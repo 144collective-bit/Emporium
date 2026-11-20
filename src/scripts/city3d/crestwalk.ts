@@ -126,7 +126,7 @@ const SPOTS: Pt[] = [
 ];
 const nearSpot = ([x, z]: Pt, r: number) => SPOTS.some(([sx, sz]) => Math.hypot(x - sx, z - sz) < r);
 
-/** Benches beside it (its left, facing across), off its steps and its places */
+/** Benches beside it (its left, along it, facing across it: `yaw` the way a sitter faces, its seat's length across that), off its steps and its places */
 export const BENCHES: { x: number; z: number; yaw: number }[] = (() => {
   const out: { x: number; z: number; yaw: number }[] = [];
   for (let d = WALK.bench / 2; d < WALK_L - 10; d += WALK.bench) {
@@ -134,7 +134,8 @@ export const BENCHES: { x: number; z: number; yaw: number }[] = (() => {
     const at = walkAt(d, -(WALK.half + 0.7));
     if (nearSpot(at, 8)) continue;
     const p = WALK_POINTS.find((q) => q.d >= d)!;
-    out.push({ x: at[0], z: at[1], yaw: Math.atan2(p.u[0], p.u[1]) });
+    // (facing the walk: its right, (-u.z, u.x))
+    out.push({ x: at[0], z: at[1], yaw: Math.atan2(-p.u[1], p.u[0]) });
   }
   return out;
 })();
@@ -161,3 +162,20 @@ export const LOOKOUTS: { x: number; z: number; look: Pt }[] = [60, WALK_L - 33].
 
 /** It starts by the cable car's foot station, on Foothill Road's sidewalk's edge */
 export const WALK_FOOT = CABLE_STATIONS[0];
+
+/** A bench's seat: its length and depth (the drawing's, crestwalk3d.ts), its top over the ground as drawn */
+export const BENCH = { long: 1.5, deep: 0.45, seat: 0.475 } as const;
+
+/**
+ * The Belvedere's two benches inside it, along its back (the side away from its view) east of the walk's way out, each facing in,
+ * clear of the walk's way through (in from the east, out to the south-west): an angle round it and the way it faces
+ */
+export const BELVEDERE_BENCHES: { x: number; z: number; yaw: number }[] = [-Math.PI / 2 + 0.2, -Math.PI / 2 + 0.9].map((a) => {
+  const [x, z] = [BELVEDERE.x + Math.cos(a) * (BELVEDERE.r - 0.9), BELVEDERE.z + Math.sin(a) * (BELVEDERE.r - 0.9)];
+  return { x, z, yaw: Math.atan2(BELVEDERE.x - x, BELVEDERE.z - z) };
+});
+/** The Belvedere's benches' seat: length, depth, top over the ground */
+export const BELVEDERE_BENCH = { long: 1.3, deep: 0.42, seat: 0.485 } as const;
+
+/** The glasshouse's fountain in its garden's west side, south of its path to the door: its middle and radius */
+export const GLASS_FOUNTAIN = { x: (GLASSHOUSE.rect[0] + GLASSHOUSE.house[0]) / 2, z: GLASSHOUSE.dome.z - 1.6, r: 0.8 } as const;

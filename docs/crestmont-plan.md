@@ -727,5 +727,18 @@ Their answers, in three rounds:
    the glasshouse (`GLASSHOUSE`), a white-framed palm house of a domed middle and two wings with palms inside, its
    garden of beds and gravel round a fountain, on ground held level east of the reservoir. Both are places with their
    panels (kickers 54 and 55), live lines, Walk in, doors and pins. No land, house or landmark moved.
-6. **Residents at leisure and cyclists on the hills.**
+6. **Residents at leisure and cyclists on the hills** (built; the owner's answers, 2026-11-20: the residents where
+   the plan put them, "Ridge Road, a few", "Skip tennis"): `crestleisure.ts` (the rules) and `crestleisure3d.ts`. At
+   home, someone out on a balcony at every third estate and every other hill house, looking out; on the other hill
+   houses' roof terraces someone on a lounger, a pair at every fourth one's table. Out, a pair at three of THE
+   ASTERLY's four terrace tables with a waiter between them, two on the Belvedere's benches and one at its front,
+   visitors in the glasshouse (two under its dome by the palm, a pair at its garden's east end, one by the fountain),
+   someone on every other bench along the walk and at each lookout. On the move, four walkers up and down the
+   Ridgeline Walk at a stroll, each on their own right; five road cyclists on Ridge Road, up its right-hand edge and
+   down the other, slow on the climbs and quick on the way down, on the asphalt's edge right of the cars and clear of
+   the joggers, their bikes pitched with the road. All come with the chunk, into the crowd's spare slots (none in the
+   boot), and dress as Crestmont's (the crowd's look counts the hills east of its streets too), the riders in
+   cycling kit. No tennis, no swimmers. Phones: every other one standing or sitting, two walkers, three cyclists.
+   With it, three Phase 5 slips fixed: the walk's benches turned along it (they stood across it), the Belvedere's
+   benches moved off the walk's way out, the glasshouse's fountain moved off its path.
 
