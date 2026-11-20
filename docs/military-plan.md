@@ -12,7 +12,8 @@ the base adds anything; the owner's pick (2026-11-19) was to trim first,
 and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 is built and signed off** (2026-11-19,
 measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
 airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is built and signed off**
-(2026-11-19, measured below). **Phase 4 (life, night and sound) is under way**, all of it, lean (the owner's pick).
+(2026-11-19, measured below). **Phase 4 (life, night and sound) is built** (2026-11-20, measured below: a
+little over its allowance in three numbers), waiting on the owner's call.
 
 ## The owner's answers (2026-11-18)
 
@@ -535,4 +536,26 @@ Every view's slowest CPU frame under 250 ms.
 | Phase 3, the base, as built | **Signed off.** |
 | How much of Phase 4 | **All of it, lean**: the flights and helicopters, the vehicles, the personnel and patrols, the night's lights and the sound, measured on phones (fewer people and flights there). |
 | Next | **Degen is ready** for Phase 4. |
+
+## Phase 4's measure (2026-11-20, the build of 028e1fd, the phone tier)
+
+Built: the apron's floodlight masts and their pools, the watchtowers' sweeping searchlights (still under reduced
+motion), the personnel (17 standing, 18 moving: the drill squad, walkers, two pairs of patrols; half on phones) in the
+base's uniform, a jeep and a truck on the base's own roads, the base's own flights (a trainer's circuits and a
+helicopter's round of the base, as more of its parked fleets: on phones only the trainer), and its sound.
+
+| View | Draws, Phase 3 → 4 (allowance +15) | Triangles (allowance +0.03M) |
+| --- | --- | --- |
+| The north, from over the stadium | 68 → 83 (+15) | 0.10M → 0.15M (**+0.05M**) |
+| Northgate Air Base, from high | 67 → 81 (+14) | 0.10M → 0.13M (+0.03M) |
+| The main gate | 112 → 133 (**+21**) | 0.21M → 0.23M (+0.02M) |
+| The runway | 70 → 74 (+4) | 0.09M → 0.10M |
+| The home view | 290 → 299 (+9) | 0.43M → 0.42M |
+
+- **Memory:** memcheck 171.5 → 172.4 MiB of 187 (**+0.9**, the allowance +0.5; since the batches' step a reading moves
+  by up to that step's 4 MiB of room, so this isn't cleanly the base's).
+- **The boot:** 741.6 → 741.4 KB (the allowance 0: Phase 4 is in its chunks). Every view's slowest CPU frame under
+  250 ms (the gate's 24 ms). The wide world passes (the searchlights now look in square to their fence: dcb24cd).
+- **Over:** the gate's draws (+21 of 15: the jeep's two and the crowd's near detail on the sentries, most likely), the
+  stadium view's triangles (+0.05M of 0.03M) and the memory (+0.9 of 0.5). The owner's call: trim, or take it.
 
