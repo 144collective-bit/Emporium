@@ -39,6 +39,8 @@ import { TERRAIN_RECT } from './terrain';
 import { inStrip } from './strip';
 import { inSunridge } from './sunridge';
 import { inLot9 } from './lot9';
+import { zoneAt } from './south';
+import { SOUTH_GROUND_RECT } from './southground';
 import { MALL_AREA } from './mall';
 import { SITE as AIRPORT_SITE } from './airfield';
 import { KART_AREA } from './kartfacility';
@@ -88,6 +90,13 @@ export function districtAt(x: number, z: number): District {
   if (inRect(CREST_RECT, x, z) || inRect(CREST_EAST, x, z)) return 'crest';
   if (inStrip(x, z)) return 'strip';
   if (inLot9(x, z)) return 'lot9';
+  // The south (docs/south-plan.md Phase 6c): the estate and the tall band by the ring road dressed as The Trenches, the
+  // village, the bungalows and the fields as the suburbs; the High Road and the council rows as the town
+  if (inRect(SOUTH_GROUND_RECT, x, z)) {
+    const zone = zoneAt(x, z);
+    if (zone === 'estate' || zone === 'tall') return 'trenches';
+    if (zone === 'village' || zone === 'bungalow' || zone === 'fields') return 'suburb';
+  }
   if (inSunridge(x, z)) return 'suburb';
   if (inRect(MALL_AREA, x, z)) return 'mall';
   if (inRect(AIRPORT_SITE, x, z)) return 'airport';

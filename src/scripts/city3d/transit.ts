@@ -31,6 +31,7 @@ import { STOP_ZONE } from './lot9';
 import { inEndswood } from './endswood';
 import { SOLIDS, type Box } from './solids';
 import { pointOn, rightOf, type Route } from './routes';
+import { SOUTH_BUS_STREETS, SOUTH_STOP_GAP } from './southpeople';
 
 export interface BusStop {
   id: string;
@@ -91,16 +92,29 @@ export function stopsOn(s: Street, crossings: Pt[], solids: readonly Box[] = SOL
 }
 
 /** Every bus stop in the city: along the avenues, and round Sunridge's collector */
-export const BUS_STOPS: BusStop[] = PLAN.streets
-  .filter((s) => s.kind === 'avenue' || s.id === 'sun-parkway')
-  .flatMap((s) =>
-    stopsOn(
-      s,
-      PLAN.crossings.filter((c) => c.streets.includes(s.id)).map((c) => c.at),
-      SOLIDS,
-      s.kind === 'avenue' ? STOP_GAP : SUN_STOP_GAP
-    )
-  );
+export const BUS_STOPS: BusStop[] = [
+  ...PLAN.streets
+    .filter((s) => s.kind === 'avenue' || s.id === 'sun-parkway')
+    .flatMap((s) =>
+      stopsOn(
+        s,
+        PLAN.crossings.filter((c) => c.streets.includes(s.id)).map((c) => c.at),
+        SOLIDS,
+        s.kind === 'avenue' ? STOP_GAP : SUN_STOP_GAP
+      )
+    ),
+  // ...and along the south's bus route: the High Road and Gate Lane (southpeople.ts, docs/south-plan.md Phase 6c)
+  ...PLAN.streets
+    .filter((s) => SOUTH_BUS_STREETS.includes(s.id))
+    .flatMap((s) =>
+      stopsOn(
+        s,
+        PLAN.crossings.filter((c) => c.streets.includes(s.id)).map((c) => c.at),
+        SOLIDS,
+        SOUTH_STOP_GAP
+      )
+    ),
+];
 
 /** A stop a route passes: how far along the route the bus's front halts there, and how far it pulls in to the kerb (0 in the kerb lane already) */
 export interface RouteStop {

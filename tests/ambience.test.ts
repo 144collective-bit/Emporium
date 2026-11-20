@@ -8,6 +8,10 @@ import { EXT, RIVER, NS_ROADS } from '../src/scripts/city3d/layout';
 import { HIGHWAY_BOX } from '../src/scripts/city3d/highway';
 import { CLUB } from '../src/scripts/city3d/avenue';
 import { LAKE_C, lakeR } from '../src/scripts/city3d/westlake';
+import { ENDS_DOORS } from '../src/scripts/city3d/endsplaces';
+import { TOWER } from '../src/scripts/city3d/aldwyns';
+import { SHOPS } from '../src/scripts/city3d/highroad';
+import { PLAT_Y, SOUTH_STATIONS } from '../src/scripts/city3d/southline';
 
 test('every layer stays between 0 and 1 across the world', () => {
   for (let x = EXT[0]; x <= EXT[1]; x += 23)
@@ -216,15 +220,39 @@ test("indoors in the mall's hall (not from over its roof); the kart park's idlin
   assert.equal(town.karts, 0);
 });
 
-test("Endswood's own: the estate's sounds on its land and just past it; Bunker Sound's beat and St Aldwyn's bell wait for their buildings", () => {
-  // (the south re-laid, docs/south-plan.md Phase 1b: the studio and the church come back in Phases 2 and 3)
+test("Endswood's own: the estate's sounds on its land and just past it, Bunker Sound's beat by its door, St Aldwyn's bell across the south", () => {
+  // (the studio and the church back since the south plan's Phase 6e: their buildings stand again)
   const on = ambienceAt(-82, 404, 0, 0);
-  assert.ok(on.ends > 0.95 && on.studio === 0 && on.bell === 0);
+  assert.ok(on.ends > 0.95);
   assert.ok(ambienceAt(-205, 445, 0, 0).ends > 0.9, 'in the village');
   assert.ok(ambienceAt(-380, 420, 0, 0).ends < 0.5, 'out in the fields');
+  const door = ENDS_DOORS.find((d) => d.id === 'bunker')!;
+  assert.ok(ambienceAt(door.x, door.z, 0, 0).studio > 0.9, "at Bunker Sound's door");
+  assert.ok(ambienceAt(door.x + 40, door.z + 40, 0, 0).studio === 0, 'none a street away');
+  const [bx, bz] = [(TOWER[0] + TOWER[2]) / 2, (TOWER[1] + TOWER[3]) / 2];
+  assert.ok(ambienceAt(bx, bz + 10, 0, 0).bell > 0.95, 'by the church');
+  assert.ok(ambienceAt(-82, 404, 0, 0).bell > 0.2, 'across the estate');
   // (and none of it downtown)
   const town = ambienceAt(30, 30, 0, 0);
   assert.ok(town.ends === 0 && town.studio === 0 && town.bell === 0);
+});
+
+test("the south's own (Phase 6e): birds in the village, shoppers along the High Road, hushed below ground with a tube train rumbling by", () => {
+  const village = ambienceAt(-205, 445, 0, 0);
+  assert.ok(village.park > 0.5, `the village's birds ${village.park.toFixed(2)}`);
+  assert.ok(ambienceAt(-82, 404, 0, 0).park < 0.2, 'none on the estate');
+  const pub = SHOPS.find((p) => p.name === 'The Brook & Lantern')!;
+  assert.ok(ambienceAt(pub.at[0], pub.at[1], 0, 0).strip > 0.3, 'the shoppers by the pub');
+  assert.ok(ambienceAt(-205, 470, 0, 0).strip < 0.05, 'none in the churchyard');
+  // Below ground on a platform: hushed, and the rumble when a train's close (some time on the clock it is)
+  const st = SOUTH_STATIONS[2];
+  const [px, pz] = st.at;
+  const down = ambienceAt(px, pz, 0, 0, PLAT_Y);
+  assert.ok(down.indoor > 0.8, 'hushed as indoors below ground');
+  let loud = 0;
+  for (let t = 0; t < 400; t += 2) loud = Math.max(loud, ambienceAt(px, pz, 0, t, PLAT_Y).tube);
+  assert.ok(loud > 0.7, `a train rumbling through (${loud.toFixed(2)})`);
+  assert.equal(ambienceAt(px, pz, 0, 0, 0).tube, 0, 'none up on the street');
 });
 
 test("in Degen's house the street is shut out (not from over its roof, nor out in his yard)", async () => {
