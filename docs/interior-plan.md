@@ -39,9 +39,14 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    south end), a cognac armchair under the front window, a black marble coffee table on a rug, a brass arc lamp. He
    wakes on the sofa facing the TV (`HOME_WAKE`, `SOFA_SEAT`). The trophy wall moves along the west wall, south of the
    media wall. The stash box goes: the stash is a vault door in the den's north wall (`home:stash` in the basement). Shots: `docs/interior-shots/phase-1-*`.
-2. **The kitchen and dining.** A working kitchen along the back wall: a hob with an extractor over it, an oven and
-   the fridge in tall walnut units, a sink with its tap under the window, open brass shelves; the island in black
-   marble with leather stools; a dining table for four with its pendant.
+2. **The kitchen and dining.** *Built, signed off by the owner (2026-11-20), live.* (Built third, the owner's order.) homerooms.ts
+   `FURNITURE`: the oven's tall walnut unit at the back wall's west end (two ovens stacked, black glass, brass
+   handles), the run in walnut with a black marble top and the sink under the window with its brass tap, the fridge's
+   tall walnut unit at its east end (the white fridge gone); the island in walnut with a thick black marble top down
+   its ends, the hob set in its kitchen side, a black extractor with a brass band hung over it from the ceiling, two
+   brass pendants, cognac leather stools with low backs on brass legs; dining for four in the corner east of the hall
+   (`dining`, four `chair`s: a walnut table on black steel legs, a runner and a brass bowl, cognac chairs, a black
+   pendant over it), clear of the ways to the side door and the stairs. Shots: `docs/interior-shots/phase-2-*`.
 3. **Upstairs: the bathroom and the walk-in wardrobe.** *Built, signed off by the owner (2026-11-19), live.* (Built second, the
    owner's order.) First the rooms' lists left the boot, which was full (the owner's pick): `homerooms.ts` lays them
    out on home.ts's `HOUSE_GEO`, in its own small chunk that imports nothing, fetched as the city starts (index.ts);

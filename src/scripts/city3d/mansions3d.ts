@@ -23,11 +23,11 @@ import { DRAPE, bandMesh, lineMesh, type Mesh } from './crestdrape';
 /** A gate's half width in the pad's edge */
 const GATE_GAP = 0.9;
 import { COVER, PLANT, SOIL } from './palette';
-import { MANSIONS, MANSION_CARS, PAD_EASE, STOREY, WALL, YARD, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
+import { MANSARD, MANSIONS, MANSION_CARS, PAD_EASE, STOREY, TURRET, WALL, YARD, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
 import { POOL_LED, WINDOW, hip, poolOf, windowOf } from './estates3d';
-import { deckHip } from './roofs3d';
+import { deckHip, mansard } from './roofs3d';
 import { POOL_LIGHTS, poolLights } from './crestnight';
-import { DECK_HIP, MANSION_BALCONIES, MANSION_CHIMNEY, MANSION_GATE, ROOF_DECKS, mansionPiers } from './crestgrand';
+import { DECK_HIP, MANSION_BALCONIES, MANSION_CHIMNEY, MANSION_GATE, ROOF_DECKS, mansionPiers, windowsAlong } from './crestgrand';
 import { drawBalcony, drawDeck, drawLeaf, drawPierTop, type Draw } from './crestgrand3d';
 import { CURTAIN, PAVING, flat } from './mallkit';
 
@@ -48,6 +48,9 @@ const SHUTTER = toon('#4f7a5a');
 const FRONT_DOOR = toon('#1d2a4a');
 const GOLD = toon('#c9a54a');
 const LED = neon('#fff0d0', 0.15, 1.4);
+/** An Art Deco house's speed lines, and a chateau's raked gravel court (the premium upgrade's Phase 3) */
+const DECO_LINE = toon('#c9d3da');
+const GRAVEL = toon('#d8cfbd');
 
 /** The frame: local +x along its front, +y up from the pad, +z out to the road (a turn, never a mirror) */
 function frameOf(m: Mansion) {
@@ -185,6 +188,15 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
           drawGlass(p, top);
           continue;
         }
+        // (the premium upgrade's Phase 3: an Art Deco house, a French chateau)
+        if (kind === 'deco') {
+          drawDeco(p, top, p === m.parts[0]);
+          continue;
+        }
+        if (kind === 'chateau') {
+          drawChateau(p, top, p === m.parts[0]);
+          continue;
+        }
         box(p.u0, 0, p.v0, p.u1, top, p.v1, wall);
         box(p.u0 - 0.04, 0, p.v0 + 0.04, p.u1 + 0.04, 0.3, p.v1 - 0.04, STONE_SHADE);
         const n = Math.max(1, Math.floor(w / 1.8));
@@ -241,6 +253,15 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       // The front door, on the main block's front; a step before it; a villa's balcony over it
       const main = m.parts[0];
       const fu = (main.u0 + main.u1) / 2;
+      // (an Art Deco house's curved canopy over its door, on two slim steel posts)
+      if (kind === 'deco') {
+        box(fu - 1.3, 2.05, main.v0, fu + 1.3, 2.17, main.v0 + 1.0, WHITE);
+        add(new THREE.CylinderGeometry(0.06, 0.06, 2.6, 12, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateY(Math.PI / 2).translate(fu, 2.11, main.v0 + 1.0), WHITE);
+        b.detail(() => {
+          for (const s of [-1, 1]) box(fu + s * 1.15 - 0.03, 0, main.v0 + 0.85, fu + s * 1.15 + 0.03, 2.05, main.v0 + 0.91, STEEL);
+          box(fu - 1.2, 2.0, main.v0 + 0.95, fu + 1.2, 2.04, main.v0 + 0.97, LED);
+        });
+      }
       if (kind !== 'glass') {
         box(fu - 0.85, 0, main.v0, fu + 0.85, 2.05, main.v0 + 0.08, STONE_SHADE);
         pane(fu, main.v0 + 0.08, [0, 1], 1.2, 0.05, 1.85, kind === 'summit' ? FRONT_DOOR : WOOD, kind !== 'summit');
@@ -281,6 +302,147 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       // (the lights under its water, small bright points at night: crestnight.ts; none in the phones' plain water)
       if (!low) for (const [u, v] of poolLights(pu0, pv0, pu1, pv1)) add(new THREE.CircleGeometry(POOL_LIGHTS.r, 8).rotateX(-Math.PI / 2).translate(u, 0.03, v), POOL_LED);
       b.build(into, { cast: true, receive: true });
+
+      /**
+       * An Art Deco house's part (the premium upgrade's Phase 3): white walls with rounded corners, ribbon windows
+       * front and back, portholes along the ground floor's front, speed lines, a parapet; its tower stepped back at the
+       * top with fins up its front and a fin on its crown; the main block's flat roof its sundeck
+       */
+      function drawDeco(p: MPart, top: number, isMain: boolean) {
+        const R = Math.min(0.7, (p.u1 - p.u0) / 4);
+        const [fv, bv] = [p.v0, p.v1];
+        box(p.u0 + R, 0, fv, p.u1 - R, top, bv, WHITE);
+        box(p.u0, 0, fv - R, p.u1, top, bv + R, WHITE);
+        for (const [u, v] of [
+          [p.u0 + R, fv - R],
+          [p.u1 - R, fv - R],
+          [p.u0 + R, bv + R],
+          [p.u1 - R, bv + R],
+        ])
+          add(new THREE.CylinderGeometry(R, R, top, 14).translate(u, top / 2, v), WHITE);
+        // (a dark shadow gap at its foot)
+        box(p.u0 + R, 0, fv - 0.04, p.u1 - R, 0.18, bv + 0.04, GUTTER);
+        const L = p.u1 - p.u0 - 2 * R;
+        const cu = (p.u0 + p.u1) / 2;
+        for (let f = 0; f < p.floors; f++) {
+          const y = f === 0 ? 0.45 : STOREY.ground + (f - 1) * STOREY.upper + 0.4;
+          const h = f === 0 ? 1.35 : 1.15;
+          if (f === 0 && isMain) {
+            // (portholes along the ground floor's front, clear of the door)
+            for (const u of windowsAlong(p.u0 + R, p.u1 - R, 1.4)) {
+              if (Math.abs(u - cu) < 1.4) continue;
+              add(new THREE.CircleGeometry(0.34, 16).translate(u, y + 0.75, fv + 0.012), windowOf(m.id, u, y, fv, low));
+              b.detail(() => add(new THREE.RingGeometry(0.34, 0.42, 16).translate(u, y + 0.75, fv + 0.014), STEEL));
+            }
+          } else if (L > 1.2) pane(cu, fv, [0, 1], L - 0.6, y, h, windowOf(m.id, cu, y, fv, low), false, 0, 0.012);
+          if (L > 1.2 && !(f === 0 && isMain)) pane(cu, bv, [0, -1], L - 0.6, y, h, windowOf(m.id, cu, y, bv, low), false, 0, 0.012);
+          // (the ribbon windows' mullions, near)
+          if (L > 1.2)
+            b.detail(() => {
+              for (const v of f === 0 && isMain ? [bv] : [fv, bv])
+                for (let u = cu - (L - 0.6) / 2; u <= cu + (L - 0.6) / 2 + 1e-6; u += (L - 0.6) / Math.max(2, Math.round((L - 0.6) / 1.1))) box(u - 0.025, y, v + (v === fv ? 0 : -0.03), u + 0.025, y + h, v + (v === fv ? 0.03 : 0), STEEL);
+            });
+        }
+        // (speed lines: three thin bands along the front and back by its top)
+        b.detail(() => {
+          for (const y of [top - 0.45, top - 0.6, top - 0.75]) for (const [a, c] of [[fv, fv + 0.025], [bv - 0.025, bv]]) box(p.u0 + R, y, a, p.u1 - R, y + 0.05, c, DECO_LINE);
+        });
+        // The roof: a parapet round it with a coping
+        const t = 0.07;
+        for (const [a0, b0, a1, b1] of [
+          [p.u0 + 0.05, fv - 0.05, p.u1 - 0.05, fv - 0.05 - t],
+          [p.u0 + 0.05, bv + 0.05 + t, p.u1 - 0.05, bv + 0.05],
+          [p.u0 + 0.05, fv - 0.05, p.u0 + 0.05 + t, bv + 0.05],
+          [p.u1 - 0.05 - t, fv - 0.05, p.u1 - 0.05, bv + 0.05],
+        ])
+          box(a0, top, b0, a1, top + 0.35, b1, WHITE);
+        add(new THREE.PlaneGeometry(p.u1 - p.u0 - 0.2, Math.abs(fv - bv) - 0.2).rotateX(-Math.PI / 2).translate(cu, top + 0.012, (fv + bv) / 2), STONE_SHADE);
+        if (isMain) drawDeck(G, ROOF_DECKS[MANSIONS.indexOf(m)], 'glass');
+        else {
+          // (the tower: its crown stepped back, a fin standing on it; fins up its front)
+          box(p.u0 + 0.45, top, fv - 0.45, p.u1 - 0.45, top + 0.6, bv + 0.45, WHITE);
+          box(cu - 0.06, top + 0.6, fv - 0.6, cu + 0.06, top + 1.7, bv + 0.6, WHITE);
+          for (const k of [-1, 0, 1]) box(cu + k * 0.7 - 0.05, 0.4, fv, cu + k * 0.7 + 0.05, top + 0.3, fv + 0.25, WHITE);
+          b.detail(() => box(cu - 0.08, top + 1.55, fv - 0.62, cu + 0.08, top + 1.6, bv + 0.62, LED));
+        }
+      }
+
+      /**
+       * A French chateau's part (Phase 3): pale stone walls with quoins and a string course, tall windows, the main
+       * block under a slate mansard with dormers front and back (its flat top a terrace); a turret round under its
+       * slate cone with a gilded finial
+       */
+      function drawChateau(p: MPart, top: number, isMain: boolean) {
+        if (p.roof === 'cone') {
+          const [cu, cv] = [(p.u0 + p.u1) / 2, (p.v0 + p.v1) / 2];
+          const r = (p.u1 - p.u0) / 2;
+          add(new THREE.CylinderGeometry(r, r + 0.05, top, 16).translate(cu, top / 2, cv), STONE);
+          add(new THREE.CylinderGeometry(r + 0.08, r + 0.08, 0.12, 16).translate(cu, top - 0.06, cv), STONE_SHADE);
+          add(new THREE.ConeGeometry(r + 0.2, TURRET.cone, 16).translate(cu, top + TURRET.cone / 2, cv), SLATE);
+          add(new THREE.SphereGeometry(0.07, 6, 4).translate(cu, top + TURRET.cone + 0.05, cv), GOLD);
+          b.detail(() => add(new THREE.CylinderGeometry(0.03, 0.03, 0.4, 5).translate(cu, top + TURRET.cone + 0.1, cv), GOLD));
+          // (its windows on the side away from the house, a storey each)
+          const mp = m.parts[0];
+          const [mu, mv] = [(mp.u0 + mp.u1) / 2, (mp.v0 + mp.v1) / 2];
+          const l = Math.hypot(cu - mu, cv - mv) || 1;
+          const n: [number, number] = [(cu - mu) / l, (cv - mv) / l];
+          for (let f = 0; f < p.floors; f++) {
+            const y = f === 0 ? 0.55 : STOREY.ground + (f - 1) * STOREY.upper + 0.45;
+            pane(cu + n[0] * r, cv + n[1] * r, n, 0.5, y, 0.95, windowOf(m.id, cu, y, cv, low), true, 0, 0.02);
+          }
+          return;
+        }
+        box(p.u0, 0, p.v0, p.u1, top, p.v1, STONE);
+        box(p.u0 - 0.04, 0, p.v0 + 0.04, p.u1 + 0.04, 0.35, p.v1 - 0.04, STONE_SHADE);
+        // (the string course between the floors, and the quoins at its back corners, near)
+        box(p.u0 - 0.04, STOREY.ground - 0.08, p.v0 + 0.04, p.u1 + 0.04, STOREY.ground + 0.04, p.v1 - 0.04, STONE_SHADE);
+        b.detail(() => {
+          for (const u of [p.u0, p.u1])
+            for (let y = 0.35, k = 0; y < top - 0.2; y += 0.42, k++) {
+              const w = k % 2 ? 0.28 : 0.45;
+              const s = u === p.u0 ? 1 : -1;
+              box(u - s * 0.03, y, p.v1 + w, u + s * w, y + 0.36, p.v1 - 0.03, STONE_SHADE);
+            }
+        });
+        const us = windowsAlong(p.u0 + 0.6, p.u1 - 0.6, 1.7);
+        const cu = (p.u0 + p.u1) / 2;
+        for (let f = 0; f < p.floors; f++) {
+          const y = f === 0 ? 0.55 : STOREY.ground + (f - 1) * STOREY.upper + 0.35;
+          const h = f === 0 ? 1.45 : 1.25;
+          for (const u of us) {
+            if (f === 0 && isMain && Math.abs(u - cu) < 0.9) continue;
+            // (clear of the turrets at its front corners)
+            if (!m.parts.slice(1).some((q) => u > q.u0 - 0.45 && u < q.u1 + 0.45)) win(u, p.v0, [0, 1], 0.8, y, h, false, true);
+            win(u, p.v1, [0, -1], 0.8, y, h, false, false);
+          }
+        }
+        // The mansard in slate, its flat top the terrace; dormers on its front and back slopes
+        const { h: mh, inset, o } = MANSARD;
+        const [r, soffit] = mansard(p.u0, p.v0, p.u1, p.v1, top, mh, inset, o);
+        add(r, SLATE);
+        add(soffit, STONE_SHADE);
+        b.detail(() => box(p.u0 - o, top - 0.02, p.v0 + o - 0.06, p.u1 + o, top + 0.1, p.v1 - o + 0.06, STONE_SHADE));
+        for (const u of us)
+          for (const s of [1, -1]) {
+            if (s > 0 && m.parts.slice(1).some((q) => u > q.u0 - 0.6 && u < q.u1 + 0.6)) continue;
+            const edge = s > 0 ? p.v0 + o : p.v1 - o;
+            const vf = edge - s * inset * 0.45;
+            const y0 = top + mh * 0.25;
+            const [a, c] = s > 0 ? [vf, vf - 0.7] : [vf, vf + 0.7];
+            box(u - 0.38, y0, a, u + 0.38, y0 + 0.85, c, STONE);
+            pane(u, vf, [0, s], 0.48, y0 + 0.12, 0.62, windowOf(m.id, u, y0, vf, low), true, 0, 0.012);
+            const [dr] = hip(u - 0.38, s > 0 ? a : c, u + 0.38, s > 0 ? c : a, y0 + 0.85, 0.35, 0.06);
+            add(dr, SLATE);
+          }
+        if (isMain) {
+          drawDeck(G, ROOF_DECKS[MANSIONS.indexOf(m)], 'stone');
+          // (a tall stone chimney at its first end, through the mansard)
+          const ch = MANSION_CHIMNEY.half;
+          const cx = p.u0 + MANSION_CHIMNEY.at;
+          box(cx - ch, top, p.v1 + 1.5, cx + ch, top + mh + 0.9, p.v1 + 0.86, STONE);
+          box(cx - ch - 0.06, top + mh + 0.9, p.v1 + 1.56, cx + ch + 0.06, top + mh + 1.02, p.v1 + 0.8, STONE_SHADE);
+        }
+      }
 
       /** The glass mansion's main block: glass below, the white upper floor out over the slope on two legs */
       function drawGlass(p: MPart, top: number) {
@@ -358,7 +520,8 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       drawBank(into, banks()[MANSIONS.indexOf(m)], low);
       const pave = (r: [number, number, number, number], y: number, mat: THREE.Material) => flat(q, r[0], r[1], r[2], r[3], m.y + y, mat, 8);
       const [cu0, cv0, cu1, cv1] = m.court;
-      pave(rectToWorld(m, Math.max(-W / 2 + 1, cu0), Math.min(-1, cv0), Math.min(W / 2 - 1, cu1), cv1), 0.02, PAVING);
+      // (a chateau's forecourt in raked gravel)
+      pave(rectToWorld(m, Math.max(-W / 2 + 1, cu0), Math.min(-1, cv0), Math.min(W / 2 - 1, cu1), cv1), 0.02, kind === 'chateau' ? GRAVEL : PAVING);
       pave(rectToWorld(m, pu0 - 1, pv0 + 1.8, pu1 + 1, pv1 - (kind === 'glass' ? 0.4 : 0.8)), 0.014, PAVING);
       pave(rectToWorld(m, pu0, pv0, pu1, pv1), 0.024, poolOf(low));
       // Its yard round the pad (mansions.ts `yard`): level, mown, a little over the grass

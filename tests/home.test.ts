@@ -203,7 +203,7 @@ test('the room: wall to wall inside the shell, its ceiling the camera\'s, everyt
   for (let i = 0; i < FURNITURE.length; i++) for (let j = i + 1; j < FURNITURE.length; j++) assert.ok(!overlap(FURNITURE[i].rect, FURNITURE[j].rect), `${FURNITURE[i].kind} on ${FURNITURE[j].kind}`);
   assert.deepEqual(
     [...new Set(FURNITURE.map((f) => f.kind))].sort(),
-    ['armchair', 'chaise', 'console', 'counter', 'cupboard', 'fridge', 'island', 'lamp', 'media', 'plant', 'sofa', 'stairs', 'stools', 'table', 'trophies'],
+    ['armchair', 'chair', 'chaise', 'console', 'counter', 'cupboard', 'dining', 'fridge', 'island', 'lamp', 'media', 'oven', 'plant', 'sofa', 'stairs', 'stools', 'table', 'trophies'],
   );
   assert.ok(homeWall(ROOM[0] + 0.05, ROOM[1] + 3, R) && !homeWall(HOME.door[0], (ROOM[1] + ROOM[3]) / 2, R));
   // From inside the front door you can walk to inside the side door and up to everything (a flood over a fine grid)

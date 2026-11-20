@@ -84,10 +84,10 @@ const FRUIT = [toon('#f2d43c'), toon('#ff9a2e')];
 const FLAME = neon('#ff8a3d', 0.9, 2.2);
 const LAMP = neon('#ffe2a8', 0.25, 1.3);
 /** The umbrellas' canopies, by style */
-const CANOPY: Record<Tone, THREE.Material> = { spanish: toon('#f4ead2'), villa: toon('#f4ead2'), tudor: toon('#2f5d40'), georgian: toon('#1e2a55'), modern: toon('#f1f1ee'), glass: toon('#f1f1ee'), compound: toon('#f4ead2'), summit: toon('#1e2a55') };
+const CANOPY: Record<Tone, THREE.Material> = { spanish: toon('#f4ead2'), villa: toon('#f4ead2'), tudor: toon('#2f5d40'), georgian: toon('#1e2a55'), modern: toon('#f1f1ee'), glass: toon('#f1f1ee'), compound: toon('#f4ead2'), summit: toon('#1e2a55'), deco: toon('#f1f1ee'), chateau: toon('#1e2a55') };
 /** A pool house's walls and roof, by style */
-const HOUSE_WALL: Record<Tone, THREE.Material> = { spanish: RENDER, villa: OCHRE, tudor: CREAM, georgian: BRICK, modern: WHITE, glass: WHITE, compound: RENDER, summit: STONE };
-const HOUSE_ROOF: Record<Tone, THREE.Material | null> = { spanish: TILE, villa: TILE, tudor: SLATE, georgian: SLATE, modern: null, glass: null, compound: TILE, summit: SLATE };
+const HOUSE_WALL: Record<Tone, THREE.Material> = { spanish: RENDER, villa: OCHRE, tudor: CREAM, georgian: BRICK, modern: WHITE, glass: WHITE, compound: RENDER, summit: STONE, deco: WHITE, chateau: STONE };
+const HOUSE_ROOF: Record<Tone, THREE.Material | null> = { spanish: TILE, villa: TILE, tudor: SLATE, georgian: SLATE, modern: null, glass: null, compound: TILE, summit: SLATE, deco: null, chateau: SLATE };
 
 /** A seeded number from a garden's place, so the flowers fall the same every time */
 function seeded(seed: number) {
