@@ -88,5 +88,8 @@ keep it up to date when what it describes changes.
   tier each device starts on: graphics built into the processor told from
   cards by their names as browsers give them, and the step down after a
   lost GPU.
+  `tests/drawrows.test.ts` holds the ?fps draw breakdown (`__draws()`,
+  `?made`; `docs/phone-far-plan.md`): each draw put down to its name, pass
+  and distance, the frame still drawn, a maker read from a stack.
 - Browser checks (the widths above, walk and drive flows) are still done by
   hand with Playwright against `npm run preview`.

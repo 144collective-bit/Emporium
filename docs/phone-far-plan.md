@@ -34,20 +34,67 @@ the ground. Desktops unchanged. Measured before and after each phase with the sa
 
 ## Phases
 
-1. **Measure, and name what's far.** A draw breakdown under `?fps` (`window.__draws()`, perf.ts: what the camera
-   draws grouped by the site, name, material and distance it comes from), and names on the ~110 unnamed far meshes
-   (each tagged by what made it), so every later phase is measured the same way. The baseline at six views (downtown,
-   The Trenches, the village, exit 6A, the Docks, Crestmont's hills) on the phone tier, written here.
+1. **Measure, and name what's far.** Done (below). A draw breakdown under `?fps` (`window.__draws()`, drawrows.ts),
+   and under `?made` each unnamed thing tagged by the code that made it (no cost to the boot: each kind is named in its code
+   in the phase that changes it); the baseline at six views on the phone tier.
 2. **The aircraft far off, one piece each.** Past the tier's `far`, each aircraft (the airport's fleet, your own when
-   it's away) drawn as one flattened far form (`farForm()` in lod.ts, as the places' are): about 43 draws to about
-   8 at the village. Up close, as now.
-3. **The landmarks' far forms in one piece on phones.** Their far forms are merged per material today (the facades'
-   textures kept); on phones only, one mesh each, coloured per vertex (`farFormMaterial()`), the textures' average
-   colour baked in: about 100 draws to about 35. Desktops keep the textured far forms.
-4. **The small far parts.** From phase 1's names: each kind pooled (far glows into one instanced mesh, small signs
-   into their place's far form, far car details dropped past `far` on phones), each measured.
+   it's away) drawn as one flattened far form (`farForm()` in lod.ts, as the places' are): about 20 draws to about
+   4 at the village. Up close, as now.
+3. **The landmarks far off, on phones.** Two parts (Phase 1 found the second is the bigger):
+   - their far forms in one piece each, coloured per vertex (`farFormMaterial()`), the textures' average colour baked
+     in: about 55 draws to about 20;
+   - the parts they keep at every distance (glows, beams, washes, bulbs and what moves: the stadium's, the Emporium's,
+     the kart park's, Liberty Bridge's, the pier's, The Trenches', the Signal tower's, the club's, and the
+     Emporium block's own in landmarks.ts and armoury.ts): past `far` on phones, the still ones folded into their far
+     form (its per-vertex glow follows the night as theirs do) and the moving ones' small far detail dropped: about
+     145 draws to about 60.
+4. **The small far parts**, in order of their draws until the aim's reached: the target range (about 17: a far form
+   of its own), the traffic (about 26: each model's paint and detail in one mesh on phones), the river's boats (about
+   14: lamps and wakes merged per boat), the Docks' moving parts (about 11), the lamps' far glows (about 11),
+   Trench Avenue's string lights (neighbourhoods.ts, about 8). Each named in its code as it's changed.
 5. **Measured after, the look checked.** The six views on the phone tier against phase 1's baseline, the review
    shots by day and at night (nothing far away visibly changed), the guides (performance.md) brought up to date.
+
+## What Phase 1 measured (2026-11-20)
+
+Headless (software renderer), walk mode, the phone tier (`data-tier` low), 1280 x 800, each view after up to 7
+minutes of building (1,700 to 2,600 of the city's sites still waiting: what's far is drawn by then, the near counts may
+be a little low). Every draw of one frame (`__draws()`), at four headings each (the camera turned to south, east,
+north and west, level). "Far" is the main pass's draws past the tier's `far` (90 m on phones).
+
+| View (phones) | Draws S / E / N / W | Worst heading | Main pass | Of which far | Outline pass |
+| --- | --- | --- | --- | --- | --- |
+| Downtown (68, 38) | 330 / 319 / 293 / 669 | 669 (W) | 447 | 134 | 219 |
+| The Trenches (-101, 180) | 271 / 347 / 554 / 243 | 554 (N) | 352 | 206 | 199 |
+| St Aldwyn's churchyard (-215, 452) | 152 / 248 / 599 / 139 | 599 (N) | 500 | 429 | 96 |
+| Exit 6A, Corner Road (-232, 276) | 223 / 316 / 347 / 151 | 347 (N) | 270 | 222 | 74 |
+| The Docks' quay (-290, 210) | 197 / 587 / 267 / 160 | 587 (E) | 497 | 447 | 87 |
+| Crestmont Boulevard (362, -80) | 264 / 133 / 135 / 615 | 615 (W) | 526 | 490 | 86 |
+
+The open views (the village, the Docks, Crestmont, The Trenches) are 550 to 615 at their worst, looking back at the
+city, 400 to 490 of it far. Downtown's west is 669 but mostly near (the Emporium's block): not this plan's, a case of
+its own. Exit 6A reads 347 at its worst (the earlier 525 was from a different camera).
+
+What the far draws are, the village looking north and Crestmont looking west (`?made`, mapped to the source through a
+build's source maps): about the same at both.
+
+| Kind | Village | Crestmont | Phase |
+| --- | --- | --- | --- |
+| Landmarks' kept parts (named: stadium 15, Emporium 13, kart park 13, Liberty 11, pier 8, Trenches 7, Signal 6, club 4; and the unnamed in landmarks.ts, armoury.ts) | about 145 | about 145 | 3 |
+| The places' far forms (`*-far`, a few each) | 55 | 55 | 3 |
+| Traffic, buses and the metro's trains (instanced per model, drawn at every distance) | 26 | 26 | 4 |
+| Aircraft (`fleet-*`, your own) | 20 | 9 | 2 |
+| The target range (its stands and cards, combat.ts) | 17 | 16 | 4 |
+| The river's boats (lamps, wakes) | 14 | 15 | 4 |
+| The Docks' moving parts (docksport3d.ts), the lamps' far glows, Trench Avenue's string lights | 30 | 30 | 4 |
+| Everything else (a few each: sky, the Neon Mile's marks, the civic quarter's washes, the garage) | about 35 | about 95 | 4 |
+
+The tile batches are not the cost (5 to 9 of it); the outline pass reaches only about 145 m and is near.
+
+How to measure again: build, serve `dist`, open `/?fps&spawn=x,z` (add `&made` for the makers) with `data-tier="low"`
+on `[data-city-root]`, walk, wait for the sites, then `await __draws((c) => c.lookAt(...))` in the console. Its
+`rows` are biggest first; `@file.js:line:col` is a built chunk's place, found through `npm run build` with
+`sourcemap: true` set for once in `astro.config.mjs`'s `vite.build` and `environments.client.build`.
 
 ## The owner's decisions (2026-11-20)
 
