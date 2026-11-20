@@ -61,7 +61,16 @@ export interface Boutique {
   cafe: boolean;
   /** Flags out from its upper floor */
   flags: boolean;
+  /** One refitted as a place (the premium upgrade's Phase 4: `CORAL_PLACES`) */
+  place?: CoralPlace;
 }
+/**
+ * Two of the Drive's boutiques refitted as places (the premium upgrade's Phase 4; the owner's call, 2026-11-20:
+ * "Split"): VELLANO MOTOR SALON, a car showroom behind a glass front on the west side, and SOLENNE, a spa on the east;
+ * each the widest boutique on its side that isn't a café or on the lane's corner. They stand where they stood.
+ */
+export type CoralPlace = 'vellano' | 'solenne';
+export const CORAL_PLACE_NAMES: Record<CoralPlace, string> = { vellano: 'VELLANO MOTOR SALON', solenne: 'SOLENNE' };
 /** Its height over the slab, parapet and all */
 export const heightOf = (b: Boutique) => STOREY.ground + (b.floors - 1) * STOREY.upper + STOREY.parapet;
 /** Along its face: its middle (the door) */
@@ -167,6 +176,15 @@ function lay(): Boutique[] {
       best.awning = west ? 'gold' : 'black';
     }
   }
+  // The refits: the showroom in glass, the spa in white render, neither with an awning or flags
+  for (const [west, place] of [
+    [true, 'vellano'],
+    [false, 'solenne'],
+  ] as [boolean, CoralPlace][]) {
+    const best = out.filter((b) => (b.face === 'e') === west && !b.cafe && !b.side).sort((p, q) => q.rect[3] - q.rect[1] - (p.rect[3] - p.rect[1]))[0];
+    if (!best) continue;
+    Object.assign(best, { place, name: CORAL_PLACE_NAMES[place], style: place === 'vellano' ? 'glass' : 'render', awning: 'none', flags: false });
+  }
   return out;
 }
 /** The boutiques along Coral Drive */
@@ -181,6 +199,25 @@ export const LANE_SHOPS: Boutique[] = (() => {
 })();
 /** Every shop on the Drive */
 export const SHOPS: Boutique[] = [...BOUTIQUES, ...LANE_SHOPS];
+
+/** The refitted places (Phase 4), by id */
+export const CORAL_PLACES = Object.fromEntries(BOUTIQUES.filter((b) => b.place).map((b) => [b.place!, b])) as Record<CoralPlace, Boutique>;
+/** Each refitted place's door (a walk prompt there opens its panel), on its step, between its shopfront and a valet's stand */
+export const CORAL_DOORS: { id: CoralPlace; x: number; z: number }[] = (['vellano', 'solenne'] as const).map((id) => {
+  const b = CORAL_PLACES[id];
+  const [dx, dz] = doorOf(b);
+  const [ox, oz] = outOf(b.face);
+  return { id, x: dx + ox * 0.28, z: dz + oz * 0.28 };
+});
+/** Where you arrive at each: on the strip in front, facing its door (a yaw faces (-sin, -cos)) */
+export const CORAL_SPAWNS = Object.fromEntries(
+  (['vellano', 'solenne'] as const).map((id) => {
+    const b = CORAL_PLACES[id];
+    const [dx, dz] = doorOf(b);
+    const [ox, oz] = outOf(b.face);
+    return [id, { x: dx + ox * 2, z: dz + oz * 2, yaw: Math.atan2(ox, oz) }];
+  })
+) as Record<CoralPlace, { x: number; z: number; yaw: number }>;
 
 /* ---------- The strip in front ---------- */
 

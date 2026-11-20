@@ -77,6 +77,8 @@ export const PANELS = {
   telegram: '[data-couriers]',
   apartments: '[data-staff]',
   vault: '[data-bank]',
+  // (VELLANO MOTOR SALON's cars for sale: the premium upgrade's Phase 4)
+  vellano: '[data-showroom]',
 } as const;
 export type PanelId = keyof typeof PANELS;
 

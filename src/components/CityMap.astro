@@ -61,6 +61,9 @@ const spots: Record<SpotId, Spot> = {
   golfclub: { title: 'Crestmont Hills Club', sub: 'Country club' },
   overlook: { title: 'The Overlook', sub: 'The view' },
   reservoir: { title: 'The Reservoir', sub: 'In the hills' },
+  asterly: { title: 'The Asterly', sub: 'Fine dining' },
+  vellano: { title: 'Vellano Motor Salon', sub: 'Car showroom' },
+  solenne: { title: 'Solenne', sub: 'Spa' },
   harbourmaster: { title: 'Harbour Master', sub: 'Southbank Docks' },
   sunclub: { title: 'Sunridge Club', sub: 'Pool & clubhouse' },
   sunpark: { title: 'Sunridge Park', sub: 'Playground' },
@@ -87,7 +90,7 @@ const spots: Record<SpotId, Spot> = {
   courthouse: { title: 'The Courthouse', sub: 'Sector 7' },
   home: { title: 'Home', sub: "Degen's place" },
 };
-const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec'];
+const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'vellano', 'solenne', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1259,6 +1262,28 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <h2 id="city-panel-title" class="city-panel-title">The Reservoir</h2>
     <p class="city-panel-text">Still water in the hills. Look, don't swim.</p>
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="asterly" data-marquee="Dinner over the city">
+    <p class="kicker"><span class="kicker-num">51</span> Highcrest</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Asterly</h2>
+    <p class="city-panel-text">Fine dining in glass on the ridge, its terrace over the city. Tables coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="vellano" data-marquee="The finest cars in the city">
+    <p class="kicker"><span class="kicker-num">52</span> Coral Drive</p>
+    <h2 id="city-panel-title" class="city-panel-title">Vellano Motor Salon</h2>
+    <p class="city-panel-text">Premium cars for Dorras. Buy one here, drive it from the garage.</p>
+    <div class="market" data-showroom></div>
+    <button type="button" class="chip-link kart-walkin" data-coral-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="solenne" data-marquee="Still water, warm stone">
+    <p class="kicker"><span class="kicker-num">53</span> Coral Drive</p>
+    <h2 id="city-panel-title" class="city-panel-title">Solenne</h2>
+    <p class="city-panel-text">A spa behind frosted glass on Coral Drive. Treatments coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-coral-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="harbourmaster" data-marquee="Ships in, boxes out">
