@@ -2006,6 +2006,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // (the texture breakdown is its own chunk: only ?fps and ?bench load it, texrows.ts)
     let texRows: ((s: THREE.Object3D) => unknown) | null = null;
     void import('./texrows').then((m) => (texRows = m.textureRows));
+    // (what one frame draws, draw by draw: its own chunk too, drawrows.ts, docs/phone-far-plan.md)
+    (window as unknown as { __draws?: () => Promise<unknown> }).__draws = () => import('./drawrows').then((m) => m.captureDraws(renderer as never, scene, camera, () => post.render(), Q.far));
     (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() });
     renderer.info.autoReset = false;
   }

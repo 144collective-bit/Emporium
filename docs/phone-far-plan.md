@@ -1,6 +1,6 @@
 # Phone far-view plan: the far city in fewer draws on phones
 
-Draft for the owner's sign-off (2026-11-20). Each phase with the owner's sign-off; keep this plan up to date.
+Signed off by the owner (2026-11-20). Each phase with the owner's sign-off; keep this plan up to date.
 
 ## Why
 
@@ -49,9 +49,10 @@ the ground. Desktops unchanged. Measured before and after each phase with the sa
 5. **Measured after, the look checked.** The six views on the phone tier against phase 1's baseline, the review
    shots by day and at night (nothing far away visibly changed), the guides (performance.md) brought up to date.
 
-## The owner's decisions (to make)
+## The owner's decisions (2026-11-20)
 
-- The aim: about 350 draws in the open views on phones, or another number?
-- On phones, may the landmarks' far forms lose their facade textures (a flat colour per part, the texture's average
-  baked in)? From past `far` (90 on phones) they're a few pixels across.
-- Phase 4 is open-ended: stop once the aim's reached, or take every kind of small far part?
+- The plan signed off; Phase 1 started.
+- The aim: about **350 draws** in the open views on phones.
+- On phones the landmarks' far forms may lose their facade textures: a flat colour per part, the texture's average
+  baked in.
+- Phase 4 stops once the aim's reached.

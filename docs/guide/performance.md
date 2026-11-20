@@ -305,7 +305,7 @@ keep it up to date when what it describes changes.
   on the line. On phones the open views (the village, exit 6A) draw about
   520 against downtown's 250, nearly all of it separate far meshes from the
   rest of the city (landmarks' far forms, the aircraft, small far parts):
-  `docs/phone-far-plan.md` (a draft for the owner's sign-off) is the plan
+  `docs/phone-far-plan.md` (signed off 2026-11-20) is the plan
   to bring them down.
   - A Batch's details are near only (`Batch.lod`, `Batch.detail()`; Lod
     'all' / 'near' / 'far'): `tileBatch()` keeps each tile's near and far
