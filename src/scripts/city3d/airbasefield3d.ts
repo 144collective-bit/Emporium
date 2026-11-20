@@ -15,6 +15,9 @@
 import * as THREE from 'three';
 import { Batch, toon } from './kit';
 import { createFleet } from './aircraft';
+import { poseAt } from './airfield';
+import { BASE_FLIGHTS } from './airbaseflights';
+import { nearGate } from './nearby';
 import type { Tick } from './world';
 import { site } from './tilework';
 import { ROAD } from './palette';
@@ -325,7 +328,7 @@ function windsock(b: Batch) {
   b.add(cone.translate(x + 1.2, 3.85, z), ORANGE);
 }
 
-export function register({ low, scene }: { low: boolean; scene?: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene, tick }: { low: boolean; scene?: THREE.Scene | null; tick?: (f: Tick) => void }) {
   for (let sx0 = FIELD[0]; sx0 < FIELD[2]; sx0 += STRIP) {
     const sx1 = sx0 + STRIP;
     site(`airbase field ${sx0}`, [sx0, FIELD[1], sx1, FIELD[3]], (into) => {
@@ -385,11 +388,16 @@ export function register({ low, scene }: { low: boolean; scene?: THREE.Scene | n
       b.build(into, { cast: true, receive: true });
     });
   }
-  // The parked aircraft: the airport's fleets of each kind, in the base's greys, their titles left off (main thread only)
+  // The parked aircraft, and the flying ones after them in the same fleets (Phase 4: no more draw calls): the airport's
+  // fleets of each kind, in the base's greys, their titles left off (main thread only). On phones only the trainer flies
   if (!scene) return;
+  const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const moving: { fleet: ReturnType<typeof createFleet>; i: number; f: (typeof BASE_FLIGHTS)[number] }[] = [];
+  const fleets: ReturnType<typeof createFleet>[] = [];
   for (const kind of ['freighter', 'prop', 'heli'] as const) {
     const mine = PARKED.filter((p) => p.kind === kind);
-    const f = createFleet(kind, mine.map((p) => p.livery));
+    const flying = BASE_FLIGHTS.filter((f) => f.kind === kind && !(low && kind === 'heli'));
+    const f = createFleet(kind, [...mine.map((p) => p.livery), ...flying.map(() => '#7b8494')]);
     f.group.traverse((o) => {
       const m = o as THREE.Mesh;
       if (!m.isMesh) return;
@@ -404,8 +412,22 @@ export function register({ low, scene }: { low: boolean; scene?: THREE.Scene | n
       m.geometry = g;
     });
     mine.forEach(({ at: [x, z, yaw] }, i) => f.set(i, { x, y: 0, z, yaw, pitch: 0, roll: 0, v: 0, ground: true, gear: true, power: 0 }));
+    flying.forEach((fl, k) => {
+      moving.push({ fleet: f, i: mine.length + k, f: fl });
+      f.set(mine.length + k, fl.parked);
+    });
     f.update(0, 0);
     f.group.name = `airbase-${kind}`;
     scene.add(f.group);
+    fleets.push(f);
   }
+  // The flights on the clock (the same for everyone), while the camera's near; still at their stands under reduced motion
+  if (reduced || !moving.length) return;
+  const near = nearGate(500);
+  tick?.(({ dt }) => {
+    if (!near(...FIELD)) return;
+    const t = Date.now() / 1000;
+    for (const m of moving) m.fleet.set(m.i, poseAt(m.f, t));
+    for (const f of fleets) f.update(t, dt);
+  });
 }
