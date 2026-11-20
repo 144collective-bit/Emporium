@@ -120,6 +120,11 @@ test('a district is found where a person stands, the town everywhere else', () =
   assert.equal(districtAt(...mid(YARDS_RECT)), 'yards');
   assert.equal(districtAt(...mid(CREST_RECT)), 'crest');
   assert.equal(districtAt(...mid(STRIP_RECT)), 'strip');
+  // (Northgate Air Base: inside its fence, not the open land or the visitors' car park outside it)
+  assert.equal(districtAt(-45, -340), 'airbase');
+  assert.equal(districtAt(-300, -540), 'airbase');
+  assert.notEqual(districtAt(-95, -280), 'airbase');
+  assert.notEqual(districtAt(-45, -290), 'airbase');
   assert.equal(districtAt(...mid(LOT9_RECT)), 'lot9');
   assert.equal(districtAt(...mid(MALL_AREA)), 'mall');
   assert.equal(districtAt(...mid(SITE)), 'airport');

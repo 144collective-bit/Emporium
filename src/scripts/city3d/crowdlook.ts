@@ -37,12 +37,13 @@ import { CREST_RECT } from './crestmont';
 import { inStrip } from './strip';
 import { inSunridge } from './sunridge';
 import { inLot9 } from './lot9';
+import { inAirbase } from './airbase';
 import { MALL_AREA } from './mall';
 import { SITE as AIRPORT_SITE } from './airfield';
 import { KART_AREA } from './kartfacility';
 import { RIVER, SOUTH_ROW } from './layout';
 
-export type District = 'town' | 'trenches' | 'uptown' | 'park' | 'docks' | 'yards' | 'crest' | 'strip' | 'beach' | 'suburb' | 'lot9' | 'mall' | 'airport' | 'karts';
+export type District = 'town' | 'trenches' | 'uptown' | 'park' | 'docks' | 'yards' | 'crest' | 'strip' | 'beach' | 'suburb' | 'lot9' | 'mall' | 'airport' | 'karts' | 'airbase';
 export type Role = 'walk' | 'idle' | 'jog' | 'kid' | 'worker' | 'guard' | 'shopper' | 'cyclist' | 'boater';
 
 /** The kinds the crowd's meshes carry: the desktop's, and the phones' (one more than the two they had: the owner's call) */
@@ -85,6 +86,8 @@ export function districtAt(x: number, z: number): District {
   if (inLot9(x, z)) return 'lot9';
   if (inSunridge(x, z)) return 'suburb';
   if (inRect(MALL_AREA, x, z)) return 'mall';
+  // (Northgate Air Base: everyone inside its fence is its own, docs/military-plan.md Phase 4)
+  if (inAirbase(x, z)) return 'airbase';
   if (inRect(AIRPORT_SITE, x, z)) return 'airport';
   if (inRect(KART_AREA, x, z)) return 'karts';
   if (inRect(BEACH, x, z)) return 'beach';
@@ -340,6 +343,27 @@ export const STYLES: Record<District, Style> = {
   mall: { ...TOWN, mix: { hoodie: 0.45, suit: 0.3, track: 0.15, puffer: 0.1 }, openCollar: 0.3, backpack: 0.1, crossbody: 0.22 },
   // The airport: travellers, suits with bags
   airport: { ...TOWN, mix: { suit: 0.55, hoodie: 0.3, puffer: 0.1, track: 0.05 }, backpack: 0.3, crossbody: 0.2, headphones: 0.3, cap: 0.3 },
+  // Northgate Air Base: its people in uniform, made up (no real force's): olive, khaki and navy in their PT kit (track),
+  // their service dress (suits) and their working tops (hoodies, hoods down), mostly in caps, little else
+  airbase: {
+    ...TOWN,
+    mix: { track: 0.45, suit: 0.3, hoodie: 0.25 },
+    suits: ['#4f5a3d', '#3d4a5f', '#6b6650', '#2e3a2b', '#5a5f4a'],
+    ties: ['#2e3a2b', '#1d2550', '#4f5a3d'],
+    openCollar: 0.4,
+    tops: ['#4f5a3d', '#5d6b52', '#6b6650', '#3d4a5f', '#7a7558', '#2e3a2b'],
+    bottoms: ['#4f5a3d', '#3a3f32', '#6b6650', '#2f3640'],
+    shoes: ['#1b1830', '#2a2420', '#3a2e24'],
+    cap: 0.7,
+    beanie: 0.06,
+    bucket: 0.06,
+    hood: 0,
+    hats: ['#4f5a3d', '#3d4a5f', '#2e3a2b', '#6b6650'],
+    backpack: 0.15,
+    crossbody: 0,
+    headphones: 0,
+    chain: 0,
+  },
   // The kart park: track suits in the teams' colours
   karts: {
     ...TOWN,

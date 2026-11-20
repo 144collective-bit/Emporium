@@ -14,6 +14,8 @@
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, fx, lit, moving, siteMat, toon } from './kit';
 import { nearGate } from './nearby';
+import { addPeople } from './life';
+import { BASE_IDLE, BASE_MOVERS } from './airbaselife';
 import type { Tick } from './world';
 import { site } from './tilework';
 import { COVER, ROAD, STONE } from './palette';
@@ -583,6 +585,12 @@ export function register({ low, scene, tick }: { low: boolean; scene?: THREE.Sce
   one('airbase range', RANGE, (b) => range(b));
   WATCHTOWERS.forEach(([x, z], i) => one(`airbase watchtower ${i}`, [x - 1.6, z - 1.6, x + 1.6, z + 1.6], (b) => watchtower(b, x, z, low)));
   one('airbase wall gate', WALL_GATE, (b) => gatehouse(b, low));
-  // The watchtowers' searchlights (main thread only)
-  if (scene) searchlights(scene, tick);
+  // The watchtowers' searchlights and the base's people (main thread only: the city's crowd takes them; every other one
+  // left out on phones)
+  if (!scene) return;
+  searchlights(scene, tick);
+  addPeople(
+    BASE_IDLE.filter((_, i) => !low || i % 2 === 0),
+    BASE_MOVERS.filter((p) => !(low && p.trim))
+  );
 }

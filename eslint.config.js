@@ -47,6 +47,7 @@ const DOM_FREE = [
   'src/scripts/city3d/layout.ts',
   'src/scripts/city3d/wall.ts',
   'src/scripts/city3d/airbase.ts',
+  'src/scripts/city3d/airbaselife.ts',
   'src/scripts/city3d/dockslife.ts',
   'src/scripts/city3d/endswest.ts',
   'src/scripts/city3d/endsterraces.ts',
