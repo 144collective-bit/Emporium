@@ -19,6 +19,7 @@
  */
 
 import { showAt } from './stripmarks';
+import { hoistAt, reversingAt } from './dockslife';
 import type { Sfx } from './combat';
 import type { Ambience } from './ambience';
 import type { Voice } from './vehicleids';
@@ -95,6 +96,10 @@ export function createSound(given?: AudioContext) {
   let wallHum: GainNode | null = null;
   let compressor: GainNode | null = null;
   let nextBeep = 0;
+  /** The Docks' straddle carrier backing up (dockslife.ts `reversingAt()`): its alarm's next beep */
+  let nextDockBeep = 0;
+  /** Under reduced motion the port stands still (dockslife.ts `STILL`), so its crane and carrier make no sound */
+  const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
   /** The stadium on a match night (the polish plan's Phase 7): the crowd's murmur round the ground, a roar swelling now and then */
   let stadiumGain: GainNode | null = null;
   let roar: GainNode | null = null;
@@ -607,26 +612,27 @@ export function createSound(given?: AudioContext) {
       }
     }
   }
+  /** One reversing alarm's beep: a short square through a low-pass, into the gain given */
+  function beep(at: number, out: AudioNode, level = 0.014) {
+    const o = ctx!.createOscillator();
+    o.type = 'square';
+    o.frequency.value = 1050;
+    const lp = ctx!.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 2400;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(level, at + 0.015);
+    g.gain.setValueAtTime(level, at + 0.32);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
+    o.connect(lp).connect(g).connect(out);
+    o.start(at);
+    o.stop(at + 0.45);
+  }
   /** A truck reversing somewhere in the yards: a string of short square beeps, a few streets off */
   function reverseBeep(t: number) {
     const n = 5 + Math.floor(Math.random() * 6);
-    for (let i = 0; i < n; i++) {
-      const at = t + i * 0.9;
-      const o = ctx!.createOscillator();
-      o.type = 'square';
-      o.frequency.value = 1050;
-      const lp = ctx!.createBiquadFilter();
-      lp.type = 'lowpass';
-      lp.frequency.value = 2400;
-      const g = ctx!.createGain();
-      g.gain.setValueAtTime(0.0001, at);
-      g.gain.exponentialRampToValueAtTime(0.014, at + 0.015);
-      g.gain.setValueAtTime(0.014, at + 0.32);
-      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
-      o.connect(lp).connect(g).connect(yardGain!);
-      o.start(at);
-      o.stop(at + 0.45);
-    }
+    for (let i = 0; i < n; i++) beep(t + i * 0.9, yardGain!);
   }
   /** A siren far off: a wail rising and falling, muffled by the blocks between */
   function siren(t: number) {
@@ -1553,8 +1559,14 @@ export function createSound(given?: AudioContext) {
           shipHorn(t);
           nextShip = t + 45 + Math.random() * 75;
         }
+        // The straddle carrier's alarm, a beep a second while it backs up (dockslife.ts: the same moment it's drawn backing)
+        if (a.docks > 0.15 && !still && t > nextDockBeep && reversingAt(Date.now() / 1000)) {
+          beep(t, shoreGain!, 0.012);
+          nextDockBeep = t + 0.9;
+        }
       }
-      // The Docks' crane: a hoist's whine, a slow saw through a low-pass, its pitch wavering as it winds
+      // The Docks' crane: a hoist's whine, a slow saw through a low-pass, its pitch wavering as it winds; only while it
+      // moves, rising as it speeds up (dockslife.ts `hoistAt()`, the crane drawn from the same clock)
       if (a.docks > 0.02 || crane) {
         if (!crane) {
           const o = ctx.createOscillator();
@@ -1576,7 +1588,9 @@ export function createSound(given?: AudioContext) {
           lfo.start();
           crane = { g, o, lfo };
         }
-        crane.g.gain.setTargetAtTime(a.docks * 0.012, t, 1.5);
+        const hoist = still ? 0 : hoistAt(Date.now() / 1000);
+        crane.g.gain.setTargetAtTime(a.docks * 0.014 * hoist, t, 0.4);
+        crane.o.frequency.setTargetAtTime(80 + 30 * hoist, t, 0.4);
       }
       // The airport: a jet's roar, a swell of noise (the ambience's level rises and fades with each take-off and landing)
       if (a.jets > 0.01 || jetGain) {

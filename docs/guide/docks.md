@@ -61,4 +61,15 @@ keep it up to date when what it describes changes.
   `carrierAt()`, `boxAt()`); a Box Runner in through the gate now and then
   (`truckAt()`); the pilot boat out round the basin (`pilotAt()`); five
   workers (`DOCK_PEOPLE`); drawn by docksport3d.ts's `life()` on the main
-  thread from the clock, still under reduced motion (`STILL`). Made-up names only.
+  thread from the clock, still under reduced motion (`STILL`); signed off
+  2026-11-20. Phase 5 (the polish, the owner's picks: the loose ends and
+  the night life) is built, waiting on the owner's sign-off: dockslife.ts's
+  `hoistAt()`, `reversingAt()`, `truckVisit()`, `pilotSpeedAt()` and
+  `lanternAt()` (`LIGHT`); sound.ts's crane whine following `hoistAt()` and
+  the carrier's reversing beeps (`beep()`, quiet under reduced motion);
+  docksport3d.ts's `lights()` driving the warning lights (`BEACON`, as
+  Uptown's towers' `beaconOn()`) and the lighthouse's lantern (`LAMP`),
+  steady under reduced motion; sodium floodlights under the cranes' portal
+  beams and lamps along ORCA STAR's deck; the pilot boat's wake (boats.ts
+  `wakeOf()`); the visiting truck in `RIG_PAINTS`, a visit each; the
+  Harbour Master's panel copy. Made-up names only.

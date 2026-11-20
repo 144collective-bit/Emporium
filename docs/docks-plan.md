@@ -264,7 +264,7 @@ boot (index.ts, crestspots.ts's `spot()`).
   sites' own (walls, hulls, boxes and the cranes' members at every
   distance, details near only).
 
-### Phase 4: the docks' life and sound (built, waiting on the owner's sign-off)
+### Phase 4: the docks' life and sound (built, signed off 2026-11-20)
 
 The owner's picks: the cranes' **full cycle**, the rest of the port **quiet**.
 
@@ -306,6 +306,46 @@ The owner's picks: the cranes' **full cycle**, the rest of the port **quiet**.
   the workers out of everything's way.
 - The sound was already there (`docks` in ambience.ts: gulls, the crane's
   hoist whine, a ship's horn).
+
+### Phase 5: the polish (built, waiting on the owner's sign-off)
+
+The owner's picks (2026-11-20) from the district's audit: the loose ends
+and the night life. Nothing moved (the snapshot holds); no new solids.
+
+- **The rules** in `dockslife.ts` (DOM-free, tested in
+  `tests/dockslife.test.ts`), all from the clock as Phase 4's:
+  `hoistAt()` (how hard the working crane's drives run, 0 standing to 1 at
+  `HOIST_FULL`), `reversingAt()` (the carrier driving against its heading:
+  out from under the crane, out of the slot and back to its spot),
+  `truckVisit()` (which truck's visit it is), `pilotSpeedAt()` (the pilot
+  boat's speed along its bow: backing out, round the basin or moored) and
+  `lanternAt()` (the lighthouse's light, `LIGHT`: two half-second flashes
+  every ten seconds, made up).
+- **The sound** (sound.ts): the crane's hoist whine only while it moves,
+  louder and higher as it speeds up (`hoistAt()`; it was a steady drone
+  wherever you stood in the Docks); the straddle carrier's reversing
+  alarm, a beep a second while it backs up (`reversingAt()`, the yards'
+  beep shared, `beep()`). Under reduced motion the port stands still, and
+  both are quiet.
+- **The lights** (docksport3d.ts `lights()`): the cranes' and ORCA STAR's
+  warning lights on a material of their own (`BEACON`), flashing at night
+  as Uptown's towers' do (skyline.ts `beaconOn()`); the lighthouse's
+  lantern on its own (`LAMP`), a low glow with its two flashes, bright
+  only at night (small: the bloom rule). Under reduced motion both hold
+  steady. Sodium floodlights hang under each crane's portal beams over the
+  quay (5 mm under the beam), and sodium lamps stand along ORCA STAR's deck
+  at its bays' ends (posts near only) and on its bridge wings.
+- **The pilot boat's wake** off its stern by its speed (boats.ts
+  `wakeOf()`, the river's boats' look), none while it's moored.
+- **The visiting truck** comes in one of the rigs' paints a visit
+  (`RIG_PAINTS`, a material swapped, never recoloured); it was always white.
+- **The Harbour Master's panel** reads "The port's office: tides, berths
+  and the gate." (it said "Coming soon"; its live line, the tide, was
+  already there). Draft copy, the owner's to change.
+- **Left for later** (the audit's other items, each the owner's call): more
+  workers, the ground's paint and stains, the edges' check, the canteen as
+  a snack bar, a Look out spot, a shipping desk for Dorras, the Harbour
+  Master's inside, ships that come and go.
 
 ## The owner's answers
 
