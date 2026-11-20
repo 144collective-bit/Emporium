@@ -19,6 +19,7 @@ import { AIRPORT_AREAS, AIRPORT_CROSSINGS, AIRPORT_STREETS, GA_CROSSINGS, GA_ROA
 import { HALF as HARBOUR_HALF, HARBOUR_STREET } from './harbour';
 import { HIGHWAY, HIGHWAY_HALF } from './highway';
 import { EXITS, RAMPS, RAMP_HALF } from './viaduct';
+import { CORNER_STREETS, DOCKS_CORNER, SOUTH_HUB } from './cornerroad';
 import { TRENCH_BLOCKS, TRENCH_CROSSINGS, TRENCH_STREETS } from './trenches';
 import { WESTLAKE_BLOCKS } from './westlake';
 import { UPTOWN_BLOCKS, UPTOWN_CROSSINGS, UPTOWN_LANES, UPTOWN_STREETS } from './uptown';
@@ -308,7 +309,15 @@ export function insetPoly(poly: Pt[], d: number): Pt[] {
 /** A block's raised slab: its lot and the sidewalk round it */
 export const slabOf = (b: Block): Pt[] => outset(b.poly, b.walk);
 /** Is a point on a raised slab (a lot or its sidewalk) */
-export const onSlab = (plan: StreetPlan, p: Pt) => plan.slabs.some((s) => inPoly(s, p));
+export const onSlab = (plan: StreetPlan, p: Pt) => {
+  // (each slab's box first: most are nowhere near; the same answer, called for every point along the kerbs)
+  let boxes = SLAB_BOXES.get(plan.slabs);
+  if (!boxes) SLAB_BOXES.set(plan.slabs, (boxes = plan.slabs.map((s) => [Math.min(...s.map((q) => q[0])), Math.min(...s.map((q) => q[1])), Math.max(...s.map((q) => q[0])), Math.max(...s.map((q) => q[1]))])));
+  const bx = boxes;
+  return plan.slabs.some((s, i) => p[0] >= bx[i][0] && p[0] <= bx[i][2] && p[1] >= bx[i][1] && p[1] <= bx[i][3] && inPoly(s, p));
+};
+/** The slabs' boxes, by plan */
+const SLAB_BOXES = new WeakMap<Pt[][], number[][]>();
 
 /* ---------- The grid, and the city as built ---------- */
 
@@ -404,6 +413,8 @@ function crossingsOf(pts: Pt[], axis: 0 | 1, c: number): Pt[] {
 export const RING_MEETS: { id: string; at: Pt; street: string; along: 0 | 1 }[] = [
   ...NS_ROADS.flatMap((r, i) => crossingsOf(HIGHWAY, 0, r.c).flatMap((at, k) => (nsRuns(i, at[1]) ? [{ id: `highway-ns${i}-${k}`, at, street: nsStreet(i, at[1]), along: 1 as const }] : []))),
   ...EW_ROADS.flatMap((r, i) => crossingsOf(HIGHWAY, 1, r.c).map((at, k) => ({ id: `highway-ew${i}-${k}`, at, street: ewStreet(i, at[0]), along: 0 as const }))),
+  // (exit 6A's road in under the south-west corner, cornerroad.ts, docs/south-plan.md Phase 5: square on to the curve)
+  { id: 'corner-6a', at: EXITS.find((e) => e.label === '6A')!.at, street: 'corner-road', along: 0 },
 ];
 
 export function cityPlan(): StreetPlan {
@@ -480,6 +491,14 @@ export function cityPlan(): StreetPlan {
   // The Trenches (trenches.ts, growth plan Phase 9): Trench Avenue, its cross streets and Bottom Street, south-west of town
   for (const t of TRENCH_STREETS) streets.push({ id: t.id, kind: t.kind, pts: t.pts, half: t.half, lanes: t.lanes });
   for (const c of TRENCH_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: c.streets, lights: c.lights });
+  // Exit 6A's road in (cornerroad.ts, docs/south-plan.md Phase 5): from The Trenches' south-west corner under the ring's
+  // curve to the Docks' ring road's corner, and its link on down to the south's Gate Lane and Field Lane
+  for (const t of CORNER_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1 });
+  crossings.find((c) => c.id === 'trench-ns0-trench-ew1')!.streets.push('corner-road');
+  crossings.push({ id: 'corner-docks', at: DOCKS_CORNER, streets: ['docks-ring', 'corner-road', 'corner-link'], lights: false });
+  const hub = crossings.find((c) => Math.hypot(c.at[0] - SOUTH_HUB[0], c.at[1] - SOUTH_HUB[1]) < 0.01);
+  if (hub) hub.streets.push('corner-link');
+  else crossings.push({ id: 'corner-south', at: SOUTH_HUB, streets: ['south-gate', 'south-field', 'corner-link'], lights: false });
   // Uptown (uptown.ts, the financial centre, redesigned in Phase 5): the circle and its streets, the one-way pair,
   // the diagonal, the east street and the crescent, every junction lit but the circle's; the Mall's axis through its
   // blocks as walk-only lanes

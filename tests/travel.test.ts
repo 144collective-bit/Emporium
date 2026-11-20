@@ -85,7 +85,10 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // (and Endswood Estate's places south of the highway's south-west bend, docs/estate-plan.md Phase 8: from
       // Crestmont's grand hotel about 66 s)
       // (and the High Road's places, docs/south-plan.md Phase 3c: as far out as the rest of the south)
-      const ends = (id: string) => ['endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage'].includes(id);
+      // (and the tube's stations' places, docs/south-plan.md Phase 4h: Lot 9's, the Circus's and the High Road's as far out
+      // as the rest of the south; Aldwyn's Green's on the street along the churchyard's far west side, as far as the Rec:
+      // from Crestmont's grand hotel about 94 s, its civic hall about 95 s)
+      const ends = (id: string) => ['endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'tube-circus', 'tube-lot9', 'tube-highroad'].includes(id);
       // (and Aldwyn's Green Rec across the brook, docs/south-plan.md Phase 3e: the furthest of them, from Crestmont's grand
       // hotel about 91 s)
       const rec = (id: string) => id === 'rec';
@@ -96,7 +99,7 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // Degen's compound: from Crestmont's grand hotel about 86 s)
       // (and Northgate Air Base's visitors' centre north of the stadium, out at the base's main gate, docs/military-plan.md
       // Phase 1: from the airport's metro station, the world's far south edge, about 79 s)
-      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'lot9' || id === 'northgate' ? 18 : id === 'home' || ends(id) || id === 'overlook' || id === 'reservoir' ? 22 : rec(id) ? 28 : 0);
+      const extra = (id: string) => (id === 'airport' || id === 'metro-airport' || docks(id) ? 12 : id === 'lot9' || id === 'northgate' ? 18 : id === 'home' || ends(id) || id === 'overlook' || id === 'reservoir' ? 22 : rec(id) ? 28 : id === 'tube-aldwyns' ? 30 : 0);
       // (from the docks out west to Crestmont's hills in the far north-east, right across the world: about 90 s)
       // (until the raised highway's exits come in, docs/highway-plan.md Phase 3, the far corners are the long way
       // round through town: the overlook to the airport's metro station about 94 s)
@@ -106,8 +109,8 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // (and Degen's compound in the far west, docs/ends-far-west-plan.md Phase 2, the owner's call: the overlook to it,
       // the far north-east corner to further south-west still, about 107 s)
       // (and Aldwyn's Green Rec across the brook in the far south-west, docs/south-plan.md Phase 3e: the overlook to it,
-      // the furthest two places apart, about 114 s)
-      const most = 116;
+      // the furthest two places apart, about 114 s; and the tube's Aldwyn's Green station, Phase 4h, about 116 s)
+      const most = 118;
       // (Stadium Road's way in from the north road went up past the raised highway's exit 1, docs/highway-plan.md
       // Phase 1b: from the stadium to Crestmont's civic hall about 63 s, to its overlook about 85 s)
       // (and since its Phase 2 the ring highway is up on its viaduct, its exits to come in Phase 3: a taxi goes the

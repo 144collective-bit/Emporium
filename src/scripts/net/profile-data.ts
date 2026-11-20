@@ -63,30 +63,72 @@ export const skinUnlocked = (id: SkinId, total: number) => total >= (SKINS.find(
 /* ---------- Wardrobe ---------- */
 
 /*
- * The original wardrobe is free. Drop 001 also sells a premium wardrobe for
- * Dorras (catalog.ts: the varsity and puffer jackets, the cowboy hat, top hat
- * and neon halo, the duffel bag and neon wings, the phone and briefcase, the
- * gold watch, the gold and holo colour packs, and the merch: marks and
- * all-over patterns). Those are ordinary Look
- * values here: whether a player owns them is the fitting room's business
- * (tycoon.ts), not the validator's, so a look that wears them is a valid
- * look.
+ * The whole wardrobe is free and open to everyone, in any colour
+ * (docs/wardrobe-plan.md Phase 1, the owner's call): nothing here is bought
+ * or locked. The crown, halo, top hat, cowboy hat, wings and the things in
+ * the hand (coffee, boombox, phone, briefcase) were retired with it, and the
+ * gold and holo colour packs went once any colour could be picked; looks
+ * saved with them come back without them (`cleanLook()`).
  */
-export type Hat = 'cap' | 'backcap' | 'beanie' | 'bucket' | 'crown' | 'cowboy' | 'tophat' | 'halo';
-export type Bag = 'backpack' | 'crossbody' | 'board' | 'duffel' | 'wings';
-export type Held = 'coffee' | 'boombox' | 'phone' | 'briefcase';
-export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer';
-export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer'];
-export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'crown', 'cowboy', 'tophat', 'halo'];
-export const BAGS: Bag[] = ['backpack', 'crossbody', 'board', 'duffel', 'wings'];
-export const HELD: Held[] = ['coffee', 'boombox', 'phone', 'briefcase'];
+export type Hat = 'cap' | 'backcap' | 'beanie' | 'bucket' | 'fitted' | 'skully' | 'hardhat';
+export type Bag = 'backpack' | 'crossbody' | 'board' | 'duffel' | 'sling' | 'chestrig' | 'waist';
+export type LookKind = 'suit' | 'hoodie' | 'track' | 'varsity' | 'puffer' | 'bomber' | 'coach' | 'vest' | 'tee' | 'shell' | 'trucker' | 'hivis' | 'hivisjacket' | 'chore' | 'coveralls' | 'blazer' | 'shirt' | 'double' | 'waistcoat' | 'overcoat';
+export const KINDS: LookKind[] = ['suit', 'hoodie', 'track', 'varsity', 'puffer', 'bomber', 'coach', 'vest', 'tee', 'shell', 'trucker', 'hivis', 'hivisjacket', 'chore', 'coveralls', 'blazer', 'shirt', 'double', 'waistcoat', 'overcoat'];
+export const HATS: Hat[] = ['cap', 'backcap', 'beanie', 'bucket', 'fitted', 'skully', 'hardhat'];
+/*
+ * Separates (docs/wardrobe-plan.md Phase 2): the top, the bottoms and the shoes are chosen on their own, worn in any
+ * pairing. A look saved before them wears what its top came with: the suit its trousers and dress shoes, the track
+ * top its track pants, the rest joggers, all but the suit sneakers (`bottomsFor()`, `shoesFor()`).
+ */
+export type Bottoms = 'trousers' | 'joggers' | 'trackpants' | 'cargo' | 'shorts' | 'denim' | 'work' | 'chinos';
+export const BOTTOMS: Bottoms[] = ['trousers', 'joggers', 'trackpants', 'cargo', 'shorts', 'denim', 'work', 'chinos'];
+export type ShoeStyle = 'dress' | 'sneaker' | 'hightop' | 'runner' | 'slide' | 'boot' | 'loafer' | 'derby';
+export const SHOE_STYLES: ShoeStyle[] = ['dress', 'sneaker', 'hightop', 'runner', 'slide', 'boot', 'loafer', 'derby'];
+/** The bottoms a top came with before the separates */
+export const bottomsFor = (kind: string): Bottoms => (kind === 'suit' ? 'trousers' : kind === 'track' ? 'trackpants' : 'joggers');
+/** The shoes a top came with before the separates */
+export const shoesFor = (kind: string): ShoeStyle => (kind === 'suit' ? 'dress' : 'sneaker');
+/** The shades' styles (docs/wardrobe-plan.md Phase 4): Degen's own (classic, as in the art, thinner now) and four more */
+export type EyeStyle = 'classic' | 'aviator' | 'round' | 'slim' | 'wrap';
+export const EYE_STYLES: { id: EyeStyle; name: string }[] = [
+  { id: 'classic', name: 'Classic' },
+  { id: 'aviator', name: 'Aviator' },
+  { id: 'round', name: 'Round' },
+  { id: 'slim', name: 'Slim' },
+  { id: 'wrap', name: 'Sport Wrap' },
+];
+export const EYE_IDS = EYE_STYLES.map((e) => e.id);
+/**
+ * Face gear (the wardrobe plan's Phase 4, the owner's picks): a full gas mask and goggles (each in place of the shades
+ * while worn), a half respirator (with any shades)
+ */
+export type FaceGear = 'gasmask' | 'respirator' | 'safety' | 'ski';
+export const FACE_GEAR: { id: FaceGear; name: string }[] = [
+  { id: 'gasmask', name: 'Gas Mask' },
+  { id: 'respirator', name: 'Respirator' },
+  { id: 'safety', name: 'Safety Goggles' },
+  { id: 'ski', name: 'Ski Goggles' },
+];
+export const FACE_IDS = FACE_GEAR.map((f) => f.id);
+/** Whether face gear covers the eyes (the shades come off for it) */
+export const coversEyes = (f: FaceGear | null | undefined) => f === 'gasmask' || f === 'safety' || f === 'ski';
+/*
+ * The ranges (the wardrobe plan's Phase 2): how the fitting room sorts the clothes, for browsing only (any piece goes
+ * with any other). Work wear arrives in Phase 6.
+ */
+export type Range = 'street' | 'business' | 'work';
+export const RANGES: { id: Range; name: string }[] = [
+  { id: 'street', name: 'Streetwear' },
+  { id: 'business', name: 'Business' },
+  { id: 'work', name: 'Work' },
+];
+export const BAGS: Bag[] = ['backpack', 'crossbody', 'board', 'duffel', 'sling', 'chestrig', 'waist'];
 
 /*
  * Merch (character rebuild Phase 4): made-up marks for the clothes, drawn in
  * the city's style (logos.ts), placeholders until the merch store's own
  * designs go in, each a single swap (no real brand, nothing about the
- * token). The Emporium diamond and the Sector 7 badge are free; the rest,
- * and the all-over patterns, are sold at Drop 001 for Dorras (catalog.ts).
+ * token). Every mark and every all-over pattern is free.
  */
 export type MarkId = 'diamond' | 'seven' | 'bolt' | 'star' | 'heart' | 'wave' | 'eye' | 'mask';
 export const MARKS: { id: MarkId; name: string }[] = [
@@ -124,40 +166,66 @@ export const PATTERN_IDS = PATTERNS.map((p) => p.id);
  * The face (docs/faces-plan.md Phase 2): Degen in the balaclava and shades as in the art, or unmasked, his face in a
  * skin tone with a haircut and its colour (all free), the shades on or off.
  */
-export type Cut = 'buzz' | 'crop' | 'curls' | 'bun' | 'bald';
+export type Cut = 'buzz' | 'crop' | 'curls' | 'bun' | 'twists' | 'hightop' | 'long' | 'bald';
 export const CUTS: { id: Cut; name: string }[] = [
   { id: 'buzz', name: 'Buzz' },
   { id: 'crop', name: 'Crop' },
   { id: 'curls', name: 'Curls' },
   { id: 'bun', name: 'Bun' },
+  { id: 'twists', name: 'Twists' },
+  { id: 'hightop', name: 'High-top' },
+  { id: 'long', name: 'Long' },
   { id: 'bald', name: 'Bald' },
 ];
 export const CUT_IDS = CUTS.map((c) => c.id);
+/** The head's proportions, unmasked (Phase 3: presets, no free moulding; the stretch is wardrobe.ts `HEAD_SCALE`) */
+export type HeadShape = 'standard' | 'round' | 'long' | 'wide' | 'narrow' | 'big';
+export const HEAD_SHAPES: { id: HeadShape; name: string }[] = [
+  { id: 'standard', name: 'Standard' },
+  { id: 'round', name: 'Round' },
+  { id: 'long', name: 'Long' },
+  { id: 'wide', name: 'Wide' },
+  { id: 'narrow', name: 'Narrow' },
+  { id: 'big', name: 'Big' },
+];
+export const SHAPE_IDS = HEAD_SHAPES.map((h) => h.id);
+/** Hair: the natural shades (the crowd's, crowdlook.ts), then the dyes (a few of the crowd dye theirs) */
+export const HAIR_NATURAL = ['#16141f', '#2b1d14', '#4a2e1c', '#6e4526', '#a87a3e', '#c9a86a', '#d8c08a', '#8a3a22', '#b4532a', '#9d9aa8', '#cfccd6'];
+export const HAIR_DYE = ['#ff6ad5', '#00b8d8', '#8f3dff', '#1f9d6a', '#f3f2f7'];
 
 export interface Look {
   kind: LookKind;
   top: string;
+  /** What he wears on his legs, and its colour */
+  bottoms: Bottoms;
   bottom: string;
   tie: string;
+  /** The shirt under the suit's jacket, or the long-sleeve under the puffer vest */
+  shirt: string;
+  /** What's on his feet, and its colour */
+  shoeStyle: ShoeStyle;
   shoes: string;
   /** One thing on the head: a hat (or null), unless a hoodie's hood is up */
   hat: Hat | null;
-  /** The hat's colour (the crown is always gold; the halo glows in the lens colour) */
+  /** The hat's colour */
   hatColor: string;
   hood: boolean;
-  /** The shades' lens colour (and the colour of any neon he wears: the halo, the wings' edges) */
+  /** The shades: their style, their frames' colour and their lenses' */
+  eyewear: EyeStyle;
+  frame: string;
   lens: string;
+  /** Face gear (or none), and its colour (`faceGear`: `face` is the faces plan's, unmasked or not) */
+  faceGear: FaceGear | null;
+  gear: string;
   /** One bag at a time */
   bag: Bag | null;
   bagColor: string;
-  /** In his right hand */
-  held: Held | null;
   headphones: string | null;
   /** Gold chain on the shades */
   chain: boolean;
   /** Gold chain with a diamond round the neck */
   necklace: boolean;
-  /** Gold watch on the left wrist (premium) */
+  /** Gold watch on the left wrist */
   watch: boolean;
   /** The top's mark (or none), where it goes and its ink */
   mark: MarkId | null;
@@ -176,54 +244,70 @@ export interface Look {
   cut: Cut;
   /** The shades on an unmasked face (the balaclava always has them) */
   shades: boolean;
+  /** The head's proportions, unmasked */
+  shape: HeadShape;
 }
 
 export const PALETTE = {
-  top: ['#16141f', '#2a2350', '#1d2550', '#3b2a6a', '#e219e5', '#00a8d8', '#f3f2f7', '#ff6a3d', '#1f9d6a', '#8f3dff', '#4a4a5a', '#d8312f'],
+  // (the last two the work wear's hi-vis yellow and orange, docs/wardrobe-plan.md Phase 6)
+  top: ['#16141f', '#2a2350', '#1d2550', '#3b2a6a', '#e219e5', '#00a8d8', '#f3f2f7', '#ff6a3d', '#1f9d6a', '#8f3dff', '#4a4a5a', '#d8312f', '#d4ec3a', '#ff8a1e'],
   bottom: ['#16141f', '#2a2350', '#1d2550', '#4a4a5a', '#f3f2f7', '#3a2418'],
-  cap: ['#d8312f', '#16141f', '#f3f2f7', '#00a8d8', '#e219e5', '#1f9d6a', '#ffd23f', '#a0652f', '#3a2418'],
+  cap: ['#d8312f', '#16141f', '#f3f2f7', '#00a8d8', '#e219e5', '#1f9d6a', '#ffd23f', '#a0652f', '#3a2418', '#ff8a1e'],
   tie: ['#1f9d55', '#e219e5', '#00b8d8', '#d8312f', '#c99a4a', '#16141f'],
+  shirt: ['#cfcedb', '#16141f', '#9fb4d8', '#e4dcc4', '#d8a0b8', '#4a4a5a'],
   extra: ['#14121f', '#f3f2f7', '#ff6ad5', '#00b8d8', '#d8312f', '#1f9d6a', '#8f3dff'],
   shoes: ['#1b1830', '#f3f2f7', '#d8312f', '#00a8d8', '#e219e5', '#ffd23f', '#1f9d6a'],
   lens: ['#22d07a', '#ff3dbb', '#00d8ff', '#ffc23a', '#9b5cff', '#ff4a3a'],
-  /** The Gold Pack: metallic golds and bronzes for tops and bottoms */
-  gold: ['#e2b04a', '#c9922e', '#a9741f', '#b8732f', '#8c5a2b', '#d9c27a'],
-  /** The Holo Pack: holographic pastels for tops and bottoms */
-  holo: ['#b9f3ff', '#ffc6f2', '#d9c6ff', '#c6ffe4', '#fff3b0', '#ffd3c2'],
+  gear: ['#2b2a33', '#16141f', '#4a5a3a', '#c8b58a', '#ff6a3d', '#f3f2f7', '#1d2550'],
+  frame: ['#0d0c14', '#f3f2f7', '#c99a4a', '#8b889c', '#3a2418', '#d8312f', '#1d2550'],
   /** A mark's ink (the whites a shade under white, so they don't bloom) */
   ink: ['#16c7b5', '#dedce8', '#16141f', '#e219e5', '#00b8d8', '#ffd23f', '#d8312f', '#e2b04a'],
   /** Skin tones, pale to deep (the crowd's too, crowdlook.ts): flat tones, none bright enough to bloom */
-  tone: ['#f1d2b6', '#e8c39e', '#dcae86', '#c99068', '#b07650', '#8f5a3a', '#6e4129', '#52301f'],
+  tone: ['#f7e0cc', '#f1d2b6', '#e8c39e', '#dcae86', '#d29f78', '#c99068', '#b07650', '#a06640', '#8f5a3a', '#6e4129', '#52301f', '#3f2418'],
   /** Hair: the natural shades, then the dyes */
-  hair: ['#16141f', '#2b1d14', '#4a2e1c', '#6e4526', '#a87a3e', '#8a3a22', '#9d9aa8', '#ff6ad5', '#00b8d8', '#8f3dff', '#1f9d6a', '#f3f2f7'],
+  hair: [...HAIR_NATURAL, ...HAIR_DYE],
 };
-/** The colour packs sold at Drop 001 (ids are the catalog's), each a list of top and bottom colours */
-export const PACKS = { gold: PALETTE.gold, holo: PALETTE.holo } as const;
-export type PackId = keyof typeof PACKS;
-export const PACK_IDS = Object.keys(PACKS) as PackId[];
-/** Which pack a colour comes from, or null for a free colour */
-export function packOf(color: string): PackId | null {
-  for (const id of PACK_IDS) if ((PACKS[id] as readonly string[]).includes(color)) return id;
-  return null;
+
+/*
+ * Any colour (docs/wardrobe-plan.md Phase 1): the lists above are only the
+ * fitting room's quick swatches; a look can carry any `#rrggbb`. A colour
+ * brighter than the palette's own white (`#f3f2f7`, `BRIGHTEST`) is dimmed
+ * to it, its hue kept, so a picked pure white sits a shade under white and
+ * nothing blooms at night; every swatch above passes as it is.
+ */
+const lum = (r: number, g: number, b: number) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+/** The brightest a worn colour can be: the palette's white */
+export const BRIGHTEST = lum(0xf3, 0xf2, 0xf7);
+const HEX = /^#[0-9a-f]{6}$/i;
+/** A colour from anywhere, made safe: `#rrggbb` lower case, no brighter than `BRIGHTEST`; anything else is null */
+export function safeColour(v: unknown): string | null {
+  if (typeof v !== 'string' || !HEX.test(v)) return null;
+  const c = [1, 3, 5].map((i) => parseInt(v.slice(i, i + 2), 16));
+  const l = lum(c[0], c[1], c[2]);
+  const k = l > BRIGHTEST ? BRIGHTEST / l : 1;
+  return '#' + c.map((x) => Math.floor(x * k).toString(16).padStart(2, '0')).join('');
 }
-/** Every colour a top or bottom can be: the free list and the packs */
-const TOPS = [...PALETTE.top, ...PALETTE.gold, ...PALETTE.holo];
-const BOTTOMS = [...PALETTE.bottom, ...PALETTE.gold, ...PALETTE.holo];
 
 /** Degen as he is in the art */
 export const DEFAULT_LOOK: Look = {
   kind: 'suit',
   top: '#16141f',
+  bottoms: 'trousers',
   bottom: '#16141f',
   tie: '#1f9d55',
+  shirt: '#cfcedb',
+  shoeStyle: 'dress',
   shoes: '#1b1830',
   hat: 'cap',
   hatColor: '#d8312f',
   hood: false,
+  eyewear: 'classic',
+  frame: '#0d0c14',
   lens: '#22d07a',
+  faceGear: null,
+  gear: '#2b2a33',
   bag: null,
   bagColor: '#00b8d8',
-  held: null,
   headphones: null,
   chain: true,
   necklace: false,
@@ -239,14 +323,19 @@ export const DEFAULT_LOOK: Look = {
   hair: '#16141f',
   cut: 'crop',
   shades: false,
+  shape: 'standard',
 };
+
+/** The hats retired with the costume pieces (docs/wardrobe-plan.md Phase 1): a look saved in one is bare-headed */
+const RETIRED_HATS = ['crown', 'cowboy', 'tophat', 'halo'];
 
 /** Anything from a player, made safe: unknown values fall back to Degen's own look */
 export function cleanLook(raw: unknown): Look {
   const o = { ...(raw && typeof raw === 'object' ? raw : {}) } as Record<string, unknown>;
   const from = <T extends string>(v: unknown, list: readonly T[], fallback: T) => (list.includes(v as T) ? (v as T) : fallback);
+  const colour = (v: unknown, fallback: string) => safeColour(v) ?? fallback;
   const orNull = <T extends string>(v: unknown, list: readonly T[], fallback: T | null) => (v === null ? null : list.includes(v as T) ? (v as T) : fallback);
-  // Looks saved before hats, bags and held items had their own fields
+  // Looks saved before hats and bags had their own fields
   if (o.hat === undefined) {
     o.hat = typeof o.beanie === 'string' ? 'beanie' : o.cap === null ? null : 'cap';
     o.hatColor = typeof o.beanie === 'string' ? o.beanie : o.cap;
@@ -258,25 +347,33 @@ export function cleanLook(raw: unknown): Look {
   const kind = from(o.kind, KINDS, DEFAULT_LOOK.kind);
   return {
     kind,
-    top: from(o.top, TOPS, DEFAULT_LOOK.top),
-    bottom: from(o.bottom, BOTTOMS, DEFAULT_LOOK.bottom),
-    tie: from(o.tie, PALETTE.tie, DEFAULT_LOOK.tie),
-    shoes: from(o.shoes, PALETTE.shoes, DEFAULT_LOOK.shoes),
-    hat: orNull(o.hat, HATS, DEFAULT_LOOK.hat),
-    hatColor: from(o.hatColor, PALETTE.cap, DEFAULT_LOOK.hatColor),
+    top: colour(o.top, DEFAULT_LOOK.top),
+    // (a look from before the separates: what its top came with)
+    bottoms: from(o.bottoms, BOTTOMS, bottomsFor(kind)),
+    bottom: colour(o.bottom, DEFAULT_LOOK.bottom),
+    tie: colour(o.tie, DEFAULT_LOOK.tie),
+    shirt: colour(o.shirt, DEFAULT_LOOK.shirt),
+    shoeStyle: from(o.shoeStyle, SHOE_STYLES, shoesFor(kind)),
+    shoes: colour(o.shoes, DEFAULT_LOOK.shoes),
+    // (a retired hat, the crown, halo, top hat or cowboy hat, comes back as no hat)
+    hat: orNull(o.hat, HATS, RETIRED_HATS.includes(o.hat as string) ? null : DEFAULT_LOOK.hat),
+    hatColor: colour(o.hatColor, DEFAULT_LOOK.hatColor),
     hood: kind === 'hoodie' && o.hood === true,
-    lens: from(o.lens, PALETTE.lens, DEFAULT_LOOK.lens),
+    eyewear: from(o.eyewear, EYE_IDS, DEFAULT_LOOK.eyewear),
+    frame: colour(o.frame, DEFAULT_LOOK.frame),
+    lens: colour(o.lens, DEFAULT_LOOK.lens),
+    faceGear: orNull(o.faceGear, FACE_IDS, null),
+    gear: colour(o.gear, DEFAULT_LOOK.gear),
     bag: orNull(o.bag, BAGS, null),
-    bagColor: from(o.bagColor, PALETTE.extra, DEFAULT_LOOK.bagColor),
-    held: orNull(o.held, HELD, DEFAULT_LOOK.held),
-    headphones: orNull(o.headphones, PALETTE.extra, null),
+    bagColor: colour(o.bagColor, DEFAULT_LOOK.bagColor),
+    headphones: safeColour(o.headphones),
     chain: o.chain === undefined ? DEFAULT_LOOK.chain : o.chain === true,
     necklace: o.necklace === true,
     watch: o.watch === true,
     // (looks saved before the merch had none of these: Degen as in the art)
     mark: orNull(o.mark, MARK_IDS, null),
     markAt: from(o.markAt, SLOT_IDS, DEFAULT_LOOK.markAt),
-    ink: from(o.ink, PALETTE.ink, DEFAULT_LOOK.ink),
+    ink: colour(o.ink, DEFAULT_LOOK.ink),
     hatMark: from(o.hatMark, MARK_IDS, DEFAULT_LOOK.hatMark),
     shoeMark: orNull(o.shoeMark, MARK_IDS, null),
     pattern: from(o.pattern, PATTERN_IDS, DEFAULT_LOOK.pattern),
@@ -286,6 +383,7 @@ export function cleanLook(raw: unknown): Look {
     hair: from(o.hair, PALETTE.hair, DEFAULT_LOOK.hair),
     cut: from(o.cut, CUT_IDS, DEFAULT_LOOK.cut),
     shades: o.shades === true,
+    shape: from(o.shape, SHAPE_IDS, DEFAULT_LOOK.shape),
   };
 }
 

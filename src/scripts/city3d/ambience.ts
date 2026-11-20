@@ -59,7 +59,9 @@ import { FOUNTAINS as DRIVE_FOUNTAINS } from './coral';
 import { CIVIC } from './crestsites';
 import { SUNRIDGE_RECT, inSunridge } from './sunridge';
 import { LOT9_RADIO, LOT9_RECT, inLot9 } from './lot9';
-import { HALL, MALL_AREA } from './mall';
+import { HALL, MALL_AREA, PAVILION } from './mall';
+import { L1, LINK, ROOF as LINK_ROOF } from './malllink';
+import { COURT_TALLEST, EAST_X, NORTH, SOUTH, WEST_X } from './courtinside';
 import { DOCKS_RECT } from './docks';
 import { FLIGHTS, SITE, poseAt } from './airfield';
 import { KART_PARK } from './kartpark';
@@ -207,9 +209,10 @@ export function jetsAt(x: number, z: number, t: number): number {
 /**
  * The layers at x, z; `lift` is how far above it the listener is (the City
  * view's camera): the beat fades with it as before, and the ground's layers
- * soften to a wash of the town; `t` is the clock (seconds) for the jets' timetable
+ * soften to a wash of the town; `t` is the clock (seconds) for the jets' timetable; `floor` is the height a walker
+ * stands at (the Skywalk's floors over the street, not the street under them)
  */
-export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000): Ambience {
+export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000, floor = 0): Ambience {
   // Out of town: how far past the town's edge
   const ox = Math.max(CITY_EXT[0] - x, x - CITY_EXT[1], 0);
   const oz = Math.max(CITY_EXT[0] - z, z - CITY_EXT[1], 0);
@@ -293,8 +296,13 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const market = near(MARKET_DECK, x, z, 1, 20);
   const docks = near(DOCKS_RECT, x, z, 0, 30);
   const jets = jetsAt(x, z, t);
-  // Inside the mall's hall (a little way out of its doors too); the City view's camera over its roof hears none of it
-  const indoor = near(HALL.rect, x, z, 0, 5) * (1 - smooth(HALL.h, HALL.h + 10, lift));
+  // Inside the mall: the hall, the Skywalk and its pavilion, Palm Court's roofed promenade (a little way out of their
+  // doors too); the City view's camera over their roofs hears none of it
+  const indoor = Math.max(
+    near(HALL.rect, x, z, 0, 5) * (1 - smooth(HALL.h, HALL.h + 10, lift)),
+    Math.max(floor > L1 - 1 ? near(LINK, x, z, 0, 3) : 0, near(PAVILION, x, z, 0, 3)) * (1 - smooth(LINK_ROOF, LINK_ROOF + 8, lift)),
+    near([WEST_X, NORTH, EAST_X, SOUTH], x, z, 0, 4) * (1 - smooth(COURT_TALLEST, COURT_TALLEST + 10, lift))
+  );
   // Inside Degen's house (walking: the City view over its roof hears the street)
   const home = inHouse(x, z) && lift < 3 ? 1 : 0;
   const karts = near(KART_RECT, x, z, 0, 40);

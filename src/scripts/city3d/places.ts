@@ -15,6 +15,7 @@ import { LIBERTY_SPAWN } from './liberty';
 import { HARBOUR_SPAWN } from './harbour';
 import { STATIONS } from './metro';
 import { STOPS } from './riverbus';
+import { SOUTH_STATIONS, TUBE_SPOTS } from './southline';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { PIER_SPAWN } from './waterfront';
@@ -34,15 +35,15 @@ import { SPHERE_SPAWN } from './stripmarks';
 import { MONO_STATIONS } from './monorail';
 import { VISITOR_SPAWN } from './airbase';
 
-export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus' | 'mono';
+export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus' | 'mono' | 'tube';
 export interface Place {
   id: string;
   kind: PlaceKind;
   /** A place with a pin and a panel: its spot id (its name is its pin's); otherwise its own name */
   spot?: string;
   name?: string;
-  /** Where you arrive: standing here, facing along yaw (forward is (-sin yaw, -cos yaw), as in walk.ts) */
-  at: { x: number; z: number; yaw: number };
+  /** Where you arrive: standing here, facing along yaw (forward is (-sin yaw, -cos yaw), as in walk.ts); `y`, up on a floor over the slab (walk.ts `placeAt()`) */
+  at: { x: number; z: number; yaw: number; y?: number };
 }
 
 /** Is a spot clear of everything solid (a body's width round it) */
@@ -113,12 +114,16 @@ export const PLACES: Place[] = [
   // (its office door faces north, onto the forecourt)
   { id: 'garage', kind: 'lot', name: 'Garage', at: { x: GARAGE_SITE.door.x - 1, z: GARAGE_SITE.door.z - 1.8, yaw: Math.atan2(-1, -1.8) } },
   { id: 'market', kind: 'lot', name: 'Market square', at: { x: STALL_SPOT.x, z: STALL_SPOT.z + 0.4, yaw: 0 } },
-  // The metro's stations: on the sidewalk at the foot of each stair tower, facing its door
-  ...STATIONS.map((s): Place => ({ id: `metro-${s.id}`, kind: 'metro', name: `${s.name} station`, at: { x: s.door.x + s.face[0] * 0.4, z: s.door.z + s.face[1] * 0.4, yaw: Math.atan2(s.face[0], s.face[1]) } })),
+  // The metro's stations: on the sidewalk at the foot of each stair tower, facing its door (Starlight Mall's on its
+  // platform, up in the Skywalk: malllink.ts)
+  ...STATIONS.map((s): Place => ({ id: `metro-${s.id}`, kind: 'metro', name: `${s.name} station`, at: { x: s.door.x + s.face[0] * 0.4, z: s.door.z + s.face[1] * 0.4, yaw: Math.atan2(s.face[0], s.face[1]), ...(s.inside ? { y: s.inside.y } : {}) } })),
   // The river bus's stops (river plan step 4b): at the top of each landing's gangway, facing the river
   ...STOPS.map((s): Place => ({ id: `riverbus-${s.id}`, kind: 'riverbus', name: s.pier, at: s.arrive })),
   // The Neon Mile's monorail (monorail.ts): at each station's door
   ...MONO_STATIONS.map((s): Place => ({ id: `mono-${s.id}`, kind: 'mono', name: s.name, at: s.at })),
+  // The south's underground line, the tube (southline.ts, the south plan's 4h): at street level by each station's way
+  // in, facing it (the Circus's in its sunken plaza)
+  ...SOUTH_STATIONS.map((s): Place => ({ id: `tube-${s.id}`, kind: 'tube', name: `${s.name} station`, at: TUBE_SPOTS[s.id] })),
 ];
 export const PLACE_IDS = PLACES.map((p) => p.id);
 
@@ -133,7 +138,7 @@ interface Copy {
 }
 /** A place's name and a line under it: the copy on its pin (CityMap.astro's directory, found under `root`), or its own */
 export function placeName(root: Copy, p: Place) {
-  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : p.kind === 'riverbus' ? 'River bus' : p.kind === 'mono' ? 'Monorail' : '' };
+  if (p.name) return { name: p.name, sub: p.kind === 'metro' ? 'Metro' : p.kind === 'tube' ? 'Tube' : p.kind === 'riverbus' ? 'River bus' : p.kind === 'mono' ? 'Monorail' : '' };
   const a = root.querySelector(`[data-dir-spot="${p.spot}"]`);
   return { name: a?.querySelector('span')?.textContent?.trim() ?? p.id, sub: a?.querySelector('small')?.textContent?.trim() ?? '' };
 }

@@ -28,7 +28,7 @@
  * gets through, no car does). `MALL_CAMERA` is the roof and the upper floor
  * for the walk camera. Made-up names only; no prices on any sign.
  */
-import { HALL, PORCH } from './mall';
+import { FIT, HALL, PORCH } from './mall';
 
 export type Rect = [number, number, number, number];
 type Box = [number, number, number, number, number];
@@ -42,7 +42,7 @@ export const IN: Rect = [HALL.rect[0] + WALL, HALL.rect[1] + WALL, HALL.rect[2] 
 export const UP = 3.2;
 export const FLOOR_T = 0.3;
 /** The doors in the south wall, behind the porch (open) */
-export const DOOR = { x0: PORCH.rect[0] + 1, x1: PORCH.rect[2] - 1, h: 3.2 };
+export const DOOR = { x0: PORCH.rect[0] + 1, x1: PORCH.rect[2] - 1, h: FIT.entrance + 0.6 };
 /** The entrance lobby (double height) is south of this; the units run from `NORTH_Z` to it */
 export const LOBBY_Z = HALL.rect[3] - 3.5;
 export const NORTH_Z = HALL.rect[1] + 7;
@@ -56,11 +56,21 @@ export const TERRACE_Z = HALL.rect[1] + 10;
 const XM = (IN[0] + IN[2]) / 2;
 /** The atrium: open from the ground floor to the roof, between the galleries, the terrace and the lobby */
 export const VOID: Rect = [IN[0] + UNIT_D + GALLERY_W, TERRACE_Z, IN[2] - UNIT_D - GALLERY_W, LOBBY_Z];
-/** The upper floor: the terrace across the north end and the two galleries */
+/** How long a unit is along its strip (four a side, `NORTH_Z` to the lobby) */
+export const UNIT_L = (LOBBY_Z - NORTH_Z) / 4;
+/**
+ * The Skywalk's corridor (docs/mall-plan.md, "One mall", Phase 1; malllink.ts): the east upper unit third from the
+ * north is the way through, its band along the hall (z0, z1); the ground floor's unit under it stays
+ */
+export const CORRIDOR_Z: [number, number] = [NORTH_Z + 2 * UNIT_L, NORTH_Z + 3 * UNIT_L];
+/** The corridor's part in the units' strip, on the upper floor */
+export const CORRIDOR_IN: Rect = [IN[2] - UNIT_D, CORRIDOR_Z[0], IN[2], CORRIDOR_Z[1]];
+/** The upper floor: the terrace across the north end, the two galleries, and the corridor off the east one */
 export const UPPER: Rect[] = [
   [IN[0], STALL_Z, IN[2], TERRACE_Z],
   [IN[0] + UNIT_D, TERRACE_Z, VOID[0], LOBBY_Z],
   [VOID[2], TERRACE_Z, IN[2] - UNIT_D, LOBBY_Z],
+  CORRIDOR_IN,
 ];
 
 /* ---------- The escalators ---------- */
@@ -120,7 +130,8 @@ export const UNITS: Unit[] = (() => {
         const [x0, x1] = face === 1 ? [IN[0], IN[0] + UNIT_D] : [IN[2] - UNIT_D, IN[2]];
         out.push({ rect: [x0, NORTH_Z + i * L, x1, NORTH_Z + (i + 1) * L], level, face, name: UNIT_NAMES[out.length], k: out.length });
       }
-  return out;
+  // (the corridor to the Skywalk is where the east upper unit third from the north was)
+  return out.filter((u) => !(u.level === 1 && u.face === -1 && u.rect[1] === CORRIDOR_Z[0]));
 })();
 /** The food court's stalls along the north wall, upstairs (made-up names), facing south */
 export const FOOD_NAMES = ['TACO VERDE', 'NOODLE BAR', 'BURGER CO.', 'GREEN BOWL', 'SUSHI GO ROUND', 'GELATO LAB'];
@@ -205,7 +216,9 @@ export const WALLS: Box[] = (() => {
   return [
     [x0, z0, x1, z0 + WALL, h],
     [x0, z0, x0 + WALL, z1, h],
-    [x1 - WALL, z0, x1, z1, h],
+    // (the east wall open on the upper floor at the corridor: under it the ground floor's unit stands, `LEVEL_SOLIDS`)
+    [x1 - WALL, z0, x1, CORRIDOR_Z[0], h],
+    [x1 - WALL, CORRIDOR_Z[1], x1, z1, h],
     [x0, z1 - WALL, DOOR.x0, z1, h],
     [DOOR.x1, z1 - WALL, x1, z1, h],
   ];
@@ -225,20 +238,23 @@ export const MALL_INSIDE_SOLIDS: Box[] = [
   ...WALLS,
   // (the units on both floors, a strip a side; the stalls' strip across the north end)
   [IN[0], NORTH_Z, IN[0] + UNIT_D, LOBBY_Z, HALL.h],
-  [IN[2] - UNIT_D, NORTH_Z, IN[2], LOBBY_Z, HALL.h],
+  [IN[2] - UNIT_D, NORTH_Z, IN[2], CORRIDOR_Z[0], HALL.h],
+  [IN[2] - UNIT_D, CORRIDOR_Z[1], IN[2], LOBBY_Z, HALL.h],
   [IN[0], IN[1], IN[2], STALL_Z, HALL.h],
   ...COLUMNS.map(([x, z]) => sq(x, z, COLUMN_R, HALL.h)),
   ...ESC_SOLIDS,
   sq(FOUNTAIN_IN.x, FOUNTAIN_IN.z, FOUNTAIN_IN.r * 0.85, 0.7),
   ...PALMS_IN.map(([x, z]) => sq(x, z, PALM_R, 0.6)),
-  ...BENCHES_IN.map((b): Box => [b.x - 0.25, b.z - 1.05, b.x + 0.25, b.z + 1.05, 0.9]),
-  ...DIRECTORY.map(([x, z]): Box => [x - 0.9, z - 0.15, x + 0.9, z + 0.15, 2.2]),
+  ...BENCHES_IN.map((b): Box => [b.x - 0.25, b.z - 1.05, b.x + 0.25, b.z + 1.05, FIT.back]),
+  ...DIRECTORY.map(([x, z]): Box => [x - 0.7, z - 0.15, x + 0.7, z + 0.15, FIT.door]),
   [...LIFT_SHAFT, HALL.h] as Box,
-  ...KIOSKS.map((k): Box => [...k.rect, 2.4] as Box),
-  ...BOLLARDS.map(([x, z]) => sq(x, z, BOLLARD, 0.9)),
+  ...KIOSKS.map((k): Box => [...k.rect, FIT.door + 0.15] as Box),
+  ...BOLLARDS.map(([x, z]) => sq(x, z, BOLLARD, 0.5)),
 ];
 /** What stands on one floor only, with a floor over or under it (x0, z0, x1, z1, level) */
 export const LEVEL_SOLIDS: [number, number, number, number, 0 | 1][] = [
+  // (the ground floor's unit under the corridor, and the east wall behind it)
+  [CORRIDOR_IN[0], CORRIDOR_IN[1], CORRIDOR_IN[2] + WALL, CORRIDOR_IN[3], 0],
   ...GROUND_THINGS.map((t): [number, number, number, number, 0 | 1] => [...t.rect, 0]),
   ...TABLES.map(([x, z]): [number, number, number, number, 0 | 1] => [x - TABLE_R, z - TABLE_R, x + TABLE_R, z + TABLE_R, 1]),
 ];
@@ -302,7 +318,7 @@ export interface InsidePerson {
   x: number;
   z: number;
   ry: number;
-  act: 'look' | 'chat' | 'sit';
+  act: 'look' | 'chat' | 'sit' | 'eat';
   /** Over the slab (a seat's height for those sitting) */
   y: number;
 }
@@ -315,7 +331,7 @@ export const MALL_INSIDE_PEOPLE: InsidePerson[] = (() => {
     out.push({ x, z: (u.rect[1] + u.rect[3]) / 2 + 0.6, ry: u.face === 1 ? -Math.PI / 2 : Math.PI / 2, act: 'look', y: u.level * UP });
   });
   // On the benches by the fountain
-  for (const b of BENCHES_IN) out.push({ x: b.x + (b.ry > 0 ? -0.05 : 0.05), z: b.z + 0.45, ry: b.ry, act: 'sit', y: 0.32 });
+  for (const b of BENCHES_IN) out.push({ x: b.x + (b.ry > 0 ? -0.05 : 0.05), z: b.z + 0.45, ry: b.ry, act: 'sit', y: FIT.seat });
   // Chatting in the atrium and the lobby
   out.push({ x: XM - 2.6, z: FOOT_Z + 1.2, ry: Math.PI / 2, act: 'chat', y: 0 }, { x: XM - 1.8, z: FOOT_Z + 1.3, ry: -Math.PI / 2, act: 'chat', y: 0 });
   out.push({ x: XM + 4, z: LOBBY_Z + 1.4, ry: Math.PI, act: 'chat', y: 0 }, { x: XM + 4.6, z: LOBBY_Z + 0.8, ry: -Math.PI / 4, act: 'chat', y: 0 });
@@ -324,8 +340,8 @@ export const MALL_INSIDE_PEOPLE: InsidePerson[] = (() => {
   FOOD_STALLS.forEach((s) => out.push({ x: (s.x0 + s.x1) / 2 - 0.4, z: STALL_Z - 1.15, ry: 0, act: 'look', y: UP }));
   TABLES.forEach(([x, z], i) => {
     if (i % 3 === 2) return;
-    out.push({ x: x - TABLE_R - 0.3, z, ry: Math.PI / 2, act: 'sit', y: UP + 0.32 });
-    if (i % 2 === 0) out.push({ x: x + TABLE_R + 0.3, z, ry: -Math.PI / 2, act: 'sit', y: UP + 0.32 });
+    out.push({ x: x - TABLE_R - 0.3, z, ry: Math.PI / 2, act: 'eat', y: UP + FIT.seat });
+    if (i % 2 === 0) out.push({ x: x + TABLE_R + 0.3, z, ry: -Math.PI / 2, act: 'eat', y: UP + FIT.seat });
   });
   // Leaning on the balustrades, looking down into the atrium
   out.push({ x: VOID[0] - 0.45, z: TERRACE_Z + 9, ry: -Math.PI / 2, act: 'look', y: UP }, { x: VOID[2] + 0.45, z: TERRACE_Z + 3.2, ry: Math.PI / 2, act: 'look', y: UP });

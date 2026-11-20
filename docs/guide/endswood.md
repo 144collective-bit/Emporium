@@ -130,10 +130,31 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   when their buildings stand (the owner's call); `ENDS_SPAWNS` on a sidewalk by each.
 - **Its sound** (ambience.ts `ends`): on its land and 25 past it. Bunker Sound's beat and St Aldwyn's bell are off
   until their buildings come back (`studio`, `bell` are 0).
-- **Below ground**: Lot 9's tunnel only (groundheight.ts `UNDER`, underground.ts); the Circus's well and its subways
-  are Phase 4's.
-- **`?bench` views**: `south-circus`, `south-high`, `south-village`, and `ends-home` (the compound from the High Road's
-  end).
+- **Below ground**: Lot 9's tunnel (groundheight.ts `UNDER`, underground.ts); the Circus's sunken plaza and its four
+  subways as data (`circus.ts`, `tests/circus.test.ts`, the south plan's 4a: `PLAZA`, `SUBWAYS` north-west,
+  north-east, south-east and south, `MOUTH_PATHS`, `CIRCUS_HOLE`, `CIRCUS_CUTS`, `CIRCUS_SOLIDS`), drawn by
+  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk) and walked (groundheight.ts
+  `UNDER`, the planters and lamps its `boxes`). Its holes are cut out of the blocks' slabs (world.ts `tiled()`,
+  `holedPoly()`, holes.ts) and the junctions' asphalt round the Circus (south3d.ts); the grass goes from under it
+  (`CIRCUS_HOLE`); the island is a planted ring round the plaza. Its trees and lamps at the boot (index.ts). The kit
+  takes a passage at any angle (`radial()`) and a well's stepped seats (`tiers`, `wellFloor()`). The underpasses under
+  the avenue crossings (`underpasses.ts`, the south plan's 4c: under the wide south avenue and Endswood Road's and
+  Marsh Lane's bends, `straight()` passages, plain: `underpass3d.ts`) share the Circus's cuts (`SLAB_CUTS`,
+  `GROUND_HOLES`) and walking (`UNDER`). The underground's south line as data (`southline.ts`, the south plan's 4d: `LINE`,
+  `SOUTH_STATIONS` with their platform, hall, escalator and way in, `LINE_PASSAGES`), drawn and walked from 4e; the kit
+  has levels for it (`y0` / `y1`, `LEVEL`). The stations built (`BUILT_STATIONS`: the High Road's in 4e, all five since 4f) are walked
+  (`BUILT_PASSAGES` in `UNDER`), drawn (`line3d.ts`, the south's chunk, a site each) and their stairs cut
+  (`STAIR_CUTS`); the High Road's station building is highroad.ts's `station` kind (`stationWalls()`). The line's
+  running tunnels between the stations are line3d.ts's `registerTunnels()` (`TUNNEL_HALF` wide enough for the cars on
+  the bends). Its trains (the south plan's 4g): the rules in `southtrains.ts` (`TUBE`, the timetable `LEGS` / `ROUND`,
+  `trainAt()`, `trackOf()`, `carPose()`, a ride's `rideAt()`), drawn by `tube3d.ts` (a lazy chunk, loaded and drawn
+  only while you're down in a station or riding, index.ts), ridden from a **Tube** door on each platform
+  (`PLAT_DOOR` along from its middle) through `tube-ui.ts` (the raised metro's card and ride bar). Since 4h that card is
+  both lines' at every station (`data-trip`): a trip to the other line (`trips.ts`: `tripOf()`, `tripTime()`,
+  `CHANGE_AT`) rides to The Trenches, changes under a fade and rides on; the stations are places (`TUBE_SPOTS`) and on
+  the world map.
+- **`?bench` views**: `south-circus`, `south-high`, `south-village`, `ends-home` (the compound from the High Road's
+  end), and inside it `ends-room` (his lounge) and `ends-den` (his basement).
 - **Degen's home** is the compound (`docs/home-plan.md`, `docs/ends-far-west-plan.md`): `home.ts` on `endsfar.ts`'s
   `PLOT` and `GATES` (all that file is now), its gates on Gate Lane at `HEAD`; the wall and gates, the double garage
   (`CAR_HOME`, `BIKE_HOME`, `HOME_GARAGE_DOOR`), the workshop (`HOME_WORKSHOP_DOOR`), the house with its room
@@ -144,7 +165,41 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `TERRACE`, `ROOF_THINGS`, `onRoof()`, `roofWall()`, groundheight.ts's `homeroof` layer), drawn by `home3d.ts`
   (registered by `south3d.ts`), its windows lit at night (`LIT_GLASS`, the middle one upstairs off), pools of light
   at night by the gates' lamps, the garage and the front door (`HOME_POOLS`, drawn by `south3d.ts`). A new thing in the
-  room goes in `FURNITURE`, on the terrace in `ROOF_THINGS`.
+  room goes in `FURNITURE` (homerooms.ts), on the terrace in `ROOF_THINGS`. **The upgrade** (the owner's call, 2026-11-18) is planned in
+  `docs/compound-plan.md`: the outside done up with his neon, the ground floor refitted, an upstairs (a bedroom, an
+  office with a desk), a trophy wall, a basement trading den; nothing built until its phase is signed off.
+  Phase 1 (the outside) is built: black steel and his neon (home3d.ts `STEEL_BLACK`, `HIS_NEON`, his D by `mark()` on
+  the gate pier's plaque and in the paving), a hoop on the garage's pier, and the yard's lit bollards and the planters
+  by the front door (home.ts `BOLLARDS`, `PLANTERS`, in `HOME_SOLIDS`).
+  Phase 2 (the ground floor refit) is built: the lounge, kitchen island and hall in `FURNITURE`, the open stairs, and
+  the trophy wall (`hometrophies.ts`: `trophies()` from the save, the `SHELF` feed set by tycoon-boot.ts; drawn on the
+  main thread by home3d.ts `trophyWall()`, added by south3d.ts).
+  Phase 3 (the upstairs) is built: the house's floors by height (home.ts `homeLevel()`, `UP_Y`, `UP_CEIL`;
+  `homeWall(x, z, r, y)`, `homeFloorY()` for groundheight.ts's `home` layer, `homeCamera(y)` for walk.ts), `UPSTAIRS`
+  (the landing, bedroom and office), the stairs re-routed room ↔ landing ↔ terrace (`HOME_PORTALS`, each with its
+  `level`), and the office's desk (`home:desk`, the business card). A new thing upstairs goes in `UPSTAIRS`.
+  Phase 4 (the basement, his trading den) is built: the `base` floor (`BASE_Y`, `BASE_CEIL`), `BASEMENT`, the steps
+  down from under the stairs (`home:cellar`, `home:cellarup`), drawn in the room's batch (home3d.ts `basement()`), the
+  trading desk's screens on the main thread (`denCharts()`, made-up charts, nothing legible). A new thing down there
+  goes in `BASEMENT`.
+  Phase 5 (the terrace and polish) is built: the outdoor sofa, the telescope, his sign at the east rail, a third
+  planter (`ROOF_THINGS`); `?bench` views `ends-room` and `ends-den`.
+  Phase 6 (the kingpin compound, the owner's call after seeing Phase 1) is built: the loft shell in charcoal brick and
+  steel (home3d.ts `house()`, `houseLights()`, home.ts `FIRE_ESCAPE`, `WALL_H` 1.8), the gatehouse and the crest gate
+  (`GATEHOUSE`, `GATE_LEAF`, `wall()`, `gatehouse()`), the fountain and palms on the drive (`FOUNTAIN`, `PALMS`,
+  `showpiece()`), the pool and cabana on the east lawn (`POOL`, `LOUNGERS`, `CABANA`, `poolside()`) and the helipad on
+  the garage's roof (`HELIPAD`, `helipad()`, looks only). Their solids are in `HOME_SOLIDS`. The plan is complete.
+  **The interior** (the owner's call, 2026-11-19) is planned in `docs/interior-plan.md`: the house fitted out to a high
+  standard in a dark luxe palette (home3d.ts's colours under "The house's palette"), a phase at a time. Phase 1 (the
+  lounge and the vault) is built: the media wall on the west wall (`FURNITURE` `media`, home3d.ts `media()`: the telly
+  mounted over a long fire, lit niches), the corner sofa facing it with its chaise, an armchair and an arc lamp, the
+  trophy wall past the media wall; he wakes facing west at it (`HOME_WAKE`, `SOFA_SEAT`). The stash is a vault door in
+  the den's north wall (`BASEMENT` `vault`, `home:stash` on the `base` floor).
+  The rooms' lists (`FURNITURE`, `UPSTAIRS`, `BASEMENT`) are in `homerooms.ts`, out of the boot (the owner's call): laid
+  out by `houseRooms(HOUSE_GEO)` (it imports nothing, so the boot's modules aren't split), fetched as the city starts
+  (index.ts), handed to `homeWall()` by `setRooms()`; waking waits for them. A new thing in a room goes there. Phase 3
+  (upstairs) is built: the dressing room off the landing (the wardrobe's prompt, `WARDROBE_RECT`), the bedroom past
+  it, the bathroom behind the landing (`DRESS_X`, `BED_DOOR`, `BATH_DOOR`, `BATH_Z`).
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

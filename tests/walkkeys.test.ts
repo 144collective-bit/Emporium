@@ -186,6 +186,9 @@ test('at the wheel: each vehicle its own keys', () => {
   assert.deepEqual(car.key('KeyF').asked, ['act']);
   assert.deepEqual(car.key('KeyV').asked, ['nextCam']);
   assert.deepEqual(car.key('KeyH').asked, ['horn']);
+  // (N a nitro can from the bag: the inventory plan's Phase 5)
+  car.h.nitro = () => void car.log.push('nitro');
+  assert.deepEqual(car.key('KeyN').asked, ['nitro']);
   car.key('Space');
   assert.ok(car.h.jumpHeld);
   assert.deepEqual(car.key('Space', false).asked, [], 'no jump at the wheel');

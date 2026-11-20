@@ -4,12 +4,9 @@
  * One body after the brand art (balaclava with the eye opening, red cap with
  * the diamond patch, green shades on a gold chain, collar, tie and a lapelled
  * suit) with knees and elbows, so walks and runs can bend. Outfits swap the
- * clothes on that body: suits, hoodies and joggers, soldier fatigues, and
- * Drop 001's premium wardrobe (the varsity and puffer jackets, the cowboy hat,
- * top hat and neon halo, the duffel bag and neon wings, the phone, the
- * briefcase and the gold watch). Neon pieces (the halo, the wings' edges, the
- * phone's screen) glow through `neon()` in kit.ts, kept dim enough by day
- * not to bloom.
+ * clothes on that body: suits, hoodies, track suits, varsity and puffer
+ * jackets, joggers, soldier fatigues, hats, bags and jewellery (wardrobe.ts,
+ * docs/wardrobe-plan.md).
  *
  * Two ways to build it:
  * - createDegen(): one figure, the skinned body on real bones
@@ -30,9 +27,9 @@ import { MARK_IDS, type MarkId, type PatternId } from '../net/profile-data';
 import { ATLAS_COLS, ATLAS_ROWS, MARK_ART } from './marks';
 import { lit, liveTex, moving, neon, toon } from './kit';
 import { crowdFrame, type CrowdClip } from './crowdclips';
-import { WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion, setWardrobeRow } from './crowdskin';
+import { SHAPE_TEXEL, WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion, setCrowdHead, setWardrobeRow } from './crowdskin';
 import { makeSkeleton, newPose, poseSkeleton, BONE_INDEX, type BoneName, type Joint, type Pose, type Skeleton } from './skeleton';
-import { BLACK, COLOR_KEYS, PLAYER, SKIN, items as wardrobe, paintMerge, restSkin, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
+import { BLACK, COLOR_KEYS, HEAD_SCALE, PLAYER, SKIN, items as wardrobe, shapeHead, paintMerge, restSkin, shadeRGB, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
 import { onLens } from './lens';
 
 export { PLAYER, SOLDIER, lookOutfit, type Detail, type Outfit, type OutfitKind } from './wardrobe';
@@ -48,11 +45,15 @@ const tmp = new THREE.Color();
 function colorOf(p: Piece, o: Outfit, out = new THREE.Color()) {
   if (p.color.startsWith('#')) return out.set(p.color);
   out.set(outfitColor(o, p.color as ColorKey));
-  return p.shade ? out.multiplyScalar(p.shade) : out;
+  if (!p.shade) return out;
+  // (a detail's shade, lifted on near-black cloth so it still shows: shadeRGB() in wardrobe.ts)
+  const c = out.getRGB(rgb, THREE.SRGBColorSpace);
+  return out.setRGB(...shadeRGB(c.r, c.g, c.b, p.shade), THREE.SRGBColorSpace);
 }
+const rgb = { r: 0, g: 0, b: 0 };
 /**
- * An outfit's colour for a key (the lenses are green as in the art when an outfit doesn't say); the head is the
- * balaclava's black, or the skin unmasked (docs/faces-plan.md)
+ * An outfit's colour for a key (the lenses green as in the art, the shirt white and the frames black, when an outfit
+ * doesn't say); the head is the balaclava's black, or the skin unmasked (docs/faces-plan.md)
  */
 const outfitColor = (o: Outfit, k: ColorKey): string =>
   k === 'head'
@@ -61,7 +62,8 @@ const outfitColor = (o: Outfit, k: ColorKey): string =>
       : BLACK
     : k === 'skin'
       ? (o.skin ?? SKIN)
-      : ((o[k] as string | undefined) ?? (k === 'lens' ? '#22d07a' : k === 'ink' ? '#16c7b5' : k === 'hair' ? BLACK : '#ff00ff'));
+      : ((o[k] as string | undefined) ??
+        (k === 'lens' ? '#22d07a' : k === 'ink' ? '#16c7b5' : k === 'shirt' ? '#cfcedb' : k === 'frame' ? '#0d0c14' : k === 'gear' ? '#2b2a33' : k === 'hair' ? BLACK : '#ff00ff'));
 
 /* ---------- The wardrobe, with the soldiers' rifle (guns.ts draws it, so it's added here) ---------- */
 
@@ -85,9 +87,9 @@ function items(q: Detail, hero = false): Item[] {
 
 /* ---------- Materials ---------- */
 
+let neonMat: THREE.MeshBasicMaterial | null = null;
 let plainMat: THREE.Material | null = null;
 let doubleMat: THREE.Material | null = null;
-let neonMat: THREE.MeshBasicMaterial | null = null;
 let logoMat: THREE.Material | null = null;
 let atlas: THREE.Texture | null = null;
 /**
@@ -255,8 +257,8 @@ function material(m: Mat | undefined, o?: Outfit): THREE.Material {
       vertexColors: true,
     }));
   if (m === 'neon') {
-    // One unlit glow for every neon piece, coloured per vertex: plain by day (under the bloom
-    // threshold, so a halo never blooms out of control), brighter at night like the city's signs
+    // One unlit glow, coloured per vertex (a crowd phone's screen): plain by day (under the bloom
+    // threshold), brighter at night like the city's signs
     if (!neonMat) {
       neonMat = neon('#ffffff', 1, 1.8);
       neonMat.vertexColors = true;
@@ -312,6 +314,24 @@ function skinPiece(p: Piece, rest: THREE.Matrix4, color: THREE.Color) {
   return g;
 }
 
+/** An outfit's head stretch (docs/faces-plan.md Phase 3): unmasked only, the balaclava keeps the art's head */
+const stretchOf = (o: Outfit) => HEAD_SCALE[(o.face && o.headShape) || 'standard'];
+/** A skinned piece at rest stretched with the head (wardrobe.ts `shapeHead()`), about the head bone's point */
+function stretchHead(g: THREE.BufferGeometry, s: readonly [number, number, number], pivot: THREE.Vector3) {
+  const p = g.attributes.position as THREE.BufferAttribute;
+  const idx = g.attributes.skinIndex as THREE.BufferAttribute;
+  const wt = g.attributes.skinWeight as THREE.BufferAttribute;
+  const head = BONE_INDEX.head;
+  const at: [number, number, number] = [pivot.x, pivot.y, pivot.z];
+  for (let i = 0; i < p.count; i++) {
+    let w = 0;
+    for (let k = 0; k < 4; k++) if (idx.getComponent(i, k) === head) w += wt.getComponent(i, k);
+    if (!w) continue;
+    const [x, y, z] = shapeHead([p.getX(i), p.getY(i), p.getZ(i)], w, at, s);
+    p.setXYZ(i, x, y, z);
+  }
+}
+
 /** The mark a logo piece prints for an outfit (null: none there) */
 function markFor(of: LogoOf, o: Outfit): MarkId | null {
   if (of === 'top') return o.mark ?? null;
@@ -333,9 +353,9 @@ function atlasUV(geo: THREE.BufferGeometry, id: MarkId) {
 /**
  * One figure: the skinned body (skeleton.ts) with everything it wears as
  * one mesh coloured per vertex, plus one each for the lenses, the cap
- * patch, the raised hood (both sides drawn) and any neon, so a figure is
- * about four draw calls whatever he wears. Things in the hand (a coffee, a
- * rifle) ride the hand bone unbent.
+ * patch and the raised hood (both sides drawn), so a figure is about four
+ * draw calls whatever he wears. Things in the hand (a rifle, a crowd
+ * shopper's bag or phone) ride the hand bone unbent.
  */
 /** A single figure's detail where its caller doesn't say: 2 on phones, 3 on desktops (the city sets it by its tier) */
 let figure: Detail = 2;
@@ -348,6 +368,8 @@ export function createDegen(o: Outfit = PLAYER, q: Detail = figure): Degen {
   const skinned = new Map<string, { mat?: Mat; list: THREE.BufferGeometry[] }>();
   const rigid = new Map<string, { joint: Joint; held: boolean; mat?: Mat; list: { geo: THREE.BufferGeometry; color: THREE.Color }[] }>();
   const print = o.pattern && o.pattern !== 'plain' ? o.pattern : null;
+  const stretch = stretchOf(o);
+  const pivot = sk.bones.head.getWorldPosition(new THREE.Vector3());
   for (const it of items(q, true)) {
     if (!it.when(o)) continue;
     for (const src of it.pieces) {
@@ -371,6 +393,7 @@ export function createDegen(o: Outfit = PLAYER, q: Detail = figure): Degen {
       const key = mat ?? '';
       if (!skinned.has(key)) skinned.set(key, { mat, list: [] });
       const g = skinPiece(p, sk.j[p.joint].matrixWorld, color);
+      if (stretch !== HEAD_SCALE.standard) stretchHead(g, stretch, pivot);
       if (p.logo) p.geo.dispose();
       // (the print is laid out on the cloth where it is at rest, so it moves with it)
       if (mat === 'pattern') {
@@ -482,7 +505,7 @@ function crowdMaterial(m: Mat | undefined) {
   let c = crowdMats.get(key);
   if (!c) {
     c = crowdVersion(material(m), key);
-    // (the lenses and neon follow the time of day like everyone's)
+    // (the lenses and a phone's screen follow the time of day like everyone's)
     if (m === 'lens') lit(c, 0.12, 0.7);
     if (m === 'neon') lit(c, 1, 1.8);
     crowdMats.set(key, c);
@@ -565,6 +588,8 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
   crowdTexture();
   const sk = makeSkeleton();
   sk.root.updateMatrixWorld(true);
+  if (COLOR_KEYS.length >= SHAPE_TEXEL) throw new Error('crowd wardrobe: the colours run into the head stretch');
+  setCrowdHead(BONE_INDEX.head, sk.bones.head.getWorldPosition(new THREE.Vector3()));
   const near = opts.light ? CROWD_NEAR_LIGHT : CROWD_NEAR;
   const meshes: THREE.InstancedMesh[] = [];
   /** A person's row: their colours, then which items they wear (`allow` leaves out items the meshes can't draw: `dress()`) */
@@ -577,6 +602,8 @@ export function createCrowd(parent: THREE.Object3D, outfits: Outfit[], opts: { l
       row[c * 4 + 2] = tmp.b;
     });
     for (const q of [1, 0] as Detail[]) for (const it of items(q, true)) if (it.when(o) && allow(q, it)) row[itemCol(it.id) * 4 + 3] = 1;
+    // (the head's stretch less one: the shader's, crowdskin.ts)
+    stretchOf(o).forEach((v, k) => (row[SHAPE_TEXEL * 4 + k] = v - 1));
     return row;
   };
   const rowOf = addWardrobe(outfits.map((o) => rowFor(o)));

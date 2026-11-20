@@ -427,8 +427,253 @@ From the Circus west, patchy as high roads are:
    with the tunnel seen; the underpasses under the ring road, the spokes
    and the bent avenues, into the ticket halls. All in `underground.ts`'s
    one kit.
+   The owner's answers (2026-11-18): the stations mixed by area (one kit,
+   each finished as the land over it: tiled at Aldwyn's Green and the
+   High Road, the blocks' concrete at Lot 9 and the Circus, gritty at The
+   Trenches); a change to the raised metro at The Trenches (a short
+   covered walk between them, both lines on one card and the map);
+   round-top tube trains in the city's style; the underpasses first,
+   then the line.
+   - **4a, the Circus's plaza and subways as data** (the owner's answers,
+     2026-11-18: the Circus first; a sunken plaza; murals and strip
+     lights inside; life with Phase 6; four subways, nothing that's built
+     moving: the west and south-west corners are built up to the Circus's
+     sidewalk, the parade's back and Church Road's end house: there you
+     cross the road at street level; the south's streets have no painted
+     zebras). Built and signed off (2026-11-18):
+     `circus.ts` (DOM-free, `tests/circus.test.ts`): the plaza
+     (`PLAZA`, a well of the kit inside the island, three steps of seats
+     round its edge you walk up, `tiers`), planters with trees and lamps
+     on its floor, four subways (`SUBWAYS`, north-west, north-east,
+     south-east and south: roofed from the plaza's wall to past the
+     sidewalk, a ramp about one in four up to each mouth), each mouth's
+     paved path on to the nearest sidewalk (the south-east's, boxed in by
+     blocks, joins the south's), the ground's hole (`CIRCUS_HOLE`), the
+     solids. The kit (`underground.ts`) takes a passage at any angle
+     (`radial()`) and a well's seats (`wellFloor()`); Lot 9's tunnel
+     unchanged. Sketch `docs/south-shots/18-phase-4a-circus.png`. Not
+     wired into walking or drawn yet: 4b.
+   - **4b, the Circus drawn and walked**. Built and signed off
+     (2026-11-19): `circus3d.ts` (in the south's chunk, a site for the plaza,
+     each subway and the paths) draws the plaza (paved floor, three steps
+     of seats cut where the subways come in, its wall with a lintel over
+     each opening, coping, a railing, a neon strip under the coping,
+     planters) and the subways (the blocks' warm concrete walls, a mural
+     each on one wall, made-up art with no words, strip lights in the
+     ceiling and a pink and a cyan neon line along the walls, the ramps'
+     parapets and coping, a headwall with its SUBWAY plate over each
+     portal, a step on to the slab at each mouth) and each mouth's paved
+     path. The island is a planted ring round the plaza (south3d.ts).
+     `holes.ts` (DOM-free, tested) cuts the plaza and the cuttings out of
+     the blocks' slabs (world.ts `tiled()`, `holedPoly()`) and the
+     junctions' asphalt; the grass goes from under the Circus
+     (`CIRCUS_HOLE`). Walked: groundheight.ts's `UNDER` takes the subways
+     and the plaza with Lot 9's tunnel; down there the planters and lamps
+     stop you (the kit's `boxes`). The trees and lamps at the boot
+     (index.ts). `?fps` reads `down` below street level; the smoke test
+     walks down the north-east ramp into the plaza (`circus`). Shots
+     `docs/south-shots/19-phase-4b-*.webp` (the subway's and the walk-in
+     from the smoke test's screenshots: the review shots' tool stalls in
+     this machine's software renderer with its camera in a subway).
+   - **4c, the avenue crossings' underpasses** (the owner's answers,
+     2026-11-19: the avenue crossings; plainer than the Circus's;
+     where an underpass crossed a zebra, the zebra would go, but the
+     south's streets have none). Built and signed off (2026-11-19):
+     `underpasses.ts` (DOM-free, `tests/underpasses.test.ts`): three
+     straight passages of the kit (`straight()`), square across their
+     roads, roofed under them and their sidewalks, a ramp down and up
+     each side: under the wide south avenue between Marsh Lane and Lot
+     9's road (on open ground), and under Endswood Road and Marsh Lane on
+     their bends (on the blocks' slabs); `SLAB_CUTS` and `GROUND_HOLES`
+     with the Circus's (world.ts, south3d.ts); walked (groundheight.ts
+     `UNDER`). `underpass3d.ts` draws them plain: concrete, strip lights,
+     parapets, headwalls with SUBWAY plates, a step on to a slab at a
+     mouth on one. The smoke test walks through the one under Endswood
+     Road (`underpass`). Shots `docs/south-shots/20-phase-4c-*.webp`
+     (from the smoke test's screenshots).
+   - **The line** (the owner's answers, 2026-11-19): stairs from the
+     street into a ticket hall, then escalators down to the platforms,
+     walkable all the way; entrances mixed (a station building where
+     there's room, the High Road's saved site, and stairs down from the
+     pavement under a roundel elsewhere); the route as planned: The
+     Trenches (the change to the raised metro), the Circus, Lot 9,
+     Aldwyn's Green, the High Road by Degen's gates (on west and to the
+     airport later); free to ride, as the raised metro is. In steps:
+     - **4d, the line as data**. Built and signed off (2026-11-19):
+       `southline.ts` (DOM-free, `tests/southline.test.ts`): the line
+       (`LINE`, 599 long, its straights through the stations joined by
+       the shortest bends no tighter than 25 round, Dubins paths:
+       `bend()`); five stations (`SOUTH_STATIONS`): The Trenches under the
+       el street (its stairs on the block behind the raised station's
+       tower, a few steps from its door), the Circus (its hall off the
+       sunken plaza, west, between its subways), Lot 9 (by the hole in
+       its fence, the stairs just inside beside the path), Aldwyn's Green
+       (its hall under the churchyard's east side, the stairs just west
+       of its wall) and the High Road (its stairs inside the station
+       building, along its front); each a ticket hall a flight down
+       (`HALL_Y`, the subways' level), an escalator (about 30 degrees)
+       down to an island platform between the twin tracks (`PLAT_Y`), the
+       tunnels deep under everything else below ground. The kit
+       (`underground.ts`) has levels: a passage's own end heights (`y0`,
+       `y1`), the floor under you the highest within a step of your
+       feet, walls only from the pieces at your level; Lot 9's tunnel,
+       the Circus and the underpasses unchanged. Sketches
+       `docs/south-shots/21-phase-4d-*.png`. Not wired into walking or
+       drawn yet: 4e.
+     - **4e, the High Road's station end to end**. Built and signed off
+       (2026-11-19): the station building replaces the hoarding
+       (highroad.ts `stationWalls()`, `STATION_DOOR`: pale walls, its door
+       at its front's east end on to a landing, the stairs down inside
+       west along it, a band in the line's colour with its name, the
+       city's M mark over the door; highroad3d.ts); its platform turned to
+       run on the building's axis west of it, so its stairs reach the
+       hall's far end clear of its escalator. `line3d.ts` (the south's
+       chunk) draws a station by its area's finish: the way in (steps,
+       walls, the header, the corridor), the ticket hall (tiles, the line's
+       band, ticket machines, the gate line, its name board, strip lights),
+       the escalator (steps, balustrades, handrails, its shaft) and the
+       island platform (yellow edges, the tracks in their beds, the tunnel's
+       walls with its name boards across the tracks, benches, a buffer stop
+       at the line's end). Walked: `BUILT_STATIONS` (the High Road's)
+       joins groundheight.ts's `UNDER`; its stairs cut out of the slab and
+       the grass (`STAIR_CUTS`). The line and its stations are baked
+       (`baked.ts` key `southline`: the boot stays at 746 KB). The smoke
+       test walks from the sidewalk to the platform (`station`). Shots
+       `docs/south-shots/22-phase-4e-*.webp` (the smoke test's).
+     - **4f, the other four stations**. Built and signed off
+       (2026-11-19): every station built (`BUILT_STATIONS`): walked, drawn
+       and its stairs cut. Halls open at their sides where a way in
+       crosses one (`sideGap()`); stairs from the street have parapets,
+       coping and railings round their openings and the city's M mark on
+       a post at the mouth; the Circus's corridor out of its sunken plaza,
+       west (its seats and wall opened there, circus3d.ts); The Trenches'
+       finish gritty (tags and bills on the FX layer), the Circus's and Lot
+       9's the blocks' concrete, Aldwyn's Green's tiled. The Trenches'
+       stairs moved into The Block's plaza by the raised station's tower
+       (they had opened in its playground; tested clear of it, the court
+       and the benches); Lot 9's on its open ground with the grass laid
+       back round their opening (`STAIR_INFILL`). Smoke walks: down The
+       Trenches', Lot 9's and Aldwyn's Green's stairs into their halls
+       (`trenches`, `lot9station`, `aldwynsstation`). Aldwyn's Green's
+       stairs moved on to the sidewalk of the street along the
+       churchyard's west side (they had opened in the terrace's back
+       gardens, out of reach); the village stands on its hill, so every
+       flight now starts at the surface at its top (`surfaceAt()`: a
+       block's slab or the open ground, rolling) and runs as long as it
+       takes to stay gentle (`STAIR_SLOPE`), its parapets and walls drawn
+       on the surface beside them. A slanting way's walls and floor run on
+       to meet its hall's side. Shots `docs/south-shots/23-phase-4f-*.webp`.
+     - **4g, the trains and the ride** (the owner's answers, 2026-11-19):
+       round-top tube trains running the line on a timetable from the
+       clock, so a platform has trains pulling in and out; a ride from
+       inside the carriage, the tunnel's walls and lights going by the
+       windows, pulling in at each platform, Skip as the raised metro's;
+       the line's own station card. Built and signed off
+       (2026-11-19): `southtrains.ts` the rules (DOM-free, tested: a
+       run speeds up, cruises and slows; one round out from The Trenches
+       to the High Road and back calling everywhere; two trains half a
+       round apart on their own tracks, standing within their platforms;
+       a ride boarding at one station and stopping at each between),
+       `tube3d.ts` the trains (two cars each: silver sides, the line's
+       teal band, open windows, a cab each end with its windscreen and
+       lights; inside, benches, yellow poles and a strip light), loaded
+       the first time you're down in a station and drawn only down there,
+       on the clock's own seconds so they're the same trains for everyone.
+       A **Tube** door on each platform, by its middle and off its bench
+       (`PLAT_DOOR`), opens the line's card (`tube-ui.ts`, the raised
+       metro's card and ride bar, one switch for both: `live.closed('metro')`);
+       the ride is seen from inside the front car (near: stood at its
+       back looking down the car and out of the windscreen; far: from the
+       car behind; the window seat by the tunnel's wall), Skip and Esc cut
+       to the end, under reduced motion it's a cut. The running tunnels
+       between the stations are drawn (`registerTunnels()`, line3d.ts, a
+       site each) and widened so a train's straight cars clear the walls on
+       the bends (`TUNNEL_HALF`, tested). The smoke test rides from
+       Aldwyn's Green to the High Road (`tube`). Shots
+       `docs/south-shots/24-phase-4g-*.webp`.
+     - **4h, the change and the map**: one card for both lines at either
+       Trenches station (every stop on both, the change made for you),
+       the line on the world map. The owner's answers (2026-11-19): a stop
+       on the other line is one trip, both rides (the first line to The
+       Trenches, "Change at The Trenches", the other line on; Skip cuts to
+       the very end); every station's card lists every stop on both lines;
+       the map draws the line (its teal, dashed: underground) and its five
+       stations are places (pins, waypoints, taxis, fast travel); the boot
+       trimmed first to make room, its budget kept. Built and signed off
+       (2026-11-19): `trips.ts` (DOM-free, tested: every
+       stop on both lines, a trip's rides, `tripOf()`, the change at The
+       Trenches, `CHANGE_AT`, `CHANGE_S`, `tripTime()`); the card for both
+       lines is `tube-ui.ts`'s, opened from every metro door and tube
+       platform (this station's line first, then the other's, "change at
+       The Trenches", each stop with its trip's time; the list scrolls); a
+       trip to the other line rides to The Trenches, fades with "Change at
+       The Trenches" and rides on (metro-ui.ts `ride(a, b, then)`), Skip
+       or Esc going straight to its very end, reduced motion cutting it.
+       Between the two Trenches stations it's the change alone. The tube's
+       stations are places (`tube-<id>`, kind `tube`, at street level by
+       each way in: `TUBE_SPOTS`, the Circus's down in its plaza; tested),
+       teal on the world map, its line drawn there dashed on a dark casing,
+       "· Tube" in Find a place. To make room the metro's rides and the
+       taxis load when first used (`loadMetroUI()`, `loadTaxis()`): the
+       boot at 747.9 of 750 KB, lower than before. Smoke: the metro and
+       tube scenes on the new card, `change` (Downtown's metro door to the
+       tube's High Road) and `taxi` (the map, the tube's Trenches station,
+       Taxi here), which found M not opening the world map while walking
+       (your business card sits un-hidden in the hub: index.ts now asks
+       whether a panel's actually on screen; fixed). The card checked at
+       320 to 1440 wide and on a phone on its side; the map's key has the
+       tube. Shots `docs/south-shots/25-phase-4h-*.webp`.
 5. **The exits.** South-west and west, as the ring's others
-   (`viaduct.ts`), and their roads in.
+   (`viaduct.ts`), and their roads in. The owner's answers (2026-11-19,
+   `docs/south-shots/26-phase-5-corner.png`): the two planned spots sit at
+   the ends of the ring's south-west corner curve (radius 70), hard against
+   exit 6's ramps (to x -96) and exit 7's (to z 229), so **one corner
+   exit** instead, at the curve's middle (about (-195, 300)), numbered
+   **6A** (every sign keeps its number), **slip ramps both sides** lying
+   round the curve towards the south side (clear of exit 6's), and its
+   **road in** from The Trenches' south-west corner, angled under the ring,
+   meeting the Docks' ring road outside and running on down to the south's
+   streets (following the land, meeting them at angles). The west exit is
+   dropped as the south-east one was. Steps, each with the owner's
+   sign-off:
+   - **5a, as data**: exit 6A in `EXITS` (its label beside the numbers),
+     its slips (`rampsOf()`), the road in in the street plan, the routes,
+     the land kept clear; tests (nothing that exists moves, the ramps clear
+     of exits 6 and 7, every route still joined); a sketch. Built and signed off
+     (2026-11-19): exit 6A is `EXITS`'
+     ninth (`n` 9 for its ids, `label` '6A' for the signs; every exit has
+     a `label` now), at `CORNER_FROM`'s ring point (the road in square on
+     to the curve there), `side` -1, slips inside and out, named
+     "Aldwyn's Green · Southbank Docks" (made up, the owner to change);
+     its ramps end at about x -145, clear of exit 6's (x -96). The road in
+     is `cornerroad.ts` (DOM-free, tested in tests/cornerroad.test.ts):
+     **Corner Road** (`corner-road`) from trench-ns0 and trench-ew1's
+     corner (-188, 261) straight out under the ring and on in an even bend
+     to the Docks' ring road's corner (Dock Road into Yard Road, -248,
+     286), and **Gate Hill** (`corner-link`) bending down from there to
+     the south's Gate Lane and Field Lane (-229, 340.5); junctions at all
+     three, lit at the ramps' feet; `RING_MEETS` has it (`corner-6a`), so
+     the piers and the lights under the deck keep to it. The snapshot only
+     gains the two roads and the two ramps (nothing that exists moved).
+     `turnsOf()` (traffic.ts) keeps a turn at a route's very end inside it.
+     Sketch `docs/south-shots/27-phase-5a-exit-6a.png`. The signs' atlas
+     and the map's badges read an exit's `label` (6A, not 9). Merged with
+     5b, not on its own: a push to main goes live, and the roads and ramps
+     weren't drawn until 5b.
+   - **5b, drawn and driven**: the ramps on the viaduct, the road and its
+     junctions, the gantries and signs with 6A's made-up names, lamps,
+     traffic using it; walked and driven, shots. Built and signed off
+     (2026-11-19): 6A's ramps, gantries, signs (its
+     label on them), ramp lamps, piers and the lights under the deck come
+     from the exit's data as every exit's (viaduct3d.ts, viadress.ts,
+     viasigns.ts); `corner3d.ts` draws Corner Road and Gate Hill in the
+     viaduct's chunk (asphalt 5 mm over the district streets' where they
+     meet, a dashed centre line, edge lines, the junctions' mouths filled at
+     The Trenches' corner and the Docks'), their lamps along the verge are
+     the boot's (`CORNER_LAMPS`, tested clear of the junctions, the deck,
+     the ramps and every solid), no tree or under-deck car on them
+     (tested); traffic drives them from the routes as built (5a). The boot
+     at 749.0 of 750 KB. Shots `docs/south-shots/28-phase-5b-*.webp`.
 6. **Life, night, sound and polish.** People, traffic and buses on the new
    roads, the blocks' lights at night, sound by district, `?bench` views,
    phones checked and trimmed, every width, the guides.

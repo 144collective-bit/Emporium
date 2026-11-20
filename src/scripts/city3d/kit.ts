@@ -5,6 +5,8 @@
  */
 import * as THREE from 'three';
 import { scopedKey, texScope } from './texscope';
+import { sharedGpu } from './gputier';
+import type { TexSources } from './texsource';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
 /* ---------- Layers ---------- */
@@ -376,6 +378,7 @@ export function canvasTex(w: number, h: number, draw: Draw): THREE.CanvasTexture
   const made = BUILT?.[key];
   if (made) return builtTexture(made, () => paint(w, h, draw));
   const c = paint(w, h, draw);
+  sources.painted++;
   if (BAKING) BAKING.push({ key, canvas: c, src: draw.toString().slice(0, 160), scope: texScope() });
   return named(canvasTexOf(c), draw);
 }
@@ -393,11 +396,62 @@ function named(t: THREE.CanvasTexture, draw: Draw) {
  */
 export function liveTex(w: number, h: number, draw: Draw): THREE.CanvasTexture {
   if (NO_DOM) return canvasTex(w, h, draw);
+  sources.painted++;
   return named(canvasTexOf(paint(w, h, draw)), draw);
 }
 
+/** The graphics' name as WebGL gives it ('' when hidden) */
+export function glName(gl: WebGLRenderingContext | WebGL2RenderingContext): string {
+  try {
+    const plain = String(gl.getParameter(gl.RENDERER) ?? '');
+    if (plain && !/^webkit webgl$/i.test(plain)) return plain;
+    const ext = gl.getExtension('WEBGL_debug_renderer_info');
+    return ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) ?? '') : '';
+  } catch {
+    return '';
+  }
+}
+/**
+ * The page has none of the build's textures (a build that skipped the bake): on graphics built into the processor
+ * (gputier.ts), the big ones are painted half size, as on phones. Painted, each holds four bytes a pixel, about four
+ * times the build's compressed ones: the whole city's that way was a quarter of a GB on a Ryzen laptop
+ * (docs/stability-plan.md). Asked before the city's renderer exists (the modules paint as they load), so the
+ * graphics' name comes from a throwaway context, let go at once. Not with ?textures=0 (painting on purpose, to compare).
+ */
+let halfPaint: boolean | undefined;
+function paintsHalf() {
+  if (halfPaint !== undefined) return halfPaint;
+  halfPaint = HALF_TEX;
+  if (!halfPaint && !BAKING && !BUILT && !/[?&](textures=0|fight|district)\b/.test(location.search)) {
+    try {
+      const gl = document.createElement('canvas').getContext('webgl2') ?? document.createElement('canvas').getContext('webgl');
+      if (gl) {
+        halfPaint = sharedGpu(glName(gl));
+        gl.getExtension('WEBGL_lose_context')?.loseContext();
+      }
+    } catch {
+      // (no answer: full size, as before)
+    }
+  }
+  return halfPaint;
+}
+
+const sources = { built: {} as Record<string, number>, fellBack: 0, painted: 0 };
+export const texSources = (): TexSources => ({ onPage: !!BUILT, built: { ...sources.built }, fellBack: sources.fellBack, painted: sources.painted, half: !!halfPaint });
+/** The GPU format a texture from the build was transcoded to, in a word */
+function formatName(f: number) {
+  if (f === THREE.RGBA_BPTC_Format) return 'BC7';
+  if (f === THREE.RGBA_S3TC_DXT5_Format) return 'BC3';
+  if (f === THREE.RGBA_S3TC_DXT1_Format || f === THREE.RGB_S3TC_DXT1_Format) return 'BC1';
+  if (f === THREE.RGB_ETC2_Format || f === THREE.RGBA_ETC2_EAC_Format) return 'ETC2';
+  if (f === THREE.RGB_ETC1_Format) return 'ETC1';
+  if (f === THREE.RGBA_ASTC_4x4_Format) return 'ASTC';
+  if (f === THREE.RGB_PVRTC_4BPPV1_Format || f === THREE.RGBA_PVRTC_4BPPV1_Format) return 'PVRTC';
+  return f === THREE.RGBAFormat ? 'uncompressed' : String(f);
+}
+
 function paint(w: number, h: number, draw: Draw) {
-  const k = HALF_TEX && w * h >= BIG_TEX ? 0.5 : 1;
+  const k = paintsHalf() && w * h >= BIG_TEX ? 0.5 : 1;
   const c = document.createElement('canvas');
   c.width = Math.max(1, Math.round(w * k));
   c.height = Math.max(1, Math.round(h * k));
@@ -523,7 +577,10 @@ async function fill({ tex, made, paint, ready }: Waiting) {
     tex.image = k.image;
     tex.minFilter = k.minFilter;
     tex.colorSpace = THREE.SRGBColorSpace;
+    const f = formatName(k.format);
+    sources.built[f] = (sources.built[f] ?? 0) + 1;
   } catch {
+    sources.fellBack++;
     // (the canvas, as if it had never been made at build time)
     const c = paint();
     (tex as unknown as { isCompressedTexture: boolean }).isCompressedTexture = false;

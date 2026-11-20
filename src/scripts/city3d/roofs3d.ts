@@ -43,3 +43,46 @@ export function hip(u0: number, v0: number, u1: number, v1: number, y: number, h
   const soffit = new THREE.PlaneGeometry(w, d).rotateX(Math.PI / 2).translate(cx, y - 0.005, cz);
   return [tris(list, mid), soffit];
 }
+
+/**
+ * A hipped roof cut flat at `f` of its height (Crestmont's premium upgrade, Phase 2: a roof terrace on the hill
+ * mansions; crestgrand.ts `hipDeck()` holds the same deck): its four slopes up to the deck's edge, the soffit under
+ * the overhang. The deck itself is drawn by the caller.
+ */
+export function deckHip(u0: number, v0: number, u1: number, v1: number, y: number, h: number, o: number, f: number) {
+  const [x0, x1, z0, z1] = [u0 - o, u1 + o, v1 - o, v0 + o];
+  const [cx, cz] = [(x0 + x1) / 2, (z0 + z1) / 2];
+  const [w, d] = [x1 - x0, z1 - z0];
+  const k = (f * Math.min(w, d)) / 2;
+  const t = y + h * f;
+  const c: V3[] = [[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]];
+  const i: V3[] = [[x0 + k, t, z0 + k], [x1 - k, t, z0 + k], [x1 - k, t, z1 - k], [x0 + k, t, z1 - k]];
+  const list: V3[][] = [];
+  for (let s = 0; s < 4; s++) {
+    const [a, b] = [s, (s + 1) % 4];
+    list.push([c[a], c[b], i[b]], [c[a], i[b], i[a]]);
+  }
+  const soffit = new THREE.PlaneGeometry(w, d).rotateX(Math.PI / 2).translate(cx, y - 0.005, cz);
+  return [tris(list, [cx, y + h * f * 0.2, cz]), soffit];
+}
+
+/**
+ * A chateau's mansard (the premium upgrade's Phase 3): steep slopes from the overhang up `h` to a flat top `inset` in
+ * from the overhang's edge (crestgrand.ts `mansardDeck()` holds the same top), the soffit under the overhang; the top
+ * itself is drawn by the caller.
+ */
+export function mansard(u0: number, v0: number, u1: number, v1: number, y: number, h: number, inset: number, o: number) {
+  const [x0, x1, z0, z1] = [u0 - o, u1 + o, v1 - o, v0 + o];
+  const [cx, cz] = [(x0 + x1) / 2, (z0 + z1) / 2];
+  const t = y + h;
+  const k = inset;
+  const c: V3[] = [[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1]];
+  const i: V3[] = [[x0 + k, t, z0 + k], [x1 - k, t, z0 + k], [x1 - k, t, z1 - k], [x0 + k, t, z1 - k]];
+  const list: V3[][] = [];
+  for (let s = 0; s < 4; s++) {
+    const [a, b] = [s, (s + 1) % 4];
+    list.push([c[a], c[b], i[b]], [c[a], i[b], i[a]]);
+  }
+  const soffit = new THREE.PlaneGeometry(x1 - x0, z1 - z0).rotateX(Math.PI / 2).translate(cx, y - 0.005, cz);
+  return [tris(list, [cx, y + h * 0.2, cz]), soffit];
+}

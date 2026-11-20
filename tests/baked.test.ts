@@ -13,6 +13,7 @@ import { UNDER } from '../src/scripts/city3d/viadress';
 import { GINNELS, HOUSES } from '../src/scripts/city3d/southterraces';
 import { SHOPS } from '../src/scripts/city3d/highroad';
 import { BUNGALOWS, COMMUNITY_CENTRE, CORNER_SHOPS, SEMIS } from '../src/scripts/city3d/council';
+import { LINE, SOUTH_STATIONS } from '../src/scripts/city3d/southline';
 import { FOOTPATHS, GROWN, SOUTH_STREETS } from '../src/scripts/city3d/south';
 
 const made: Record<string, unknown> = await bake({ quiet: true });
@@ -30,7 +31,7 @@ function assertPlain(v: unknown, path: string) {
 }
 
 test('everything baked is plain data: it comes into the page as it was made', () => {
-  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'council', 'highroad', 'jog-cycle', 'march-cycle', 'metro-pillars', 'metro-plateaus', 'rolls', 'routes', 'south-grown', 'terraces', 'under-deck', 'verges', 'walk-cycle']);
+  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'council', 'crest-land', 'crest-paths', 'highroad', 'hill-fine', 'jog-cycle', 'mansion-ground', 'march-cycle', 'metro-pillars', 'metro-plateaus', 'rolls', 'routes', 'south-grown', 'southline', 'sun-lots', 'terraces', 'under-deck', 'verges', 'walk-cycle']);
   for (const [key, v] of Object.entries(made)) assertPlain(v, key);
 });
 
@@ -80,4 +81,8 @@ test("the south's closes, crescents and their footpaths from the page are the on
   assert.ok(GROWN.streets.length > 10 && GROWN.paths.length >= GROWN.streets.length);
   for (const s of GROWN.streets) assert.ok(SOUTH_STREETS.includes(s), `${s.id} is one of the south's streets`);
   for (const p of GROWN.paths) assert.ok(FOOTPATHS.includes(p), `${p.id} is one of its footpaths`);
+});
+
+test("the underground's south line and its stations from the page are the ones laid here", () => {
+  assert.deepStrictEqual(viaPage(made.southline), viaPage({ line: LINE, stations: SOUTH_STATIONS }));
 });

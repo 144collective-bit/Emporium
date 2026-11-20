@@ -62,6 +62,8 @@ export interface TouchHost {
   jumpHeld: boolean;
   aim: boolean;
   drive: { horn(): void };
+  /** The touch Nitro button at the wheel of your car or bike (the inventory plan's Phase 5) */
+  nitro?(): void;
   combat: { trigger(on: boolean, touch?: boolean): void; reload(): void };
   // What walk mode does
   hm(job: HoldJob, input: HoldInput): HoldMode;
@@ -237,6 +239,8 @@ export function wireTouch(el: TouchEls, s: TouchState, h: TouchHost) {
     );
   for (const ev of ['gesturestart', 'gesturechange'] as const) document.addEventListener(ev, (e) => h.active && e.preventDefault());
   root.addEventListener('contextmenu', (e) => h.active && onControls(e.target) && e.preventDefault());
+  // A nitro can from the bag (the inventory plan's Phase 5; shown while there's one and you're in your car or on your bike)
+  root.querySelector('[data-drive-nitro]')?.addEventListener('pointerdown', () => h.nitro?.());
   // The horn while driving your car (city life plan, Phase 2)
   $('[data-drive-horn]').addEventListener('pointerdown', () => {
     if (h.boat?.active) h.boat.horn();

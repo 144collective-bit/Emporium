@@ -23,11 +23,14 @@
  * - `bagHtml()`: the weapons and the grid for the business card's Bag tab
  *   (tycoon-ui.ts), read-only, with the Armoury and the Night Market as
  *   ways in from the City view.
- * - `buySnack()`: a snack bought at a diner's door or a Night Market stall
- *   (walk mode's prompts, `SNACK_BARS`).
+ * - `buyAt()`: a consumable bought where it's sold (walk mode's prompts,
+ *   `SELLERS`: the snack bars, Uptown's coffee carts and newsstands, Kestrel
+ *   Fuel's kiosk), and Use where it works (Phase 5: `useItem()`'s `Here`,
+ *   from walk mode); the boosts on now as chips with their time left
+ *   (`[data-boosts]`, `paintBoosts()`).
  *
- * The hand (empty or the thing he holds out) is this view's: the save keeps
- * what he carries, not what's out.
+ * What's out (a gun or his empty hands, his fists) is this view's: the save
+ * keeps what he carries, not what's out.
  */
 import { GUN_MODS, GUN_MOD_IDS, ITEM_CATALOG, ITEM_MAX, applyGunMods, type ItemId } from './catalog';
 import { WEAPONS, type Weapon, type WeaponId } from './combat-sim';
@@ -47,24 +50,23 @@ import {
   swapSlots,
   unequip,
   useItem,
-  SNACK_BARS,
+  touchFirst,
+  SELLERS,
+  type Here,
   type InvResult,
   type Slot,
 } from './inventory';
+import { FLYERS, type BoostId, type Boosts } from './boosts';
+import { HOT_SLOTS } from './touchlayout';
 import { gunMods, type TycoonSave } from './tycoon';
 import { esc, fmt, onTap, repaint, whyNot, type GameDeps } from './ui';
-import type { Held } from '../net/profile-data';
-
-export const HELD_NAMES: Record<Held, string> = { coffee: 'Iced coffee', boombox: 'Boombox', phone: 'Phone', briefcase: 'Briefcase' };
-/** Line icons in a 24 box (the fitting room's Hand tab draws the same) */
-const HELD_ICONS: Record<Held, string> = {
-  coffee: 'M7 8h10l-1.5 13h-7z M6.5 8a5.5 3 0 0 1 11 0 M13 5l2-3 M8 13h8',
-  boombox: 'M3 9h18v10H3z M8 9V6h8v3 M8 14m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0 M16 14m-2.5 0a2.5 2.5 0 1 0 5 0a2.5 2.5 0 1 0-5 0',
-  phone: 'M8 2h8a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1z M10 18h4 M9 7l2 3 2-4 2 5',
-  briefcase: 'M3 8h18v12H3z M9 8V5h6v3 M3 13h18 M11 12h2v3h-2z',
+/** A bun with a filling, a can with a bolt on it, a canister with its nozzle and a flame, a stack of flyers */
+const ITEM_ICONS: Record<ItemId, string> = {
+  snack: 'M4 11a8 5.5 0 0 1 16 0z M3 14h18 M4 17h16a2 2 0 0 1-2 3H6a2 2 0 0 1-2-3z M9 7.5h.01 M13 6.5h.01',
+  energy: 'M7 5h10v16H7z M8 2h8v3H8z M13 8l-3 5h4l-3 5',
+  nitro: 'M8 8h8v13H8z M10 8V5h4v3 M12 5V3h4 M12 12c-1.5 1.5-1.5 3 0 4.5 1.5-1.5 1.5-3 0-4.5z',
+  flyers: 'M6 4h11l2 2v14H6z M9 9h7 M9 12h7 M9 15h4 M4 7v15h12',
 };
-/** A bun with a filling */
-const ITEM_ICONS: Record<ItemId, string> = { snack: 'M4 11a8 5.5 0 0 1 16 0z M3 14h18 M4 17h16a2 2 0 0 1-2 3H6a2 2 0 0 1-2-3z M9 7.5h.01 M13 6.5h.01' };
 
 const icon = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="${d}"/></svg>`;
 const gunArt = (id: WeaponId) => `<svg class="hb-gun" viewBox="0 0 120 40" aria-hidden="true"><path d="${ART[id]}"/></svg>`;
@@ -83,7 +85,6 @@ function statBars(w: Weapon) {
 /** The name a hotbar slot goes by */
 function slotName(x: Slot) {
   if (x.kind === 'gun') return x.weapon ? WEAPONS[x.weapon].short : 'Empty';
-  if (x.kind === 'held') return HELD_NAMES[x.held];
   return ITEM_CATALOG[x.item].name;
 }
 /** A grid key's art, name and count */
@@ -95,10 +96,9 @@ function thing(save: TycoonSave, key: string, ammo?: (id: WeaponId) => [number, 
     const [mag, res] = ammo?.(it.weapon) ?? [w.mag, w.reserve];
     return { art: gunArt(it.weapon), name: WEAPONS[it.weapon].name, short: WEAPONS[it.weapon].short, count: String(mag), about: `${modLine(save, it.weapon)} · ${mag} / ${res}`, stats: statBars(w), it };
   }
-  if (it.kind === 'held') return { art: icon(HELD_ICONS[it.held]), name: HELD_NAMES[it.held], short: HELD_NAMES[it.held], count: '', about: 'Held in your hand', it };
   const n = save.inventory.items[it.item] ?? 0;
   const c = ITEM_CATALOG[it.item];
-  return { art: icon(ITEM_ICONS[it.item]), name: c.name, short: c.name, count: `×${n}`, about: `${c.blurb} ${n} of ${ITEM_MAX} · ${fmt.format(c.price)} each`, it };
+  return { art: icon(ITEM_ICONS[it.item]), name: c.name, short: c.name, count: `×${n}`, about: `${c.blurb}. ${n} of ${ITEM_MAX} · ${fmt.format(c.price)} at ${c.where}`, it };
 }
 
 /* ---------- The weapons and the grid (the inventory, the business card's Bag) ---------- */
@@ -112,8 +112,8 @@ export interface GridOpts {
   live: boolean;
   /** What's selected: a grid space (0-15) or a weapon slot (-1, -2) */
   sel?: number | null;
-  /** The weapon slot whose gun is out, and whether the thing in his hand is out */
-  out?: { slot: 0 | 1 | null; held: boolean };
+  /** The weapon slot whose gun is out */
+  out?: { slot: 0 | 1 | null };
   /** Where something was just dropped (it settles with a bounce) */
   land?: number | null;
 }
@@ -138,10 +138,9 @@ export function gridParts(save: TycoonSave, o: GridOpts) {
     .map((k, i) => {
       const t = k ? thing(save, k, o.ammo) : null;
       const on = o.sel === i;
-      const out = !!t && t.it.kind === 'held' && o.out?.held && save.inventory.held === t.it.held;
       return (
-        `<${tag} class="inv-cell${t ? '' : ' is-empty'}${on ? ' is-sel' : ''}${out ? ' is-out' : ''}${o.land === i ? ' is-landed' : ''}" data-cell="${i}"${o.live ? ` aria-pressed="${on}"` : ''} aria-label="${t ? esc(t.name) : `Space ${i + 1}: empty`}">` +
-        (t ? `<span class="inv-art">${t.art}</span><span class="inv-name">${esc(t.short)}</span>${t.count ? `<span class="inv-count">${t.count}</span>` : ''}${out ? '<span class="inv-badge">Out</span>' : ''}` : '') +
+        `<${tag} class="inv-cell${t ? '' : ' is-empty'}${on ? ' is-sel' : ''}${o.land === i ? ' is-landed' : ''}" data-cell="${i}"${o.live ? ` aria-pressed="${on}"` : ''} aria-label="${t ? esc(t.name) : `Space ${i + 1}: empty`}">` +
+        (t ? `<span class="inv-art">${t.art}</span><span class="inv-name">${esc(t.short)}</span>${t.count ? `<span class="inv-count">${t.count}</span>` : ''}` : '') +
         `</${end}>`
       );
     })
@@ -161,25 +160,50 @@ export function bagHtml(save: TycoonSave, o: { may(id: WeaponId): boolean; ways?
   );
 }
 
-/** Use a consumable from the inventory or the hotbar: only in a spar (Phase 3), so for now it says so */
-function useOne(game: GameDeps, id: ItemId) {
-  const r = useItem(game.save(), id, false);
-  if (r.ok) game.commit();
-  else game.toast(r.why === 'stock' ? `No ${ITEM_CATALOG[id].name.toLowerCase()}s left` : 'Use it in a spar', 4200);
+/** What using one says when it can't be used (Phase 5: each where it works) */
+function notNow(id: ItemId, why: InvResult & { ok: false }) {
+  const c = ITEM_CATALOG[id];
+  if (why.why === 'stock') return `No ${c.name.toLowerCase()} left`;
+  if (why.why === 'active') return id === 'flyers' ? 'Your flyers are still out' : `${c.name} still going`;
+  if (why.why === 'empty') return 'Stock your stall first';
+  return c.use;
+}
+/** What using one says when it's used */
+const USED: Record<ItemId, string> = {
+  snack: 'Snack eaten',
+  energy: 'Energy drink · run faster, never out of breath',
+  nitro: 'Nitro',
+  flyers: `Flyers out · twice the customers for ${FLYERS.minutes} min`,
+};
+/** Use a consumable from the inventory, the hotbar or a key (N in the car): where it works, it's used up and its boost starts */
+function useOne(d: Pick<HotbarDeps, 'game' | 'here' | 'boosts' | 'now'>, id: ItemId) {
+  const game = d.game;
+  const r = useItem(game.save(), id, { ...d.here(), now: Date.now(), on: (b) => d.boosts.on(b, d.now()) });
+  if (!r.ok) {
+    game.toast(notNow(id, r), 3600);
+    game.sfx('denied');
+    return false;
+  }
+  if (id === 'energy' || id === 'nitro') d.boosts.start(id, d.now());
+  game.commit();
+  game.sfx(id === 'nitro' ? 'kartBoost' : 'buy');
+  if (id !== 'nitro') game.toast(USED[id], 3200);
+  return true;
 }
 
-/** A snack at a diner's door or a Night Market stall: one into the bag, if there's room and the Dorras */
-export function buySnack(game: GameDeps, where: string) {
+/** One consumable bought where it's sold (a snack at a diner, an energy drink at a coffee cart...): into the bag, if there's room and the Dorras */
+export function buyAt(game: GameDeps, id: ItemId, where: string) {
   const s = game.save();
-  const r = buyItem(s, 'snack');
+  const c = ITEM_CATALOG[id];
+  const r = buyItem(s, id);
   if (!r.ok) {
-    game.toast(r.why === 'max' ? `Bag full · ${ITEM_MAX} snacks max` : whyNot(r.why, ITEM_CATALOG.snack.level));
+    game.toast(r.why === 'max' ? `Bag full · ${ITEM_MAX} max` : whyNot(r.why, c.level));
     game.sfx('denied');
     return false;
   }
   game.commit();
   game.sfx('buy');
-  game.toast(`${where} · snack bought · ${s.inventory.items.snack} / ${ITEM_MAX} in bag`, 3600);
+  game.toast(`${where} · ${c.name.toLowerCase()} bought · ${s.inventory.items[id]} / ${ITEM_MAX} in bag`, 3600);
   return true;
 }
 
@@ -200,11 +224,14 @@ export interface HotbarDeps {
   game: GameDeps;
   combat: HotbarCombat;
   touched(): void;
-  /** Put a thing in his hand (the look's `held`, which the save follows) */
-  hold(held: Held): void;
   /** The inventory opened (free the mouse, stand him still) and closed */
   opened(): void;
   closed(): void;
+  /** Where Degen is, for what can be used there (Phase 5) */
+  here(): Omit<Here, 'now' | 'on'>;
+  /** The boosts on him (walk mode's), on its clock in seconds */
+  boosts: Boosts;
+  now(): number;
 }
 
 /** Two taps on the same thing this close together (ms) are a double tap */
@@ -218,12 +245,12 @@ const LAND_MS = 400;
 
 export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   const bar = root.querySelector<HTMLElement>('[data-hotbar]')!;
+  const boostsEl = root.querySelector<HTMLElement>('[data-boosts]')!;
+  let boostsShown = '';
   const panel = root.querySelector<HTMLElement>('[data-inv]')!;
   const weaponsEl = panel.querySelector<HTMLElement>('[data-inv-weapons]')!;
   const gridEl = panel.querySelector<HTMLElement>('[data-inv-grid]')!;
   const infoEl = panel.querySelector<HTMLElement>('[data-inv-info]')!;
-  /** With no gun out: his hands empty (his fists) or the thing he holds out */
-  let hand: 'hands' | 'held' = 'held';
   let shown = '';
   let open = false;
   /** Selected in the inventory: a grid space (0-15) or a weapon slot (-1 slot 1, -2 slot 2) */
@@ -236,12 +263,15 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   const fine = matchMedia('(hover: hover) and (pointer: fine)');
 
   const save = () => d.game.save();
+  /** The bar's slots: all seven on a keyboard's 1-7; a touch screen's four, the consumable that works where he is first (Phase 5) */
+  const coarse = matchMedia('(pointer: coarse)');
+  const barSlots = () => (coarse.matches ? slots(save(), HOT_SLOTS, touchFirst(!!d.here().atStall)) : slots(save()));
   const may = (id: WeaponId) => d.combat.canTake(id);
   /** The hotbar slot lit now ('hands': nothing out) */
   function current() {
     const g = save().inventory.guns;
     if (d.combat.armed) return d.combat.weapon === g[1] && g[1] !== g[0] ? 'gun1' : d.combat.weapon === g[0] ? 'gun0' : 'hands';
-    return hand === 'held' && save().inventory.held ? 'held' : 'hands';
+    return 'hands';
   }
   const outSlot = (): 0 | 1 | null => {
     const c = current();
@@ -249,16 +279,10 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
   };
   /** Nothing in his hands: his fists */
   function hands() {
-    hand = 'hands';
     d.combat.holster();
   }
   function drawGun(w: WeaponId) {
     if (!d.combat.draw(w)) d.game.toast(`The ${WEAPONS[w].name} isn't unlocked yet.`);
-  }
-  function holdOut(h: Held) {
-    if (save().inventory.held !== h) d.hold(h);
-    hand = 'held';
-    d.combat.holster();
   }
   function pickAt(x: Slot | undefined) {
     const a = pickSlot(x);
@@ -271,24 +295,20 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
         if (at === slotKey(x)) hands();
         else drawGun(a.weapon);
         break;
-      case 'held':
-        if (at === 'held') hand = 'hands';
-        else holdOut(a.held);
-        break;
       case 'empty':
         // (empty hands are his fists: the gun out goes away)
         hands();
         d.game.toast(`Weapon slot ${x.kind === 'gun' ? x.i + 1 : ''} is empty. Fill it in the bag.`);
         break;
       case 'use':
-        useOne(d.game, a.item);
+        useOne(d, a.item);
         break;
     }
     paint();
     return true;
   }
   /** Pick the hotbar slot numbered n + 1 (1-7) */
-  const pick = (n: number) => pickAt(slots(save())[n]);
+  const pick = (n: number) => pickAt(barSlots()[n]);
   /** Step to the next (or previous) of the weapons and empty hands */
   function step(dir: 1 | -1) {
     const key = stepKey(save(), current(), dir);
@@ -354,7 +374,6 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
       const first = !g[0] ? 0 : !g[1] ? 1 : out === 0 ? 1 : 0;
       return [first, 1 - first].map((k) => ({ id: `slot${k}`, label: `${g[k] ? 'Swap' : 'To'} slot ${k + 1}` }));
     }
-    if (t.it.kind === 'held') return [current() === 'held' && save().inventory.held === t.it.held ? { id: 'away', label: 'Put away' } : { id: 'hold', label: 'Hold it' }];
     return [{ id: 'use', label: 'Use' }];
   }
   /** A right-click's quick move: a weapon back in the bag, the rest their first action */
@@ -379,8 +398,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
     }
     if (id === 'draw' && t.it.kind === 'gun') drawGun(t.it.weapon);
     else if (id === 'away') hands();
-    else if (id === 'hold' && t.it.kind === 'held') holdOut(t.it.held);
-    else if (id === 'use' && t.it.kind === 'item') useOne(d.game, t.it.item);
+    else if (id === 'use' && t.it.kind === 'item') useOne(d, t.it.item);
     paint();
   }
   const primary = (i: number) => {
@@ -394,7 +412,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
 
   function paint() {
     const s = save();
-    const list = slots(s);
+    const list = barSlots();
     const now = current();
     // (a signature first: the bar is checked every frame, painted only when it changes)
     const sig = `${now}|${list.map((x) => (x.kind === 'gun' && x.weapon ? `${x.weapon}:${d.combat.ammo(x.weapon).join('/')}` : x.kind === 'item' ? `${x.item}:${x.n}` : slotKey(x))).join(',')}`;
@@ -405,7 +423,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
         list
           .map((x, i) => {
             const k = slotKey(x);
-            const art = x.kind === 'gun' ? (x.weapon ? gunArt(x.weapon) : '') : x.kind === 'held' ? icon(HELD_ICONS[x.held]) : icon(ITEM_ICONS[x.item]);
+            const art = x.kind === 'gun' ? (x.weapon ? gunArt(x.weapon) : '') : icon(ITEM_ICONS[x.item]);
             // (a gun's count is its magazine; its reserve under it, shown on phones where the header leaves it out)
             const ammo = x.kind === 'gun' && x.weapon ? d.combat.ammo(x.weapon) : null;
             const count = ammo ? `<span class="hb-count">${ammo[0]}</span><small class="hb-res">/${ammo[1]}</small>` : x.kind === 'item' ? `<span class="hb-count">×${x.n}</span>` : '';
@@ -419,7 +437,7 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
       );
     }
     if (!open) return;
-    const out = { slot: outSlot(), held: now === 'held' };
+    const out = { slot: outSlot() };
     const landing = land.at !== null && performance.now() - land.t < LAND_MS ? land.at : null;
     const { weapons, cells } = gridParts(s, { ammo: (w) => d.combat.ammo(w), may, live: true, sel, out, land: landing });
     repaint(weaponsEl, weapons);
@@ -634,17 +652,12 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
     step,
     /** Per frame on foot: the bar (and the inventory while it's open) kept up to date */
     update: paint,
-    /** The thing in his hand is out (no gun drawn, and his hand on it) */
-    get heldOut() {
-      return !d.combat.armed && hand === 'held';
-    },
-    /** Nothing in his hands (no gun drawn, nothing held out): his fists (brawl.ts) */
+    /** Nothing in his hands (no gun drawn): his fists (brawl.ts) */
     get handsEmpty() {
-      return !d.combat.armed && (hand === 'hands' || !save().inventory.held);
+      return !d.combat.armed;
     },
-    /** Walking starts with the thing in his hand out, as before the inventory */
+    /** Walking starts with the bar painted afresh */
     reset() {
-      hand = 'held';
       shown = '';
     },
     /** The inventory (Tab, the Bag button, View on a gamepad) */
@@ -663,11 +676,31 @@ export function createHotbar(root: HTMLElement, d: HotbarDeps) {
       if (edge(14) || edge(15)) move(edge(14) ? -1 : 1, 0);
       if (edge(12) || edge(13)) move(0, edge(12) ? -1 : 1);
     },
-    /** The snack bars' prompts on foot (the diners' doors, the Night Market's stalls), and buying one there */
-    doors: SNACK_BARS.map((b) => ({ id: `snack:${b.id}`, x: b.x, z: b.z, label: `${b.name} · Snack` })),
-    snack(id: string) {
-      const bar = SNACK_BARS.find((b) => b.id === id);
-      if (bar) buySnack(d.game, bar.name);
+    /** Where things are sold, a prompt each on foot ("Coffee cart · Energy drink"), and buying one there */
+    doors: SELLERS.map((b) => ({ id: `buy:${b.id}`, x: b.x, z: b.z, label: `${b.name} · ${ITEM_CATALOG[b.sells].name}` })),
+    buy(id: string) {
+      const b = SELLERS.find((x) => x.id === id);
+      if (b) buyAt(d.game, b.sells, b.name);
+    },
+    /** Use one by its key (N in your car: the nitro), not from a slot */
+    use: (id: ItemId) => useOne(d, id),
+    /** Every frame in walk mode, whatever he's in: the boosts on now as chips with the seconds left (the flyers' minutes) */
+    paintBoosts() {
+      const now = d.now();
+      const fly = Math.max(0, save().flyers - Date.now()) / 1000;
+      const on: [ItemId, number][] = [
+        ...(['energy', 'nitro'] as BoostId[]).map((id): [ItemId, number] => [id, d.boosts.left(id, now)]),
+        ['flyers', fly],
+      ];
+      const html = on
+        .filter(([, t]) => t > 0)
+        .map(([id, t]) => `<span class="boost-chip boost-${id}" title="${esc(ITEM_CATALOG[id].name)}">${icon(ITEM_ICONS[id])}<b>${t >= 60 ? `${Math.ceil(t / 60)}m` : `${Math.ceil(t)}s`}</b></span>`)
+        .join('');
+      if (html !== boostsShown) {
+        boostsShown = html;
+        boostsEl.innerHTML = html;
+        boostsEl.hidden = !html;
+      }
     },
     /** A key while the inventory is open: Tab closes it, the rest wait (its own arrows and Enter go to it) */
     key(e: KeyboardEvent, down: boolean) {

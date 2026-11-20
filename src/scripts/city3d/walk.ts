@@ -33,7 +33,7 @@ import { SUN_DOORS } from './sunplaces';
 import { FIGURE_SCALE } from './skeleton';
 import * as THREE from 'three';
 import type { SpotId } from '../../lib/city';
-import { HOLDING, PLAYER, RELAXED, createDegen, type Outfit } from './character';
+import { PLAYER, RELAXED, createDegen, type Outfit } from './character';
 import { LAND_CROUCH, LAND_ROLL, copyPose, createLocomotion, placeRoot, type Root } from './locomotion';
 import type { Animator } from './animator';
 import type { Contact } from './contact';
@@ -49,7 +49,6 @@ import type { Sfx } from './combat';
 import { createCombatLazy } from './combat-lazy';
 import { lazy } from './lazy';
 import type { Hotbar } from './inventory-ui';
-import type { Held } from '../net/profile-data';
 import type { GunShop } from './gunshop';
 import { ARMS, AVENUE_DOORS } from './avenue';
 import { onDeck } from './waterfront';
@@ -84,7 +83,8 @@ import type { KartPark, KartRace, KartUI } from './kart-types';
 import { CUPS } from './kart-cups';
 import type { KartInput } from './kart-sim';
 import { abandonSeries, seriesNext } from './tycoon';
-import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, TURNTABLE_BOX, WALK_SPAWN, addSolids, rayBoxes, type Box } from './solids';
+import { CAMERA_GRID, DOORS, GARAGE_SITE, RACK, SOLIDS, SOLID_GRID, SOLID_GRIDS, STALL_SPOT, TURNTABLE_BOX, WALK_SPAWN, addSolids, rayBoxes, type Box } from './solids';
+import { ENERGY, createBoosts } from './boosts';
 import { BoxGrid } from './boxgrid';
 import { count } from './tycoon';
 import { SLAB, type Tick } from './world';
@@ -95,12 +95,14 @@ import { GATE } from './stadium';
 import { WALK_UNDER, viaductSurface, walkOff } from './viaground';
 import { skyDeckWall, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallWall } from './mallinside';
+import { LINK_CAMERA, linkUp, linkWall } from './malllink';
+import { COURT_CAMERA, courtWall } from './courtinside';
 import { skyUp, skyWall } from './southsky';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
 import { ENDS_DOORS } from './endsplaces';
-import { HOME_CAMERA, HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeWall, inHouse, onRoof, roofWall } from './home';
+import { HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, homeCamera, homeWall, inHouse, onRoof, roofWall } from './home';
 import { CITYHALL_DOOR, COURT_DOOR, POLICE_DOOR } from './civic';
 import { DOWN as UNDER_DOWN } from './underground';
 import { HARBOUR_MASTER } from './docksport';
@@ -313,8 +315,6 @@ export interface WalkDeps {
   places(): { id: string; x: number; z: number; label: string }[];
   /** Open one of them (tycoon-ui.ts) */
   openPlace(id: string): void;
-  /** Put a thing in Degen's hand from the inventory (the look's `held`: profile-ui.ts wears it, the save follows) */
-  hold(held: Held): void;
   /** The economy, for the shops in walk mode (buying, mods) */
   game: GameDeps;
   /** The kart park in the north-east (its hut door opens the kart menu; races run on its track) */
@@ -400,9 +400,6 @@ export function createWalk(d: WalkDeps) {
   let contactMod: typeof import('./contact') | null = null;
   let contact: Contact | null = null;
   let contactRot: Float32Array | null = null;
-  /** The thing in his hand behaving (heldpose.ts, with the on-foot chunk): its schedule and swing, and the turns it lays on */
-  let heldLife: ReturnType<typeof import('./heldpose').createHeldLife> | null = null;
-  let heldRot: Float32Array | null = null;
   const contactBoxes: Box[] = [];
   const contactPeople: { x: number; z: number }[] = [];
   /** The peek: how far he's leaning (-1 his left to 1 his right), eased; the gamepad's lean, the touch corner's, and when it was looked for */
@@ -593,8 +590,14 @@ export function createWalk(d: WalkDeps) {
   let momentDy = 0;
   /** Sitting down, where the camera goes: a three-quarter view from whichever side of him has the room */
   let benchYaw = 0;
-  /** Woken on a seat (`enter()`'s `seat`): once he's up, the camera comes round behind him to this, then it's yours */
+  /**
+   * Woken on a seat (`enter()`'s `seat`): once he's up, the camera comes round behind him to this, then it's yours.
+   * Any turn of the view by hand ends it at once (`look()`), and it gives up after `WAKE_SWING` s whatever happens:
+   * it must never hold the view against you (it did, turning while it swung, until both were added)
+   */
   let wakeYaw: number | null = null;
+  const WAKE_SWING = 2.5;
+  let wakeLeft = 0;
   const benchEye = new THREE.Vector3();
   const benchDir = new THREE.Vector3();
   function pickBenchYaw(mk: { face: number; y: number; seat?: { x: number; z: number } }) {
@@ -721,8 +724,8 @@ export function createWalk(d: WalkDeps) {
       else if (n.id === 'car') (drive.active ? getOut() : getIn());
       else if (n.id === 'put') putDown();
       else if (n.id === 'bench' || n.id === 'stand') return;
-      // (a snack is bought there and then: the mouse stays captured)
-      else if (n.id.startsWith('place:snack:')) hotbar?.snack(n.id.slice(12));
+      // (a snack, an energy drink, a nitro can or flyers are bought there and then: the mouse stays captured)
+      else if (n.id.startsWith('place:buy:')) hotbar?.buy(n.id.slice(10));
       else if (n.id.startsWith('place:')) {
         if (document.pointerLockElement === canvas) document.exitPointerLock();
         d.openPlace(n.id.slice(6));
@@ -761,10 +764,10 @@ export function createWalk(d: WalkDeps) {
   function blocked(x: number, z: number, y = 0, skip?: (b: Box) => boolean) {
     if (x < BOUNDS[0] || x > BOUNDS[2] || z < BOUNDS[1] || z > BOUNDS[3]) return true;
     // Inside Degen's house (home.ts, docs/home-plan.md Phase 3): only the room's walls and what stands in it stop you
-    if (inHouse(x, z, y)) return homeWall(x, z, RADIUS);
+    if (inHouse(x, z, y)) return homeWall(x, z, RADIUS, y);
     // ...and up on his roof terrace (docs/ends-far-west-plan.md Phase 3) only its rail and what stands on it
     if (onRoof(x, z, y)) return roofWall(x, z, RADIUS);
-    // Below ground (underground.ts: Lot 9's tunnel, Endswood's subways and well): down there only their walls stop you;
+    // Below ground (underground.ts: Lot 9's tunnel, the Circus's subways and plaza): down there only their walls stop you;
     // at street level the open cuttings' and the well's edges do
     if (UNDER.inZone(x, z)) {
       if (y < UNDER_DOWN) return UNDER.wall(x, z, y, RADIUS);
@@ -782,8 +785,11 @@ export function createWalk(d: WalkDeps) {
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
     // Up in Endswood's sky network (southsky.ts): only its railings stop you (off its galleries, bridges and decks)
     if (skyUp(x, z, y)) return skyWall(x, z, y, RADIUS);
-    // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor
-    if (mallWall(x, z, y, RADIUS)) return true;
+    // Up in Starlight Mall's Skywalk (malllink.ts): only its edges and what stands on your floor stop you
+    if (linkUp(x, z, y)) return linkWall(x, z, y, RADIUS);
+    // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor; in the Skywalk's
+    // pavilion at street level, its escalators' sides; in Palm Court (courtinside.ts), its upper floor's edges
+    if (mallWall(x, z, y, RADIUS) || linkWall(x, z, y, RADIUS) || courtWall(x, z, y, RADIUS)) return true;
     // (the river is a wall at its edges, wherever they curve (river.ts), but at the bridges, on The Trenches' boardwalk and pier and on Uptown's esplanade: their railings are the decks' edges)
     if (inWater(x, z, -0.3) && !onBridge(x, z) && !onDeck(x, z, RADIUS) && !onEsplanade(x, z, RADIUS)) return true;
     // ...and the swing bridge's barriers while they're down (swingbridge.ts)
@@ -802,7 +808,7 @@ export function createWalk(d: WalkDeps) {
   /** How far the camera can sit from the pivot along `dir` before something's in the way. */
   function cameraRoom(from: THREE.Vector3, dir: THREE.Vector3, want: number, min = 0.35, skipUnder = 0.5) {
     let t = want;
-    // (down below ground, underground.ts: the walls, floor and roof of Lot 9's tunnel, Endswood's subways and its well)
+    // (down below ground, underground.ts: the walls, floor and roof of Lot 9's tunnel, the Circus's subways and its plaza)
     const under = from.y < 0.6 && UNDER.inZone(from.x, from.z);
     if (under) t = UNDER.room(from.x, from.y, from.z, dir.x, dir.y, dir.z, t);
     // Ground (and kerb) below
@@ -821,7 +827,7 @@ export function createWalk(d: WalkDeps) {
     }
     // Only the boxes under the camera's line can be in its way (padded as the test below pads them)
     // (and Liberty Bridge's towers over their arches and its walkways' roofs, which you walk under: a bottom, b[5])
-    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, HOME_CAMERA] as number[][]) {
+    for (const b of [...CAMERA_GRID.alongRay(from, dir, t, 0.18, nearBoxes), ...d.placedSolids(), ...LIBERTY_CAMERA, ...DECK_CAMERA, ...MALL_CAMERA, ...LINK_CAMERA, ...COURT_CAMERA, ...homeCamera(pos.y)] as number[][]) {
       if (b[4] < skipUnder) continue;
       const lo = [b[0] - 0.18, b[5] ?? 0, b[1] - 0.18];
       const hi = [b[2] + 0.18, b[4] + 0.15, b[3] + 0.18];
@@ -912,16 +918,30 @@ export function createWalk(d: WalkDeps) {
           game: d.game,
           combat,
           touched: d.touched,
-          hold: d.hold,
           // The inventory (Tab): the mouse freed for dragging, Degen stood still, as at a counter
           opened() {
             still();
           },
           closed: () => canvas.focus({ preventScroll: true }),
+          // (Phase 5: what can be used here; the energy drink on foot, the nitro at your own car's or bike's wheel)
+          here: () => ({
+            onFoot: !drive.active && !fly.active && !karts.active && !boat?.active && !fighting() && !ride,
+            car: drive.active && (drive.vehicle?.kind === 'car' || drive.vehicle?.kind === 'bike'),
+            atStall: !drive.active && Math.hypot(pos.x - STALL_SPOT.x, pos.z - STALL_SPOT.z) < 1.6,
+          }),
+          boosts,
+          now: boostNow,
         });
       }),
     'your bag'
   );
+  /** The consumables' boosts on him (boosts.ts, the inventory plan's Phase 5): the energy drink and the nitro, on this clock */
+  const boosts = createBoosts();
+  const boostNow = () => performance.now() / 1000;
+  /** How many nitro cans, in the speed readout's Nitro button */
+  const nitroN = root.querySelector<HTMLElement>('[data-drive-nitro-n]');
+  /** N in your car (X on a gamepad, the touch Nitro button): a nitro can from the bag */
+  const useNitro = () => void (hotbar ? hotbar.use('nitro') : loadHotbar().then(() => hotbar?.use('nitro')));
   /** Pick a hotbar slot (0-6), or step through the fists and the guns */
   const pickSlot = (n: number) => (hotbar ? hotbar.pick(n) : void loadHotbar().then(() => hotbar?.pick(n)));
   /** Open or close the inventory (Tab, the Bag button, View on a gamepad) */
@@ -1620,6 +1640,8 @@ export function createWalk(d: WalkDeps) {
       d.touched();
       return;
     }
+    // (the view turned by hand: waking's swing round behind him lets go, `wakeYaw`)
+    wakeYaw = null;
     // Finer control down the sight
     k *= 1 - combat.aimed * 0.4;
     const dyaw = -dx * k * settings.sens;
@@ -1734,6 +1756,7 @@ export function createWalk(d: WalkDeps) {
 
   /** The keyboard (walkkeys.ts, docs/walk-plan.md Phase 2): what it reads and calls of walk mode */
   const keyHost: KeyHost = {
+    nitro: useNitro,
     d,
     get active() {
       return active;
@@ -1935,6 +1958,7 @@ export function createWalk(d: WalkDeps) {
 
   /** The touch controls (walktouch.ts, docs/walk-plan.md Phase 3): the page, walk mode's shared objects, and what they read and call */
   const touchHost: TouchHost = {
+    nitro: useNitro,
     d,
     get active() {
       return active;
@@ -1998,6 +2022,7 @@ export function createWalk(d: WalkDeps) {
   /** The gamepad (walkpad.ts, docs/walk-plan.md Phase 1): what it reads and calls of walk mode, and what it fills */
   const padState: PadState = { pad, drive: padDrive, kart: padKart, fly: padFly, fight: padFight };
   const padHost: PadHost = {
+    nitro: useNitro,
     d,
     get hotbar() {
       return hotbar;
@@ -2197,7 +2222,10 @@ export function createWalk(d: WalkDeps) {
     if (pedals.gas || pedals.brake) throttle = (pedals.gas ? 1 : 0) - (pedals.brake ? 1 : 0);
     if (padDrive.steer) steer = padDrive.steer;
     if (padDrive.throttle) throttle = padDrive.throttle;
-    driven += drive.update(dt, { throttle, steer, handbrake: jumpHeld || padDrive.handbrake });
+    // (a nitro can burning: your car or bike only, never the kart)
+    const kind = drive.vehicle?.kind;
+    const boost = kind !== 'kart' && boosts.on('nitro', boostNow()) ? 1 : 0;
+    driven += drive.update(dt, { throttle, steer, handbrake: jumpHeld || padDrive.handbrake, boost });
     // Every ten tiles the distance goes on the save's counters (missions watch them)
     if (driven >= 10) {
       count(d.game.save(), 'driven', Math.floor(driven));
@@ -2367,6 +2395,11 @@ export function createWalk(d: WalkDeps) {
     if (!drive.active && !karts.active) setNear(baseNear);
     pollPad(dt);
     cardFrame(dt);
+    // (the boosts on now, as chips, whatever he's in; Nitro on touch while there's a can for your car or bike)
+    hotbar?.paintBoosts();
+    const cans = drive.active && drive.vehicle?.kind !== 'kart' ? (d.game.save().inventory.items.nitro ?? 0) : 0;
+    if (cans > 0 !== root.classList.contains('has-nitro')) root.classList.toggle('has-nitro', cans > 0);
+    if (cans > 0 && nitroN && nitroN.textContent !== String(cans)) nitroN.textContent = String(cans);
     kartUI.update(dt);
     fightUI.update(dt);
     if (ride) return rideFrame(dt, t);
@@ -2465,6 +2498,8 @@ export function createWalk(d: WalkDeps) {
       ? fists!.brawl.step(hitStop > 0 ? 0 : dt, pos.x, pos.z, face, { punch: fightBtns.punch, kick: fightBtns.kick, dodge: fightBtns.dodge, guard: guardHeld, sprinting: sprint && mag > 0.1, dx: dirX, dz: dirZ })
       : null;
     if (!fighting()) fightBtns.punch = fightBtns.kick = fightBtns.dodge = false;
+    // (an energy drink on: never out of breath)
+    if (fistsOn && boosts.on('energy', boostNow())) fists!.brawl.refill();
     const guardUp = fistsOn && fists!.brawl.up;
     const rooted = fistsOn && fists!.brawl.rooted;
     if (fistsOn !== fistsShown) {
@@ -2478,7 +2513,9 @@ export function createWalk(d: WalkDeps) {
     if (guardUp !== root.classList.contains('is-guard')) root.classList.toggle('is-guard', guardUp);
     // (up stairs a climb's pace: the stairs takes' walking, a brisk climb running; movesim.ts STAIRS)
     const climbing = mag > 0.1 && climbAhead(groundAt, pos.x, pos.z, pos.y, dirX, dirZ, SCALE);
-    const top = Math.min(shooting ? AIMING : sprint ? SPRINT : walkLock ? WALK : RUN, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp ? fistsMod!.BRAWL.guardSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
+    // (an energy drink on: his run and sprint quicker, boosts.ts ENERGY)
+    const pep = boosts.on('energy', boostNow()) ? ENERGY.speed : 1;
+    const top = Math.min(shooting ? AIMING : sprint ? SPRINT * pep : walkLock ? WALK : RUN * pep, crouched ? CROUCH.speed : Infinity, climbing ? (walkLock ? STAIRS.walk : STAIRS.run) : Infinity, carrying ? RUN * MOMENT.crate.slow : Infinity, guardUp ? fistsMod!.BRAWL.guardSpeed : Infinity) * (1 - (1 - PEEK.slow) * Math.abs(peek));
 
     // Towards it on the springs (movesim.ts; hardly any control in the air), facing where he's
     // going, or where you look when aiming / in first person; a moment's approach walks him onto its mark
@@ -2495,7 +2532,8 @@ export function createWalk(d: WalkDeps) {
     // (woken on his sofa, docs/spawn-plan.md: up off it, the view swings round behind him, so ahead is into the room)
     if (wakeYaw !== null && !(moments.active && moments.phase === 'hold')) {
       yaw += wrap(wakeYaw - yaw) * damp(3, dt);
-      if (Math.abs(wrap(wakeYaw - yaw)) < 0.01) wakeYaw = null;
+      wakeLeft -= dt;
+      if (Math.abs(wrap(wakeYaw - yaw)) < 0.01 || wakeLeft <= 0) wakeYaw = null;
     }
     // (a kick or the dodge: he stands for it; the guard up, he faces where you look, as aiming)
     const gx = mg ? mg.dx * mg.speed : rooted ? 0 : dirX * top;
@@ -2743,7 +2781,6 @@ export function createWalk(d: WalkDeps) {
     if (!combat.armed) owedPitch = owedYaw = 0;
     recoil = Math.max(0, recoil - dt * 0.35);
     aimAmt += ((shooting ? 1 : 0) - aimAmt) * damp(14, dt);
-    if (hero.held) hero.held.visible = (hotbar ? hotbar.heldOut : !combat.armed) && !carrying;
     hotbar?.update();
     // Both hands on the gun (after walking and jumping have posed the arms)
     const gunInHand = combat.geared && combat.poseGun(P, { aim: aimAmt, pitch, recoil, run: runAmt, dt });
@@ -2772,7 +2809,7 @@ export function createWalk(d: WalkDeps) {
     // The hands on the motion capture: as the playing take closes them (animator.ts GRIP), unless something's in them
     if (animator && mocapW > 0 && !P.grip) {
       const g = RELAXED + (animator.grip - RELAXED) * mocapW;
-      P.grip = [g, hero.held?.visible ? Math.max(g, HOLDING) : g];
+      P.grip = [g, g];
     }
     hero.update();
     // On foot, unarmed and not showing off, the motion capture: blended in and out over a moment
@@ -2799,7 +2836,6 @@ export function createWalk(d: WalkDeps) {
           contactMod = cm;
           contact = cm.createContact({ hands: !d.low });
           contactRot = new Float32Array(animator.rot.length);
-          heldRot = new Float32Array(animator.rot.length);
           mocapState = 'on';
         },
         // (it can be tried again: the procedural walk carries on meanwhile; say so once, so a reverted-looking
@@ -2850,27 +2886,11 @@ export function createWalk(d: WalkDeps) {
             rot = contactRot;
           }
         }
-        // The thing in his hand behaving (heldpose.ts, the polish plan's Phase 8): the cup to his lips now and then, the
-        // phone read standing still and glanced at on the walk, the briefcase swinging on his hand; not while something
-        // else has his arms (a gun, an emote, a slide, a vault, a moment, the fists up, a crate)
-        if (onFoot && outfit.held && hero.held?.visible && u < 0.5 && !moments.active && !carrying) {
-          heldLife ??= onFoot.createHeldLife(0.37);
-          heldLife.update(dt, outfit.held, speed, !emote && !slide && !over && guardAmt < 0.05 && !combat.armed);
-          if (heldLife.layer.kind) {
-            if (rot === animator.rot && heldRot) {
-              heldRot.set(animator.rot);
-              rot = heldRot;
-            }
-            onFoot.applyHeld(rot, animator.hips, heldLife, dt);
-          }
-        } else heldLife?.update(dt, null, speed, false);
         anim.applyTo(hero.rig, rot, animator.hips, w, u, face - drawFace);
         anim.addLook(hero.rig, headYaw + lookAround, headPitch * 0.5 + gazePitch, w * (1 - u));
         // Follow-through (follow.ts): the head a few frames behind the chest as it turns
         const trail = headFollow.update(dt, drawFace + anim.chestYaw(hero.rig));
         if (!firstPerson) anim.addLook(hero.rig, trail, 0, w * (1 - u));
-        // (anything in his hand held out in front of it, clear of his leg; not while it's up at his face)
-        if (hero.held?.visible) anim.addCarry(hero.rig, w * (1 - u) * (1 - (heldLife?.layer.reach ?? 0)));
       }
       root0.roll = loco.root.roll * (1 - mocapW);
       root0.pitch = loco.root.pitch * (1 - mocapW);
@@ -3258,7 +3278,6 @@ export function createWalk(d: WalkDeps) {
       d.scene.add(hero.g);
       combat.setOutfit(o);
       fistsView?.setOutfit(o);
-      heldLife?.reset();
     },
     playEmote(id: string) {
       emote = { id, t: 0 };
@@ -3310,7 +3329,7 @@ export function createWalk(d: WalkDeps) {
      * the way its sitter faces, `h` its seat over the ground: waking on his sofa at home, docs/spawn-plan.md), up off
      * it with `standUp()` or the first push of the keys
      */
-    enter(spawn?: { x: number; z: number; yaw: number }, seat?: { x: number; z: number; ry: number; h: number }) {
+    enter(spawn?: { x: number; z: number; yaw: number; y?: number }, seat?: { x: number; z: number; ry: number; h: number }) {
       active = true;
       // A few steps back from the doors, so the arcade tower fills the view
       pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(WALK_SPAWN.back));
@@ -3325,14 +3344,16 @@ export function createWalk(d: WalkDeps) {
       moments.cancel();
       dropCrate();
       momentAmt = momentDy = 0;
-      // ?spawn=x,z[,yaw] in the address: start walking somewhere else (for checking a place on real devices)
+      // ?spawn=x,z[,yaw[,y]] in the address: start walking somewhere else (for checking a place on real devices); `y`,
+      // how high, picks the floor where floors stand over one another (Degen's house upstairs: home.ts)
       const at = new URLSearchParams(location.search).get('spawn')?.split(',').map(Number);
       if (at && at.length >= 2 && at.every(Number.isFinite)) {
-        pos.set(at[0], groundAt(at[0], at[1]), at[1]);
+        pos.set(at[0], groundAt(at[0], at[1], at[3] ?? 0), at[1]);
         if (at.length > 2) yaw = at[2];
       }
       if (spawn) {
-        pos.set(spawn.x, groundAt(spawn.x, spawn.z), spawn.z);
+        // (`y`: up on a floor over the slab, as `placeAt()`: Starlight Mall's station in the Skywalk)
+        pos.set(spawn.x, groundAt(spawn.x, spawn.z, spawn.y === undefined ? 0 : SLAB + spawn.y), spawn.z);
         yaw = spawn.yaw;
       }
       // (his body facing the way the camera looks: the place in front of him, not always the same way)
@@ -3354,6 +3375,7 @@ export function createWalk(d: WalkDeps) {
         // (the camera in front of him, looking back at him on the seat: behind him is the sofa's back and the wall;
         // once he's up it swings round behind him, `wakeYaw`)
         wakeYaw = spawn?.yaw ?? wrap(mk.face - Math.PI);
+        wakeLeft = WAKE_SWING;
         yaw = wrap(mk.face + 0.35);
         moments.sit(mk);
       } else wakeYaw = null;
@@ -3369,6 +3391,9 @@ export function createWalk(d: WalkDeps) {
     exit() {
       hideCard();
       lastMode = null;
+      boosts.clear();
+      hotbar?.paintBoosts();
+      root.classList.remove('has-nitro');
       // Leaving walk mode on a ride: it ends where it is
       if (ride) {
         const r = ride;

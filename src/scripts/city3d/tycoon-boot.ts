@@ -11,6 +11,7 @@
  * polish plan's Phase 4): nothing of the economy changes, the boot's code is
  * just smaller. `TycoonCore` is what the screens get from here.
  */
+import { SHELF } from './hometrophies';
 import {
   LOT_KINDS,
   START_DORRAS,
@@ -161,6 +162,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   const tabsEl = card.querySelector<HTMLElement>('[data-biz-tabs]')!;
   const toastEl = root.querySelector<HTMLElement>('[data-econ-toast]')!;
   const { save, fresh, refund } = loadSave(Date.now());
+  // (the trophy wall in his lounge reads the save: hometrophies.ts)
+  SHELF.set(save);
   const state: TycoonCore['state'] = { tab: 'stall', unitSel: 0, note: '', panel: null };
   let toastTimer = 0;
   /** Set while a backup is being put back: nothing more is stored before the city starts again */
@@ -289,6 +292,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     // Badges and level-ups first, so their XP is in the save that's stored
     missions.onCommit();
     store();
+    // The trophy wall at home (hometrophies.ts: it redraws only if what it shows changed)
+    SHELF.set(save);
     paintPill();
     screens?.paintCard();
     screens?.paintPanel();

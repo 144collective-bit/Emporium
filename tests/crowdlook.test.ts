@@ -1,11 +1,15 @@
 // The crowd's outfits by district and role (the polish plan's Phase 8, crowdlook.ts): seeded and stable, no two
 // neighbours alike, every kind one the crowd's meshes carry (phones one more than they had), each district its
 // own cloth, the roles' rules (joggers in track, kids bright, the Docks' workers in hi-vis, bouncers in black),
-// and the districts found where they stand.
+// and the districts found where they stand. By district, the wardrobe's own pieces (docs/wardrobe-plan.md Phase 8):
+// well dressed in the north, streetwear in The Trenches and the Ends, work wear at the port; and the crowd's meshes
+// held to the vertex work they had, about.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { CROWD_KINDS, CROWD_KINDS_LIGHT, HI_VIS, STYLES, cityOutfit, districtAt, roleOf, seeded, type District, type Role } from '../src/scripts/city3d/crowdlook';
-import { items, type Detail, type Outfit, type OutfitKind } from '../src/scripts/city3d/wardrobe';
+import { bottomsOf, items, shoesOf, type Detail, type Outfit, type OutfitKind } from '../src/scripts/city3d/wardrobe';
+import { ENDSWOOD_RECT, inEndswood } from '../src/scripts/city3d/endswood';
+import { inTrenches } from '../src/scripts/city3d/trenches';
 import { TRENCH_RECT } from '../src/scripts/city3d/trenches';
 import { UPTOWN_RECT } from '../src/scripts/city3d/uptown';
 import { NORTH_RECT } from '../src/scripts/city3d/uptownnorth';
@@ -48,8 +52,10 @@ test('every outfit is one the crowd can draw: a kind it carries, hex colours, on
         for (let i = 0; i < 40; i++) {
           const o = cityOutfit(seeded(i / 40 + 0.01), { district, role, kinds });
           assert.ok(kinds.includes(o.kind), `${district} ${role}: ${o.kind} is a kind the crowd carries (${kinds.join(', ')})`);
-          for (const c of [o.top, o.bottom, o.shoes, o.tie, o.cap, o.beanie, o.bucket, o.lens, o.backpack, o.crossbody, o.headphones]) if (c !== undefined) assert.match(c, HEX, `${district} ${role}: ${c}`);
-          assert.ok([o.cap, o.beanie, o.bucket, o.hood].filter(Boolean).length <= 1, `${district} ${role}: one hat`);
+          for (const c of [o.top, o.bottom, o.shoes, o.tie, o.cap, o.beanie, o.bucket, o.hardhat, o.lens, o.backpack, o.crossbody, o.sling, o.waist, o.headphones]) if (c !== undefined) assert.match(c, HEX, `${district} ${role}: ${c}`);
+          assert.ok([o.cap, o.beanie, o.bucket, o.hardhat, o.hood].filter(Boolean).length <= 1, `${district} ${role}: one hat`);
+          assert.ok([o.backpack, o.crossbody, o.sling, o.waist].filter(Boolean).length <= 1, `${district} ${role}: one bag`);
+          assert.ok(!o.chestrig, 'no chest rig in the crowd (the players\' only)');
           assert.ok(!(o.hood && o.kind !== 'hoodie'), 'only a hoodie has a hood');
           assert.ok(!(o.tie && o.kind !== 'suit'), 'only a suit has a tie');
           assert.ok(o.build! > 0.9 && o.build! < 1.15 && o.height! > 0.94 && o.height! < 1.06, 'a build and height near one');
@@ -81,6 +87,28 @@ test('each district dresses its own way', () => {
   assert.ok(share('beach', (o) => o.shoes === '#f3f2f7') > 0.4, 'white shoes at the cove');
   assert.ok(share('lot9', (o) => STYLES.lot9.tops.includes(o.top) || STYLES.lot9.suits.includes(o.top)) > 0.95, 'Lot 9 in its own cloth');
   assert.ok(share('karts', (o) => o.kind === 'track') > 0.4, 'the kart park in track');
+  // The wardrobe by district (docs/wardrobe-plan.md Phase 8): well dressed in the north, street in The Trenches and the
+  // Ends, work wear on the port's workers
+  const smart = (o: Outfit) => ['dress', 'derby', 'loafer'].includes(shoesOf(o)!);
+  assert.ok(share('uptown', smart) > 0.6, 'Uptown in dress shoes, derbies and loafers');
+  assert.ok(share('uptown', (o) => ['trousers', 'chinos'].includes(bottomsOf(o)!)) > 0.7, 'Uptown in trousers and chinos');
+  assert.ok(share('crest', (o) => bottomsOf(o) === 'chinos') > 0.3, 'Crestmont in chinos');
+  for (const d of ['trenches', 'ends'] as District[]) {
+    assert.ok(share(d, (o) => ['denim', 'cargo', 'joggers', 'shorts', 'trackpants'].includes(bottomsOf(o)!)) > 0.85, `${d} in street legs`);
+    assert.ok(share(d, (o) => ['sneaker', 'runner', 'hightop', 'slide'].includes(shoesOf(o)!)) > 0.85, `${d} in street shoes`);
+    assert.ok(share(d, (o) => !!o.capFlat || !!o.skully) > 0.08, `${d}: fitted caps and skullies`);
+    assert.ok(share(d, (o) => !!o.sling || !!o.waist) > 0.05, `${d}: slings and waist bags`);
+    // (its tenth in suits the only ones dressed up)
+    assert.ok(share(d, smart) < 0.15, `${d} hardly dressed up`);
+  }
+  assert.ok(share('ends', (o) => shoesOf(o) === 'slide') > share('trenches', (o) => shoesOf(o) === 'slide'), 'more slides in the Ends');
+  for (const d of ['docks', 'yards'] as District[]) {
+    assert.equal(share(d, (o) => shoesOf(o) === 'boot' && ['work', 'cargo'].includes(bottomsOf(o)!), 'worker'), 1, `${d}'s workers in work trousers or cargo and boots`);
+    assert.ok(share(d, (o) => !!o.hardhat, 'worker') > 0.25, `${d}'s workers in hard hats`);
+  }
+  assert.ok(share('beach', (o) => bottomsOf(o) === 'shorts') > 0.35, 'shorts at the cove');
+  // (the smart pieces only with the suits and the coats)
+  for (const d of DISTRICTS) assert.equal(share(d, (o) => (o.kind === 'hoodie' || o.kind === 'track') && (smart(o) || bottomsOf(o) === 'chinos')), 0, `${d}: no chinos or dress shoes under a hoodie`);
   // The town as it was: suits and hoodies about half and half, the odd track suit or puffer
   const suits = share('town', (o) => o.kind === 'suit');
   assert.ok(suits > 0.35 && suits < 0.55, `the town's suits ${suits}`);
@@ -136,6 +164,11 @@ test('a district is found where a person stands, the town everywhere else', () =
   const cz = b.reduce((s, p) => s + p[1], 0) / b.length;
   assert.equal(districtAt(cx, cz), 'suburb');
   assert.equal(districtAt(-1e5, -1e5), 'town', 'a spare slot out of the world');
+  // The Ends: on Endswood's land (out of The Trenches)
+  let ends: [number, number] | null = null;
+  for (let x = ENDSWOOD_RECT[0]; x < ENDSWOOD_RECT[2] && !ends; x += 3) for (let z = ENDSWOOD_RECT[1]; z < ENDSWOOD_RECT[3] && !ends; z += 3) if (inEndswood(x, z) && !inTrenches(x, z)) ends = [x, z];
+  assert.ok(ends, "a spot on Endswood's land");
+  assert.equal(districtAt(...ends!), 'ends');
 });
 
 test('the crowd stays a few draws a kind: the phones add one kind of meshes, the desktop two, over the suits and hoodies they had', () => {
@@ -157,4 +190,37 @@ test('the crowd stays a few draws a kind: the phones add one kind of meshes, the
   const perKind = was / 2;
   assert.ok(light - was <= perKind + 1, `phones: ${light} meshes where ${was} were (one kind more)`);
   assert.ok(full - was <= 2 * perKind + 2, `desktop: ${full} meshes where ${was} were (two kinds more)`);
+});
+
+/*
+ * The crowd's vertex work (docs/wardrobe-plan.md Phase 8): a kind's mesh holds every piece anyone of that kind wears,
+ * and everyone of the kind runs over all of it, so the district wardrobes' pieces cost every person of a kind. Measured
+ * here as each kind's mesh at each level, summed: before Phase 8 the desktop's near 161k and far 59k, the phones' 95k
+ * and 44k; with it 262k, 67k, 153k and 48k (the far crowd, most of it, a seventh more; the near, within 12 m, a handful
+ * of people, two thirds more), held with a little room so a new piece in the crowd says so.
+ */
+test("the crowd's meshes hold about the vertex work they had: the far crowd's within a fifth", () => {
+  const cost = (kinds: readonly OutfitKind[], q: Detail, light: boolean) => {
+    const union = new Map<OutfitKind, Set<string>>();
+    for (const district of DISTRICTS)
+      for (const role of ROLES)
+        for (let i = 0; i < 60; i++) {
+          const o = cityOutfit(seeded(i / 60 + 0.013), { district, role, kinds });
+          if (!union.has(o.kind)) union.set(o.kind, new Set());
+          for (const it of items(q, true)) if (it.when(o)) union.get(o.kind)!.add(it.id);
+        }
+    let v = 0;
+    for (const it of items(q, true)) for (const ids of union.values()) if (ids.has(it.id)) for (const p of it.pieces) if (!(light && p.detail)) v += p.geo.index ? p.geo.index.count : p.geo.attributes.position.count;
+    return v;
+  };
+  const limits: [string, readonly OutfitKind[], Detail, boolean, number][] = [
+    ['desktop near', CROWD_KINDS, 1, false, 275_000],
+    ['desktop far', CROWD_KINDS, 0, false, 71_000],
+    ['phones near', CROWD_KINDS_LIGHT, 1, true, 162_000],
+    ['phones far', CROWD_KINDS_LIGHT, 0, true, 51_000],
+  ];
+  for (const [name, kinds, q, light, max] of limits) {
+    const v = cost(kinds, q, light);
+    assert.ok(v <= max, `${name}: ${v} vertices over the kinds' meshes (at most ${max})`);
+  }
 });

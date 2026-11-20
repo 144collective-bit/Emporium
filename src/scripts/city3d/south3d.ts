@@ -9,7 +9,7 @@
  */
 import * as THREE from 'three';
 import type { Tick } from './world';
-import { SLAB } from './world';
+import { SLAB, holedPoly } from './world';
 import { Batch, PAL, fx, glowMat, lit, toon } from './kit';
 import { site } from './tilework';
 import { dashes, pieces, ribbon, unit } from './roads3d';
@@ -17,9 +17,15 @@ import { COVER, KERB, PLANT, ROAD, STONE, VERGE } from './palette';
 import { BRIDGES, BROOK, BROOK_HALF, BULB, CHURCHYARD, CIRCUS, FOOTPATHS, HEDGES, PATH_HALF, REC, SOUTH_CROSSINGS, SOUTH_STREETS, type Pt } from './south';
 import { BOLLARD, PATH_BOLLARDS } from './endswood';
 import { PLOT } from './endsfar';
-import { addCurtains, registerHome } from './home3d';
+import { addCurtains, denCharts, houseLights, registerHome, trophyWall } from './home3d';
 import { HOME_POOLS } from './home';
 import { registerTunnel } from './tunnel3d';
+import { registerCircus } from './circus3d';
+import { registerUnderpasses } from './underpass3d';
+import { registerLine } from './line3d';
+import { PLAZA } from './circus';
+import { SLAB_CUTS } from './underpasses';
+import { boundsOf, disc } from './holes';
 
 export const SELF = import.meta.url;
 
@@ -115,25 +121,38 @@ function registerStreets(low: boolean) {
     const r = c.streets.includes('south-circus') ? 6.2 : 4.4;
     site(`south junction ${i}`, [c.at[0] - r - 0.5, c.at[1] - r - 0.5, c.at[0] + r + 0.5, c.at[1] + r + 0.5], (into) => {
       const b = new Batch();
-      b.add(new THREE.CircleGeometry(r, low ? 16 : 24).rotateX(-Math.PI / 2).translate(c.at[0], Y - 0.003, c.at[1]), ASPHALT);
+      // (by the Circus or an underpass, their cuttings cut out of it: circus.ts, underpasses.ts)
+      const round = disc(c.at[0], c.at[1], r, low ? 16 : 24);
+      const cuts = SLAB_CUTS.filter((h) => {
+        const [x0, z0, x1, z1] = boundsOf(h);
+        return x0 < c.at[0] + r && x1 > c.at[0] - r && z0 < c.at[1] + r && z1 > c.at[1] - r;
+      });
+      b.add(cuts.length ? holedPoly(round, Y - 0.003, cuts) : new THREE.CircleGeometry(r, low ? 16 : 24).rotateX(-Math.PI / 2).translate(c.at[0], Y - 0.003, c.at[1]), ASPHALT);
       b.build(into, { cast: false, receive: true });
     });
   }
-  // The Circus's island: a kerb round a planted mound (the well under it is Phase 4's)
+  // The Circus's island: a kerb round a planted ring round the sunken plaza (circus.ts; the plaza, its rim and the
+  // subways are circus3d.ts's)
   const r = CIRCUS.r - CIRCUS.half;
+  const inner = PLAZA.r + PLAZA.wall + 0.08;
   site('south circus island', [CIRCUS.x - r - 1, CIRCUS.z - r - 1, CIRCUS.x + r + 1, CIRCUS.z + r + 1], (into) => {
     const b = new Batch();
-    b.add(new THREE.CylinderGeometry(r, r, SLAB, low ? 24 : 40).translate(CIRCUS.x, SLAB / 2, CIRCUS.z), KERB_GRIT);
-    b.add(new THREE.CircleGeometry(r - 0.3, low ? 24 : 40).rotateX(-Math.PI / 2).translate(CIRCUS.x, SLAB + 0.005, CIRCUS.z), ISLAND);
+    b.add(new THREE.CylinderGeometry(r, r, SLAB, low ? 24 : 40, 1, true).translate(CIRCUS.x, SLAB / 2, CIRCUS.z), KERB_GRIT);
+    b.add(new THREE.RingGeometry(r - 0.3, r, low ? 24 : 40, 1).rotateX(-Math.PI / 2).translate(CIRCUS.x, SLAB + 0.002, CIRCUS.z), KERB_GRIT);
+    b.add(new THREE.RingGeometry(inner, r - 0.3, low ? 24 : 40, 1).rotateX(-Math.PI / 2).translate(CIRCUS.x, SLAB + 0.005, CIRCUS.z), ISLAND);
     b.detail(() => {
       if (low) return;
-      for (let k = 0; k < 7; k++) {
-        const a = (k / 7) * Math.PI * 2 + 0.4;
-        b.add(new THREE.SphereGeometry(0.7 + (k % 3) * 0.15, 8, 6).scale(1, 0.7, 1).translate(CIRCUS.x + Math.cos(a) * (r - 2.2), SLAB + 0.35, CIRCUS.z + Math.sin(a) * (r - 2.2)), SHRUB);
+      for (let k = 0; k < 14; k++) {
+        const a = (k / 14) * Math.PI * 2 + 0.2;
+        const rr = (inner + r - 0.3) / 2;
+        b.add(new THREE.SphereGeometry(0.42 + (k % 3) * 0.08, 8, 6).scale(1, 0.7, 1).translate(CIRCUS.x + Math.cos(a) * rr, SLAB + 0.2, CIRCUS.z + Math.sin(a) * rr), SHRUB);
       }
     });
     b.build(into, { cast: true, receive: true });
   });
+  registerCircus(low);
+  registerUnderpasses();
+  registerLine(low);
 }
 
 /** The footpaths out of the closes (paved, over the blocks they cross) and the bollards at their ends */
@@ -281,4 +300,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   scene.add(fx(pools));
   // The room's curtains (docs/spawn-plan.md Phase 2): they move, so they're drawn here rather than in the house's site
   if (tick) addCurtains(scene, tick);
+  // The trophy wall in his lounge (docs/compound-plan.md Phase 2): what's on its shelves, from the save, on the main
+  // thread (home3d.ts `trophyWall()`, hometrophies.ts)
+  trophyWall(scene, low);
+  // The trading desk's screens in his basement (docs/compound-plan.md Phase 4): made-up charts, shown only down there
+  denCharts(scene, tick, low);
+  // The house's windows lit at night (docs/compound-plan.md Phase 6: its factory windows, slate glass by day)
+  houseLights(scene);
 }

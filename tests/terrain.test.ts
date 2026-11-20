@@ -4,7 +4,8 @@
 // away before the skyline ring, and every aircraft flies well over them.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HILLS, TERRAIN_RECT, heightAt, hillsAlong, naturalAt, onCrest, onHills, slopeAt, type Level } from '../src/scripts/city3d/terrain';
+import { HILLS, HILL_STEP, LEVELS, TERRAIN_RECT, heightAt, hillLines, hillsAlong, naturalAt, onCrest, onHills, slopeAt, type Level } from '../src/scripts/city3d/terrain';
+import { drawnAt } from '../src/scripts/city3d/drawn';
 import { onSouthGround } from '../src/scripts/city3d/southground';
 /** The ground's height but the south's rolling ground (docs/south-plan.md Phase 1c: its own, tests/southground.test.ts) */
 const crestAt = (x: number, z: number) => (onSouthGround(x, z) ? 0 : heightAt(x, z));
@@ -144,4 +145,25 @@ test('every aircraft that crosses the hills (none does today) flies well over th
       if (p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1) continue;
       assert.ok(p.y > heightAt(p.x, p.z) + 10, `${f.id} is ${(p.y - heightAt(p.x, p.z)).toFixed(1)} over the hills at ${p.x.toFixed(0)}, ${p.z.toFixed(0)}`);
     }
+});
+
+test("the ground as drawn: the hills' grid on every level's edges and through its bank, close to the hills' own shape", () => {
+  // (a grid line on each of a level's edges, closer through its bank)
+  for (const l of LEVELS) {
+    const p0 = Math.floor(l.rect[0] / 30) * 30;
+    const q0 = Math.floor(l.rect[1] / 30) * 30;
+    const xs = hillLines(p0, p0 + 30, q0, q0 + 30, 0);
+    assert.ok(xs.some((x) => Math.abs(x - l.rect[0]) < 0.06), 'no line on a level edge');
+    for (let k = 1; k < xs.length; k++) assert.ok(xs[k] > xs[k - 1] && xs[k] - xs[k - 1] <= HILL_STEP + 1e-9);
+  }
+  // (on the grid's lines it is the hills; between them within a little of them, and right by a pad within less)
+  for (let x = 300.13; x < 470; x += 1.37)
+    for (let z = -420.29; z < -40; z += 1.41) {
+      const d = Math.abs(drawnAt(x, z) - heightAt(x, z));
+      assert.ok(d < 0.35, `the grass ${d.toFixed(2)} off the hills at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+    }
+  for (const l of LEVELS) {
+    const [x0, z0, x1, z1] = l.rect;
+    for (let x = x0 + 0.05; x < x1; x += 0.7) for (const z of [z0 + 0.05, z1 - 0.05]) assert.ok(Math.abs(drawnAt(x, z) - l.y) < 0.02, 'a pad drawn off level at its edge');
+  }
 });

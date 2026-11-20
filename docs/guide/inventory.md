@@ -11,14 +11,13 @@ keep it up to date when what it describes changes.
   inventory) and the controls after it (the owner's call: Tab opens a 4 x 4
   grid with two weapon slots), Phase 2 (fists on the street, below) and
   Phase 3 (sparring partners and styles, below) are built: what Degen carries is the save's
-  `inventory` (v11: two weapon slots, `guns`, either may be empty; the
-  thing in his hand, `held`, kept in step with the look by `setHeld()`; his
+  `inventory` (v11: two weapon slots, `guns`, either may be empty; his
   consumables, `items`; where each thing lies in the grid, `grid`), its
   shape and cleaning in `inventory-save.ts` (the boot's; `GRID_SIZE` 16,
   `GRID_COLS` 4) and its rules in `inventory.ts` (DOM-free, tested in
   `tests/inventory.test.ts`, loaded with the hotbar and the gun store):
   the hotbar's slots in his order (`slots()`: weapon 1, weapon 2, the
-  thing in his hand, the consumables he has; no fists slot: empty hands
+  consumables he has; no fists slot: empty hands
   are the fists; `pickSlot()` (the drawn weapon's key again puts it away),
   `stepKey()` through the weapons and empty hands), the grid (`carried()`,
   `layout()`: what was where stays there, the new in the first free
@@ -31,6 +30,23 @@ keep it up to date when what it describes changes.
   doors, the Night Market's stalls and, since the polish plan's Phase 7,
   The Rusty Nail's door, walk prompts `snack:<id>` that buy one there and
   then).
+- **Things worth carrying** (Phase 5, the owner's go): three consumables
+  that work outside a spar, their effects in `boosts.ts` (DOM-free, tested
+  in `tests/boosts.test.ts`): the **energy drink** (on foot: his run and
+  sprint `ENERGY.speed` times as fast and the fists never out of breath,
+  brawl-sim.ts `refill()`, for 30 s), the **nitro can** (at the wheel of
+  your own car or bike: `NITRO`, drive-sim.ts `DriveInput.boost`, 4 s,
+  under protocol.ts `SPEEDS.drive`) and the **flyers** (at your stall:
+  twice the customers for 5 min, the save's `flyers`, `flyersShare()` in
+  `advance()`). `useItem(s, id, here)` (inventory.ts, `Here`: in a spar,
+  on foot, at the wheel, at the stall) uses one only where it works, one
+  at a time; walk mode keeps the two boosts on Degen (`createBoosts()`).
+  Sold at their own places (`SELLERS`: the snack bars, Uptown's coffee
+  carts and newsstands, Kestrel Fuel's kiosk; prompts `buy:<id>`). On
+  screen: chips with the time left (`[data-boosts]`, `paintBoosts()`),
+  the nitro's cell in the speed readout (`[data-drive-nitro]`,
+  `.has-nitro`, a tap fires it; N, X on a pad), a touch hotbar of four
+  (`touchFirst()`), the bag's line saying where each is sold.
 - **The stash** (the home plan's Phase 4): the trunk in Degen's house
   keeps consumables he doesn't carry. The save's `stash` (how many of
   each, up to `STASH_MAX` 20; `cleanStash()` in inventory-save.ts, run by
@@ -62,9 +78,10 @@ keep it up to date when what it describes changes.
   it away), 3-7 the rest, X, the touch Swap button, RB and the d-pad
   step, and the wheel steps while the mouse is captured (free, it still
   sets the camera's distance); first person is the gamepad's right stick
-  click. The thing in his hand puts the gun away and takes that out;
-  which is out isn't saved (walking starts with the thing in his hand
-  out).
+  click. Which gun is out isn't saved. The thing in his hand (its hotbar
+  slot, its grid space, "Hold it") was retired with the wardrobe's held
+  things (`docs/wardrobe-plan.md` Phase 1): `cleanInventory()` drops a
+  saved one and its `held:` space in the grid.
 - The loadout is picked in the inventory or at the gun store's Loadout row
   (gunshop.ts: tap a slot, then a gun, or "Leave it empty"; picking
   gears him up with the first weapon, all full); the guns

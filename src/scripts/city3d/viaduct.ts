@@ -53,6 +53,11 @@ const SEGS: Seg[] = [
   arc(X0 + R, Z0 + R, Math.PI),
   line(X0 + R, Z0, 1, 0, CX - X0 - R),
 ];
+/** Each piece's box (its ends and middle: a straight's, or a quarter circle's from one axis to the next) */
+const SEG_BOXES = SEGS.map((sg) => {
+  const ps = [0, 0.5, 1].map((t) => sg.at(sg.len * t));
+  return [Math.min(...ps.map((p) => p.x)), Math.min(...ps.map((p) => p.z)), Math.max(...ps.map((p) => p.x)), Math.max(...ps.map((p) => p.z))];
+});
 const STARTS = SEGS.reduce<number[]>((a, s, i) => [...a, i ? a[i - 1] + SEGS[i - 1].len : 0], []);
 /** The ring's length */
 export const RING_LEN = STARTS.at(-1)! + SEGS.at(-1)!.len;
@@ -92,7 +97,12 @@ export function ringPoint(s: number, o: number): Pt {
 export function ringS(x: number, z: number): { s: number; o: number } {
   let best = { s: 0, o: 0 };
   let bestD = Infinity;
-  SEGS.forEach((seg, i) => {
+  // (the pieces nearest first, and none whose box is already further than the best found: the same answer, a fraction
+  // of the work, called for everything placed along the ring as its chunk loads)
+  const near = SEG_BOXES.map((b, i) => [Math.hypot(Math.max(b[0] - x, 0, x - b[2]), Math.max(b[1] - z, 0, z - b[3])), i]).sort((p, q) => p[0] - q[0] || p[1] - q[1]);
+  for (const [boxD, i] of near) {
+    if (boxD >= bestD) break;
+    const seg = SEGS[i];
     // Each piece is short enough to search in a few steps, then refine
     let lo = 0;
     let hi = seg.len;
@@ -111,7 +121,7 @@ export function ringS(x: number, z: number): { s: number; o: number } {
       bestD = d;
       best = { s: STARTS[i] + u, o: (x - p.x) * p.tz + (z - p.z) * -p.tx };
     }
-  });
+  }
   return { s: wrapS(best.s), o: best.o };
 }
 
@@ -133,8 +143,10 @@ export const OUTER_LANE = MEDIAN / 2 + LANE * 1.5;
 /* ---------- The exits ---------- */
 
 export interface Exit {
-  /** Numbered clockwise from the stadium */
+  /** Numbered clockwise from the stadium (the order they were built: 6A is 9) */
   n: number;
+  /** Its number on the signs: `n`, but 6A at the south-west corner (between 6 and 7, every other sign keeping its own) */
+  label: string;
   /** The crossing at the arterial today (streetplan.ts) */
   crossing: string;
   /** The arterial (its street in the plan) */
@@ -171,7 +183,18 @@ const EXIT_DATA: [string, string, Pt, string, 1 | -1, Form, Form][] = [
   ['highway-ew4-1', 'ew4', [-215, 137], 'Southbank Docks', -1, 'slip', 'slip'],
   ['highway-ew0-1', 'ew0', [-215, -4.5], 'Uptown · Kart Park', 1, 'full', 'full'],
 ];
-export const EXITS: Exit[] = EXIT_DATA.map(([crossing, street, at, name, side, inner, outer], i) => ({ n: i + 1, crossing, street, at, name, side, inner, outer }));
+/**
+ * Exit 6A (docs/south-plan.md Phase 5, the owner's calls, 2026-11-19): one exit at the ring's south-west corner, where
+ * the plan's two (the south side's and the west side's) didn't fit between exit 6's ramps and exit 7's. Its road in
+ * (cornerroad.ts) runs from The Trenches' south-west corner (`CORNER_FROM`, where trench-ns0 meets trench-ew1) straight
+ * out under the curve, square on to it, so its slip ramps' feet are on it; the ramps lie round the curve towards the
+ * south side (clear of exit 6's)
+ */
+export const CORNER_FROM: Pt = [-188, 261];
+export const EXITS: Exit[] = [
+  ...EXIT_DATA.map(([crossing, street, at, name, side, inner, outer], i): Exit => ({ n: i + 1, label: String(i + 1), crossing, street, at, name, side, inner, outer })),
+  { n: 9, label: '6A', crossing: 'corner-6a', street: 'corner-road', at: ringPoint(ringS(CORNER_FROM[0], CORNER_FROM[1]).s, 0), name: "Aldwyn's Green · Southbank Docks", side: -1, inner: 'slip', outer: 'slip' },
+];
 /** Each exit's place along the ring */
 export const exitS = (e: Exit) => ringS(e.at[0], e.at[1]).s;
 

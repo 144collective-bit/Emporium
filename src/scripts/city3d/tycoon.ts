@@ -52,6 +52,7 @@ import { CORNER_SHOPS, type CornerId } from './projects';
 import { MY_STALL_DOOR } from './nightmarket';
 import { cleanInventory, cleanStash, emptyInventory, type Inventory, type Stash } from './inventory-save';
 import { FREE_PLAY } from './freeplay';
+import { FLYERS, flyersShare } from './boosts';
 import {
   BOT_LEVELS,
   type BotLevel,
@@ -89,14 +90,12 @@ import {
   STYLE_CATALOG,
   STARTER_KARTS,
   UNIT_LEVEL_COSTS,
-  WARDROBE_CATALOG,
   WORKSHOP_LEVEL_COSTS,
   XP,
   carStats,
   kartStats,
   levelFor,
   modCost,
-  wardrobeEntry,
   type CarModId,
   type CarMods,
   type GunModId,
@@ -493,7 +492,10 @@ export interface TycoonSave {
   /** The cars and (vehicle plan Phase 7) the motorbikes you've bought, and their mods */
   garage: { owned: GarageId[]; mods: Partial<Record<GarageId, CarMods>> };
   armoury: { owned: WeaponId[]; mods: Partial<Record<WeaponId, GunMods>> };
-  /** Premium wardrobe items (catalog.ts) you've bought */
+  /**
+   * The premium wardrobe you bought before the whole wardrobe went free (docs/wardrobe-plan.md Phase 1): kept as a
+   * record only; nothing reads it, and nothing is bought into it now
+   */
   wardrobe: string[];
   /** The level of each place you run (1 where unset) */
   levels: Partial<Record<PlaceId, number>>;
@@ -517,6 +519,8 @@ export interface TycoonSave {
   inventory: Inventory;
   /** What's put away in the trunk at home (home.ts, docs/home-plan.md Phase 4): consumables; a save from before it has none */
   stash: Stash;
+  /** When the flyers handed out at your stall run out (ms; 0 none out: the inventory plan's Phase 5, boosts.ts `FLYERS`) */
+  flyers: number;
   /** The daily prize cap (save v13, catalog.ts PRIZE_CAP): the day (`dayKey()`), and the cup races and purses paid on it */
   prizes: Prizes;
 }
@@ -574,6 +578,7 @@ export function newSave(now: number): TycoonSave {
     visited: [],
     inventory: emptyInventory(),
     stash: {},
+    flyers: 0,
     prizes: emptyPrizes(),
   };
 }
@@ -684,6 +689,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     visited: [],
     inventory: emptyInventory(),
     stash: {},
+    flyers: 0,
     prizes: emptyPrizes(),
   };
   cleanGame(s, o, now);
@@ -691,6 +697,8 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   s.inventory = cleanInventory(o.inventory, s);
   // (the trunk at home: a save from before it has nothing put away)
   s.stash = cleanStash(o.stash);
+  // (the flyers out at your stall: never further off than a fresh lot of them; a save from before them has none)
+  s.flyers = Math.floor(num(o.flyers, 0, now + FLYERS.minutes * 60000, 0));
   // Phase 3: staff only where there's a job for them; couriers and contracts checked against the rules
   const places = (v: unknown) => PLACE_IDS.find((p) => p === v);
   s.staff = [...new Set((Array.isArray(o.staff) ? o.staff : []).map(places).filter((p): p is PlaceId => !!p && !!roleAt(s, p)))];
@@ -1132,7 +1140,9 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
     // A clerk sells half as fast again, and at full pace while you're away
     const clerk = s.staff.includes(p);
     // (the Night Market's stall trades after dusk only: the share of the time since the last tick it was open)
-    const rate = (away ? (clerk ? 1 : OFFLINE_PACE) : at === p ? SERVING : 1) * (clerk ? STAFF_BOOST : 1) * (p === NIGHT_PLACE ? nightShare(from, now) : 1);
+    // (flyers out at your stall: more customers for the share of the tick they were out, not while you were away)
+    const fly = p === 'stall' && !away ? 1 + (FLYERS.customers - 1) * flyersShare(s.flyers, from, now) : 1;
+    const rate = (away ? (clerk ? 1 : OFFLINE_PACE) : at === p ? SERVING : 1) * (clerk ? STAFF_BOOST : 1) * (p === NIGHT_PLACE ? nightShare(from, now) : 1) * fly;
     for (const slot of sh.slots) {
       if (slot.qty <= 0) continue;
       const want = pace(s, slot, p) * rate * minutes + slot.carry;
@@ -1544,7 +1554,6 @@ export function gearValue(s: TycoonSave) {
     const m = gunMods(s, id);
     for (const k of GUN_MOD_IDS) for (let l = 1; l <= m[k]; l++) v += modCost(GUN_CATALOG[id].price, l) ?? 0;
   }
-  for (const id of s.wardrobe) v += wardrobeEntry(id)?.price ?? 0;
   for (const id of s.fight.styles) v += STYLE_CATALOG[id as keyof typeof STYLE_CATALOG]?.price ?? 0;
   return v;
 }
@@ -1943,20 +1952,6 @@ export function modGun(s: TycoonSave, id: WeaponId, mod: GunModId): BuyResult {
   return r;
 }
 
-/* ---------- Drop 001: the premium wardrobe ---------- */
-
-export const ownsWardrobe = (s: TycoonSave, id: string) => s.wardrobe.includes(id);
-export function buyWardrobe(s: TycoonSave, id: string): BuyResult {
-  const w = wardrobeEntry(id);
-  if (!w) return { ok: false, why: 'place' };
-  if (ownsWardrobe(s, id)) return { ok: false, why: 'owned' };
-  const r = pay(s, w.price, w.level, 'clothes');
-  if (!r.ok) return r;
-  s.wardrobe.push(id);
-  count(s, 'bought', 1);
-  return r;
-}
-
 /* ---------- The district plots, retired with Build mode (save v12) ---------- */
 
 /** What a save from before v12 paid for its district plots and what it built on them: given back when it loads */
@@ -2009,7 +2004,8 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
     for (const k of GUN_MOD_IDS) mods[k] = Math.round(num(m[k], 0, MOD_LEVELS, 0));
     if (GUN_MOD_IDS.some((k) => mods[k] > 0) && (STARTER_GUNS.includes(id) || s.armoury.owned.includes(id))) s.armoury.mods[id] = mods;
   }
-  s.wardrobe = [...new Set((Array.isArray(o.wardrobe) ? o.wardrobe : []).filter((id): id is string => typeof id === 'string' && WARDROBE_CATALOG.some((w) => w.id === id)))];
+  // (the record of what was bought before the wardrobe went free: short plain ids only)
+  s.wardrobe = [...new Set((Array.isArray(o.wardrobe) ? o.wardrobe : []).filter((id): id is string => typeof id === 'string' && /^[a-z0-9-]{1,24}$/.test(id)))].slice(0, 64);
   // (v12: Build mode retired; the district plots a save owned are refunded in full)
   const refund = plotRefund(o);
   if (refund) {

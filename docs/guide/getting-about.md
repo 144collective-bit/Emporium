@@ -33,7 +33,7 @@ keep it up to date when what it describes changes.
     **Fast travel** fades out, stands you at the place (`walk.placeAt()`)
     and fades in. **Bring my car** (`walk.bringCar()`, `drive.bring()`):
     the nearest lane spot round you, clear of traffic.
-  - **Taxis** are `taxi.ts`: a Cruiser in taxi yellow with a lit TAXI sign
+  - **Taxis** are `taxi.ts` (loaded the first time one's called): a Cruiser in taxi yellow with a lit TAXI sign
     comes from a spot on the roads a way off to the kerb nearest you, along
     `pathBetween()` (`routes.ts`: the shortest drive between two points on
     the streets, in the right lanes, ending at the kerb nearest the place),
@@ -50,11 +50,23 @@ keep it up to date when what it describes changes.
   - **Rides** (taxi, metro and river bus) go through `walk.setRide()` (`Ride` in
     `walk.ts`): the ride moves Degen (hidden) and its own camera, the keys
     wait, `.city.is-riding` hides the walk HUD; leaving walk mode ends it.
+  - **The tube**, the south's underground line (The Trenches to the High
+    Road, the south plan's Phase 4), is its own: `endswood.md` (`southline.ts`,
+    `southtrains.ts`, `tube3d.ts`, `tube-ui.ts`); it shares the metro's card
+    (one card for both lines at every station, `trips.ts`), its ride bar and
+    its one switch (`live.closed('metro')`). Its stations are places
+    (`tube-<id>`, kind `tube`, at street level by each way in: southline.ts
+    `TUBE_SPOTS`) and the world map draws its line, teal, dashed on a dark
+    casing.
   - **The metro** is `metro.ts` (DOM-free, tested in `tests/metro.test.ts`):
-    an elevated line on a viaduct as tracks (`TRACKS`: `main` from the Kart
-    Park station north of the ring highway (the north side's stage 2: it
-    crosses the raised highway high, metro.ts `trackY()`; Starlight Mall
-    station since the kart park moved west, `docs/kart-west-plan.md`) down the east ring avenue's
+    an elevated line on a viaduct as tracks (`TRACKS`: `main` from its north
+    end north of the ring highway (the north side's stage 2: it crosses the
+    raised highway high, metro.ts `trackY()`, and stays up through Starlight
+    Mall's Skywalk over the avenue, `needAt()`, `mall.md`; Starlight Mall
+    station is in the Skywalk since docs/mall-plan.md "One mall" Phase 2,
+    `inside`: its platform floor, its door up there (index.ts shows its
+    Metro prompt only up there), its glass lift the mall's; it was at the
+    north end, Kart Park's until the park moved west) down the east ring avenue's
     median to the switch (`SWITCH_S`), a
     quarter-circle bend (`BEND_R`) and west over the open land south of the
     south row and Trench Avenue's median to The Trenches, and on (via the
@@ -75,12 +87,14 @@ keep it up to date when what it describes changes.
     on from the switch down the avenue's median, then (since the airport's
     Phase 3 step 2) a bend east (`BRANCH`) over the airport's old land and
     the highway to Airport Station by Airport Drive, `AIRPORT_END`; and
-    `crest` (Crestmont's Phase 9): off the main line just south of Starlight Mall
-    station (`CREST_S`), east between the old Kart Road's line and the highway, round
+    `crest` (Crestmont's Phase 9): off the main line north of Starlight Mall
+    station (`CREST_S`; a train between them runs on past it and turns round,
+    `TURN`, `TURN_S`, then through Starlight Mall without stopping on a ride), east between the old Kart Road's line and the highway, round
     outside the highway's north-east corner and south to Crestmont station
     past Alder Way (`CREST`, `CREST_END`; nothing grows under it,
-    `SPUR_CLEAR`), facing north, so its runs but Starlight Mall's turn round
-    there; runs on the branch, the spur and out to Uptown go faster, `TRAIN.express`, `speedOf()`); a place
+    `SPUR_CLEAR`), facing north, so its runs turn round past it (`TURN_S`;
+    the timetable's legs to and from the turn stand `TURN_STOP` there, not a
+    station's dwell, `LEGS`); runs on the branch, the spur and out to Uptown go faster, `TRAIN.express`, `speedOf()`); a place
     on them is a track and a distance (`pointOn()`, `along()`, `sideOf()`);
     pillars wherever the ground is clear (`PILLARS`: an avenue's median
     clear of its junctions, or open land off every road; over the river
@@ -118,10 +132,14 @@ keep it up to date when what it describes changes.
     station in its own frame along its track: platform, canopy with the
     station names from one sign atlas, skybridge, tower with an M roundel
     over the door, totem; two cars, `userData.keep`). Its rides are
-    `metro-ui.ts`: the station door's "Metro" prompt (a walk `places` entry,
-    `metro:<id>`) opens the station card (`[data-metro]`), a ride runs
-    alongside the train (`[data-metro-bar]`, Skip ride / Esc) and you step
-    out at the destination's door.
+    `metro-ui.ts` (loaded the first time it's needed): the station door's
+    "Metro" prompt (a walk `places` entry, `metro:<id>`) opens the card for
+    both lines (`[data-metro]`, tube-ui.ts since the south plan's 4h: every
+    stop on the metro and the tube, a trip to the other line changing at The
+    Trenches, trips.ts; metro-ui.ts's own card only if that won't load), a
+    ride runs alongside the train (`[data-metro-bar]`, Skip ride / Esc) and
+    you step out at the destination's door (or, on a trip's first ride, the
+    change goes on: `ride(a, b, then)`).
   - **Sound by district** is `ambience.ts` (DOM-free, tested in
     `tests/ambience.test.ts`): `ambienceAt(x, z, lift)` gives the town's
     hum, the river (and Westlake's lake), the traffic's rush (the highway,

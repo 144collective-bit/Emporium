@@ -12,7 +12,7 @@
 import { HIGHWAY_BOX, HIGHWAY_HALF } from './highway';
 import type { Box, Pt, Rect } from './underground';
 import { CIRCUS, FOOTPATHS, PATH_HALF, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, BRIDGES, BULB } from './south';
-import { distTo, inside } from './streetfaces';
+import { distTo, insideRow, rowCrossings } from './streetfaces';
 import { southLift } from './southground';
 
 export type { Rect, Pt, Box };
@@ -58,8 +58,14 @@ const CELLS = new Set<number>();
   for (const b of SOUTH_BLOCKS) {
     const xs = b.poly.map((p) => p[0]);
     const zs = b.poly.map((p) => p[1]);
-    for (let x = Math.floor(Math.min(...xs) / CELL) * CELL; x <= Math.max(...xs); x += CELL)
-      for (let z = Math.floor(Math.min(...zs) / CELL) * CELL; z <= Math.max(...zs); z += CELL) if (inside(b.poly, [x + CELL / 2, z + CELL / 2])) mark(x + CELL / 2, z + CELL / 2);
+    const [z0, z1] = [Math.floor(Math.min(...zs) / CELL) * CELL, Math.max(...zs)];
+    // (each row's crossings of the block's edge worked out once: a block's outline runs to hundreds of points)
+    const rows: number[][] = [];
+    for (let z = z0; z <= z1; z += CELL) rows.push(rowCrossings(b.poly, z + CELL / 2));
+    for (let x = Math.floor(Math.min(...xs) / CELL) * CELL; x <= Math.max(...xs); x += CELL) {
+      let r = 0;
+      for (let z = z0; z <= z1; z += CELL, r++) if (insideRow(rows[r], x + CELL / 2)) mark(x + CELL / 2, z + CELL / 2);
+    }
     for (const [x, z] of b.poly) mark(x, z);
   }
 }

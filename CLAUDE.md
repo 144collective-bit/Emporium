@@ -83,7 +83,7 @@ it and has been retired completely. Build only on what's here.
 | The inventory, fists on the street, sparring partners, free play | `docs/guide/inventory.md` |
 | Target practice, the guns, the gun store, the Fight Club | `docs/guide/combat.md` |
 | Dorras, the market, units, lots, contracts, staff, the Vault, missions, Getting started, the save and its backup | `docs/guide/economy.md` |
-| Drop 001's fitting room, the character screen, the premium wardrobe | `docs/guide/fitting-room.md` |
+| Drop 001's fitting room, the character screen, the free wardrobe, any colour (`docs/wardrobe-plan.md`) | `docs/guide/fitting-room.md` |
 | Menus, the start menu, the header, the hub, pins, touch controls, views, keys | `docs/guide/menus.md` |
 | Bloom, z-fighting, cut-out signs, the comic page, palette, type, styles | `docs/guide/visual-rules.md` |
 | Phones, start-up, lazy chunks, baked data, textures, draw calls, shadows, near and far, sites, building kits, lazy districts, `?fps`, `?bench`, the snapshot | `docs/guide/performance.md` |
@@ -240,8 +240,12 @@ guide file listed in the index above.
 - degenemporium.com is a static build hosted on Hostinger, deployed from
   GitHub (the owner linked them, 2026-11: a push to `main` goes live by
   itself; no more zips extracted into `public_html` by hand). The "Build
-  site" GitHub Action still builds every push to `main` into a downloadable
-  zip (artifact `degenemporium-site`) and runs the checks.
+  site" GitHub Action builds every push to `main`, runs the checks, makes
+  the textures, and publishes the finished site to the `deploy` branch,
+  which Hostinger deploys with no build of its own (2026-11-19: Hostinger's
+  own plain build had no textures list, so every browser painted them, 4x
+  the graphics memory; `docs/stability-plan.md`). Never commit to `deploy`
+  by hand. The zip (artifact `degenemporium-site`) is still attached.
 - If the live site ever shows the procedural walk instead of the motion
   capture, the clips file didn't fetch: walk.ts says so once in a toast and
   `?fps` reads `motion capture failed` (a stale or partial upload is the
