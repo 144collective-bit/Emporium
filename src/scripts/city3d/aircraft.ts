@@ -24,7 +24,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FONT_DISPLAY, canvasTex, fx, glowTex, neon, nightU, paintMat, sharedFor, toon } from './kit';
-import { LOD_EYE } from './lod';
+import { FAR_PHONE, LOD_EYE } from './lod';
 import { isNear } from './tiles';
 import type { AircraftKind, Pose } from './airfield';
 import {
@@ -662,9 +662,6 @@ function materials() {
 
 /* ---------- Far off (docs/phone-far-plan.md Phase 2) ---------- */
 
-/** Phones (index.ts): each aircraft past the tier's `far` is drawn in one piece (`farGeometry()`), a fleet's far ones one draw */
-export const FAR_FLEETS = { on: false };
-
 /** The nav lights' and the beacon's brightness by day and at night (their neon's, `materials()`) */
 const LIT: Partial<Record<Role, [number, number]>> = { neon: [0.35, 2.4], strobe: [0.6, 2.4] };
 
@@ -845,7 +842,8 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
       accent.instanceColor!.needsUpdate = true;
     },
     update(t: number, dt: number) {
-      if (FAR_FLEETS.on && !far) {
+      // (phones: each aircraft past the tier's `far` in one piece, a fleet's far ones one draw: lod.ts `FAR_PHONE`)
+      if (FAR_PHONE.on && !far) {
         far = inst(farGeometry(model), farMaterial(), false);
         liveries.forEach((c, i) => far!.setColorAt(i, new THREE.Color(c)));
       }

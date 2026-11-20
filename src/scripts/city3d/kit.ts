@@ -44,7 +44,10 @@ export function isMoving(o: THREE.Object3D) {
  * the ink pre-pass. Without one, the outlines of whatever is behind the sign
  * get drawn across it.
  */
+/** Every cut-out sign made (`occlude()`): on phones the small ones are hidden far off (lod.ts `updateLods()` takes them) */
+export const OCCLUDED: THREE.Mesh[] = [];
 export function occlude(mesh: THREE.Mesh, map: THREE.Texture) {
+  OCCLUDED.push(mesh);
   const mat = new THREE.ShaderMaterial({
     side: THREE.DoubleSide,
     uniforms: { map: { value: map } },

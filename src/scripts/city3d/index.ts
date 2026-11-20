@@ -74,7 +74,6 @@ import { addTrafficBikes, bodies, buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
-import { FAR_FLEETS } from './aircraft';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
 import { FLY, POLAR, anyHeld, clampCam, easeVel, groundUnder, keyDir, noKeys, reach, turn, wish, type V3 } from './freecam';
 import { LENS, cityNear, nearFor } from './lens';
@@ -158,7 +157,7 @@ import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
-import { farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
+import { FAR_PHONE, farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
 import { createQuality, type QualityStep } from './quality';
@@ -232,8 +231,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const picked: Picked = root.dataset.tier ? { tier: root.dataset.tier as Tier, why: 'set by the page' } : pickTier(device(gpu));
   const tier = picked.tier;
   const Q = TIERS[tier];
-  // Phones draw each aircraft far off in one piece (aircraft.ts, docs/phone-far-plan.md Phase 2)
-  FAR_FLEETS.on = tier === 'low';
+  // Phones draw the far city in fewer pieces: the far forms, aircraft, small signs (lod.ts, docs/phone-far-plan.md)
+  FAR_PHONE.on = tier === 'low';
   // Phones' trees don't sway (`low ? 0 : SWAY`): their tile pieces in the shared paint carry no uv (tilebatch.ts)
   UV.sway = tier !== 'low';
   // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
@@ -654,7 +653,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   bootAt.tiled = performance.now();
   // Each place's far form (growth plan Phase 2): a couple of draws far away instead of one per material.
   // Made after the boot, a place at a time in spare moments (each stays near until it has one)
-  const farQueue = [...spots.map((sp) => sp.group), ...['garage', 'market'].flatMap((n) => scene.getObjectByName(n) ?? [])];
+  // (phones: the swing bridge too, its turning span kept as it is: docs/phone-far-plan.md Phase 3)
+  const farQueue = [...spots.map((sp) => sp.group), ...['garage', 'market', ...(FAR_PHONE.on ? ['swing-bridge'] : [])].flatMap((n) => scene.getObjectByName(n) ?? [])];
   const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(() => f(), { timeout: 400 }) : setTimeout(f, 60));
   const nextFar = () => {
     const g = farQueue.shift();
