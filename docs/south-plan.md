@@ -701,6 +701,15 @@ From the Circus west, patchy as high roads are:
      `?bench` views of the south and their draw calls), every width
      (320 to 1440, phones upright and on their side) of the south's cards
      and screens, the seams and edges where the south meets the rest.
+     Measured (2026-11-20, headless, walk mode, `data-tier` low and
+     medium): draws on phones 160 to 203 at the Circus, the High Road and
+     the estate, 515 in the village and 525 at exit 6A (downtown 252, The
+     Trenches 446). Broken down by what draws: the south's own geometry
+     about 40; 150 to 170 the city's tiles over 300 away, seen across the
+     open land from the south's edge (the camera's far 1340 on every
+     tier). The owner's answer: **merge the far tiles on phones** (the
+     same look, the far city in bigger merged pieces, far fewer draws),
+     measured before and after.
    - **6c, life**: people on the High Road, the estate's decks, the
      Circus's plaza and subways, the village and the rec; the south bus
      route and its stops; traffic checked on the new roads.
