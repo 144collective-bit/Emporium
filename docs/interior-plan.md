@@ -63,7 +63,7 @@ Every room takes it, in the room's shared paint (lit from inside: `paint()` in h
    steel-framed screen with a brass rain head, a brass towel rail. **The office** in the palette (a walnut desk, a
    cognac chair). The upstairs windows drawn where they are outside (`houseWindows()`). Shots:
    `docs/interior-shots/phase-3-*`.
-4. **The utility and boot room, and the den in the palette.** *Built, waiting on the owner's sign-off.* homerooms.ts
+4. **The utility and boot room, and the den in the palette.** *Built, signed off by the owner (2026-11-20), live.* homerooms.ts
    `FURNITURE`: by the side door, the boot room (`boots`: the east wall behind it in the deep green, a walnut bench with
    a cognac cushion, his trainers under it, a brass rail of hooks over it with his jackets and a cap; the old cupboard
    gone) and the laundry's tall walnut unit in the corner south of the door (`laundry`: the washer and the dryer
