@@ -752,8 +752,8 @@ From the Circus west, patchy as high roads are:
      stops along the High Road and Gate Lane (transit.ts, `SOUTH_STOP_GAP`).
      The boot 747.0 of 760 KB. Shots `docs/south-shots/30-phase-6c-*.webp`.
    - **6d, night**: the blocks' and the village's windows, the galleries'
-     lights, the High Road's shop fronts, warm and patchy. Built (2026-11-20,
-     waiting for the owner's sign-off): looked at by night (walk mode, the
+     lights, the High Road's shop fronts, warm and patchy. Built and signed off
+     (2026-11-20): looked at by night (walk mode, the
      night sky, medium and phone tiers), the south was mostly there from
      its phases: the blocks' ribbon windows lit patchily (warm, a few TV
      blue, many dark), the galleries' and bridges' strip lights, the
