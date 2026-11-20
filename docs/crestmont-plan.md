@@ -694,8 +694,20 @@ Their answers, in three rounds:
    bank (terrain.ts `RAMP.bank`, the new lots only). Crestmont's north edge (`CREST_RECT`) moved from -380 to -395 to
    take in the highest. No walls: the Phase 2 gates on lit piers at their drives, balconies (glass on the Art Deco,
    stone on the chateaux), roof terraces, festoons and pool lights as the other hill houses.
-4. **Highcrest:** the hilltop quarter's plaza with THE ASTERLY, SOLENNE and VELLANO MOTOR SALON (or the showroom on
-   Coral Drive: asked at this phase), each a place; a metro or taxi way up.
+4. **Highcrest** (the owner's answers, 2026-11-20: "Split", "Panels + the showroom sells", the names kept; the way up
+   an aerial cable car, after the straight funicular lines from the Flats proved long, gentle and over the hill houses'
+   ground; two PRs):
+   - **4a, the places (built):** the hills had no room left for a three-building plaza (every spot beside a road near
+     the overlook on a hill house's ground), so THE ASTERLY (crestsites.ts `ASTERLY`) is a glass pavilion off the
+     overlook's falling side, its floor level with it, standing out over the slope on slim legs (no ground cut or
+     built up), its view terrace beyond, a bridge from a gap in the overlook's rail to its door; a HIGHCREST marker
+     stone at the overlook's way in. On Coral Drive two boutiques are refitted where they stood (coral.ts
+     `CORAL_PLACES`): VELLANO MOTOR SALON (HALCYON's front, now glass, its ground floor open behind it with a car on
+     show) and SOLENNE (IVORY HALL's, white render, frosted windows). Each a place with its panel, live line, Walk in,
+     door and pin; the showroom's panel sells the game's cars for Dorras through the garage's rules (tycoon-ui.ts
+     `showroomView()`, tycoon.ts `buyCar()`), THE ASTERLY's and SOLENNE's insides coming soon.
+   - **4b, the cable car (next):** gondola cabins on a cable from a station in the Flats up over the hills to THE
+     ASTERLY, on a few slim pylons on clear ground.
 5. **The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse.**
 6. **Residents at leisure and cyclists on the hills.**
 

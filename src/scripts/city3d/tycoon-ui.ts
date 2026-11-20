@@ -155,7 +155,11 @@ import {
 } from './tycoon';
 import { CORNER_SHOPS } from './projects';
 import { DOORS } from './solids';
-import { PLACE_LEVELS } from './catalog';
+import { CAR_CATALOG, CAR_IDS, PLACE_LEVELS } from './catalog';
+import { buyCar, ownsCar } from './tycoon';
+/** A car the showroom sells */
+type PlayerCar = (typeof CAR_IDS)[number];
+import { CARS } from './carspec';
 import { LV, whyNot } from './ui';
 import { confirmHtml, focusConfirm } from './menukit';
 import type { SpotId } from '../../lib/city';
@@ -958,8 +962,48 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
     } else if (ds.letGo) {
       letGo(save, ds.letGo as PlaceId);
       state.note = 'Let go.';
+    } else if (ds.showBuy) {
+      // (VELLANO MOTOR SALON: asked once, unless the rules would say no anyway, then why at once)
+      const id = ds.showBuy as PlayerCar;
+      const e = CAR_CATALOG[id];
+      if (level(save) >= e.level && save.dorras >= e.price) showAsk = id;
+      else {
+        // (the rules refuse it, changing nothing: say why)
+        const r = buyCar(save, id);
+        state.note = r.ok ? `The ${CARS[id].name} is yours. Drive it from the garage.` : whyNot(r.why, e.level);
+        h.sfx(r.ok ? 'buy' : 'denied');
+      }
+    } else if ('showNo' in ds) showAsk = null;
+    else if (ds.showYes) {
+      const id = ds.showYes as PlayerCar;
+      showAsk = null;
+      const r = buyCar(save, id);
+      state.note = r.ok ? `The ${CARS[id].name} is yours. Drive it from the garage.` : whyNot(r.why, CAR_CATALOG[id].level);
+      h.sfx(r.ok ? 'buy' : 'denied');
     } else return;
     changed();
+    if (showAsk && state.panel) focusConfirm(state.panel.el);
+  }
+  /**
+   * VELLANO MOTOR SALON's showroom (the premium upgrade's Phase 4; the owner's call, 2026-11-20: the showroom sells):
+   * the game's made-up cars for sale, dearest first, each its price, its level and its line, bought for Dorras through
+   * the garage's own rules (tycoon.ts `buyCar()`), asked once; a car you own says so
+   */
+  let showAsk: PlayerCar | null = null;
+  function showroomView() {
+    const lv = level(save);
+    const forSale = CAR_IDS.filter((id) => CAR_CATALOG[id].price > 0).sort((a, b) => CAR_CATALOG[b].price - CAR_CATALOG[a].price);
+    const rows = forSale.map((id) => {
+      const e = CAR_CATALOG[id];
+      const name = CARS[id].name;
+      const deal = ownsCar(save, id)
+        ? '<span class="stall-qty">Yours</span>'
+        : showAsk === id
+          ? confirmHtml(`Buy the ${name} for ${fmt.format(e.price)} Dorras?`, 'Buy', 'Cancel', `data-show-yes="${id}"`, 'data-show-no')
+          : `<button type="button" class="chip-link" data-show-buy="${id}">Buy · ${fmt.format(e.price)}</button>`;
+      return `<div class="stall-slot"><div class="stall-slot-top"><b>${esc(name)}</b>${lv < e.level ? `<span class="stall-qty">Level ${e.level}</span>` : ''}</div><p class="biz-level-note">${esc(e.pitch)}</p>${deal}</div>`;
+    });
+    return `${rows.join('')}<p class="city-panel-fine">Dorras only, earned in the city. Drive it from the garage once it's yours.</p>`;
   }
   /** Walking at the place with the car parked by it: the goods go by hand (the card closes for the carry; `run` is the move, its note shown after) */
   function carried(dir: 'load' | 'unload', p: PlaceId, run: () => string) {
@@ -1052,7 +1096,9 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
               ? `${couriersView(now)}${noteHtml}${toCard('units')}`
               : state.panel.id === 'vault'
                 ? `${bankView(now)}${noteHtml}${toCard('units')}`
-                : `${staffView()}${noteHtml}${toCard('units')}`;
+                : state.panel.id === 'vellano'
+                  ? `${noteHtml}${showroomView()}`
+                  : `${staffView()}${noteHtml}${toCard('units')}`;
     repaint(state.panel.el, html);
   }
 

@@ -185,6 +185,43 @@ export const OVERLOOK = (() => {
   };
 })();
 
+/* ---------- THE ASTERLY, on Highcrest (the premium upgrade's Phase 4) ---------- */
+
+export const ASTERLY_NAME = 'THE ASTERLY';
+/** The ridge round the overlook, its name on a marker stone at the overlook's way in */
+export const HIGHCREST_NAME = 'HIGHCREST';
+/**
+ * Crestmont's fine-dining restaurant on Highcrest, the ridge round the overlook (the owner's calls, 2026-11-20:
+ * "Split", the restaurant by the overlook; the hilltop's other ground all the hill houses'): a glass pavilion off the
+ * overlook's side that falls away, its floor level with the overlook, standing out over the slope on slim legs (no
+ * ground cut or built up for it: the slope under it as it is), its view terrace beyond it over the city, a short
+ * bridge from the overlook's rail to its door. Off the overlook's middle, so the view from the rail stays open.
+ */
+export const ASTERLY = (() => {
+  const [x0, z0, x1, z1] = OVERLOOK.rect;
+  const [cx, cz] = [(x0 + x1) / 2, (z0 + z1) / 2];
+  const half = (z1 - z0) / 2;
+  // (out the way the overlook looks, south over the city; along its east side)
+  const s = Math.sign(OVERLOOK.look[1]) || 1;
+  const along = (a: number, b: number): [number, number] => [Math.min(cz + s * a, cz + s * b), Math.max(cz + s * a, cz + s * b)];
+  const [bz0, bz1] = along(7, 14);
+  const [tz0, tz1] = along(14, 17.5);
+  const [gz0, gz1] = along(half - 0.3, 7);
+  const body: Rect = [cx + 2.5, bz0, cx + 12.5, bz1];
+  return {
+    body,
+    terrace: [cx + 2.5, tz0, cx + 12.5, tz1] as Rect,
+    bridge: [cx + 4.2, gz0, cx + 5.8, gz1] as Rect,
+    /** Its floor's top, level with the overlook's paving */
+    y: OVERLOOK.y + 0.15,
+    /** Its storey, its roof's slab over it */
+    h: 3.4,
+    roof: 0.35,
+    /** The way its terrace looks (out from the overlook) */
+    out: s,
+  };
+})();
+
 /* ---------- The reservoir ---------- */
 
 /**
@@ -234,6 +271,8 @@ export const SITE_SPAWNS = {
   overlook: { x: (OVERLOOK.rect[0] + OVERLOOK.rect[2]) / 2 - OVERLOOK.look[0] * 2, z: (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2 - OVERLOOK.look[1] * 2, yaw: facing(OVERLOOK.look[0], OVERLOOK.look[1]) },
   /** Outside the reservoir's fence on its west bank, facing the water */
   reservoir: { x: FENCE[0] - 1.4, z: (FENCE[1] + FENCE[3]) / 2, yaw: facing(1, 0) },
+  /** On the overlook by its rail, at the bridge to THE ASTERLY, facing it */
+  asterly: { x: (ASTERLY.bridge[0] + ASTERLY.bridge[2]) / 2, z: (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2 + ASTERLY.out * ((OVERLOOK.rect[3] - OVERLOOK.rect[1]) / 2 - 1.6), yaw: facing(0, ASTERLY.out) },
 };
 
 /**
@@ -241,7 +280,7 @@ export const SITE_SPAWNS = {
  * door under its porte-cochère on the west front, the civic hall's in its colonnade, the clubhouse's off its terrace;
  * the overlook's at its rail, the reservoir's by its fence on the west bank ("Look out")
  */
-export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'golfclub' | 'overlook' | 'reservoir'; x: number; z: number }[] = (() => {
+export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'golfclub' | 'overlook' | 'reservoir' | 'asterly'; x: number; z: number }[] = (() => {
   const oc: Pt = [(OVERLOOK.rect[0] + OVERLOOK.rect[2]) / 2, (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2];
   const half = (OVERLOOK.rect[2] - OVERLOOK.rect[0]) / 2;
   return [
@@ -250,6 +289,8 @@ export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'golfclub' | 'overlook' |
     { id: 'golfclub', x: (CLUB.house[0] + CLUB.house[2]) / 2, z: CLUB.house[3] + 0.7 },
     { id: 'overlook', x: oc[0] + OVERLOOK.look[0] * (half - 2.3), z: oc[1] + OVERLOOK.look[1] * (half - 2.3) },
     { id: 'reservoir', x: FENCE[0] - 0.9, z: (FENCE[1] + FENCE[3]) / 2 },
+    // (THE ASTERLY's at the overlook's end of its bridge)
+    { id: 'asterly', x: (ASTERLY.bridge[0] + ASTERLY.bridge[2]) / 2, z: oc[1] + ASTERLY.out * (half - 0.8) },
   ];
 })();
 
@@ -292,6 +333,9 @@ export const SITE_SOLIDS: Box[] = [
     return [box([a, b, c, b + t], top), box([a, d - t, c, d], top), box([a, b, a + t, d], top), box([c - t, b, c, d], top)];
   })(),
   sq([RESERVOIR.tower.x, RESERVOIR.tower.z], RESERVOIR.tower.r, RESERVOIR.y + RESERVOIR.tower.h),
+  // THE ASTERLY and its terrace's rail, out over the slope (none walks out there: its floor isn't the ground)
+  box(ASTERLY.body, ASTERLY.y + ASTERLY.h + ASTERLY.roof),
+  box(ASTERLY.terrace, ASTERLY.y + 1.1),
 ];
 /** In the hotel's drive off the boulevard (the street's palms keep off) */
 export const inHotelDrive = (x: number, z: number, m = 0) => x > HOTEL.drive[0] - m && x < HOTEL.drive[2] + m && z > HOTEL.drive[1] - m && z < HOTEL.drive[3] + m;
@@ -308,6 +352,9 @@ export function onSite(x: number, z: number, m = 0) {
   };
   if (HOLES.some((h) => near(h.tee, h.green, FAIRWAY + 1.5) || near(h.green, h.green, FRINGE + 3))) return true;
   if (near(OVERLOOK.path[0], OVERLOOK.path[1], 1.6)) return true;
+  // (and under THE ASTERLY and its terrace, out over the slope)
+  const [ax0, az0, ax1, az1] = [ASTERLY.body[0], Math.min(ASTERLY.body[1], ASTERLY.terrace[1]), ASTERLY.body[2], Math.max(ASTERLY.body[3], ASTERLY.terrace[3])];
+  if (x > ax0 - 1 - m && x < ax1 + 1 + m && z > az0 - 1 - m && z < az1 + 1 + m) return true;
   const [fx0, fz0, fx1, fz1] = FENCE;
   return x > fx0 - 1 - m && x < fx1 + 1 + m && z > fz0 - 1 - m && z < fz1 + 1 + m;
 }
