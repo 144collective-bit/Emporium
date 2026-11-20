@@ -11,8 +11,8 @@ baseline is measured (below). The phone is over its geometry ceiling before
 the base adds anything; the owner's pick (2026-11-19) was to trim first,
 and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 is built and signed off** (2026-11-19,
 measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
-airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is built** (2026-11-19,
-measured below), waiting on the owner's sign-off.
+airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is built and signed off**
+(2026-11-19, measured below). **Phase 4 (life, night and sound) is under way**, all of it, lean (the owner's pick).
 
 ## The owner's answers (2026-11-18)
 
@@ -527,4 +527,12 @@ Every view's slowest CPU frame under 250 ms.
 
 - **Memory:** memcheck 170.7 → 171.5 MiB of 187 (+0.8, the allowance +3).
 - **The boot:** 740.6 → 741.6 KB of 750 (+1.0, the allowance +2). **Textures:** none new.
+
+## The owner's sign-off on Phase 3 (2026-11-20)
+
+| Question | Answer |
+| --- | --- |
+| Phase 3, the base, as built | **Signed off.** |
+| How much of Phase 4 | **All of it, lean**: the flights and helicopters, the vehicles, the personnel and patrols, the night's lights and the sound, measured on phones (fewer people and flights there). |
+| Next | **Degen is ready** for Phase 4. |
 
