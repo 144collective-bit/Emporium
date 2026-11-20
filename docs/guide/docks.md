@@ -63,7 +63,7 @@ keep it up to date when what it describes changes.
   workers (`DOCK_PEOPLE`); drawn by docksport3d.ts's `life()` on the main
   thread from the clock, still under reduced motion (`STILL`); signed off
   2026-11-20. Phase 5 (the polish, the owner's picks: the loose ends and
-  the night life) is built, waiting on the owner's sign-off: dockslife.ts's
+  the night life) is built and signed off (2026-11-20): dockslife.ts's
   `hoistAt()`, `reversingAt()`, `truckVisit()`, `pilotSpeedAt()` and
   `lanternAt()` (`LIGHT`); sound.ts's crane whine following `hoistAt()` and
   the carrier's reversing beeps (`beep()`, quiet under reduced motion);

@@ -307,7 +307,7 @@ The owner's picks: the cranes' **full cycle**, the rest of the port **quiet**.
 - The sound was already there (`docks` in ambience.ts: gulls, the crane's
   hoist whine, a ship's horn).
 
-### Phase 5: the polish (built, waiting on the owner's sign-off)
+### Phase 5: the polish (built, signed off 2026-11-20)
 
 The owner's picks (2026-11-20) from the district's audit: the loose ends
 and the night life. Nothing moved (the snapshot holds); no new solids.
