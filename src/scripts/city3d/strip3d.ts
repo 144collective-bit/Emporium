@@ -18,7 +18,7 @@ import { registerResorts } from './resorts3d';
 import { registerMarks } from './stripmarks3d';
 import { registerMono } from './monorail3d';
 import { addPeople } from './life';
-import { STRIP_IDLE } from './striplife';
+import { SHOW_WATCHERS, STRIP_IDLE } from './striplife';
 import type { Tick } from './world';
 
 export const SELF = import.meta.url;
@@ -52,6 +52,9 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerMono({ low, scene, tick });
   // Its people standing about (Phase 5: striplife.ts): valets, doormen, the crowds at the shows (phones every other one)
   if (scene) addPeople(STRIP_IDLE.filter((_, i) => !low || i % 2 === 0), []);
+  // (and the passers-by who stop for the fountain show while it's on; always there under reduced motion, the show stands still)
+  const still = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (scene) addPeople(SHOW_WATCHERS.filter((_, i) => !low || i % 2 === 0).map((p) => (still ? { ...p, when: undefined } : p)), []);
   const asphalt = toon('#2a2838');
   const white = toon('#eceaf6');
   const yellow = neon(ROAD.yellow, 0.9, 1.1);

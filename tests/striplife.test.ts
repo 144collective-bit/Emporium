@@ -3,8 +3,10 @@
 // by their doors, the fountain show's music by the lake).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { STRIP_IDLE } from '../src/scripts/city3d/striplife';
-import { STRIP_LEAD, STRIP_MIX, STRIP_PAINTS, inStrip } from '../src/scripts/city3d/strip';
+import { SHOW_WATCHERS, STRIP_IDLE } from '../src/scripts/city3d/striplife';
+import { SHOW } from '../src/scripts/city3d/stripmarks';
+import { STRIP_BLVD } from '../src/scripts/city3d/layout';
+import { STRIP_LAMPS, STRIP_LEAD, STRIP_MIX, STRIP_PAINTS, inStrip } from '../src/scripts/city3d/strip';
 import { RESORTS, resortOf } from '../src/scripts/city3d/resorts';
 import { PLAN, onSlab } from '../src/scripts/city3d/streetplan';
 import { SOLIDS } from '../src/scripts/city3d/solids';
@@ -51,4 +53,28 @@ test('its sound: the crowd on the Strip, the chimes by the casino doors, the sho
   assert.ok(ambienceAt(r.door.x, r.door.z + 40).casino < 0.05);
   assert.ok(ambienceAt((lake[0] + lake[2]) / 2, lake[3] + 1).show > 0.9);
   assert.ok(ambienceAt(240, 0).show < 0.1);
+});
+
+test('passers-by stop for the fountain show: on the sidewalk by the lake, facing it, clear of everything, only while it\'s on', () => {
+  const lake = resortOf('gondolier')!.water[0];
+  assert.ok(SHOW_WATCHERS.length >= 6);
+  SHOW_WATCHERS.forEach((p, i) => {
+    assert.ok(p.x > lake[0] && p.x < lake[2] && p.z > STRIP_BLVD.z + STRIP_BLVD.half && p.z < lake[1] - 0.3, `watcher ${i} on the sidewalk by the lake`);
+    assert.ok(Math.cos(p.ry) > 0.9, `watcher ${i} facing the lake`);
+    for (const b of SOLIDS) assert.ok(!(p.x > b[0] - 0.3 && p.x < b[2] + 0.3 && p.z > b[1] - 0.3 && p.z < b[3] + 0.3), `watcher ${i} in ${b}`);
+    for (const [x, z] of STRIP_LAMPS) assert.ok(Math.hypot(p.x - x, p.z - z) > 0.6, `watcher ${i} in a lamp`);
+    for (const q of [...STRIP_IDLE, ...SHOW_WATCHERS.slice(0, i)]) assert.ok(Math.hypot(p.x - q.x, p.z - q.z) > 0.6, `watcher ${i} on top of someone`);
+  });
+  // There for the show's length of every period, gone the rest (the clock's: Date.now())
+  const real = Date.now;
+  try {
+    const at = (s: number) => {
+      Date.now = () => s * 1000;
+      return SHOW_WATCHERS.every((p) => p.when!(20));
+    };
+    assert.ok(at(SHOW.period * 1000 + 5) && at(SHOW.period * 1000 + SHOW.length - 1));
+    assert.ok(!at(SHOW.period * 1000 + SHOW.length + 5) && !at(SHOW.period * 1001 - 2));
+  } finally {
+    Date.now = real;
+  }
 });

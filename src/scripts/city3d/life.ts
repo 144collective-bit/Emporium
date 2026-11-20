@@ -71,7 +71,9 @@ export interface LifeOpts {
   /** The sounds the city's life makes (sound.ts): a car's horn, a bus's doors, a boat's horn; `gain` by how far off it is */
   sfx?: (kind: LifeSfx, gain: number) => void;
 }
-export type LifeSfx = 'horn' | 'doors' | 'boatHorn';
+/** How far off the Party Liner's beat is heard (tiles) */
+const PARTY_HEARD = 32;
+export type LifeSfx = 'horn' | 'doors' | 'boatHorn' | 'partyBeat';
 
 /* ======================================================================
    Traffic
@@ -110,6 +112,8 @@ interface Vehicle {
   mover: Mover;
   body: Body;
   horn: Horn;
+  /** The Party Liner's DJ: the last beat heard (each once) */
+  beat: number;
   seed: number;
   /** Its brake lights, and which way it's indicating (what the lights showed this frame) */
   brake: boolean;
@@ -381,6 +385,8 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       mover: { v: 0, held: 0, react: reactionOf(i) },
       body: newBody(0, 0),
       horn: newHorn(seed),
+      /** (the Party Liner's DJ: the last beat heard, so each sounds once) */
+      beat: -1,
       seed,
       brake: false,
       turn: null,
@@ -829,6 +835,15 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
       // (never a patrol car: they never bother you)
       const heldUp = v.v < 0.1 && (byYou < 0.1 || byParked < 0.1);
       if (v.model !== 'police' && hornDue(v.horn, heldUp, dt, v.seed) && (byYou < 0.1 || v.horn.n === 1) && opts.sfx) opts.sfx('horn', Math.max(0, 1 - offEye(v) / 45) * 0.9);
+      // The Party Liner's DJ: a muffled beat off its top deck as it goes by, twice a second on the clock (the Strip's plan, Phase 7)
+      if (v.model === 'partybus' && opts.sfx && dt > 0) {
+        const off = offEye(v);
+        const beat = Math.floor(Date.now() / 500);
+        if (off < PARTY_HEARD && beat !== v.beat) {
+          v.beat = beat;
+          opts.sfx('partyBeat', (1 - off / PARTY_HEARD) * 0.8);
+        }
+      }
       // A bus stops at its stops (transit.ts): slowing in, standing with its doors open (the traffic behind waits), pulling away;
       // a delivery truck at its loading bays (fleet.ts), standing longer with its hazards on
       if (v.bus) {
@@ -1105,7 +1120,8 @@ export function addPeople(idle: readonly Idle[], movers: readonly ParkPerson[]) 
   for (const c of idle) {
     const p = spare.pop();
     if (!p) break;
-    Object.assign(p, { x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry });
+    // (an idle only sometimes there keeps its hook and its spot: the frame stands it out of the world while it says no)
+    Object.assign(p, { x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, when: c.when, home: c.when ? { x: c.x, z: c.z } : undefined });
     dresser?.(p);
   }
   for (const pp of movers) {

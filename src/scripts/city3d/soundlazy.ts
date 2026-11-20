@@ -32,7 +32,7 @@ export function createSound() {
     engine: (revs: number, voice?: Voice) => real?.engine(revs, voice),
     tyres: (level: number) => real?.tyres(level),
     aero: (kind: 'prop' | 'jet' | 'heli', revs: number) => real?.aero(kind, revs),
-    update: (rain: number, night: number, a: Ambience, rumble?: number, quake?: number) => real?.update(rain, night, a, rumble, quake),
+    update: (rain: number, night: number, a: Ambience, rumble?: number, quake?: number, ear?: { x: number; z: number; heard: number }) => real?.update(rain, night, a, rumble, quake, ear),
     suspend: () => real?.suspend(),
     resume: () => real?.resume(),
   };

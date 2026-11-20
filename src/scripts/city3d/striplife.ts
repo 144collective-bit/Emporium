@@ -8,7 +8,9 @@
  */
 import type { Idle } from './landmarks';
 import { RESORTS, SLAB_Y, resortOf } from './resorts';
-import { SPHERE, SPHERE_DOOR } from './stripmarks';
+import { SPHERE, SPHERE_DOOR, showAt } from './stripmarks';
+import { STRIP_BLVD } from './layout';
+import { STRIP_LAMPS } from './strip';
 
 /** Facing along (dx, dz): 0 is +z, PI / 2 is +x (landmarks.ts `Idle`) */
 const facing = (dx: number, dz: number) => Math.atan2(dx, dz);
@@ -17,11 +19,11 @@ export const STRIP_IDLE: Idle[] = (() => {
   const out: Idle[] = [];
   const at = (x: number, z: number, ry: number, act: Idle['act'] = 'look') => out.push({ x, z, y: SLAB_Y + 0.008, ry, act });
   for (const r of RESORTS) {
-    // Valets: one by the stand at the boulevard end of the drop-off, one by the car under the canopy
-    const [px0, pz0, px1, pz1] = r.porte.rect;
-    const zFront = r.face > 0 ? pz1 - 0.6 : pz0 + 0.6;
+    // Valets either side of the bay at the canopy's east end: one on the door's side of the car, one by the
+    // boulevard's (the drive's way in across the canopy's west part is kept clear: stripdrop.ts)
+    const [, pz0, px1, pz1] = r.porte.rect;
     const zMid = (pz0 + pz1) / 2;
-    at(px0 + 1.25, zFront, facing(0, r.face), 'serve');
+    at(px1 - 1.0, r.cars[0][2] - r.face * 1.0, facing(0, r.face), 'serve');
     at(px1 - 1.0, zMid + r.face * 0.9, facing(-1, 0), 'serve');
     // Doormen either side of the door, facing out to the boulevard
     // (closer in where water flanks the door: Dragonspire's drawbridge, the Gondolier's bridge over its canal)
@@ -43,6 +45,24 @@ export const STRIP_IDLE: Idle[] = (() => {
     const a = (deg * Math.PI) / 180;
     const [x, z] = [cx + Math.sin(a) * (SPHERE.r + 1.6), cz - Math.cos(a) * (SPHERE.r + 1.6)];
     at(x, z, facing(cx - x, cz - z), deg % 24 === 0 ? 'phone' : 'look');
+  }
+  return out;
+})();
+
+/**
+ * Passers-by who stop for the fountain show (docs/strip-plan.md Phase 7): along the boulevard's south sidewalk by the
+ * Gondolier's lake, facing it, there only while a show is on (stripmarks.ts `showAt()`; life.ts's `Idle.when`), clear
+ * of the sidewalk's lamps. Under reduced motion strip3d.ts keeps them there.
+ */
+export const SHOW_WATCHERS: Idle[] = (() => {
+  const lake = resortOf('gondolier')!.water[0];
+  const z = STRIP_BLVD.z + STRIP_BLVD.half + 0.75;
+  const lamps = STRIP_LAMPS.filter(([, lz]) => lz > STRIP_BLVD.z).map(([x]) => x);
+  const on = () => showAt(Date.now() / 1000) >= 0;
+  const out: Idle[] = [];
+  for (let x = lake[0] + 1.4, k = 0; x < lake[2] - 1; x += 2.3, k++) {
+    if (lamps.some((l) => Math.abs(l - x) < 0.8)) continue;
+    out.push({ x, z: z + (k % 2) * 0.35, y: SLAB_Y + 0.008, ry: facing(((k * 7) % 5 - 2) * 0.12, 1), act: k % 3 === 2 ? 'phone' : 'look', when: on });
   }
   return out;
 })();

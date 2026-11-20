@@ -16,7 +16,8 @@ import { nearGate } from './nearby';
 import { Batch, FONT_DISPLAY, canvasTex, fx, lit, moving, neon, rng, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { SLAB, waterMat, type Tick } from './world';
-import { parkedCars } from './cars';
+import { carGeometry, carMaterials, parkedCars } from './cars';
+import { DROPS, DROP_STILL, PARKED, dropAt } from './stripdrop';
 import { crown, trunk } from './palms3d';
 import { SWAY } from './dusk';
 import {
@@ -30,6 +31,7 @@ import {
   RIM,
   SCARAB,
   WILD_ACE,
+  COASTER_LAP,
   coasterAt,
   portePosts,
   POST,
@@ -1285,8 +1287,29 @@ export function registerResorts({ low, scene, tick }: { low: boolean; scene: THR
   rims.build(water, { cast: true, receive: true });
   scene.add(water);
 
-  // The cars under the porte-cochères
-  parkedCars(scene, SLAB, RESORTS.flatMap((r) => r.cars));
+  // The cars under the porte-cochères: Big City's parked; the others come and go on the clock (stripdrop.ts: in along
+  // the kerb lane, under the canopy, a while in the bay, out the far end), each in its bay under reduced motion
+  parkedCars(scene, SLAB, PARKED);
+  const stillCars = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const drops = DROPS.map((d) => {
+    const geo = carGeometry(d.car);
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(geo.paint, toon(d.paint)), new THREE.Mesh(geo.detail, carMaterials().detail));
+    for (const m of g.children) m.castShadow = m.receiveShadow = true;
+    scene.add(moving(g));
+    return { d, g };
+  });
+  const placeDrops = (t: number) => {
+    for (const { d, g } of drops) {
+      const p = dropAt(d, stillCars ? DROP_STILL : t);
+      g.visible = !!p;
+      if (p) {
+        g.position.set(p.x, SLAB, p.z);
+        g.rotation.y = p.yaw;
+      }
+    }
+  };
+  placeDrops(Date.now() / 1000);
 
   // The cowboy's waving arm, from his shoulder
   const C = WILD_ACE.cowboy;
@@ -1328,7 +1351,7 @@ export function registerResorts({ low, scene, tick }: { low: boolean; scene: THR
   }
   train.userData.keep = true;
   scene.add(moving(train));
-  const LAP = 26;
+  const LAP = COASTER_LAP;
   const GAP = 0.0042;
   const fwd = new THREE.Vector3();
   const place = (t: number) => {
@@ -1354,6 +1377,7 @@ export function registerResorts({ low, scene, tick }: { low: boolean; scene: THR
     if (!stripNear(...STRIP_RECT)) return;
     const t = now();
     place(t);
+    placeDrops(t);
     arm.rotation.z = -0.35 + Math.sin(t * 3.2) * 0.45;
     // (one set of bulbs dim in turn, the other two lit: the chase runs along every line)
     const k = Math.floor(t * 6) % 3;

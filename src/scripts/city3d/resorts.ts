@@ -313,6 +313,8 @@ export const COASTER: [number, number, number][] = (() => {
 })();
 
 /** A point on the rollercoaster's track, `t` from 0 to 1 round it (a Catmull-Rom curve through `COASTER`, closed) */
+/** How long the train takes round (seconds): resorts3d.ts draws it, stripsound.ts hears it */
+export const COASTER_LAP = 26;
 export function coasterAt(t: number): [number, number, number] {
   const n = COASTER.length;
   const f = (((t % 1) + 1) % 1) * n;

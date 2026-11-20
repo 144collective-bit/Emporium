@@ -2291,7 +2291,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const ear = walking ? walk.position : controls.target;
     const heard = walking ? 1 : Math.max(0, 1 - camera.position.distanceTo(controls.target) / 120);
     // (the el's rumble overhead, and Lava Lagoon's volcano erupting: stripmarks.ts; still under reduced motion)
-    sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * heard, reduced ? 0 : volcanoRumble(ear.x, ear.z, Date.now() / 1000) * heard);
+    // (and where, for what moves on the clock and is heard where it is: the Strip's coaster and monorail, stripsound.ts)
+    sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * heard, reduced ? 0 : volcanoRumble(ear.x, ear.z, Date.now() / 1000) * heard, reduced ? undefined : { x: ear.x, z: ear.z, heard });
 
     if ((!reduced || dirty || flight) && (!covered || frames === 0 || t - coveredAt >= 1)) {
       if (covered) coveredAt = t;

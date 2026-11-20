@@ -431,6 +431,54 @@ What was built:
   cones.
 - **The boot** unchanged at 678.2 of 680.
 
+### The polish: drop-offs, the show's passers-by and the sounds (Phase 7, built, waiting on the owner's sign-off)
+
+The owner's picks (2026-11-20) from the district's audit: the loose ends
+and the sounds. Nothing moved (the snapshot holds); no new solids.
+
+- **The drop-offs** (`stripdrop.ts`, DOM-free, tested in
+  `tests/stripdrop.test.ts`; the porte-cochères' drives promised since
+  Phase 2): each resort's own car under its canopy now comes and goes on
+  the clock (`DROPS`, `dropAt()`, `PERIOD` 150 s, `STAND` 55 s in the bay):
+  in along the boulevard's kerb lane from its far end (the north row's
+  westbound, the south row's eastbound), right across the sidewalk and
+  under the canopy into its bay by the door, a while there, then out
+  through the canopy's east end and back into the lane to the boulevard's
+  other end; away, the bay is empty. The canopies are too short for a limo
+  beside the car already there, so the cars are the resorts' own (Wild
+  Ace's red classic and the rest). Each way is the nearest that keeps clear
+  of the sidewalk's lamps (`sweeps()`); the tests hold every way clear of
+  the solids, the lamps, the people and the water, no two cars in one
+  place, each car in its own bay. **Big City's** car stays parked
+  (`PARKED`): its pylon stands across its way out. Drawn by resorts3d.ts
+  on the main thread from the clock, each parked in its bay under reduced
+  motion (`DROP_STILL`). The valet who stood in the way in now stands on
+  the bay's door side (striplife.ts). The car's box stays solid in its bay.
+  The traffic doesn't see them: a car behind in the kerb lane can pass
+  through one as it slows to turn in (as the traffic does a parked car).
+- **The show's passers-by** (striplife.ts `SHOW_WATCHERS`): people stop on
+  the boulevard's south sidewalk along the Gondolier's lake, facing it,
+  while a fountain show is on (`showAt()`, through `Idle.when`; life.ts's
+  `addPeople()` now keeps `when` for the crowd's spare slots); always there
+  under reduced motion; phones every other one.
+- **The sounds** (`stripsound.ts`, DOM-free, tested in
+  `tests/stripsound.test.ts`: `stripNoise()` at the listener's spot and the
+  clock): Big City's coaster rattling by its speed, its chain clicking up
+  the lift (`CLIMB`), its riders screaming down the drops (`DROP`), heard
+  where it's drawn (`COASTER_LAP` shared with resorts3d.ts); the
+  monorail's hum where its train is, softer standing at a station. sound.ts
+  plays them (its own chunk: index.ts passes where the ear is, nothing under
+  reduced motion). The Party Liner's DJ: a muffled beat twice a second as
+  it goes by (life.ts, `partyBeat`, heard within 32).
+- **The panels:** the seven resorts' and the Sphere's describe the place
+  instead of "Coming soon" (draft copy, the owner's to change; no betting).
+- **The boot** grew 0.1 KB, to 764.6 of 765 (main was already at 764.5).
+- **Left for later** (the audit's other items, each the owner's call): the
+  crowds cheering the show's finale and the eruption, people at the pools
+  by day, a food cart, Orbit's saucer deck as a lookout, a Watch prompt
+  for the shows, a ride on the coaster, an arcade for Dorras, the edges'
+  check.
+
 ## Rules for every phase
 
 - Made-up names only: no real resort, casino, brand, show, performer or
@@ -462,3 +510,6 @@ What was built:
 4. The monorail. Built.
 5. Life and sound. Built.
 6. Polish and performance. Built: the plan is done.
+7. The polish (the owner's picks after the audit): the drop-offs, the
+   show's passers-by, the moving sounds, the panels. Built, waiting on the
+   owner's sign-off.

@@ -19,6 +19,7 @@
  */
 
 import { showAt } from './stripmarks';
+import { stripNoise } from './stripsound';
 import type { Sfx } from './combat';
 import type { Ambience } from './ambience';
 import type { Voice } from './vehicleids';
@@ -80,6 +81,10 @@ export function createSound(given?: AudioContext) {
   let nextShip = 0;
   /** The Docks' crane: a hoist's whine, a slow filtered saw wavering as it winds */
   let crane: { g: GainNode; o: OscillatorNode; lfo: OscillatorNode } | null = null;
+  /** The Neon Mile's moving sounds (stripsound.ts, docs/strip-plan.md Phase 7): the coaster's rattle, the monorail's hum; the chain's clicks and the riders' screams one-shots */
+  let stripRide: { rattle: GainNode; mono: GainNode } | null = null;
+  let nextClick = 0;
+  let nextScream = 0;
   /** The airport: a jet's roar, a swell of noise */
   let jetGain: GainNode | null = null;
   /** Inside the mall: a low hum and a murmur of people */
@@ -174,6 +179,75 @@ export function createSound(given?: AudioContext) {
     src.start();
     lfo.start();
     return g;
+  }
+
+  /** The monorail's hum: a low saw through a low-pass, and the air off it (band-passed noise), into one gain */
+  function monoHum() {
+    const g = ctx!.createGain();
+    g.gain.value = 0;
+    g.connect(master);
+    const lp = ctx!.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 320;
+    const o = ctx!.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.value = 72;
+    o.connect(lp).connect(g);
+    o.start();
+    const air = noise(4);
+    const bp = ctx!.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 520;
+    bp.Q.value = 0.8;
+    const ag = ctx!.createGain();
+    ag.gain.value = 0.6;
+    air.connect(bp).connect(ag).connect(g);
+    air.start();
+    return g;
+  }
+  /** The lift chain's click: a short square tick */
+  function chainClick(t: number, level: number) {
+    const o = ctx!.createOscillator();
+    o.type = 'square';
+    o.frequency.value = 2300;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.018 * level, t + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+    o.connect(g).connect(master);
+    o.start(t);
+    o.stop(t + 0.05);
+  }
+  /** The riders down a drop: a few voices gliding up and falling away, wavering, far off through a band */
+  function screams(t: number, level: number) {
+    const bp = ctx!.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1400;
+    bp.Q.value = 0.7;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.022 * level, t + 0.25);
+    g.gain.setValueAtTime(0.022 * level, t + 0.9);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 1.6);
+    bp.connect(g).connect(master);
+    for (let v = 0; v < 3; v++) {
+      const o = ctx!.createOscillator();
+      o.type = 'triangle';
+      const f = 720 + v * 150 + Math.random() * 80;
+      o.frequency.setValueAtTime(f, t);
+      o.frequency.linearRampToValueAtTime(f * 1.35, t + 0.5);
+      o.frequency.linearRampToValueAtTime(f * 0.95, t + 1.6);
+      const lfo = ctx!.createOscillator();
+      lfo.frequency.value = 5 + v * 1.3;
+      const depth = ctx!.createGain();
+      depth.gain.value = 22;
+      lfo.connect(depth).connect(o.frequency);
+      o.connect(bp);
+      o.start(t + v * 0.07);
+      lfo.start(t);
+      o.stop(t + 1.7);
+      lfo.stop(t + 1.7);
+    }
   }
 
   function init() {
@@ -995,6 +1069,27 @@ export function createSound(given?: AudioContext) {
           crack(t + 0.05, 'highpass', 1500, 0.7, 0.1, 0.55);
           tone(t + 0.42, 'square', 160, 120, 0.04, 0.08);
           break;
+        // The Party Liner's DJ going by: a kick (a sine falling fast) and a muffled chord stab, as through its sides
+        case 'partyBeat': {
+          tone(t, 'sine', 120, 45, 0.16, 0.2);
+          const lp = ctx.createBiquadFilter();
+          lp.type = 'lowpass';
+          lp.frequency.value = 600;
+          const g = ctx.createGain();
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.03, t + 0.01);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+          lp.connect(g).connect(bus);
+          for (const f of [220, 277, 330]) {
+            const o = ctx.createOscillator();
+            o.type = 'sawtooth';
+            o.frequency.value = f;
+            o.connect(lp);
+            o.start(t);
+            o.stop(t + 0.2);
+          }
+          break;
+        }
         // A boat's horn before a bridge: two low reeds held a moment, sent down the river
         case 'boatHorn': {
           const g = ctx.createGain();
@@ -1408,7 +1503,7 @@ export function createSound(given?: AudioContext) {
       set(a.out.gain, revs >= 0 ? 0.04 + r * 0.07 : 0, revs >= 0 ? 0.2 : 0.3);
     },
     /** Called every frame with the scene's state and the district's layers where you are (ambience.ts) */
-    update(rain: number, night: number, a0: Ambience, rumble = 0, quake = 0) {
+    update(rain: number, night: number, a0: Ambience, rumble = 0, quake = 0, ear?: { x: number; z: number; heard: number }) {
       if (!ctx || !on) return;
       const t = ctx.currentTime;
       // Indoors (the mall's hall) the outdoor layers come through the walls damped, the rain too
@@ -1422,6 +1517,24 @@ export function createSound(given?: AudioContext) {
       elGain.gain.setTargetAtTime(rumble * 0.5, t, 0.3);
       screechGain.gain.setTargetAtTime(rumble * rumble * 0.035, t, 0.3);
       quakeGain.gain.setTargetAtTime(quake * 0.75, t, 0.5);
+      // The Neon Mile's moving sounds (stripsound.ts), where they're drawn on the same clock: Big City's coaster
+      // rattling round, its chain clicking up the lift, its riders screaming down the drops; the monorail's hum
+      // (no ear under reduced motion: the city stands still, and they're quiet)
+      const sn = ear && ear.heard > 0 ? stripNoise(ear.x, ear.z, Date.now() / 1000) : null;
+      if (sn || stripRide) {
+        stripRide ??= { rattle: layer('bandpass', 950, 1.4, 0.3, 2.2), mono: monoHum() };
+        const k = (ear?.heard ?? 0) * outdoors;
+        stripRide.rattle.gain.setTargetAtTime((sn?.rattle ?? 0) * k * 0.06, t, 0.3);
+        stripRide.mono.gain.setTargetAtTime((sn?.mono ?? 0) * k * 0.05, t, 0.5);
+        if (sn && sn.clatter * k > 0.05 && t > nextClick) {
+          chainClick(t, sn.clatter * k);
+          nextClick = t + 0.12;
+        }
+        if (sn && sn.scream * k > 0.25 && t > nextScream) {
+          screams(t, sn.scream * k);
+          nextScream = t + 2.2;
+        }
+      }
       boomGain.gain.setTargetAtTime(a.boombox * 0.32, t, 0.4);
       clubGain.gain.setTargetAtTime(a.club * 0.55, t, 0.4);
       hoodGain.gain.setTargetAtTime(a.hood, t, 1);

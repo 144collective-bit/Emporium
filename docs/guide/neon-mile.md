@@ -13,7 +13,7 @@ keep it up to date when what it describes changes.
   Strip's only, every flight clear of them), the welcome sign, a fountain
   show, a volcano, a giant LED sphere, searchlights, a monorail to the
   metro, crowds, limos and party buses, its own sound. Scenery first: the
-  resorts are places that say coming soon, no betting. Phase 1 (the
+  resorts are places with panels (no betting). Phase 1 (the
   boulevard and the land) is built: `strip.ts` (DOM-free, tested in
   `tests/strip.test.ts`): the boulevard (`strip-blvd`, layout.ts
   `STRIP_BLVD`: two lanes each way round a 4-wide planted median) from the
@@ -89,4 +89,15 @@ keep it up to date when what it describes changes.
   is done: `?bench` views `strip` and `strip-street`; phones draw the Sphere's
   shader on a lighter path (`LOW`) and the coaster at half its samples; the
   fountain's nozzle lights in the FX layer; the volcano's flames shaped as
-  flames. It draws lighter than Uptown on desktop and phones.
+  flames. It draws lighter than Uptown on desktop and phones. Phase 7 (the
+  polish, the owner's picks) is built, waiting on the owner's sign-off:
+  `stripdrop.ts` (DOM-free, tested in `tests/stripdrop.test.ts`: the
+  canopy cars of every resort but Big City come and go on the clock,
+  `DROPS`, `dropAt()`, `PARKED`, drawn by resorts3d.ts, parked under
+  reduced motion at `DROP_STILL`); striplife.ts's `SHOW_WATCHERS` (people
+  stopping along the Gondolier's lake while a show is on, `Idle.when`,
+  which life.ts's `addPeople()` now keeps); `stripsound.ts` (DOM-free,
+  tested in `tests/stripsound.test.ts`: `stripNoise()`, the coaster's
+  rattle, chain and screams and the monorail's hum, played by sound.ts
+  from the ear index.ts passes); the Party Liner's beat (life.ts
+  `partyBeat`); the resorts' and the Sphere's panels describe the place.
