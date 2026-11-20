@@ -639,8 +639,8 @@ From the Circus west, patchy as high roads are:
    - **5a, as data**: exit 6A in `EXITS` (its label beside the numbers),
      its slips (`rampsOf()`), the road in in the street plan, the routes,
      the land kept clear; tests (nothing that exists moves, the ramps clear
-     of exits 6 and 7, every route still joined); a sketch. Built
-     (2026-11-19, waiting for the owner's sign-off): exit 6A is `EXITS`'
+     of exits 6 and 7, every route still joined); a sketch. Built and signed off
+     (2026-11-19): exit 6A is `EXITS`'
      ninth (`n` 9 for its ids, `label` '6A' for the signs; every exit has
      a `label` now), at `CORNER_FROM`'s ring point (the road in square on
      to the curve there), `side` -1, slips inside and out, named
@@ -657,14 +657,13 @@ From the Circus west, patchy as high roads are:
      gains the two roads and the two ramps (nothing that exists moved).
      `turnsOf()` (traffic.ts) keeps a turn at a route's very end inside it.
      Sketch `docs/south-shots/27-phase-5a-exit-6a.png`. The signs' atlas
-     and the map's badges read an exit's `label` (6A, not 9). Not merged
-     on its own: the roads and ramps aren't drawn until 5b, and a push to
-     main goes live (traffic would drive them unseen), so 5a and 5b go to
-     main together.
+     and the map's badges read an exit's `label` (6A, not 9). Merged with
+     5b, not on its own: a push to main goes live, and the roads and ramps
+     weren't drawn until 5b.
    - **5b, drawn and driven**: the ramps on the viaduct, the road and its
      junctions, the gantries and signs with 6A's made-up names, lamps,
-     traffic using it; walked and driven, shots. Built (2026-11-19,
-     waiting for the owner's sign-off): 6A's ramps, gantries, signs (its
+     traffic using it; walked and driven, shots. Built and signed off
+     (2026-11-19): 6A's ramps, gantries, signs (its
      label on them), ramp lamps, piers and the lights under the deck come
      from the exit's data as every exit's (viaduct3d.ts, viadress.ts,
      viasigns.ts); `corner3d.ts` draws Corner Road and Gate Hill in the
