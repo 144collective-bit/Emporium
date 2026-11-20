@@ -718,6 +718,17 @@ From the Circus west, patchy as high roads are:
      city-wide far view on phones is **its own performance plan, later**
      (aircraft merged when far, far landmarks in one piece each, far glows
      pooled); 6b carries on with the widths and the seams.
+     Widths (2026-11-20): a south place's panel (Kestrel Fuel on the High
+     Road) at 320 x 640, 375 x 812, 812 x 375, 768 x 1024, 1024 x 768 and
+     1440 x 900: on screen, no sideways scroll, nothing clipped (the tube's
+     card, the only other screen of the south's own, was checked in 4h).
+     Seams: the seam map's ranked south seams (Endswood Estate against
+     "open land", about (-179, 417), (-115, 339), (-251, 361)) are the
+     south's own ground between its blocks (greens, the brook's valley,
+     the fields: the village counts as the estate's area), looked at on
+     the ground at each: no gap or hard line. One for the owner: at
+     (-115, 339) a grassed block's edge runs dead straight. Shots
+     `docs/south-shots/29-phase-6b-*.webp`.
    - **6c, life**: people on the High Road, the estate's decks, the
      Circus's plaza and subways, the village and the rec; the south bus
      route and its stops; traffic checked on the new roads.
