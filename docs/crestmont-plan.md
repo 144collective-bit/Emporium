@@ -706,8 +706,39 @@ Their answers, in three rounds:
      show) and SOLENNE (IVORY HALL's, white render, frosted windows). Each a place with its panel, live line, Walk in,
      door and pin; the showroom's panel sells the game's cars for Dorras through the garage's rules (tycoon-ui.ts
      `showroomView()`, tycoon.ts `buyCar()`), THE ASTERLY's and SOLENNE's insides coming soon.
-   - **4b, the cable car (next):** gondola cabins on a cable from a station in the Flats up over the hills to THE
-     ASTERLY, on a few slim pylons on clear ground.
-5. **The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse.**
-6. **Residents at leisure and cyclists on the hills.**
+   - **4b, the cable car (built; the owner's answers: "Foothill Road's east end", "Ride shown, then walk", "Glass
+     gondolas"):** `cablecar.ts` (the rules), `cablecar3d.ts` (the drawing), `cablecar-ui.ts` (the ride). A station
+     just north of Foothill Road at the Flats' east end, the line about 225 m straight up over the hills and the
+     reservoir to a station on legs beside THE ASTERLY, level with it; three slim white pylons on clear ground, none
+     taller than the Emporium (the rope's room over the ground and the hill houses' real roofs, `CLEAR`, a cabin's foot
+     lower only near the stations); eight glass gondolas round the loop on the clock, lit at night, still under reduced
+     motion. Each station's door ("Cable car") opens the station card: Ride up or Ride down, about twenty seconds under
+     a camera alongside the cabin, Skip ride or Esc to cut to the end, then you walk on at the other station (the top
+     one's door on the overlook by THE ASTERLY's bridge). Both stations are places on the map; the cable car is a live
+     feature (`cablecar`) the owner can close.
+5. **The Ridgeline Walk, the Belvedere and the Crestmont Glasshouse** (built; the owner's answers, 2026-11-20: "That
+   path, steps where steep", "Halfway up", "East of the reservoir"): `crestwalk.ts` (the walk's line as a search laid
+   it over the hills' clear ground, held fixed; its steps, benches, lamps and lookouts) and `crestwalk3d.ts`. The walk
+   runs about 280 m from Foothill Road by the cable car's foot station, round the station, east along the hills' foot
+   and up the east valley, by the glasshouse (a branch to its door) and through the Belvedere, then up the last climb
+   to the overlook: gravel on the grass, stone steps and an iron handrail where it's steep, low lamps, benches, two
+   lookouts with a rail and a coin viewer. The Belvedere (crestsites.ts `BELVEDERE`), a round of columns under a copper
+   dome, stands on the ground as it is (its ring level over its columns), so the meadow by it stays where it was laid;
+   the glasshouse (`GLASSHOUSE`), a white-framed palm house of a domed middle and two wings with palms inside, its
+   garden of beds and gravel round a fountain, on ground held level east of the reservoir. Both are places with their
+   panels (kickers 54 and 55), live lines, Walk in, doors and pins. No land, house or landmark moved.
+6. **Residents at leisure and cyclists on the hills** (built; the owner's answers, 2026-11-20: the residents where
+   the plan put them, "Ridge Road, a few", "Skip tennis"): `crestleisure.ts` (the rules) and `crestleisure3d.ts`. At
+   home, someone out on a balcony at every third estate and every other hill house, looking out; on the other hill
+   houses' roof terraces someone on a lounger, a pair at every fourth one's table. Out, a pair at three of THE
+   ASTERLY's four terrace tables with a waiter between them, two on the Belvedere's benches and one at its front,
+   visitors in the glasshouse (two under its dome by the palm, a pair at its garden's east end, one by the fountain),
+   someone on every other bench along the walk and at each lookout. On the move, four walkers up and down the
+   Ridgeline Walk at a stroll, each on their own right; five road cyclists on Ridge Road, up its right-hand edge and
+   down the other, slow on the climbs and quick on the way down, on the asphalt's edge right of the cars and clear of
+   the joggers, their bikes pitched with the road. All come with the chunk, into the crowd's spare slots (none in the
+   boot), and dress as Crestmont's (the crowd's look counts the hills east of its streets too), the riders in
+   cycling kit. No tennis, no swimmers. Phones: every other one standing or sitting, two walkers, three cyclists.
+   With it, three Phase 5 slips fixed: the walk's benches turned along it (they stood across it), the Belvedere's
+   benches moved off the walk's way out, the glasshouse's fountain moved off its path.
 

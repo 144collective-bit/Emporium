@@ -218,7 +218,8 @@ keep it up to date when what it describes changes.
     esplanade (`JOG`), cyclists in the one-way pair's bike lanes the way each
     street runs (`CYCLISTS`, `cyclistAt()`; the riders the crowd's, kind
     `park` with the park's people; their bikes `uptownlife3d.ts`, one
-    instanced mesh on Uptown's tick); its sound in ambience.ts (a quieter
+    instanced mesh on Uptown's tick, its geometry `bike3d.ts`'s, shared with
+    Crestmont's cyclists); its sound in ambience.ts (a quieter
     hum, `UPTOWN_HUSH`; the plaza's `fountain`; the circle's traffic); and
     the executive helicopter (below, under the airport).
   - **The plaza** (Phase 3) is `plaza.ts` (DOM-free, tested in

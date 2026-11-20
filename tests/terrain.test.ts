@@ -65,8 +65,8 @@ test('flat everywhere but the hills: 0 outside their land, and under every stree
   // (but the hills' mansions and landmarks, which stand on their ground up there: tests/mansions.test.ts, tests/crestsites.test.ts)
   for (const b of SOLIDS.filter((b) => !MANSION_SOLIDS.includes(b) && !SITE_SOLIDS.includes(b))) for (const [x, z] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) assert.equal(crestAt(x, z), 0, `a solid at ${x}, ${z} is on the hills`);
   // (but the landmarks up in the hills: the overlook and the reservoir, tests/crestsites.test.ts)
-  // (and THE ASTERLY, arrived at on the overlook: the premium upgrade's Phase 4)
-  for (const p of PLACES.filter((p) => p.id !== 'overlook' && p.id !== 'reservoir' && p.id !== 'asterly')) assert.equal(crestAt(p.at.x, p.at.z), 0, `${p.id} is on the hills`);
+  // (and THE ASTERLY and the cable car's top station, arrived at on the overlook: the premium upgrade's Phase 4)
+  for (const p of PLACES.filter((p) => p.id !== 'overlook' && p.id !== 'reservoir' && p.id !== 'asterly' && p.id !== 'cable-top' && p.id !== 'belvedere' && p.id !== 'glasshouse')) assert.equal(crestAt(p.at.x, p.at.z), 0, `${p.id} is on the hills`);
 });
 
 test("gentle hills to 45-60 m (the owner's call), never under the ground, smooth enough to walk and drive", () => {

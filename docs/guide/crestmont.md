@@ -259,3 +259,43 @@ keep it up to date when what it describes changes.
   crestspots.ts, their live lines in livelines.ts; the showroom's cars are
   the tycoon's `vellano` panel (tycoon-boot.ts `PANELS`, tycoon-ui.ts
   `showroomView()`), bought with tycoon.ts `buyCar()`.
+  Phase 4b, Highcrest's cable car: the rules are `cablecar.ts` (DOM-free, in
+  the boot; `CABLE_STATIONS` with their doors and arrivals, `PYLON_AT` on
+  clear ground, `SUPPORTS` baked as `cable-supports`, `ropeY()`, `needAt()`
+  and `CLEAR`, `cabinsAt()` on the clock, `rideAt()`, `CABLE_VIEW` for the
+  ride's cabin, `CABLE_DOORS`, `CABLE_SOLIDS` joining the grids with the
+  chunk), tested in `tests/cablecar.test.ts`; the stations, pylons and ropes
+  are sites and the gondolas instanced on the main thread in `cablecar3d.ts`
+  (`registerCable()`); the ride is `cablecar-ui.ts` (the metro's card and
+  bar, a `Ride` of kind `cable`), loaded by index.ts the first time a
+  station's door is used (behind `live.closed('cablecar')`); the stations
+  are places of kind `cable` (`cable-foot`, `cable-top`).
+  Phase 5, the Ridgeline Walk, the Belvedere and the Crestmont Glasshouse:
+  the walk is `crestwalk.ts` (DOM-free, the chunk's: `WALK_LINE` held as a
+  search laid it, `WALK_POINTS` every half tile with their grades, `STEPS`
+  where steep, `BENCHES`, `WALK_LAMPS`, `LOOKOUTS`, `GLASS_PATH` the branch
+  to the glasshouse's door), tested in `tests/crestwalk.test.ts`, drawn in
+  `crestwalk3d.ts` (`registerWalk()`, a site every 30 along it). The
+  Belvedere and the glasshouse are crestsites.ts's (`BELVEDERE` on the
+  ground as it is, its ring at `top`, kept off by `onSite()`; `GLASSHOUSE`
+  held level in `SITE_LEVELS`), places with their doors (`SITE_DOORS`) and
+  arrivals (`SITE_SPAWNS`), their solids in `SITE_SOLIDS`. The walk's
+  benches (`BENCHES`, `BENCH`: along it, a sitter facing across it), the
+  Belvedere's (`BELVEDERE_BENCHES`, off its way through) and the glasshouse's
+  fountain (`GLASS_FOUNTAIN`, south of its path) are crestwalk.ts's data,
+  which the drawing, Phase 6's sitters and the tests all read.
+  Phase 6, residents at leisure and Ridge Road's cyclists: `crestleisure.ts`
+  (DOM-free, the chunk's) holds `LEISURE_IDLE` (people on the balconies,
+  the roof terraces' loungers and tables, at THE ASTERLY's terrace tables
+  with a waiter, on the Belvedere's and the walk's benches, at the lookouts,
+  in the glasshouse and its garden) and `LEISURE_PEOPLE` (walkers up and down
+  the Ridgeline Walk, `strollAt()`; road cyclists on Ridge Road, `RIDERS` and
+  `rideAt()` round `RIDE_LOOP`, on the asphalt's edge right of the cars,
+  their pace from the grade), tested in `tests/crestleisure.test.ts`.
+  `crestleisure3d.ts` (`registerLeisure()`) puts them in the crowd's spare
+  slots (life.ts `addPeople()`, phones half) and draws the bikes instanced
+  on the main thread, pitched with the road; the bike's geometry is shared
+  with Uptown's in `bike3d.ts`. The crowd's look counts the hills east of
+  `CREST_RECT` as Crestmont's (crowdlook.ts `CREST_EAST`), so the walk's and
+  the glasshouse's people dress as its own; a rider's id holds `cyclist`
+  for their kit. Phase 8's people (`crestlife.ts`) stay the boot's.

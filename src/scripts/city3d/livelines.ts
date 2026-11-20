@@ -46,6 +46,8 @@ export const LIVE_IDS = [
   'overlook',
   'reservoir',
   'asterly',
+  'belvedere',
+  'glasshouse',
   'vellano',
   'solenne',
   'lot9',
@@ -208,6 +210,12 @@ export function liveLine(id: string, t = Date.now()): string | null {
       if (between(h, 18, 23)) return h >= sunset ? 'Dinner by candlelight · The city below' : 'Dinner from six · Terrace for the sunset';
       if (between(h, 15, 18)) return 'Closed for the afternoon · Dinner from six';
       return 'Closed · Lunch from noon';
+    // (the premium upgrade's Phase 5: the Ridgeline Walk's lookout, the palm house)
+    case 'belvedere':
+      return h >= sunset || h < 5 ? 'Lamps on the walk · The Flats lit below' : `Sunset about ${clockText(sunset)} · Benches under the dome`;
+    case 'glasshouse':
+      if (between(h, 9, 18)) return between(h, 9, 12) ? 'Palm house open · Misted at nine' : 'Palm house open till six · Orchids in flower';
+      return 'Palm house shut · Lit from inside';
     case 'vellano':
       if (between(h, 10, 19)) return c.dow === 6 || c.dow === 0 ? 'Showroom open · Weekend viewings' : 'Showroom open till seven · The new model in the window';
       return 'Showroom lit · Open at ten';

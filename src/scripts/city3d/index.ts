@@ -31,6 +31,7 @@ import { STRIP_LAMPS } from './strip';
 import { DECK_LAMPS } from './viapiers';
 import { RAMP_LAMPS, UNDER_LIGHTS } from './viadress';
 import { CORNER_LAMPS } from './cornerroad';
+import { SOUTH_PEOPLE } from './southpeople';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
 import { RURAL_LAMPS } from './ruraldress';
@@ -94,7 +95,7 @@ import { buildBigLots } from './biglots';
 import { buildCornerShops } from './cornershops';
 import { buildBeacons } from './beacons';
 import { createTravelUI } from './travel-ui';
-import { ambienceAt } from './ambience';
+import type { Ambience, ambienceAt as AmbienceAt } from './ambience';
 import type { createTaxis } from './taxi';
 import { buildMetro } from './metro3d';
 import type { MetroUI } from './metro-ui';
@@ -102,6 +103,7 @@ import type { RiverBusUI } from './riverbus-ui';
 import type { StashUI } from './stash-ui';
 import { STOPS as BUS_STOPS_RIVER } from './riverbus';
 import type { MonoUI } from './monorail-ui';
+import type { CableUI } from './cablecar-ui';
 import type { TubeUI } from './tube-ui';
 import type { Tube } from './tube3d';
 import { HALL_Y, PLAT_DOOR, PLAT_Y, SOUTH_STATIONS, lineAt } from './southline';
@@ -111,6 +113,7 @@ import { YARD_TREES } from './southyard';
 import { FLOOR, PLANTERS, PLANTER_H, PLAZA, PLAZA_LAMPS as CIRCUS_LAMPS } from './circus';
 const CIRCUS_MID = [PLAZA.x, PLAZA.z] as const;
 import { MONO_STATIONS } from './monorail';
+import { CABLE_DOORS } from './cablecar';
 import { PLACES } from './places';
 import { placeName } from './places';
 import { buildKartPark } from './kartpark3d';
@@ -450,6 +453,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The Circus's sunken plaza (circus.ts, docs/south-plan.md Phase 4b): a tree in each planter, lamps by the seats
   for (const { at: [x, z] } of PLANTERS) addTree(x, z, 0.75, false, FLOOR + PLANTER_H);
   for (const [x, z] of CIRCUS_LAMPS) addLamp(x, z, Math.atan2(x - CIRCUS_MID[0], z - CIRCUS_MID[1]), FLOOR);
+  // The south's people about (southpeople.ts, docs/south-plan.md Phase 6c): on the High Road, the podium deck, the
+  // Circus's plaza, in the churchyard and at the rec (phones: half of them, the trim)
+  SOUTH_PEOPLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push({ x: p.x, z: p.z, y: p.y, ry: p.ry, act: p.act }));
   // The raised ring highway's lamps on its median barrier (viapiers.ts, docs/highway-plan.md Phase 2)
   for (const [x, z, ry, y] of DECK_LAMPS) addLamp(x, z, ry, y);
   // ...up its exits' ramps, and the lights under its deck where a street passes under (viadress.ts, Phase 4)
@@ -884,7 +890,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(INSIDE_SPAWN);
       });
     // Crestmont's landmarks (crestsites.ts): Walk in where you arrive at each, facing it
-    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir' || id === 'asterly') {
+    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir' || id === 'asterly' || id === 'belvedere' || id === 'glasshouse') {
       const at = SITE_SPAWNS[id];
       panelBody.querySelector('[data-crest-walkin]')?.addEventListener('click', () => {
         close();
@@ -1084,6 +1090,37 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     ),
     'the monorail'
   );
+  // Highcrest's cable car (cablecar.ts, the premium upgrade's Phase 4b): its card and rides loaded when a station's door first opens
+  let cableUI: CableUI | null = null;
+  const loadCable = lazy(
+    () =>
+      import('./cablecar-ui').then(({ createCableUI }) =>
+      (cableUI = createCableUI(root, {
+        camera,
+        reduced,
+        free: () => walking && walk.onFoot,
+        setRide: (r) => walk.setRide(r),
+        arrive: (s) => {
+          works.want(s.at.x, s.at.z, 80);
+          walk.placeAt(s.at);
+        },
+        want: (x, z, r) => works.want(x, z, r),
+        toast: (text) => game.toast(text),
+        sfx: (kind) => sound.sfx(kind),
+        opened: () => {
+          walk.releaseMouse();
+          close();
+          tycoon?.closeCard();
+          metroUI?.close();
+          tubeUI?.close();
+          riverBusUI?.close();
+          monoUI?.close();
+          skyLiftUI?.close();
+        },
+      }))
+    ),
+    'the cable car'
+  );
   // The south's underground line (southline.ts, docs/south-plan.md Phase 4g): its trains (tube3d.ts) loaded the first
   // time you're down by its platforms or ride, running on their timetable from the clock; a door on each platform's
   // middle ("Tube", only down there), its card and rides (tube-ui.ts) loaded the first time one opens
@@ -1244,7 +1281,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
+    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...CABLE_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     openPlace: (id) => {
       // (Degen's front and back doors, home.ts: a fade in or out of the room inside)
       // (in his room, home.ts `HOME_USES`: the wardrobe is the fitting room, the trunk the stash)
@@ -1285,6 +1322,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         const [, way, i] = id.split(':');
         const l = LIBERTY_LIFTS[Number(i)];
         return rideTo(way === 'up' ? l.up : l.down, 'liberty', 'Liberty Bridge', way === 'up' ? 'Liberty Bridge · High walkway' : 'Liberty Bridge · Deck');
+      }
+      if (id.startsWith('cable:')) {
+        const shut = live.closed('cablecar');
+        if (shut) return tycoon?.toast(shut, 3500);
+        return void loadCable()
+          .then((ui) => ui.open(id.slice(6)))
+          .catch(() => game.toast('Cable car not running · try again'));
       }
       if (id.startsWith('mono:')) {
         const shut = live.closed('monorail');
@@ -1556,7 +1600,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !shown : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || cableUI?.skip() || cableUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -1789,7 +1833,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   /* ---------- Controls: time, weather, sound, view ---------- */
   const sound = createSound();
   lifeSfx = (k, g) => sound.sfx(k, g);
-  let amb = ambienceAt(controls.target.x, controls.target.z);
+  // The sound by district (ambience.ts): fetched after the boot (docs/south-plan.md 6a; nothing's heard till Sound is
+  // on), the sound left alone till it's in
+  let ambienceAt: typeof AmbienceAt | null = null;
+  void import('./ambience').then((m) => (ambienceAt = m.ambienceAt)).catch(() => {});
+  let amb: Ambience | null = null;
   let ambT = 0;
   const group = (name: string, apply: (v: string) => void) => {
     const btns = root.querySelectorAll<HTMLButtonElement>(`[data-${name}]`);
@@ -2241,7 +2289,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // The sound follows the district you're in (ambience.ts): where you walk, or where the City view looks
     // (its height softening it), a few times a second
     ambT -= dt;
-    if (ambT <= 0) {
+    if (ambT <= 0 && ambienceAt) {
       ambT = 0.25;
       amb = walking ? ambienceAt(walk.position.x, walk.position.z, 0, undefined, walk.position.y) : ambienceAt(controls.target.x, controls.target.z, camera.position.distanceTo(controls.target));
       // (up on his roof terrace he's out of doors: home.ts)
@@ -2251,7 +2299,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const ear = walking ? walk.position : controls.target;
     const heard = walking ? 1 : Math.max(0, 1 - camera.position.distanceTo(controls.target) / 120);
     // (the el's rumble overhead, and Lava Lagoon's volcano erupting: stripmarks.ts; still under reduced motion)
-    sound.update(s.rain, s.night, amb, metro.rumbleAt(ear.x, ear.z) * heard, reduced ? 0 : volcanoRumble(ear.x, ear.z, Date.now() / 1000) * heard);
+    // (and below ground in the south, a tube train's: ambience.ts `tube`)
+    if (amb) sound.update(s.rain, s.night, amb, Math.max(metro.rumbleAt(ear.x, ear.z) * heard, amb.tube), reduced ? 0 : volcanoRumble(ear.x, ear.z, Date.now() / 1000) * heard);
 
     if ((!reduced || dirty || flight) && (!covered || frames === 0 || t - coveredAt >= 1)) {
       if (covered) coveredAt = t;

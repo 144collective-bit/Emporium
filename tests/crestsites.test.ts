@@ -120,7 +120,7 @@ test('nothing grows on them, and no lamp stands there', () => {
 test("the doors (the polish plan's Phase 7): one a place, on its ground by the building or the view, clear of everything solid, a step from where you arrive", () => {
   assert.deepEqual(
     SITE_DOORS.map((d) => d.id),
-    ['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly']
+    ['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse']
   );
   for (const d of SITE_DOORS) {
     for (const s of SOLIDS) assert.ok(!inside([s[0], s[1], s[2], s[3]], d.x, d.z), `${d.id}'s door in ${s.join()}`);
