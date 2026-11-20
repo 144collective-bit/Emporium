@@ -48,8 +48,15 @@ export function addLod(near: THREE.Object3D[], far: THREE.Object3D[], box: THREE
   }, box);
 }
 
+/** Where the camera was at the last `updateLods()`, and the tier's `far`: what swaps its own far forms (aircraft.ts) reads it */
+export const LOD_EYE = { x: 0, y: 0, z: 0, far: Infinity };
+
 /** Swap every switch for a camera at x, y, z (near within `far`); `now` (ms) times the freeing of near forms */
 export function updateLods(x: number, y: number, z: number, far: number, now = performance.now()) {
+  LOD_EYE.x = x;
+  LOD_EYE.y = y;
+  LOD_EYE.z = z;
+  LOD_EYE.far = far;
   for (const s of SWITCHES) {
     const { min, max } = s.box;
     const near = isNear(boxDistance(x, y, z, min.x, min.y, min.z, max.x, max.y, max.z), far, s.isNear);

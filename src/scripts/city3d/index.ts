@@ -74,6 +74,7 @@ import { addTrafficBikes, bodies, buildLife, walker } from './life';
 import { createWalk } from './walk';
 import { buildGarage } from './garage';
 import { buildAirport } from './airport';
+import { FAR_FLEETS } from './aircraft';
 import { CAMERA_FAR, PAN_BOUNDS } from './bounds';
 import { FLY, POLAR, anyHeld, clampCam, easeVel, groundUnder, keyDir, noKeys, reach, turn, wish, type V3 } from './freecam';
 import { LENS, cityNear, nearFor } from './lens';
@@ -231,6 +232,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const picked: Picked = root.dataset.tier ? { tier: root.dataset.tier as Tier, why: 'set by the page' } : pickTier(device(gpu));
   const tier = picked.tier;
   const Q = TIERS[tier];
+  // Phones draw each aircraft far off in one piece (aircraft.ts, docs/phone-far-plan.md Phase 2)
+  FAR_FLEETS.on = tier === 'low';
   // Phones' trees don't sway (`low ? 0 : SWAY`): their tile pieces in the shared paint carry no uv (tilebatch.ts)
   UV.sway = tier !== 'low';
   // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
