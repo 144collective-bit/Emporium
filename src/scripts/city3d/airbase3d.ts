@@ -17,6 +17,7 @@ import { nearGate } from './nearby';
 import { addPeople } from './life';
 import { BASE_IDLE, BASE_MOVERS, BASE_VEHICLES, vehicleAt } from './airbaselife';
 import { carGeometry, carMaterials } from './cars';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Tick } from './world';
 import { site } from './tilework';
 import { COVER, ROAD, STONE } from './palette';
@@ -509,11 +510,18 @@ function searchlights(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined)
  * near, still under reduced motion */
 function vehicles(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined) {
   const reduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const paint = toon('#5d6b52');
+  // (one mesh each, the owner's trim: its paint given the olive in its vertex colours and merged with its detail, drawn
+  // with the detail's own material)
+  const olive = new THREE.Color('#5d6b52');
   const cars = BASE_VEHICLES.map((v) => {
     const geo = carGeometry(v.car);
+    const paint = geo.paint.clone();
+    const col = new Float32Array(paint.attributes.position.count * 3);
+    for (let i = 0; i < col.length; i += 3) col.set([olive.r, olive.g, olive.b], i);
+    paint.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    const one = mergeGeometries([paint, geo.detail.clone()]);
     const g = new THREE.Group();
-    g.add(new THREE.Mesh(geo.paint, paint), new THREE.Mesh(geo.detail, carMaterials().detail));
+    g.add(new THREE.Mesh(one ?? geo.detail, carMaterials().detail));
     for (const m of g.children) m.castShadow = m.receiveShadow = true;
     g.name = v.id;
     scene.add(moving(g));

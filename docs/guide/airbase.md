@@ -96,14 +96,15 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
     searchlights (airbase3d.ts `searchlights()`: one instanced additive beam each, down to the ground, sweeping `SWEEP`
     either side of `searchRest()`, in towards the base, at night only; still under reduced motion: the Strip's way).
   - **Its people** (`airbaselife.ts`, DOM-free, on `DOM_FREE`, tested in `tests/airbaselife.test.ts`; the camp's chunk
-    hands them to the crowd, life.ts `addPeople()`, every other one on phones): `BASE_IDLE` (sentries at the guardhouses
-    acting `wait`, never `guard`: that's the crowd's bouncers; pairs chatting, a queue at the mess, people at the motor
-    pool and the heliport), `BASE_MOVERS` (the drill squad's column round `DRILL_LOOP`, walkers round `ROW_LOOPS`, the
+    hands them to the crowd, life.ts `addPeople()`, every other one on phones): `BASE_IDLE` (pairs chatting, a queue at the
+    mess, people at the motor pool and the heliport; never acting `guard`: that's the crowd's bouncers; no sentries at
+    the gates since Phase 4's trim), `BASE_MOVERS` (the drill squad's column round `DRILL_LOOP`, walkers round `ROW_LOOPS`, the
     patrols on `BEATS` along the south fence, `beatAt()`: back and forth, never stopping or chasing). Their look is
     crowdlook.ts `STYLES.airbase` (`districtAt()` inside the fence).
   - **Its vehicles** (`airbaselife.ts` `BASE_VEHICLES`, `vehicleAt()`, `loopPoint()`): a jeep up the avenue on its
-    right, along the apron's road and back, and a truck round the motor pool's yard; the city's own models (cars.ts
-    `carGeometry`), olive, drawn and moved by airbase3d.ts `vehicles()` as the Docks' truck (still under reduced motion).
+    right, along the apron's road and back (the motor pool's moving truck trimmed in Phase 4); the city's own off-road
+    model (cars.ts `carGeometry`), its paint olive in its vertex colours merged with its detail into one mesh, drawn and
+    moved by airbase3d.ts `vehicles()` as the Docks' truck (still under reduced motion).
   - **Its flying** (`airbaseflights.ts`, DOM-free, the airfield's chunk's only, tested in `tests/airbaseflights.test.ts`):
     `TRAINER` (circuits: off east from the runway's west end, round the north of the base, landing west from the east,
     back to `TRAINER_HOLD`) and `ROUNDER` (the helicopter's round of the base from the heliport), built with airfield.ts's

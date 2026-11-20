@@ -3,8 +3,8 @@
  * airbase3d.ts, the camp's chunk, which hands them to the city's crowd: life.ts `addPeople()`). Its personnel in their
  * uniforms (crowdlook.ts `STYLES.airbase`): made up, unarmed, never a target, and they never stop or chase you.
  *
- * - `BASE_IDLE`: standing about: a sentry at each guardhouse's door, pairs chatting outside the HQ and the barracks, a
- *   queue at the mess hall, people round the motor pool's trucks, one waiting by the heliport's hut.
+ * - `BASE_IDLE`: standing about: pairs chatting outside the HQ and the barracks, a queue at the mess hall, people round
+ *   the motor pool's trucks, one waiting by the heliport's hut (no sentries at the gates since Phase 4's trim).
  * - `BASE_MOVERS`: the drill squad in a column round the parade ground, people walking round the barracks rows, and the
  *   patrols along the inside of the south fence, back and forth.
  * Every other one is left out on phones (`trim`, or the chunk's own `i % 2`).
@@ -12,7 +12,7 @@
 import type { Idle } from './landmarks';
 import { WALK_PACE, type Moment, type ParkPerson } from './parklife';
 import { loopAt, loopLen } from './civic';
-import { BARRACKS, GATES, HELI_HUT, HQ, MOTOR_POOL, PARADE, SERVICES, guardhouseOf, southFenceZ } from './airbase';
+import { BARRACKS, HELI_HUT, HQ, MOTOR_POOL, PARADE, SERVICES, southFenceZ } from './airbase';
 import type { Rect } from './tiles';
 
 /** The base's ground (open land: the people stand on it) */
@@ -20,11 +20,7 @@ export const BASE_Y = 0;
 
 /** Standing about (ry: 0 faces +z, south; π/2 faces +x) */
 export const BASE_IDLE: Idle[] = [
-  // (a sentry inside each gate, by the guardhouse's door on its west face, facing the way in: -x)
-  ...GATES.map((g): Idle => {
-    const r = guardhouseOf(g);
-    return { x: r[0] - 1.2, z: (r[1] + r[3]) / 2, ry: -Math.PI / 2, y: BASE_Y, act: 'wait' };
-  }),
+  // (no sentries at the gates: trimmed, the owner's call on Phase 4's measure, the people nearest the main gate's view)
   // (outside the HQ's portico, a pair talking)
   { x: (HQ[0] + HQ[2]) / 2 - 7, z: HQ[3] + 4, ry: Math.PI / 2, y: BASE_Y, act: 'chat' },
   { x: (HQ[0] + HQ[2]) / 2 - 5.8, z: HQ[3] + 4, ry: -Math.PI / 2, y: BASE_Y, act: 'chat' },
@@ -123,9 +119,10 @@ export const loopLength = (pts: readonly Way2[]) => pts.reduce((n, p, i) => n + 
 
 /**
  * The base's vehicles: a jeep up the parade avenue on its right, along the apron's road and back down (the base keeps to
- * the right, as the town does), and a truck round the motor pool's yard; their kinds (cars.ts), loops and paces
+ * the right, as the town does); its kind (cars.ts), loop and pace. (The motor pool's truck on its rounds was trimmed,
+ * the owner's call on Phase 4's measure: its parked trucks stay.)
  */
-export const BASE_VEHICLES: { id: string; car: 'offroad' | 'truck'; loop: Way2[]; pace: number }[] = [
+export const BASE_VEHICLES: { id: string; car: 'offroad'; loop: Way2[]; pace: number }[] = [
   {
     id: 'airbase-jeep',
     car: 'offroad',
@@ -138,17 +135,6 @@ export const BASE_VEHICLES: { id: string; car: 'offroad' | 'truck'; loop: Way2[]
       [-7, -322],
     ],
     pace: 7,
-  },
-  {
-    id: 'airbase-truck',
-    car: 'truck',
-    loop: [
-      [94, -338],
-      [150, -338],
-      [150, -356],
-      [94, -356],
-    ],
-    pace: 3,
   },
 ];
 /** Where a vehicle is at time t (the same clock for everyone), and its stand under reduced motion (t 0) */
