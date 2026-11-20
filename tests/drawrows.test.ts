@@ -111,8 +111,8 @@ test('the draw breakdown names an unnamed thing by the code that made it', () =>
     '    at boot (http://x/src/scripts/city3d/index.ts:900:3)',
   ].join('\n');
   assert.equal(makerOf(stack), 'kit:412<westlake3d:88');
-  // (a built chunk's hash left off)
-  assert.equal(makerOf('    at a (http://x/_astro/westlake3d.Bx9_k2Qa.js:1:2000)', 1), 'westlake3d:1');
+  // (a built chunk's code is all on one line: its file and column, for its source map)
+  assert.equal(makerOf('    at a (http://x/_astro/westlake3d.Bx9_k2Qa.js:1:2000)', 1), 'westlake3d.Bx9_k2Qa.js:1:2000');
   const m = mesh();
   m.userData.made = 'kit:412<westlake3d:88';
   assert.equal(drawName(m, m.material), '@kit:412<westlake3d:88');
