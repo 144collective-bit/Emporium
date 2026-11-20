@@ -111,7 +111,11 @@ keep it up to date when what it describes changes.
     (`metro-ui.ts`, `loadMetroUI()`) and the card for both lines with the
     tube's rides (`tube-ui.ts`, `loadTubeUI()`; the tube's trains,
     `tube3d.ts`, `loadTube()`: the south plan's 4h moved the first two out
-    of the boot to make room for it), the gun store, the
+    of the boot to make room for it), the character screen (`charscreen.ts`,
+    `loadChar()`, the first time it opens), the sound by district
+    (`ambience.ts`, fetched after the boot: nothing's heard till Sound is on)
+    and the gamepad's handling (`walkpad.ts`, the first time a connected pad's
+    seen, walk.ts `pollPad`; the south plan's 6a), the gun store, the
     garage's and the hangar's menus (`gunshop.ts`, `garage-ui.ts`,
     `hangar-ui.ts`: each loads the first time its door or counter opens
     it, `lazyMenu()` in walk.ts; the saved car and aircraft are read by

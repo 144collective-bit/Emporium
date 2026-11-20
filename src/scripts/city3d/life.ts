@@ -19,7 +19,7 @@ import { departuresRoadY, departuresSlope } from './airfield';
 import { heightAt, onHills, riseAlong } from './terrain';
 import { WATER_Y } from './river';
 import { DECK_Y as BOARDWALK_Y, STROLL, boatZ } from './waterfront';
-import { JUNCTIONS, ROUTES, SPOTS, climbOn, heightOn, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
+import { JUNCTIONS, ROUTES, SOUTH_BUS_ROUTE, SPOTS, climbOn, heightOn, lightState, phaseOf, pointOn, rightOf, type Junction, type Phase, type Pt, type Route } from './routes';
 import { BAR, CARS, CAR_SCALE, PAINTS, carGeometry, carMaterials, theFarCars, trailerGeometry, type CarId } from './cars';
 import { BIKES, type BikeId } from './mybike';
 import { DRIVER_SCALE } from './carinside';
@@ -28,6 +28,9 @@ import { BAYS, BAY_DWELL, BIKE_MIX, BIKE_PAINTS, PIN_TO_MIDDLE, RIG_LEN, barLit,
 import { isNear, tileKey, tileOf } from './tiles';
 import type { Idle } from './landmarks';
 import { TRENCH_WALKS } from './projects';
+import { SOUTH_BUS_PAINT, SOUTH_WALKS } from './southpeople';
+import { SLAB_Y as ENDS_SLAB } from './endswood';
+import { southLift } from './southground';
 import { UPTOWN_PEOPLE, UPTOWN_WALKS } from './uptownlife';
 import { CREST_MIX, CREST_PEOPLE, TOUR_PAINT } from './crestlife';
 import { LOT9_PEOPLE } from './lot9';
@@ -216,6 +219,15 @@ const CREST_HOME = homeOf(CREST_RECT, TOUR_PAINT, CREST_MIX);
 const SUN_HOME = homeOf(SUNRIDGE_RECT, SCHOOL_BUS_PAINT, SUN_MIX);
 /** The Neon Mile's (strip.ts, docs/strip-plan.md Phase 5): its party bus, limos, taxis, supercars and town cars */
 const STRIP_HOME = homeOf(STRIP_RECT, '', STRIP_MIX, STRIP_LEAD, STRIP_PAINTS);
+/** The south's bus (docs/south-plan.md Phase 6c): on its own route round the High Road, the Circus and the village
+ * (routes.ts `SOUTH_BUS_ROUTE`), put back only on it, in Aldwyn's Green's green */
+const SOUTH_HOME: Home | null = (() => {
+  const spots = SPOTS.filter((s) => s.r === SOUTH_BUS_ROUTE);
+  if (SOUTH_BUS_ROUTE < 0 || !spots.length) return null;
+  const xs = spots.map((s) => s.x);
+  const zs = spots.map((s) => s.z);
+  return { rect: [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)], spots, bus: SOUTH_BUS_PAINT, mix: [], lead: 'bus', paints: {} };
+})();
 /** The traffic's mix of cars, repeated (buses come first, as many as the quality tier allows, then the trucks and the patrol cars) */
 const MIX: CarId[] = ['hatch', 'sedan', 'van', 'hatch', 'pickup', 'sedan', 'coupe', 'hatch', 'sedan', 'van', 'pickup', 'exec'];
 /** The delivery trucks, in turn */
@@ -414,6 +426,7 @@ function buildTraffic(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => voi
     [CREST_HOME, nCrest],
     [SUN_HOME, nSun],
     [STRIP_HOME, nStrip],
+    ...(SOUTH_HOME ? ([[SOUTH_HOME, 1]] as const) : []),
   ] as const)
     for (let k = 0; k < n && home.spots.length; k++) {
       const v = newVehicle(total + extra++, k === 0 ? home.lead : home.mix[(k - 1) % home.mix.length], false, home.spots[Math.floor((((k * 7919) % 1000) / 1000) * home.spots.length)]);
@@ -1039,6 +1052,8 @@ interface Loop {
 }
 interface Person {
   kind: 'walk' | 'idle' | 'park' | 'ride';
+  /** A walker round one of the south's blocks: their feet on its pavement as the ground rolls (southpeople.ts) */
+  lift?: boolean;
   /** A rider in the traffic: their bike's (`riders`) */
   ride?: number;
   /** Westlake Park's people (parklife.ts): where they are is a function of the time */
@@ -1136,7 +1151,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   const people: Person[] = [];
   // Round downtown's blocks (the square and the pocket parks too), and the south row's (the street life across the river),
   // and round Liberty Bridge's high walkways and galleries, up between its towers
-  const walks: { poly: Pt[]; y?: number }[] = [
+  const walks: { poly: Pt[]; y?: number; lift?: boolean }[] = [
     ...PLAN.blocks.filter((b) => b.id.startsWith('dt-') || (b.use === 'district' && b.ref!.startsWith('S'))).map((b) => ({ poly: b.poly })),
     ...DECK_STROLLS.map((poly) => ({ poly, y: LIBERTY_HIGH })),
   ];
@@ -1145,6 +1160,9 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   walks.push(...PLAN.blocks.filter((b) => TRENCH_WALKS.includes(b.id)).map((b) => ({ poly: b.poly })));
   // ...and round Uptown's blocks by the plaza and the diagonal (finance plan Phase 6)
   walks.push(...PLAN.blocks.filter((b) => UPTOWN_WALKS.includes(b.id)).map((b) => ({ poly: b.poly })));
+  // ...and round the south's: the High Road's north side and the village's blocks round St Aldwyn's (docs/south-plan.md
+  // Phase 6c), their feet on the pavement as the ground rolls
+  walks.push(...PLAN.blocks.filter((b) => SOUTH_WALKS.includes(b.id)).map((b) => ({ poly: b.poly, lift: true })));
   // ...and up and down the waterfront's boardwalk
   walks.push({ poly: STROLL, y: BOARDWALK_Y });
   // ...and round Crestmont's Drive (docs/crestmont-plan.md Phase 8), its shoppers carrying their bags
@@ -1214,6 +1232,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         seg,
         inset: lane.inset,
         y: walks[b].y,
+        lift: walks[b].lift,
         u,
         dir: lane.dir,
         speed: lane.speed,
@@ -1419,7 +1438,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       if (Number.isNaN(p.face)) p.face = p.ry;
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
       p.face += turn * Math.min(1, dt * 9);
-      const y = p.act && seated(clipOf(p.act, 'idle')) ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
+      const y = p.lift ? ENDS_SLAB + southLift(p.x, p.z) : p.act && seated(clipOf(p.act, 'idle')) ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
       // (an idle only sometimes there, the stadium's queue on match night: out of the world the rest of the time)
       if (p.when && p.home) {
         const here = p.when(hour);

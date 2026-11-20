@@ -170,3 +170,11 @@ keep it up to date when what it describes changes.
     (`engine(revs, voice)`; `Voice` in vehicleids.ts, `VOICE` in mycar.ts
     per car model, `BIKE_VOICE` in mybike.ts, the kart `kart`, the hire
     boat `boat`; the kart is a single speed, `motorOf(..., 1)`).
+
+    The south's (docs/south-plan.md Phase 6e): Bunker Sound's beat (`studio`) and
+    St Aldwyn's bell (`bell`) back with their buildings, the village's birds and
+    owl (the park's layer, `VILLAGE_BIRDS`), the High Road's shoppers (the Neon
+    Mile's crowd, `HIGH_ROAD_MURMUR`), and below ground (`BELOW`) hushed as
+    indoors with a tube train's rumble from the timetable (`tube`,
+    `tubeRumbleAt()`, mixed with the el's in index.ts). ambience.ts is fetched
+    after the boot (the south plan's 6a).

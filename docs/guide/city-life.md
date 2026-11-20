@@ -98,3 +98,8 @@ keep it up to date when what it describes changes.
   crowd person plays and where they stand, never a pose, clip or rig
   change on Degen; that's `docs/animation-plan.md`'s (sitting on a bench
   waits for it).
+- **The south's life** (docs/south-plan.md Phase 6c): its people about are `southpeople.ts` (`SOUTH_PEOPLE`, placed with
+  the crowd in index.ts), its walkers go round `SOUTH_WALKS`' blocks (life.ts: a walker's `lift` puts their feet on the
+  rolling pavement, endswood.ts `SLAB_Y` plus `southLift()`), and its bus has a route of its own (routes.ts `busLoop()`,
+  the last of `ROUTES`, `SOUTH_BUS_ROUTE`), one bus put back only on it (life.ts `SOUTH_HOME`), its stops along
+  `SOUTH_BUS_STREETS` (transit.ts). A new route of its own goes after the generated ones, so theirs don't move.

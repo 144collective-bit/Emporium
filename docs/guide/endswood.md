@@ -5,9 +5,13 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
 - **The south re-laid** (the owner's calls, 2026-11-14, `docs/south-plan.md`): Endswood, "the Ends", and the land
   round it are being rebuilt as one place that grew: an old village (Aldwyn's Green) on winding lanes with the estate
   dropped into part of it, tall along the ring road, low to the hedged fields, the Circus the heart, Lot 9 shrunk to
-  the south-east. Built a phase at a time with the owner's sign-off. **Phase 1b is built: the streets are in and the
-  old estate is taken up.** What stands on the blocks comes back in Phases 2 (the blocks: the Wall, the twin towers,
-  the stairwell blocks, the sky network) and 3 (the village's terraces, the High Road's places, St Aldwyn's).
+  the south-east. Built a phase at a time with the owner's sign-off, **all six phases built and signed off
+  (2026-11-20)**: the streets and the rolling ground (1), the estate's blocks and their sky network (2), Aldwyn's
+  Green's terraces, St Aldwyn's, the High Road's places and the council rows (3), below ground: the Circus's plaza
+  and subways, the underpasses and the tube with its five stations (4), exit 6A and its road in (5), and the life,
+  night and sound (6). What's left over (the plan's last section): the city-wide far view on phones (its own plan),
+  a grassed block's straight edge in the estate band, the platform benches' collisions, the ride bar naming a
+  two-line trip's last stop.
 - **The street web** is `south.ts` (DOM-free, the boot's, tested in `tests/south.test.ts`), built on `streetfaces.ts`
   (DOM-free: `smooth()` lines through control points, `node()` putting a shared point wherever lines meet or cross,
   `faces()` tracing the blocks between them, Sunridge's way made general). In it:
@@ -126,10 +130,16 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   land, the brook and the rec ground; the fields keep theirs.
 - **Its places** (`endsplaces.ts`, tested in `tests/endsplaces.test.ts`): the estate (pin over the Circus), St
   Aldwyn's (over its churchyard) and Bunker Sound (its door under Teasel House's hoarded half, `southblocks.ts`
-  `BUNKER`, off Endswood Road: its pin over it and a door prompt, `ENDS_DOORS`), still "coming soon"; the others' doors
-  when their buildings stand (the owner's call); `ENDS_SPAWNS` on a sidewalk by each.
-- **Its sound** (ambience.ts `ends`): on its land and 25 past it. Bunker Sound's beat and St Aldwyn's bell are off
-  until their buildings come back (`studio`, `bell` are 0).
+  `BUNKER`, off Endswood Road: its pin over it and a door prompt, `ENDS_DOORS`), still "coming soon"; St Aldwyn's (its
+  door), the High Road's (`HIGH_ROAD_PLACES`: The Brook & Lantern, Rosa's Café, Kestrel Fuel, the bus garage) and the
+  rec (its pavilion), each with its door prompt and panel; `ENDS_SPAWNS` on a sidewalk by each. The tube's five stations are places too (southline.ts `TUBE_SPOTS`).
+- **Its sound** (ambience.ts `ends`): on its land and 25 past it; Bunker Sound's beat (`studio`) and St Aldwyn's bell
+  (`bell`), the village's birds, the High Road's shoppers, and below ground a hush and the tube's rumble (the south
+  plan's 6e: getting-about.md's sound by district).
+- **Its life** (the south plan's 6c, city-life.md): people about (`southpeople.ts`), walkers round `SOUTH_WALKS`' blocks,
+  its own bus route (routes.ts `busLoop()`, `SOUTH_BUS_ROUTE`) and stops (transit.ts); its crowd dressed by zone
+  (crowdlook.ts `districtAt()`). **By night** (6d) its windows are lit patchily, its blocks' entrance halls warm
+  (infill.ts `lobbyWarm`).
 - **Below ground**: Lot 9's tunnel (groundheight.ts `UNDER`, underground.ts); the Circus's sunken plaza and its four
   subways as data (`circus.ts`, `tests/circus.test.ts`, the south plan's 4a: `PLAZA`, `SUBWAYS` north-west,
   north-east, south-east and south, `MOUTH_PATHS`, `CIRCUS_HOLE`, `CIRCUS_CUTS`, `CIRCUS_SOLIDS`), drawn by

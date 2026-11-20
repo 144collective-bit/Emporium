@@ -90,7 +90,7 @@ export const PLACES: Place[] = [
   { id: 'palmcourt', kind: 'spot', spot: 'palmcourt', at: COURT_SPAWN },
   { id: 'mall', kind: 'spot', spot: 'mall', at: MALL_SPAWN },
   // Crestmont's landmarks (crestsites.ts): where you arrive at each, facing it
-  ...(['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SITE_SPAWNS[id] })),
+  ...(['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SITE_SPAWNS[id] })),
   // Coral Drive's refitted showroom and spa (coral.ts, the premium upgrade's Phase 4): on the strip in front of each
   ...(['vellano', 'solenne'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: CORAL_SPAWNS[id] })),
   // Southbank Docks' Harbour Master (docksport.ts): on the sidewalk, facing its door
