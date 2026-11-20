@@ -234,7 +234,8 @@ These are my recommendations, made so the plan is complete; any can change.
    2026-11-20):
    - `?bench` has three more Sunridge views (bench.ts `BENCH_VIEWS`):
      `sun-street` at street level down Sunridge Parkway's west side,
-     `sun-court` over Ocotillo Court's turning circle, and `sun-pools` over
+     `sun-court` over Palo Verde Court's turning circle (houses all round it;
+     Ocotillo Court's has two lots with no house, below), and `sun-pools` over
      the back yards' pools along the west wall (four of the nineteen pools
      are in that row). With `sunridge`, over the loop, it has four.
    - Measured headless (swiftshader, so draws and triangles count, not frame
@@ -257,6 +258,12 @@ These are my recommendations, made so the plan is complete; any can change.
      streets, blocks, walls and monuments feed `SOLIDS` and the street
      plan); the few constants only the chunk reads are too small to be
      worth moving. It stays.
+   - Found while choosing the views, for the owner: Ocotillo Court's turning
+     circle stands in open ground. Two of its four lots (`sun-lot-87`,
+     `sun-lot-88`) are the two of the 101 with no house (sunhouses.ts
+     `build()`: no plan fits them, 87 being only 11 deep), and their
+     neighbours' yard walls still run along the empty lot lines (two of them
+     crossing). Left as it is until the owner picks what goes there.
 7. *(Optional)* **A home of your own** for Dorras, with the owner's say.
 
 ## Constraints
