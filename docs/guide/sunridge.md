@@ -74,3 +74,10 @@ keep it up to date when what it describes changes.
   `sunlife3d.ts` (`registerLife()` from sunridge3d.ts's `register()`: the
   people into the crowd, the dogs and leads on the main thread, the cars
   through `parkedCars()`).
+- **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views
+  (`sunridge` over the loop, `sun-street`, `sun-court`, `sun-pools`). On
+  phones it's 105-195 draws and 0.18-0.49M triangles, among the city's
+  lightest (downtown's street is 340 and 0.64M), so it has no far forms;
+  the phone trims are the chunk's (`low` in sunhouses3d.ts, sunyards3d.ts,
+  sunamenities3d.ts and sunlife.ts's halved lists). Its share of the boot
+  is about 5.3 KB gzipped (sunridge.ts, sunplaces.ts).

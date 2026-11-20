@@ -230,13 +230,38 @@ These are my recommendations, made so the plan is complete; any can change.
    `parkedCars()`). Kids on bikes and scooters were left out (they'd need a
    ridden bike of their own); the school bus parked by day and gone in the
    morning waits on a timetable.
-6. **Polish and performance:** `?bench` views (the street, the cul-de-sac,
-   the pool), phone checks, the boot budget.
+6. **Polish and performance** (built, waiting on the owner's sign-off,
+   2026-11-20):
+   - `?bench` has three more Sunridge views (bench.ts `BENCH_VIEWS`):
+     `sun-street` at street level down Sunridge Parkway's west side,
+     `sun-court` over Ocotillo Court's turning circle, and `sun-pools` over
+     the back yards' pools along the west wall (four of the nineteen pools
+     are in that row). With `sunridge`, over the loop, it has four.
+   - Measured headless (swiftshader, so draws and triangles count, not frame
+     rates). On the phone tier Sunridge is among the lightest views:
+     105-195 draws and 0.18-0.49M triangles (the street 136 and 0.27M, the
+     court 105 and 0.18M, the pools 195 and 0.32M), against downtown's
+     street at 340 and 0.64M and Crestmont's Coral Drive at 141 and
+     0.56M. On the desktop (medium tier) it's 191-266 draws and 0.95-1.96M
+     triangles, against downtown's 536 and 2.13M and Crestmont's 204-258.
+     Its slowest CPU frames were 24-42 ms on the phone and 58-133 ms on the
+     desktop, all under memcheck's 250 ms. So no more phone trims and no far
+     forms: the phone trims Phases 2-5 put in (no fine house details, half
+     the small plants, no back-yard furniture, the trimmed crowd) are
+     enough.
+   - Every width (320, 375, 768, 1024, 1440, and a phone on its side):
+     the club's, the park's and the school's panels on screen, nothing wider
+     than the panel, no sideways scroll.
+   - The boot: Sunridge's share is about 5.3 KB gzipped (sunridge.ts 4.7,
+     sunplaces.ts 0.6). Nearly all of it is what the boot needs (the
+     streets, blocks, walls and monuments feed `SOLIDS` and the street
+     plan); the few constants only the chunk reads are too small to be
+     worth moving. It stays.
 7. *(Optional)* **A home of your own** for Dorras, with the owner's say.
 
 ## Constraints
 
-- The boot is at 661.1 of 680 KB after Phase 5 (the start-up pass made room,
+- The boot was at 661.1 of 680 KB after Phase 5 (761.8 of 765 at Phase 6, the city grown round it) (the start-up pass made room,
   docs/performance-plan.md): what the boot needs (the streets, blocks and
   solids, the places' lamps) is kept small and packed; everything drawn, and
   its life, is the chunk's. The budget is raised only with the owner's say.

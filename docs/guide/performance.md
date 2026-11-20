@@ -480,7 +480,8 @@ keep it up to date when what it describes changes.
   The Trenches round The Block, Degen's home in the Ends, the Neon Mile from over its boulevard and down it,
   where the edge was before Phase 6, the far edge (from `EXT`), and since the
   polish plan's Phase 10 Uptown North, the mall, Harbour Bridge, Sunridge,
-  Southfield and Lot 9 (`BLEND_VIEWS` has the same six for the shots)) measured for a few
+  Southfield and Lot 9 (`BLEND_VIEWS` has the same six for the shots), and since the suburb plan's Phase 6 Sunridge's
+  street, a cul-de-sac and the back yards' pools (`sun-street`, `sun-court`, `sun-pools`)) measured for a few
   seconds each, once every site is built (it builds faster while it
   waits), then a 48 s camera route through them (all but the view from high over every district). Results (fps,
   average / 95th-percentile / slowest frame, CPU ms, the slowest frame's CPU
