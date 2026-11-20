@@ -752,7 +752,19 @@ From the Circus west, patchy as high roads are:
      stops along the High Road and Gate Lane (transit.ts, `SOUTH_STOP_GAP`).
      The boot 747.0 of 760 KB. Shots `docs/south-shots/30-phase-6c-*.webp`.
    - **6d, night**: the blocks' and the village's windows, the galleries'
-     lights, the High Road's shop fronts, warm and patchy.
+     lights, the High Road's shop fronts, warm and patchy. Built (2026-11-20,
+     waiting for the owner's sign-off): looked at by night (walk mode, the
+     night sky, medium and phone tiers), the south was mostly there from
+     its phases: the blocks' ribbon windows lit patchily (warm, a few TV
+     blue, many dark), the galleries' and bridges' strip lights, the
+     terraces' and council homes' windows lit house by house, the High
+     Road's sash windows by a seeded pick and its shop fronts glowing. The
+     one thing out of keeping: the blocks' entrance halls, the city's
+     lobby glazing, lit an even cold blue the whole length of every block.
+     Now their own ground band in the facade atlas (infill.ts `lobbyWarm`,
+     the same by day): warm at night, one pane in four dark and one dim.
+     Under the bloom's threshold, checked on the phone tier. Shots
+     `docs/south-shots/31-phase-6d-*.webp`.
    - **6e, sound by district**: the estate, the village, the High Road,
      the tube below ground.
    - **6f, the guides**: endswood.md and the rest brought up to date, the

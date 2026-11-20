@@ -46,9 +46,10 @@ const SHOP_W = 3.2;
 const GROUND_PX = 100;
 
 type WallKind = WallKindName;
-type GroundKind = 'shopWarm' | 'shopPink' | 'shopCyan' | 'diner' | 'lobby' | 'stoneBase' | 'loading';
+type GroundKind = 'shopWarm' | 'shopPink' | 'shopCyan' | 'diner' | 'lobby' | 'stoneBase' | 'loading' | 'lobbyWarm';
 const WALL_KINDS: WallKind[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark', 'brickOrange', 'brickPurple', 'brickPainted', 'brickGlazed', 'panel'];
-const GROUND_KINDS: GroundKind[] = ['shopWarm', 'shopPink', 'shopCyan', 'diner', 'lobby', 'stoneBase', 'loading'];
+// (`lobbyWarm` last: the south's blocks' entrance halls, docs/south-plan.md Phase 6d)
+const GROUND_KINDS: GroundKind[] = ['shopWarm', 'shopPink', 'shopCyan', 'diner', 'lobby', 'stoneBase', 'loading', 'lobbyWarm'];
 /** Each wall's own colour (for its trim and parapet) and the colour of its stone trim */
 const WALL_COLOR: Record<WallKind, { wall: string; trim: string }> = {
   brick: { wall: '#7a3b38', trim: '#c9b8a8' },
@@ -400,13 +401,16 @@ function groundBand(c: CanvasRenderingContext2D, kind: GroundKind, lit: boolean)
     }
     return;
   }
-  if (kind === 'lobby') {
+  if (kind === 'lobby' || kind === 'lobbyWarm') {
+    // (the south's blocks' entrance halls, `lobbyWarm`: the same glazing by day; at night warm and patchy, one pane in
+    // four dark and one dim, the owner's call for the south's nights, docs/south-plan.md Phase 6d)
+    const warm = kind === 'lobbyWarm';
     if (!lit) {
       c.fillStyle = '#1b1830';
       c.fillRect(0, 0, 256, 100);
     }
-    for (let x = 6; x < 256; x += 64) {
-      c.fillStyle = lit ? '#9dbbe0' : '#6f8fc4';
+    for (let x = 6, k = 0; x < 256; x += 64, k++) {
+      c.fillStyle = lit ? (warm ? ['#e8c08a', '#000000', '#b88f5e', '#e8c08a'][k % 4] : '#9dbbe0') : '#6f8fc4';
       c.fillRect(x, 10, 52, 86);
       if (!lit) {
         c.fillStyle = '#3e5a8f';
