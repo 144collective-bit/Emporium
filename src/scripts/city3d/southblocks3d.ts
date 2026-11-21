@@ -22,7 +22,7 @@
  */
 import * as THREE from 'three';
 import type { Tick } from './world';
-import { Batch, lit, neon, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, lit, neon, toon } from './kit';
 import { ATLAS, kit, type Frame } from './infill';
 import { site } from './tilework';
 import { PLANT } from './palette';
@@ -471,7 +471,7 @@ function drawBoilerHouse(b: Batch, c: Core, near: Pt) {
 /* ---------- The towers' stair cages (docs/brutalist-plan.md, the owner's pick: caged, walked) ---------- */
 
 /** The cages' anti-climb mesh: dark, seen through (the frame's rails over it) */
-const MESH = new THREE.MeshBasicMaterial({ color: '#23262b', transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide });
+const MESH = new THREE.MeshBasicMaterial({ color: '#4a5058', transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide });
 
 /** A sloped slab: from (a0, y0) to (a1, y1) along the cage, b0 to b1 across, its top and underside, `t` thick */
 function slope(b: Batch, g: Cage, a0: number, a1: number, b0: number, b1: number, y0: number, y1: number, t: number, m: THREE.Material) {
@@ -566,6 +566,16 @@ function drawCage(b: Batch, g: Cage, low: boolean, tired: boolean) {
     const n: Pt = [g.side[0] * Math.sign(bb), g.side[1] * Math.sign(bb)];
     quad(b, g.at(a0, bb), g.at(a1, bb), y0, y1, n, MESH);
   };
+  // (near only, not on phones: the mesh's bars, upright every 0.3, so it reads as a cage, the flights seen through it)
+  if (!low)
+    b.detail(() => {
+      for (const bb of [-half, half])
+        for (let a = 0.3; a < len; a += 0.3) {
+          if (bb > 0 && a < land + 0.3) continue;
+          const p = g.at(a, bb);
+          b.add(plain(new THREE.BoxGeometry(0.025, top - g.base, 0.025).translate(p[0], (g.base + top) / 2, p[1])), CONC_DARK);
+        }
+    });
   meshSide(land + 0.3, len, half, g.base, top);
   meshSide(0, land + 0.3, half, g.base + 1.7, top);
   meshSide(0, len, -half, g.base, top);
@@ -637,6 +647,57 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material = S
     }
   });
 }
+/* ---------- The blocks' names on their bridges (the brutalist plan's polish: painted, stencilled, worn) ---------- */
+
+/** The names a bridge's end can lead to: the blocks' own (made up), each a row of one painted texture */
+const SIGN_NAMES = BLOCKS.map((q) => q.name.toUpperCase());
+const SIGN_ROW = 64;
+const SIGN_TEX = canvasTex(512, SIGN_ROW * SIGN_NAMES.length, (c) => {
+  c.clearRect(0, 0, 512, SIGN_ROW * SIGN_NAMES.length);
+  SIGN_NAMES.forEach((name, i) => {
+    const y = i * SIGN_ROW + SIGN_ROW / 2;
+    c.font = `800 40px ${FONT_DISPLAY}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillStyle = '#e8e4d8';
+    c.fillText(name, 256, y, 496);
+    // (stencil breaks across the letters, a drip or two under them, worn through here and there)
+    c.globalCompositeOperation = 'destination-out';
+    for (let x = 18; x < 500; x += 23) c.fillRect(x, y - 2, 3, 4);
+    for (let k = 0; k < 40; k++) c.fillRect((k * 97 + i * 31) % 512, y - 20 + ((k * 53) % 40), 4, 3);
+    c.globalCompositeOperation = 'source-over';
+    c.fillStyle = '#e8e4d8';
+    for (let k = 0; k < 4; k++) c.fillRect(60 + ((k * 113 + i * 41) % 380), y + 16, 2, 8 + ((k * 7) % 10));
+  });
+});
+const SIGN = toon('#ffffff', { map: SIGN_TEX, alphaTest: 0.5 });
+/** A block's name painted on a bridge's parapet, inside, `s` along it from a to c, on its right (o) or left side */
+function drawName(b: Batch, a: Pt, c: Pt, y: number, s: number, side: 1 | -1, name: string) {
+  const row = SIGN_NAMES.indexOf(name.toUpperCase());
+  if (row < 0) return;
+  const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+  const t: Pt = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+  const r: Pt = [-t[1], t[0]];
+  const o = side * (BRIDGE_HALF - 0.125);
+  const w = 1.5;
+  // (read left to right walking towards the end: along t on the left parapet, against it on the right)
+  const dir = side < 0 ? 1 : -1;
+  const p0: Pt = [a[0] + t[0] * (s - (dir * w) / 2) + r[0] * o, a[1] + t[1] * (s - (dir * w) / 2) + r[1] * o];
+  const p1: Pt = [a[0] + t[0] * (s + (dir * w) / 2) + r[0] * o, a[1] + t[1] * (s + (dir * w) / 2) + r[1] * o];
+  const n: Pt = [-r[0] * side, -r[1] * side];
+  const [y0, y1] = [y + 0.18, y + 0.5];
+  const [v0, v1] = [1 - ((row + 1) * SIGN_ROW) / (SIGN_ROW * SIGN_NAMES.length), 1 - (row * SIGN_ROW) / (SIGN_ROW * SIGN_NAMES.length)];
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute([p0[0], y0, p0[1], p1[0], y0, p1[1], p1[0], y1, p1[1], p0[0], y1, p0[1]], 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute([n[0], 0, n[1], n[0], 0, n[1], n[0], 0, n[1], n[0], 0, n[1]], 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute([0, v0, 1, v0, 1, v1, 0, v1], 2));
+  const front = (p1[0] - p0[0]) * n[1] - (p1[1] - p0[1]) * n[0] > 0;
+  g.setIndex(front ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]);
+  b.add(g, SIGN);
+}
+/** Where a bridge's end leads: the block its core serves, the block it meets, nothing for the deck */
+const endName = (e: (typeof BRIDGES)[number]['a']) => ('core' in e ? blockById(CORES.find((q) => q.id === e.core)!.of).name : 'block' in e ? blockById(e.block).name : '');
+
 /** A bridge's pier: a concrete column under its span, a cap on it under the deck */
 function drawPier(b: Batch, p: (typeof PIERS)[number]) {
   const k = kit(b, WORLD);
@@ -993,7 +1054,18 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   [...spans.values()].forEach((set, i) =>
     site(`south-blocks bridge ${i}`, rectOf(set[0].pts, 2), (into) => {
       const b = new Batch();
-      for (const br of set) drawBridge(b, br.pts[0], br.pts[1], (br.ys[0] + br.ys[1]) / 2);
+      for (const br of set) {
+        const [a, c] = br.pts;
+        const y = (br.ys[0] + br.ys[1]) / 2;
+        drawBridge(b, a, c, y);
+        // (each end's block named on the parapet a little before it, on the left walking towards it)
+        const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+        if (l > 4 && !low)
+          b.detail(() => {
+            if (endName(br.b)) drawName(b, a, c, y, l - 1.3, -1, endName(br.b));
+            if (endName(br.a)) drawName(b, a, c, y, 1.3, 1, endName(br.a));
+          });
+      }
       for (const p of PIERS.filter((q) => set.some((br) => q.id.startsWith(`${br.id}-pier`)))) drawPier(b, p);
       b.build(into, opts);
     })
