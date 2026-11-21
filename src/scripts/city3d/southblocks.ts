@@ -377,6 +377,53 @@ export const BLOCKS: Block[] = [RAMPART, HARRIER, KITE, TWIN_CORE, LINNET, MARTE
 export const blockById = (id: string) => BLOCKS.find((b) => b.id === id)!;
 export const coreById = (id: string) => CORES.find((c) => c.id === id)!;
 
+/* ---------- The towers' stair cages (docs/brutalist-plan.md, the owner's pick: caged stairs outside, walked) ---------- */
+
+/**
+ * A service tower's stair cage: a concrete-framed cage of anti-climb mesh standing out from one of its faces (one with
+ * no door, link or bridge on it, clear of the streets and the courts: measured), switchback flights inside it from the
+ * street up to each of its landings. In the cage's own numbers: `a` out from the tower's face (0 at the face), `b`
+ * across (its `side`)
+ */
+export interface Cage {
+  id: string;
+  core: string;
+  /** The face's middle at the tower, the way out from it, the way across */
+  root: Pt;
+  out: Pt;
+  side: Pt;
+  base: number;
+  /** As high as the cage's frame goes */
+  top: number;
+  /** A point in the cage's numbers, in the world */
+  at(a: number, b: number): Pt;
+}
+/** The cage's measures: how far out it reaches, half its width, its landings' depth, its lanes' half gap */
+export const CAGE = { len: 5, half: 1.1, land: 0.9, gap: 0.05 };
+/** Which face each tower's cage stands out from (measured: the others have a door, a link, a bridge, a street or a
+ * parking court; the Rampart's fifth, Linnet's and Marten's north ones, Fennel's east one and Teasel's east one have no
+ * room for one and keep their lifts alone) */
+const CAGE_FACES: Record<string, '+d' | '-d' | '+r' | '-r'> = {
+  'rampart-0': '+d', 'rampart-1': '+d', 'rampart-2': '+d', 'rampart-3': '+d', 'linnet-b': '-r', 'marten-b': '+r',
+  'wren-a': '-r', 'wren-b': '+r', 'sorrel-a': '-r', 'sorrel-b': '-r', 'fennel-b': '+r', 'teasel-b': '+r',
+};
+export const CAGES: Cage[] = CORES.filter((c) => CAGE_FACES[c.id]).map((c) => {
+  const d: Pt = [Math.cos(c.rot), Math.sin(c.rot)];
+  const out: Pt = { '+d': d, '-d': [-d[0], -d[1]] as Pt, '+r': [-d[1], d[0]] as Pt, '-r': [d[1], -d[0]] as Pt }[CAGE_FACES[c.id]];
+  const side: Pt = [-out[1], out[0]];
+  const root: Pt = [c.at[0] + out[0] * (c.half + 0.05), c.at[1] + out[1] * (c.half + 0.05)];
+  const at = (a: number, b: number): Pt => [root[0] + out[0] * a + side[0] * b, root[1] + out[1] * a + side[1] * b];
+  return { id: `${c.id}-cage`, core: c.id, root, out, side, base: blockById(c.of).base, top: c.top - 0.3, at };
+});
+/** A cage's ground as boxes: under its second flights' lane and its far end (its first flight's lane and the way in at the
+ * tower left clear, walked up from the street) */
+const cageSolids = (g: Cage): Box[] => {
+  const { len, half, gap, land } = CAGE;
+  const rect = (a0: number, a1: number, b0: number, b1: number): Pt[] => [g.at(a0, b0), g.at(a1, b0), g.at(a1, b1), g.at(a0, b1)];
+  return [...cover(rect(land, len, -half, -gap), g.top, 0.3), ...cover(rect(len - 2, len, gap, half), g.top, 0.3)];
+};
+
+
 /* ---------- The galleries ---------- */
 
 export interface Gallery {
@@ -561,6 +608,7 @@ export const ARCH_X: [number, number] = [pointAt(RAMPART_SPINE, RAMPART.arch!.fr
 export const BLOCK_SOLIDS: Box[] = [
   ...BLOCKS.flatMap((b) => cover(b.foot, topOf(b), 0.6, b.arch ? ARCH_X : undefined)),
   ...CORES.map((c) => cover(c.foot, c.top, 0.6)).flat(),
+  ...CAGES.flatMap(cageSolids),
 ];
 
 /** Where the blocks stand, all of them, their bridges and their deck (districts.ts loads their drawing within reach of it) */
