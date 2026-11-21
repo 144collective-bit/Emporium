@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import { BALCONY_DOOR, CELL_W, COLS, END_MIN, LINTEL, PANES, PX, RECESS, RECESS_LIFE, REACH, ROWS, SIDE_LOOK, baysOf, recessLife, sideOpen, styleOf, windowsOf, type FacadeStyle } from '../src/scripts/city3d/facade';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 import { SLAB } from '../src/scripts/city3d/world';
-import { FLOOR, INFILL, bodyOf } from '../src/scripts/city3d/downtown';
+import { FLOOR, INFILL, bodyOf, type Infill } from '../src/scripts/city3d/downtown';
+import { rows } from '../src/scripts/city3d/projects';
+import { TENEMENTS } from '../src/scripts/city3d/streetwall';
 import { WINDOW_TYPE } from '../src/scripts/city3d/windows';
 
 const STYLES: FacadeStyle[] = ['sash', 'pair', 'casement', 'arched', 'shuttered', 'balcony', 'steel', 'ribbon'];
@@ -112,12 +114,14 @@ test("a side wall's windows only where it faces a street or a lane (docs/buildin
   assert.equal(sideOpen([0, 0], [1, 0], [0, 1], 4, 3, 1, neighbour), true, 'onto open ground');
   // A neighbour along only a sliver of the side (its front corner) leaves the side open
   assert.equal(sideOpen([0, 0], [1, 0], [0, 1], 4, 3, 0, (x, z) => x < 0 && z > -0.5), true);
-  // Downtown: some sides of each kind; an open side is never hard against another infill building
-  const bodies = INFILL.map(bodyOf);
+  // Downtown, and the kits' rows and tenements in The Trenches (Phase 3): some sides of each kind; an open side is
+  // never hard against another of those buildings
+  const all = [...INFILL, ...(rows().byBlock.flatMap((b) => b.lots) as unknown as Infill[]), ...(TENEMENTS as unknown as Infill[])];
+  const bodies = all.map(bodyOf);
   const walled = (x: number, z: number) => SOLIDS.some((b) => b[4] > SLAB + 1.2 && x > b[0] && x < b[2] && z > b[1] && z < b[3]);
   let open = 0;
   let shut = 0;
-  INFILL.forEach((f, i) => {
+  all.forEach((f, i) => {
     const [x0, z0, x1, z1] = bodies[i];
     const n: [number, number] = f.face === 'n' ? [0, -1] : f.face === 's' ? [0, 1] : f.face === 'w' ? [-1, 0] : [1, 0];
     const t: [number, number] = [n[1], -n[0]];
@@ -134,8 +138,8 @@ test("a side wall's windows only where it faces a street or a lane (docs/buildin
       // (the side's middle, just outside it, isn't inside another downtown building)
       const u = side === 0 ? -SIDE_LOOK : w + SIDE_LOOK;
       const p: [number, number] = [L[0] + t[0] * u - n[0] * d * 0.5, L[1] + t[1] * u - n[1] * d * 0.5];
-      for (const [j, b] of bodies.entries()) if (j !== i) assert.ok(!(p[0] > b[0] && p[0] < b[2] && p[1] > b[1] && p[1] < b[3]), `infill ${i}'s side ${side} is against infill ${j}`);
+      for (const [j, b] of bodies.entries()) if (j !== i) assert.ok(!(p[0] > b[0] && p[0] < b[2] && p[1] > b[1] && p[1] < b[3]), `building ${i}'s side ${side} is against building ${j}`);
     }
   });
-  assert.ok(open > 10 && shut > 10, `${open} sides open, ${shut} against a neighbour`);
+  assert.ok(open > 60 && shut > 60, `${open} sides open, ${shut} against a neighbour`);
 });
