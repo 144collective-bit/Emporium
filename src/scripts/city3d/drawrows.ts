@@ -25,8 +25,10 @@ export interface DrawRow {
 }
 
 export interface DrawBreakdown {
-  /** Every draw of the frame */
+  /** Every draw of the frame (what three draws: an instanced mesh with none to show, or a batch with nothing in view, is none) */
   total: number;
+  /** The renderer's own count of the frame's draw calls, to check `total` against (null if it isn't kept: it is under ?fps) */
+  calls: number | null;
   byPass: Record<DrawPass, number>;
   /** The main pass's draws of things past the tier's `far` (their nearest point), the far view's share */
   far: number;
@@ -49,7 +51,14 @@ export function drawName(object: THREE.Object3D, material: THREE.Material) {
  * Draw one frame (`render`) and say what each of its draws was: `camera` is the view's own camera (the main pass),
  * `scene` the city's (draws of other scenes are the post passes'); `far` the tier's near-and-far line
  */
-export function captureDraws(renderer: { renderBufferDirect: Draw }, scene: THREE.Object3D, camera: THREE.Camera, render: () => void, far: number): DrawBreakdown {
+/** Whether three will draw `obj` at all (it skips an instanced mesh with no copies to show and a batch with nothing in view) */
+export function drawsAnything(obj: THREE.Object3D) {
+  if ((obj as THREE.InstancedMesh).isInstancedMesh) return (obj as THREE.InstancedMesh).count > 0;
+  if ((obj as THREE.BatchedMesh).isBatchedMesh) return ((obj as unknown as { _multiDrawCount?: number })._multiDrawCount ?? 1) > 0;
+  return true;
+}
+
+export function captureDraws(renderer: { renderBufferDirect: Draw; info?: { render: { calls: number } } }, scene: THREE.Object3D, camera: THREE.Camera, render: () => void, far: number): DrawBreakdown {
   const rows = new Map<string, DrawRow & { seen: Set<THREE.Object3D> }>();
   const byPass: Record<DrawPass, number> = { main: 0, outline: 0, shadow: 0, post: 0 };
   let total = 0;
@@ -58,6 +67,7 @@ export function captureDraws(renderer: { renderBufferDirect: Draw }, scene: THRE
   const sphere = new THREE.Sphere();
   const own = renderer.renderBufferDirect;
   const watch: Draw = function (this: unknown, cam, sc, geo, mat, obj, group) {
+    if (!drawsAnything(obj)) return own.call(this, cam, sc, geo, mat, obj, group);
     const pass: DrawPass = sc !== scene ? 'post' : cam === camera ? 'main' : (cam as THREE.OrthographicCamera).isOrthographicCamera ? 'shadow' : 'outline';
     if (!geo.boundingSphere) geo.computeBoundingSphere();
     sphere.copy(geo.boundingSphere ?? sphere.set(new THREE.Vector3(), 0)).applyMatrix4(obj.matrixWorld);
@@ -78,13 +88,15 @@ export function captureDraws(renderer: { renderBufferDirect: Draw }, scene: THRE
     return own.call(this, cam, sc, geo, mat, obj, group);
   };
   renderer.renderBufferDirect = watch;
+  const before = renderer.info?.render.calls ?? 0;
   try {
     render();
   } finally {
     renderer.renderBufferDirect = own;
   }
+  const calls = renderer.info ? renderer.info.render.calls - before : null;
   const out = [...rows.values()].map(({ seen: _, ...r }) => r).sort((a, b) => b.draws - a.draws || a.what.localeCompare(b.what));
-  return { total, byPass, far: farDraws, rows: out };
+  return { total, calls, byPass, far: farDraws, rows: out };
 }
 
 /** The files (and lines) in a stack that aren't three's or this one's: what made a thing */

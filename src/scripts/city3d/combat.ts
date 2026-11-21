@@ -33,6 +33,7 @@
 import * as THREE from 'three';
 import { FONT_DISPLAY, fx, glowTex, liveTex, mergeMeshes, moving, neon, PAL, sidesBox, toon } from './kit';
 import { type Tick } from './world';
+import { hideFar } from './lod';
 import { DRONES, DUMMIES, SWAP_TIME, WEAPONS, WEAPON_IDS, createSim, dronePose, weaponUnlocked, type SimEvent, type TargetKind, type WeaponId } from './combat-sim';
 import type { ClientMsg, MeRow, NetEvent } from '../net/protocol';
 import { MOVES, type MoveId } from './fight-moves';
@@ -426,6 +427,9 @@ export function createCombat(d: CombatDeps) {
     hinge.add(card);
     card.castShadow = card.receiveShadow = true;
     g.add(base, hinge);
+    // (named for the draw breakdown; on phones not drawn past the tier's far: lod.ts, docs/phone-far-plan.md Phase 4)
+    g.name = 'range-dummy';
+    hideFar(g);
     const { bar, fill } = healthBar();
     bar.position.set(x, d.ground + 1.55, z);
     scene.add(g, bar);
@@ -464,6 +468,8 @@ export function createCombat(d: CombatDeps) {
     const light = new THREE.Mesh(new THREE.SphereGeometry(0.035, 8, 6), neon('#ff2a2a', 0.6, 2.2));
     light.position.set(0, 0.09, -0.18);
     g.add(fx(light));
+    g.name = 'range-drone';
+    hideFar(g);
     const { bar, fill } = healthBar();
     scene.add(g, bar);
     looks.push({ g, bar, fill, barShow: 0, flash: 0, light, fall: null });

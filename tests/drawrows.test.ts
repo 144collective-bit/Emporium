@@ -118,3 +118,36 @@ test('the draw breakdown names an unnamed thing by the code that made it', () =>
   m.userData.made = 'kit:412<westlake3d:88';
   assert.equal(drawName(m, m.material), '@kit:412<westlake3d:88');
 });
+
+test('the draw breakdown counts only what three draws: not an instanced mesh with no copies to show', () => {
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera();
+  const shown = new THREE.InstancedMesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial(), 4);
+  shown.name = 'cars';
+  const none = new THREE.InstancedMesh(new THREE.BoxGeometry(), new THREE.MeshBasicMaterial(), 4);
+  none.name = 'none';
+  none.count = 0;
+  scene.add(shown, none);
+  const info = { render: { calls: 0 } };
+  const renderer = {
+    info,
+    renderBufferDirect(_c: THREE.Camera, _s: THREE.Object3D, _g: THREE.BufferGeometry, _m: THREE.Material, o: THREE.Object3D, _gr?: unknown) {
+      if ((o as THREE.InstancedMesh).count > 0) info.render.calls++;
+    },
+  };
+  const out = captureDraws(
+    renderer,
+    scene,
+    camera,
+    () => {
+      for (const o of [shown, none]) renderer.renderBufferDirect(camera, scene, o.geometry, o.material as THREE.Material, o, null);
+    },
+    90
+  );
+  assert.equal(out.total, 1);
+  assert.equal(out.calls, 1);
+  assert.deepEqual(
+    out.rows.map((r) => r.what),
+    ['cars']
+  );
+});
