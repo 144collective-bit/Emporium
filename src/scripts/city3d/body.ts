@@ -26,7 +26,7 @@ import { HAND, THUMB_REST, fingerWeigh, makeSkeleton, newPose, poseSkeleton, ste
 export const EYE_Y = 0.126;
 
 /** A row of the head: height, half width, depth to the front and to the back, the middle's z, squareness (2 an ellipse) */
-type Row = [y: number, hw: number, front: number, back: number, zc: number, n: number];
+export type Row = [y: number, hw: number, front: number, back: number, zc: number, n: number];
 export const HEAD_ROWS: Row[] = [
   // The neck tube, from inside the collar up under the jaw
   [-0.085, 0.05, 0.051, 0.05, -0.01, 2],
@@ -51,15 +51,6 @@ export const HEAD_ROWS: Row[] = [
 export const HEAD_TOP = HEAD_ROWS[HEAD_ROWS.length - 1][0];
 export const HEAD_BOTTOM = HEAD_ROWS[0][0];
 
-function rowAt(y: number): Row {
-  const R = HEAD_ROWS;
-  let i = 0;
-  while (i < R.length - 2 && y > R[i + 1][0]) i++;
-  const a = R[i];
-  const b = R[i + 1];
-  const f = THREE.MathUtils.clamp((y - a[0]) / (b[0] - a[0]), 0, 1);
-  return a.map((v, k) => (k === 0 ? y : v + (b[k] - v) * f)) as Row;
-}
 const bell = (x: number, at: number, w: number) => Math.exp(-(((x - at) / w) ** 2));
 /** The face's features, pushed out (or in) from the plain oval at (x, y): nose, cheekbones, brow over the eye sockets, chin, the line of the mouth */
 function features(x: number, y: number) {
@@ -75,31 +66,7 @@ function features(x: number, y: number) {
 /** How far round to the front a point is (1 dead ahead, 0 at the side): features fade out round the sides */
 const frontness = (w: number) => w ** 4;
 
-/** The front of the head at (x, y): its z, features and all */
-export function headFront(x: number, y: number) {
-  const [, hw, front, , zc, n] = rowAt(y);
-  const u = Math.min(0.995, Math.abs(x) / hw);
-  const w = (1 - u ** n) ** (1 / n);
-  return zc + front * w + features(x, y) * frontness(w);
-}
-
-/** The head's row at height y: its half-width, front, back, middle (z) and roundness (what the hats sit on) */
-export function headRow(y: number) {
-  const [, hw, front, back, zc, n] = rowAt(y);
-  return { hw, front, back, zc, n };
-}
-
-/** Whether a point is inside the head, its features and all (the hats are seated on it: docs/clothing-plan.md Phase 5) */
-export function inHead(x: number, y: number, z: number) {
-  if (y < HEAD_BOTTOM || y > HEAD_TOP) return false;
-  const [, hw, , back, zc, n] = rowAt(y);
-  const ax = Math.abs(x);
-  if (ax >= hw) return false;
-  if (z >= zc) return z < headFront(x, y);
-  return zc - z < back * (1 - (ax / hw) ** n) ** (1 / n);
-}
-
-/** The heights the head's rings sit at: close together over the face, wider on the neck and crown */
+/** The heights Degen's head's rings sit at: close together over the face, wider on the neck and crown */
 function rings(q: number) {
   const ys: number[] = [-0.085, -0.06, -0.035, -0.015, -0.004];
   const step = q >= 2 ? 0.009 : 0.015;
@@ -108,43 +75,100 @@ function rings(q: number) {
   return ys;
 }
 
-/** The head and its neck tube, `seg` round, closed at the bottom and domed at the top */
-export function headGeometry(seg: number, q = 2) {
-  const ys = rings(q);
-  const pos: number[] = [];
-  const idx: number[] = [];
-  for (const y of ys) {
-    const [, hw, front, back, zc, n] = rowAt(y);
-    const e = 2 / n;
-    for (let k = 0; k < seg; k++) {
-      const a = (k / seg) * Math.PI * 2;
-      const c = Math.cos(a);
-      const s = Math.sin(a);
-      const x = Math.sign(c) * Math.abs(c) ** e * hw;
-      const w = Math.abs(s) ** e;
-      const z = s >= 0 ? zc + front * w + features(x, y) * frontness(w) : zc - back * w;
-      pos.push(x, y, z);
-    }
-  }
-  const R = ys.length;
-  for (let i = 0; i < R - 1; i++)
-    for (let k = 0; k < seg; k++) {
-      const a = i * seg + k;
-      const b = i * seg + ((k + 1) % seg);
-      idx.push(a, a + seg, b, b, a + seg, b + seg);
-    }
-  const lo = R * seg;
-  pos.push(0, ys[0], rowAt(ys[0])[4], 0, ys[R - 1], rowAt(ys[R - 1])[4]);
-  for (let k = 0; k < seg; k++) {
-    const k1 = (k + 1) % seg;
-    idx.push(lo, k, k1, lo + 1, (R - 1) * seg + k1, (R - 1) * seg + k);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setIndex(idx);
-  g.computeVertexNormals();
-  return g;
+/**
+ * A head (docs/characters-plan.md): its rows, the features pushed out of its front, and the heights its rings sit
+ * at by detail level. Degen's is `DEGEN_HEAD`; a character's head of its own is another (heads.ts).
+ */
+export interface HeadDef {
+  rows: Row[];
+  features: (x: number, y: number) => number;
+  rings: (q: number) => number[];
 }
+export const DEGEN_HEAD: HeadDef = { rows: HEAD_ROWS, features, rings };
+
+/** A head's shape as functions: its row at a height, its front, whether a point's inside it, and its geometry */
+export function headModel(def: HeadDef) {
+  const R = def.rows;
+  const top = R[R.length - 1][0];
+  const bottom = R[0][0];
+  const rowAt = (y: number): Row => {
+    let i = 0;
+    while (i < R.length - 2 && y > R[i + 1][0]) i++;
+    const a = R[i];
+    const b = R[i + 1];
+    const f = THREE.MathUtils.clamp((y - a[0]) / (b[0] - a[0]), 0, 1);
+    return a.map((v, k) => (k === 0 ? y : v + (b[k] - v) * f)) as Row;
+  };
+  /** The front of the head at (x, y): its z, features and all */
+  const front = (x: number, y: number) => {
+    const [, hw, fr, , zc, n] = rowAt(y);
+    const u = Math.min(0.995, Math.abs(x) / hw);
+    const w = (1 - u ** n) ** (1 / n);
+    return zc + fr * w + def.features(x, y) * frontness(w);
+  };
+  /** The head's row at height y: its half-width, front, back, middle (z) and roundness (what the hats sit on) */
+  const row = (y: number) => {
+    const [, hw, fr, back, zc, n] = rowAt(y);
+    return { hw, front: fr, back, zc, n };
+  };
+  /** Whether a point is inside the head, its features and all */
+  const inside = (x: number, y: number, z: number) => {
+    if (y < bottom || y > top) return false;
+    const [, hw, , back, zc, n] = rowAt(y);
+    const ax = Math.abs(x);
+    if (ax >= hw) return false;
+    if (z >= zc) return z < front(x, y);
+    return zc - z < back * (1 - (ax / hw) ** n) ** (1 / n);
+  };
+  /** The head and its neck tube, `seg` round, closed at the bottom and domed at the top */
+  const geometry = (seg: number, q = 2) => {
+    const ys = def.rings(q);
+    const pos: number[] = [];
+    const idx: number[] = [];
+    for (const y of ys) {
+      const [, hw, fr, back, zc, n] = rowAt(y);
+      const e = 2 / n;
+      for (let k = 0; k < seg; k++) {
+        const a = (k / seg) * Math.PI * 2;
+        const c = Math.cos(a);
+        const s = Math.sin(a);
+        const x = Math.sign(c) * Math.abs(c) ** e * hw;
+        const w = Math.abs(s) ** e;
+        const z = s >= 0 ? zc + fr * w + def.features(x, y) * frontness(w) : zc - back * w;
+        pos.push(x, y, z);
+      }
+    }
+    const N = ys.length;
+    for (let i = 0; i < N - 1; i++)
+      for (let k = 0; k < seg; k++) {
+        const a = i * seg + k;
+        const b = i * seg + ((k + 1) % seg);
+        idx.push(a, a + seg, b, b, a + seg, b + seg);
+      }
+    const lo = N * seg;
+    pos.push(0, ys[0], rowAt(ys[0])[4], 0, ys[N - 1], rowAt(ys[N - 1])[4]);
+    for (let k = 0; k < seg; k++) {
+      const k1 = (k + 1) % seg;
+      idx.push(lo, k, k1, lo + 1, (N - 1) * seg + k1, (N - 1) * seg + k);
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    g.setIndex(idx);
+    g.computeVertexNormals();
+    return g;
+  };
+  return { top, bottom, rowAt, front, row, inside, geometry };
+}
+
+const DEGEN = headModel(DEGEN_HEAD);
+/** The front of Degen's head at (x, y): its z, features and all */
+export const headFront = DEGEN.front;
+/** Degen's head's row at height y: its half-width, front, back, middle (z) and roundness (what the hats sit on) */
+export const headRow = DEGEN.row;
+/** Whether a point is inside Degen's head, its features and all (the hats are seated on it: docs/clothing-plan.md Phase 5) */
+export const inHead = DEGEN.inside;
+/** Degen's head and its neck tube, `seg` round, closed at the bottom and domed at the top */
+export const headGeometry = DEGEN.geometry;
 
 /* ---------- The hands ---------- */
 

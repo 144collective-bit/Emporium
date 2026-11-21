@@ -9,6 +9,8 @@ import tseslint from 'typescript-eslint';
 const DOM_FREE = [
   'src/scripts/city3d/settings.ts',
   'src/scripts/city3d/settings-rows.ts',
+  'src/scripts/city3d/lookrows.ts',
+  'src/scripts/city3d/heads.ts',
   'src/scripts/city3d/stillticks.ts',
   'src/scripts/city3d/malllink.ts',
   'src/scripts/city3d/courtinside.ts',

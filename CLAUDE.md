@@ -70,6 +70,7 @@ it and has been retired completely. Build only on what's here.
 | Everything south of The Trenches redesigned (Endswood, Aldwyn's Green, Lot 9), its phases | `docs/south-plan.md` |
 | Endswood as re-laid: the street web (`south.ts`), its land, lamps and places, Degen's home and compound (`docs/home-plan.md`), waking there at the start (`docs/spawn-plan.md`) | `docs/guide/endswood.md` |
 | The raised highway, its exits, turn lanes, country roads, street wear | `docs/guide/highway.md` |
+| The motorway exits rebuilt (four interchanges, two-lane ramps, frontage roads, the deck's third lane), its survey and phases | `docs/exits-plan.md` |
 | The ground palette, ground cover, verges, rolls, Southfield, the fringes, lamps by district, the seams, the review shots | `docs/guide/blend.md` |
 | Palm Court and Starlight Mall, inside the mall | `docs/guide/mall.md` |
 | Sector 7 Airport, flying | `docs/guide/airport.md` |
@@ -77,7 +78,7 @@ it and has been retired completely. Build only on what's here.
 | How traffic, people, buses and boats behave; dusk, wind, thunder | `docs/guide/city-life.md` |
 | The car models, the vehicle upgrade, the garage, driving, motorbikes, boating | `docs/guide/vehicles.md` |
 | The kart park, its circuit, races, karts and save | `docs/guide/kart-park.md` |
-| Degen's body, skeleton, wardrobe, clothes, tailoring, crowds, faces (`docs/faces-plan.md`) | `docs/guide/character.md` |
+| Degen's body, skeleton, wardrobe, clothes, tailoring, crowds, faces (`docs/faces-plan.md`), new characters (`docs/characters-plan.md`) | `docs/guide/character.md` |
 | Motion capture, the animator, contact, moments, emotes, the crowd's acts, the lab | `docs/guide/animation.md` |
 | Walk mode, collisions, the ground under a point, the split of `walk.ts` (`docs/walk-plan.md`) | `docs/guide/walk-mode.md` |
 | The inventory, fists on the street, sparring partners, free play | `docs/guide/inventory.md` |

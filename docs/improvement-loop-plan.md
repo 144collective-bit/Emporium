@@ -1,7 +1,8 @@
 # The improvement loop: nightly passes over the whole city
 
-A scheduled task sends one dedicated runner session a message every hour
-from **22:07 to 03:07 GMT** (six passes a night). Each pass picks the next item from this plan, makes the change, checks
+A scheduled task sends a pass to one dedicated runner session (with the repo
+attached and push access) every hour at **22:07, 23:07, 00:07, 01:07, 02:07
+and 03:07 GMT**. Each pass starts from fresh `main`, picks the next item from this plan, makes the change, checks
 it and merges it to `main`. Merging to `main` puts it live. When every item in
 a level is done, the run that finished it writes the next level and the loop
 carries on.
@@ -66,6 +67,13 @@ asking, as long as everything in **The rules** below holds:
     live settings.
 11. **Pause switch.** If the line under **Status** says `PAUSED`, the run
     does nothing and ends.
+
+## The board
+
+The owner's kanban board tracks every item: https://claude.ai/artifact/GsX2xpXCSNhkr4KFVuQmJH
+(collection `cards`; columns backlog, needs-you, ready, in-progress, checking,
+live). A pass that can reach it moves its item's card; this plan stays the
+source of truth.
 
 ## Status
 
@@ -246,6 +254,27 @@ this list; this plan is what the loop reads.
       `crestgardens`, `crestbanks`, `coral`); then the owner's second ask:
       **every other driveway in the city checked to line up and not cover
       the sidewalk** (R2's sweep).
+
+## Track C: the motorway exits (signed off by the owner, 2026-11-21)
+
+`docs/exits-plan.md`, signed off as written: nine exits become four
+interchanges with two-lane slip ramps, frontage roads, a three-lane deck and
+the high-tech kit. Order: from the first pass after the first night's list (J1, J2, the south
+hunt), one phase or lettered step a pass, in the plan's order (1, 2a, 2b, 3a...). The new
+interchanges stay behind `?exits=new` until Phase 7. Each pass follows the
+exits plan's own rules on top of this plan's; Phase 7's snapshot rewrite is
+the owner's, on purpose, for the ramps and exits only. Track A's sweeps and
+the hunt carry on between exit phases (alternate passes).
+
+- [ ] Phase 1: the standard as rules and tests
+- [ ] Phase 2: the interchanges as data (2a, 2b)
+- [ ] Phase 3: the deck widened to three lanes (3a, 3b, 3c)
+- [ ] Phase 4: the interchanges drawn (4a north, 4b east, 4c south, 4d west)
+- [ ] Phase 5: clearing the way (metro portal frames, fence, hedge, props)
+- [ ] Phase 6: traffic, taxis, walking, driving (6a, 6b, 6c)
+- [ ] Phase 7: the switch (signs, high-tech kit, snapshot, old ramps and 6A
+      retired)
+- [ ] Phase 8: polish and phones
 
 ## Level 1: the safety net (bugs and tests)
 

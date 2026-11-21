@@ -25,7 +25,7 @@
  * or a hoodie, track to a hoodie).
  */
 import type { HairCut, Outfit, OutfitKind } from './wardrobe';
-import { HAIR_DYE, HAIR_NATURAL, PALETTE, SHAPE_IDS, type Bottoms, type ShoeStyle } from '../net/profile-data';
+import { HAIR_DYE, HAIR_NATURAL, SHAPE_IDS, type Bottoms, type ShoeStyle } from '../net/profile-data';
 import { inEndswood } from './endswood';
 import type { IdleAct, CrowdClip } from './crowdclips';
 import { inTrenches } from './trenches';
@@ -568,8 +568,9 @@ export function cityOutfit(r: () => number, where: Where = {}): Outfit {
 /** How many of the crowd still wear the balaclava and shades (the bouncers all do) */
 export const MASKED_SHARE = 0.15;
 /** Skin tones, pale to deep: made-up flat tones under the key light, none bright enough to bloom */
-// (the players' own: profile-data.ts `PALETTE`)
-export const SKIN_TONES: readonly string[] = PALETTE.tone;
+// (the players' are profile-data.ts `PALETTE.tone`, with more in it: the crowd keeps its own twelve, so a swatch added
+// for the players re-seeds nobody)
+export const SKIN_TONES: readonly string[] = ['#f7e0cc', '#f1d2b6', '#e8c39e', '#dcae86', '#d29f78', '#c99068', '#b07650', '#a06640', '#8f5a3a', '#6e4129', '#52301f', '#3f2418'];
 /** Hair: the natural shades (black twice as often), and now and then a dyed one (more of those on the Neon Mile and in The Trenches) */
 export const HAIR_COLORS: readonly string[] = ['#16141f', ...HAIR_NATURAL];
 export const HAIR_DYES: readonly string[] = HAIR_DYE;

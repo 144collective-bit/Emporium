@@ -3,6 +3,11 @@
 Part of the project guide (`CLAUDE.md` is its index). Moved here word for word from `CLAUDE.md`;
 keep it up to date when what it describes changes.
 
+- **The exits are to be rebuilt** (the owner's ask, 2026-11-21, `docs/exits-plan.md`, for the owner's sign-off): four
+  interchanges, one a side, with two-lane slip ramps to one-way frontage roads, the deck widened to three lanes each
+  way, exit 6A retired. Until its Phase 7 switch, what's below describes the city as it stands. The fit is drawn by
+  `npm run exits-fit` (`docs/exits-shots/`).
+
 - **The raised highway and the roads** (the owner's call): the ring highway
   rebuilt on a modern concrete box-girder viaduct all the way round, eight
   numbered exits laid as partial cloverleafs (district edges moved to make
