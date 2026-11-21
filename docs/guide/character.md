@@ -150,7 +150,7 @@ keep it up to date when what it describes changes.
 - **New characters** (the owner's call, 2026-11-21) are planned in
   `docs/characters-plan.md`: Degen's body with a head of its own sculpted
   after the owner's art, worn as a ready-made look in the fitting room
-  (the first, SlimeWhale, done and signed off; the second, Smilex, in the lab:
+  (the first, SlimeWhale, done and signed off; the second, Smilex, done and signed off:
   his hexagon head, white gloves, `characterGloves()` and the `gloves-<id>`
   items, and the PulseChain pendant, `characterPendant()` and the
   `necklace-<id>-<top>` items, the owner's exceptions noted in the plan). Phases 1-3 built (the head,
