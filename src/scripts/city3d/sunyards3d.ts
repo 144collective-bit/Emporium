@@ -2,7 +2,8 @@
  * Sunridge's yards drawn (docs/suburb-plan.md Phase 3; the data is sunyards.ts), sites in Sunridge's chunk: each
  * yard in its house's frame (the front's decomposed granite or lawn, the desert's agave, barrel cactus, prickly pear,
  * ocotillo, saguaros, palo verdes and boulders, the lawns' palms, shade trees, shrubs and flower beds; the back's
- * patio, ramada, grill, pool with its coping and deck, loungers, trampolines, swing sets and sheds; the bins), and the
+ * patio, ramada, grill, pool with its coping and deck, loungers, trampolines, swing sets and sheds; the big gardens'
+ * lemon, mesquite and shade trees, raised beds, fire pits and stepping stones, Phase 8; the bins), and the
  * block walls in sites a tile each (their caps, the gates in the returns). Trees, walls, pools and the ground at every
  * distance; the small plants and the back yards' things near only, fewer on phones.
  */
@@ -14,7 +15,7 @@ import { hip } from './roofs3d';
 import { addSolids } from './solids';
 import { TILE, tileOf } from './tiles';
 import { HOUSES, SCHEMES, type House } from './sunhouses';
-import { BLOCK, GROUNDS, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, islandOf, sprayAt, sprinklerOn, type Plant, type Yard } from './sunyards';
+import { BED_W, BLOCK, DRESS_R, GROUNDS, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, islandOf, sprayAt, sprinklerOn, type Plant, type Yard } from './sunyards';
 import { SUNRIDGE_RECT } from './sunridge';
 import { CROWD_VIEW } from './character';
 import { GARDENS, LOTS } from './sunridgelots';
@@ -266,6 +267,93 @@ function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
   }
 }
 
+/** A big garden's dressing (sunyards.ts `dress`, Phase 8), in the yard's materials: the trees at every distance, the rest near only */
+function drawDress(b: Batch, h: House, y: Yard, low: boolean) {
+  const M = frameOf(h);
+  const add = (g: THREE.BufferGeometry, m: THREE.Material) => b.add(g.applyMatrix4(M), m);
+  const at = (g: THREE.BufferGeometry, u: number, v: number, yy = 0) => g.translate(u, yy, -v);
+  for (const d of y.dress) {
+    if (d.kind !== 'tree') continue;
+    const { u, v, s } = d;
+    if (d.sort === 'mesquite') {
+      // Three dark trunks leaning out from the ground, a wide flat canopy of a few clumps
+      for (let k = 0; k < 3; k++) {
+        const a = (k / 3) * Math.PI * 2 + u * 1.7;
+        add(at(new THREE.CylinderGeometry(0.04, 0.08, 1.5 * s, 5, 1, true).translate(0, 0.75 * s, 0).rotateZ(0.42).rotateY(a), u, v), TRUNK);
+      }
+      for (let k = 0; k < (low ? 3 : 6); k++) {
+        const a = (k / 6) * Math.PI * 2 + v;
+        const r = k === 0 ? 0 : 0.62 * s;
+        add(at(new THREE.IcosahedronGeometry(0.5 * s, 0).scale(1, 0.4, 1), u + Math.cos(a) * r, v + Math.sin(a) * r, 1.45 * s + (k % 2) * 0.1), LEAF);
+      }
+    } else if (d.sort === 'lemon') {
+      // A short trunk, a round dense canopy low to the ground, its fruit
+      add(at(new THREE.CylinderGeometry(0.05, 0.07, 0.7 * s, 6, 1, true).translate(0, 0.35 * s, 0), u, v), TRUNK);
+      add(at(new THREE.IcosahedronGeometry(0.62 * s, 1).scale(1, 0.9, 1), u, v, 1.05 * s), PALM_LEAF);
+      if (!low)
+        for (let k = 0; k < 9; k++) {
+          const a = k * 2.39996;
+          const yy = (0.75 + (k % 3) * 0.22) * s;
+          const r = Math.sqrt(Math.max(0, 0.62 * 0.62 - ((yy - 1.05 * s) / 0.9) ** 2)) * s + 0.02;
+          add(at(new THREE.SphereGeometry(0.06, 5, 4), u + Math.cos(a) * r, v + Math.sin(a) * r, yy), FLOWERS[0]);
+        }
+    } else {
+      add(at(new THREE.CylinderGeometry(0.08, 0.12, 1.4 * s, 6, 1, true).translate(0, 0.7 * s, 0), u, v), TRUNK);
+      add(at(new THREE.IcosahedronGeometry(0.85 * s, 1).scale(1, 0.85, 1), u, v, 1.85 * s), LEAF);
+    }
+  }
+  b.detail(() => {
+    for (const d of y.dress) {
+      if (d.kind === 'bed') {
+        // A raised timber bed along its wall: its four sides, its soil, its crop in two rows (built long along x, turned)
+        const [L, W, t, H] = [DRESS_R.bed, BED_W, 0.05, 0.3];
+        const put = (g: THREE.BufferGeometry, m: THREE.Material) => add(at(g.rotateY(d.rot), d.u, d.v), m);
+        put(new THREE.BoxGeometry(2 * L, H, t).translate(0, H / 2, W - t / 2), TRUNK);
+        put(new THREE.BoxGeometry(2 * L, H, t).translate(0, H / 2, -W + t / 2), TRUNK);
+        put(new THREE.BoxGeometry(t, H, 2 * W - 2 * t).translate(L - t / 2, H / 2, 0), TRUNK);
+        put(new THREE.BoxGeometry(t, H, 2 * W - 2 * t).translate(-L + t / 2, H / 2, 0), TRUNK);
+        put(new THREE.BoxGeometry(2 * L - 2 * t, H - 0.04, 2 * W - 2 * t).translate(0, (H - 0.04) / 2, 0), BED);
+        const long = 2 * L - 0.25;
+        const n = low ? 3 : 6;
+        for (let k = 0; k < n; k++)
+          for (const side of [-1, 1]) {
+            const x = -long / 2 + (long * (k + 0.5)) / n;
+            const z = side * W * 0.45;
+            if (d.crop === 'veg') put(new THREE.SphereGeometry(0.1, 6, 4).scale(1, 0.75, 1).translate(x, H + 0.02, z), k % 3 === 2 ? PEAR : SHRUB);
+            else put(new THREE.SphereGeometry(0.075, 5, 4).translate(x, H + 0.03, z), FLOWERS[(k + (side > 0 ? 1 : 0)) % 3]);
+          }
+      } else if (d.kind === 'firepit') {
+        // A pad of pavers, the pit's stone ring and its ashes, the chairs round it facing in
+        add(at(new THREE.CircleGeometry(DRESS_R.firepit - 0.1, 20).rotateX(-Math.PI / 2), d.u, d.v, 0.014), CONCRETE);
+        add(at(new THREE.CylinderGeometry(0.42, 0.46, 0.26, 12, 1, true), d.u, d.v, 0.13), BOULDER);
+        add(at(new THREE.RingGeometry(0.33, 0.43, 12).rotateX(-Math.PI / 2), d.u, d.v, 0.26), BOULDER);
+        add(at(new THREE.CircleGeometry(0.34, 12).rotateX(-Math.PI / 2), d.u, d.v, 0.1), MAT);
+        if (low) continue;
+        for (let k = 0; k < d.chairs; k++) {
+          const a = (k / d.chairs) * Math.PI * 2 + d.u;
+          // (a low slatted garden chair: its seat sloping back, a tall back leaning from it, broad arms on its sides)
+          const chair = [
+            new THREE.BoxGeometry(0.46, 0.06, 0.46).rotateX(-0.12).translate(0, 0.26, 0),
+            new THREE.BoxGeometry(0.46, 0.62, 0.05).translate(0, 0.31, 0).rotateX(-0.35).translate(0, 0.24, 0.22),
+            new THREE.BoxGeometry(0.08, 0.04, 0.52).translate(-0.27, 0.44, -0.02),
+            new THREE.BoxGeometry(0.08, 0.04, 0.52).translate(0.27, 0.44, -0.02),
+            new THREE.BoxGeometry(0.05, 0.44, 0.06).translate(-0.27, 0.22, -0.2),
+            new THREE.BoxGeometry(0.05, 0.44, 0.06).translate(0.27, 0.22, -0.2),
+            new THREE.BoxGeometry(0.05, 0.26, 0.06).translate(-0.21, 0.13, 0.18),
+            new THREE.BoxGeometry(0.05, 0.26, 0.06).translate(0.21, 0.13, 0.18),
+          ];
+          // (its front toward the pit: the chair's front is -z, turned to face the middle)
+          const [cu, cv] = [d.u + Math.cos(a) * 0.95, d.v + Math.sin(a) * 0.95];
+          const yaw = Math.atan2(Math.cos(a), -Math.sin(a));
+          for (const g of chair) add(at(g.rotateY(yaw), cu, cv), k % 2 ? SHED : WHITE);
+        }
+      } else if (d.kind === 'stones') {
+        for (const [k, p] of d.pts.entries()) add(at(new THREE.CylinderGeometry(0.2, 0.21, 0.03, 7).scale(1, 1, 0.75).rotateY(k * 1.3), p[0], p[1], 0.015), CONCRETE);
+      }
+    }
+  });
+}
+
 export function registerYards(low: boolean, scene: THREE.Scene | null) {
   const lots = new Map(LOTS.map((l) => [l.id, l]));
   const houses = new Map(HOUSES.map((h) => [h.id, h]));
@@ -279,6 +367,7 @@ export function registerYards(low: boolean, scene: THREE.Scene | null) {
     site(`sunridge yard ${h.id}`, rect, (into) => {
       const b = new Batch();
       drawYard(b, h, y, low);
+      drawDress(b, h, y, low);
       b.build(into, { cast: true, receive: true });
     });
   }

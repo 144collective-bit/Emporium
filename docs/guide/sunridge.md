@@ -94,7 +94,9 @@ keep it up to date when what it describes changes.
   read them through sunyards.ts `gardenFrame()`, `acrossG()`, `depthG()`,
   `Yard.inner` the whole garden in gravel, `Yard.lawn` the back lawn grown
   to the garden's walls; the walls on every garden edge but the open front
-  yard, sunyards.ts `walls()`); eight late lots and houses on the field
+  yard, sunyards.ts `walls()`; the big gardens' trees, beds, fire pits and
+  stepping stones, `dressOf()`, `Yard.dress`, drawn by sunyards3d.ts
+  `drawDress()`); eight late lots and houses on the field
   east of the school and the south row's gap (sunridgelots.ts `late()`,
   `LATE_FROM`; sunhouses.ts builds them after every other house).
 - **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views

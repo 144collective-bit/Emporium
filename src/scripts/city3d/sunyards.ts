@@ -13,7 +13,8 @@
  * - **The back yard** (`back`): a patio off the house, a ramada over it on some (`ramada`), a grill, a pool on about
  *   one in three with its coping and loungers (`pool`), a trampoline, a swing set or a shed on some (`extras`).
  *
- * `YARD_SOLIDS`: the walls (cells along them) and the sheds, joined to the grids when the chunk loads.
+ * `YARD_SOLIDS`: the walls (cells along them), the sheds and the big gardens' trunks, beds and fire pits, joined to the
+ * grids when the chunk loads.
  */
 import { HOUSES, frameOf, toWorld, type House } from './sunhouses';
 import { GARDENS, LOTS, type Lot } from './sunridgelots';
@@ -35,6 +36,31 @@ export interface Plant {
   s: number;
 }
 export type Extra = 'trampoline' | 'swing' | 'shed';
+/**
+ * What dresses a big back garden (Phase 8, the owner's call: "a varied mix, not in every garden"): a tree out
+ * toward its far end (a lemon, a mesquite or a shade tree), a raised timber bed along a wall (vegetables or
+ * flowers), a fire pit with its chairs on a pad of pavers, and stepping stones from the patio out to one of them
+ * or the shed. In the frame (u, v); a bed's `rot` is its length's way in the frame (from u toward v), along its wall.
+ */
+export type Dress =
+  | { kind: 'tree'; sort: 'lemon' | 'mesquite' | 'shade'; u: number; v: number; s: number }
+  | { kind: 'bed'; crop: 'veg' | 'flowers'; u: number; v: number; rot: number }
+  | { kind: 'firepit'; u: number; v: number; chairs: number }
+  | { kind: 'stones'; pts: Pt[] };
+/** How far each reaches round its spot (a bed: half its length; its half width is `BED_W`) */
+export const DRESS_R = { tree: 0.85, bed: 0.95, firepit: 1.35 } as const;
+export const BED_W = 0.32;
+/** A bed's middle, its four corners (round from the near left) and the middles of its sides, in the frame */
+export function bedCorners(u: number, v: number, rot: number): Pt[] {
+  const [cx, cy] = [Math.cos(rot), Math.sin(rot)];
+  const at = (a: number, b: number): Pt => [u + cx * a - cy * b, v + cy * a + cx * b];
+  const [L, W] = [DRESS_R.bed, BED_W];
+  return [[u, v], at(-L, -W), at(L, -W), at(L, W), at(-L, W), at(-L, 0), at(L, 0), at(0, -W), at(0, W)];
+}
+/** A garden's room behind the house (square tiles) from which it's dressed; and from which it gets two things, or three */
+export const DRESS_FROM = 30;
+const DRESS_TWO = 70;
+const DRESS_THREE = 110;
 export interface Yard {
   house: string;
   front: 'desert' | 'lawn';
@@ -60,6 +86,8 @@ export interface Yard {
   grill: { u: number; v: number };
   pool?: { u0: number; u1: number; v0: number; v1: number };
   extras: { kind: Extra; u: number; v: number }[];
+  /** The big gardens' dressing (Phase 8): none in a small one, and not in every big one */
+  dress: Dress[];
   /** The return walls' gates: where (u, v) and how wide */
   gates: { u0: number; u1: number; v: number }[];
 }
@@ -427,7 +455,7 @@ function lay(): Yard[] {
             .filter((isl, k) => fits(isl, inFrom(ground[k])))
         : [];
     const drive = driveOf(h, d0, d1, Math.max(0, Math.min(FLARE, d0 - L(0) - 0.05)), Math.max(0, Math.min(FLARE, R(0) - d1 - 0.05)), edge);
-    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground: ground.map(toEdge), drive, islands, inner: f.poly, lawn, plants, bins, back, patio, ramada, grill, pool, extras, gates });
+    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground: ground.map(toEdge), drive, islands, inner: f.poly, lawn, plants, bins, back, patio, ramada, grill, pool, extras, dress: dressOf(h, f, patio, pool, extras, out.length), gates });
   }
   return out;
 }
@@ -441,6 +469,120 @@ export interface WallSeg {
   /** A gate across part of it (from and to, along it, 0-1) */
   gate?: [number, number];
 }
+/* ---------- The big gardens dressed (Phase 8) ---------- */
+
+/**
+ * A big garden's dressing: in about two in three of those with room behind the house, one to three of a tree, a bed
+ * and a fire pit, each where there's room for it (in the garden, a path's width off its walls, clear of the house,
+ * the patio, the pool's deck, the sheds and swings and each other), and stepping stones out to one of them or the
+ * shed on most. Its own generator, so the yards laid before it keep theirs.
+ */
+function dressOf(h: House, f: GFrame, patio: Yard['patio'], pool: Yard['pool'], extras: Yard['extras'], n: number): Dress[] {
+  const rand = rng(6173 + n * 97);
+  const vb = Math.max(...h.parts.map((p) => p.v1));
+  const room = area(behind(f, vb)) - (pool ? (pool.u1 - pool.u0 + 0.9) * (pool.v1 - pool.v0 + 0.8) : 0);
+  if (room < DRESS_FROM || rand() < 0.33) return [];
+  const count = room > DRESS_THREE ? 3 : room > DRESS_TWO ? 2 : 1;
+  const kinds = (['tree', 'bed', 'firepit'] as const).map((k) => ({ k, w: rand() })).sort((a, b) => a.w - b.w).map((x) => x.k).slice(0, count);
+  const out: Dress[] = [];
+  // (what's taken: circles round each thing, and the house, patio and pool's deck as boxes)
+  const taken: [number, number, number][] = extras.map((e) => [e.u, e.v, e.kind === 'shed' ? 0.75 : 0.9]);
+  const boxes: [number, number, number, number][] = [...h.parts.map((p) => [p.u0, p.v0, p.u1, p.v1] as [number, number, number, number]), [patio[0], patio[1], patio[2], patio[3] + 0.3]];
+  if (pool) boxes.push([pool.u0 - 0.6, pool.v0 - 1.5, pool.u1 + 0.6, pool.v1 + 0.5]);
+  const clearOf = (pts: Pt[], m: number) =>
+    pts.every((p) => inside(f.poly, p) && edgeDist(f.poly, p) >= m && boxes.every(([u0, v0, u1, v1]) => p[0] < u0 - 0.35 || p[0] > u1 + 0.35 || p[1] < v0 - 0.35 || p[1] > v1 + 0.35));
+  const free = (u: number, v: number, r: number) => taken.every(([tu, tv, tr]) => Math.hypot(tu - u, tv - v) > r + tr + 0.35);
+  const ring = (u: number, v: number, r: number, k = 8): Pt[] => [[u, v], ...Array.from({ length: k }, (_, i) => [u + Math.cos((i / k) * Math.PI * 2) * r, v + Math.sin((i / k) * Math.PI * 2) * r] as Pt)];
+  // (the spots to try: a grid over the garden behind the patio)
+  const vs = f.poly.map((p) => p[1]);
+  const us = f.poly.map((p) => p[0]);
+  const spots: Pt[] = [];
+  for (let v = patio[3] + 0.8; v < Math.max(...vs); v += 0.4) for (let u = Math.min(...us); u < Math.max(...us); u += 0.4) spots.push([u, v]);
+  const pick = (score: (p: Pt) => number, ok: (p: Pt) => boolean): Pt | null => {
+    let best: Pt | null = null;
+    let bs = -Infinity;
+    for (const p of spots) {
+      if (!ok(p)) continue;
+      const sc = score(p) + rand() * 0.8;
+      if (sc > bs) [best, bs] = [p, sc];
+    }
+    return best;
+  };
+  for (const k of kinds) {
+    if (k === 'tree') {
+      // Out toward the far end, near a wall (its canopy may lean over it a little)
+      const r = DRESS_R.tree;
+      const p = pick(
+        (q) => q[1] - Math.abs(edgeDist(f.poly, q) - 1.4) * 1.5,
+        (q) => free(q[0], q[1], r) && clearOf([q], 1.0) && clearOf(ring(q[0], q[1], r), 0.25),
+      );
+      if (!p) continue;
+      const sorts = ['lemon', 'mesquite', 'shade'] as const;
+      out.push({ kind: 'tree', sort: sorts[Math.floor(rand() * 3)], u: p[0], v: p[1], s: 0.85 + rand() * 0.3 });
+      taken.push([p[0], p[1], r]);
+    } else if (k === 'bed') {
+      // Along a wall, turned to run beside it (the nearest of the garden's edges), a path's width off it
+      const r = DRESS_R.bed;
+      const wallWay = (q: Pt) => {
+        let best = Infinity;
+        let rot = 0;
+        for (let i = 0; i < f.poly.length; i++) {
+          const [a, b] = [f.poly[i], f.poly[(i + 1) % f.poly.length]];
+          const d = distTo([a, b], q);
+          if (d < best) [best, rot] = [d, Math.atan2(b[1] - a[1], b[0] - a[0])];
+        }
+        return rot;
+      };
+      const p = pick(
+        (q) => -Math.abs(edgeDist(f.poly, q) - BED_W - 0.5) * 4,
+        (q) => free(q[0], q[1], r) && clearOf(bedCorners(q[0], q[1], wallWay(q)), 0.4),
+      );
+      if (p) {
+        out.push({ kind: 'bed', crop: rand() < 0.5 ? 'veg' : 'flowers', u: p[0], v: p[1], rot: wallWay(p) });
+        taken.push([p[0], p[1], r]);
+      }
+    } else {
+      // Out in the open, away from the house
+      const r = DRESS_R.firepit;
+      const p = pick(
+        (q) => Math.min(edgeDist(f.poly, q), 3) + (q[1] - vb) * 0.15,
+        (q) => free(q[0], q[1], r) && clearOf(ring(q[0], q[1], r, 10), 0.3),
+      );
+      if (!p) continue;
+      out.push({ kind: 'firepit', u: p[0], v: p[1], chairs: rand() < 0.5 ? 3 : 4 });
+      taken.push([p[0], p[1], r]);
+    }
+  }
+  // The stepping stones: from the patio's far edge out to the fire pit, the tree, a bed or the shed, a gentle curve
+  const ends: Pt[] = [
+    ...out.filter((d) => d.kind === 'firepit').map((d) => [d.u, d.v - DRESS_R.firepit + 0.15] as Pt),
+    ...extras.filter((e) => e.kind === 'shed').map((e) => [e.u, e.v - 0.6] as Pt),
+    ...out.filter((d) => d.kind === 'tree').map((d) => [d.u, d.v - 0.6] as Pt),
+    ...out.filter((d) => d.kind === 'bed').map((d) => [d.u, d.v - Math.max(...bedCorners(d.u, d.v, d.rot).map((c) => d.v - c[1])) - 0.3] as Pt),
+  ];
+  if (ends.length && rand() < 0.8) {
+    const e = ends[0];
+    const st: Pt = [Math.min(Math.max(e[0], patio[0] + 0.3), patio[2] - 0.3), patio[3] + 0.4];
+    const len = Math.hypot(e[0] - st[0], e[1] - st[1]);
+    if (len > 1.2) {
+      const bow = (rand() - 0.5) * Math.min(1.4, len * 0.3);
+      const mid: Pt = [(st[0] + e[0]) / 2 + ((e[1] - st[1]) / len) * bow, (st[1] + e[1]) / 2 - ((e[0] - st[0]) / len) * bow];
+      const N = Math.max(2, Math.round(len / 0.6));
+      const pts: Pt[] = [];
+      for (let i = 0; i <= N; i++) {
+        const t = i / N;
+        const p: Pt = [(1 - t) * (1 - t) * st[0] + 2 * t * (1 - t) * mid[0] + t * t * e[0], (1 - t) * (1 - t) * st[1] + 2 * t * (1 - t) * mid[1] + t * t * e[1]];
+        // (none in the pool's deck, under a thing or against a wall: the path stops short there)
+        const under = out.some((d) => d.kind !== 'stones' && 'u' in d && Math.hypot(d.u - p[0], d.v - p[1]) < (d.kind === 'firepit' ? 1.2 : d.kind === 'tree' ? 0.3 : 0.6));
+        if (!inside(f.poly, p) || edgeDist(f.poly, p) < 0.3 || under || (pool && p[0] > pool.u0 - 0.6 && p[0] < pool.u1 + 0.6 && p[1] > pool.v0 - 1.5 && p[1] < pool.v1 + 0.5)) break;
+        pts.push(p);
+      }
+      if (pts.length >= 3) out.push({ kind: 'stones', pts });
+    }
+  }
+  return out;
+}
+
 function lerp(a: Pt, b: Pt, t: number): Pt {
   return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
 }
@@ -514,7 +656,7 @@ function walls(): WallSeg[] {
 export const WALLS: WallSeg[] = walls();
 
 type Box = [number, number, number, number, number];
-/** What of the yards is solid: the walls (cells a tile long along them) and the sheds; the lots' ground is world.ts SLAB, 0.15 */
+/** What of the yards is solid: the walls (cells a tile long along them), the sheds and the gardens' trunks, beds and fire pits; the lots' ground is world.ts SLAB, 0.15 */
 export const YARD_SOLIDS: Box[] = (() => {
   const out: Box[] = [];
   const t = BLOCK.t / 2;
@@ -534,6 +676,14 @@ export const YARD_SOLIDS: Box[] = (() => {
         const c = [toWorld(h, e.u - 0.5, e.v - 0.4), toWorld(h, e.u + 0.5, e.v + 0.4), toWorld(h, e.u - 0.5, e.v + 0.4), toWorld(h, e.u + 0.5, e.v - 0.4)];
         out.push([Math.min(...c.map((p) => p[0])), Math.min(...c.map((p) => p[1])), Math.max(...c.map((p) => p[0])), Math.max(...c.map((p) => p[1])), 0.15 + 1.2]);
       }
+    // (the big gardens' trees by their trunks, the raised beds and the fire pits' rings: Phase 8)
+    for (const d of y.dress) {
+      if (d.kind === 'stones') continue;
+      const [hu, top] = d.kind === 'tree' ? [0.15, 2] : d.kind === 'firepit' ? [0.46, 0.26] : [0, 0.3];
+      const local: Pt[] = d.kind === 'bed' ? bedCorners(d.u, d.v, d.rot).slice(1, 5) : [[d.u - hu, d.v - hu], [d.u + hu, d.v + hu], [d.u - hu, d.v + hu], [d.u + hu, d.v - hu]];
+      const c = local.map(([u, v]) => toWorld(h, u, v));
+      out.push([Math.min(...c.map((p) => p[0])), Math.min(...c.map((p) => p[1])), Math.max(...c.map((p) => p[0])), Math.max(...c.map((p) => p[1])), 0.15 + top]);
+    }
   }
   return out;
 })();

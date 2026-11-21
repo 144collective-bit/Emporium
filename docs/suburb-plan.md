@@ -408,6 +408,20 @@ These are my recommendations, made so the plan is complete; any can change.
      school and two in the gap on the south row; their houses are built
      after every other (sunhouses.ts, `rng(8823)`), so every house, yard
      and resident before keeps its id.
+   - **The big gardens dressed** (the owner's call, 2026-11-21, after the
+     sign-off: "a varied mix of these, not in every garden"): about two in
+     three gardens with 30 square tiles or more behind the house get one
+     to three of a tree out toward the far end (a lemon, a mesquite or a
+     shade tree), a raised timber bed along a wall (vegetables or flowers)
+     and a fire pit with three or four chairs on a pad of pavers, each where
+     it has room, and stepping stones from the patio out to one of them or
+     the shed on most (sunyards.ts `dressOf()`, `Yard.dress`, `DRESS_FROM`,
+     its own generator, so every yard keeps what it had). Drawn in the
+     yard's own materials (sunyards3d.ts `drawDress()`: no new draw calls),
+     the trees at every distance, the rest near only, fewer on phones; the
+     trunks, beds and pits solid. About a third of all the gardens.
+     Tested: each thing in its garden, clear of the walls, the house, the
+     pool, the extras and each other; every kind of each.
    - **What's left:** about 540 square tiles of the 4,800 the scan found,
      nearly all the thin margins kept round the amenities and the streets
      and a few slivers where three gardens meet.

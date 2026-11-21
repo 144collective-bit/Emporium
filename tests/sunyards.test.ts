@@ -3,7 +3,7 @@
 // never doubled; the returns' gates; the pools and back-yard things inside the back yard; their solids.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { FLARE, HEAD_CLEAR, REACH, SPRINKLE, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, sprayAt, sprinklerOn } from '../src/scripts/city3d/sunyards';
+import { DRESS_FROM, DRESS_R, bedCorners, FLARE, HEAD_CLEAR, REACH, SPRINKLE, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, behind, gardenFrame, sprayAt, sprinklerOn } from '../src/scripts/city3d/sunyards';
 import { HOUSES, toWorld } from '../src/scripts/city3d/sunhouses';
 import { GARDENS, LOTS, outline } from '../src/scripts/city3d/sunridgelots';
 import { PATH, SUNRIDGE_RECT, SUN_BLOCKS, SUN_LAMPS, SUN_STREETS, ZONES, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
@@ -233,4 +233,61 @@ test('the back lawns (Phase 8): inside their garden, clear of its walls, under n
   }
   assert.ok(n > YARDS.length * 0.4, `only ${n} back lawns`);
   assert.ok(bigger > n * 0.3, `only ${bigger} of ${n} lawns grown into their gardens`);
+});
+
+test('the big gardens dressed (Phase 8): a varied mix in some, none in a small one, each thing in its garden clear of the walls, the house, the pool and each other', () => {
+  const kinds = new Map<string, number>();
+  let dressed = 0;
+  let big = 0;
+  const area = (q: Pt[]) => Math.abs(q.reduce((s, p, i) => s + p[0] * q[(i + 1) % q.length][1] - q[(i + 1) % q.length][0] * p[1], 0)) / 2;
+  for (const y of YARDS) {
+    const h = houses.get(y.house)!;
+    const f = gardenFrame(lots.get(h.lot)!);
+    const vb = Math.max(...h.parts.map((p) => p.v1));
+    const room = area(behind(f, vb));
+    if (room >= DRESS_FROM) big++;
+    if (!y.dress.length) continue;
+    dressed++;
+    assert.ok(room >= DRESS_FROM * 0.9, `${y.house}: a small garden (${room.toFixed(0)}) dressed`);
+    const g = gardens.get(h.lot)!;
+    const world = (u: number, v: number): Pt => [h.o[0] + h.u[0] * u + h.v[0] * v, h.o[1] + h.u[1] * u + h.v[1] * v];
+    const things = y.dress.filter((d) => d.kind !== 'stones') as Exclude<(typeof y.dress)[number], { kind: 'stones' }>[];
+    for (const d of y.dress) kinds.set(d.kind + ('sort' in d ? d.sort : 'crop' in d ? d.crop : ''), (kinds.get(d.kind + ('sort' in d ? d.sort : 'crop' in d ? d.crop : '')) ?? 0) + 1);
+    for (const d of things) {
+      const r = d.kind === 'tree' ? 0.3 : DRESS_R.firepit;
+      const hu = d.kind === 'bed' ? DRESS_R.bed : r;
+      const hv = hu;
+      const around: Pt[] = d.kind === 'bed' ? bedCorners(d.u, d.v, d.rot) : Array.from({ length: 13 }, (_, k) => (k ? [d.u + Math.cos((k / 12) * Math.PI * 2) * r, d.v + Math.sin((k / 12) * Math.PI * 2) * r] : [d.u, d.v]));
+      if (d.kind === 'bed') {
+        // (along the garden's nearest edge: a wall, or the perimeter wall it backs onto)
+        const c = world(d.u, d.v);
+        const edges = g.outline.map((a, i) => [a, g.outline[(i + 1) % g.outline.length]] as [Pt, Pt]);
+        const [a, b] = edges.reduce((m, e) => (distTo(e, c) < distTo(m, c) ? e : m));
+        const way = world(Math.cos(d.rot), Math.sin(d.rot));
+        const bedWay = Math.atan2(way[1] - h.o[1], way[0] - h.o[0]);
+        assert.ok(Math.abs(Math.abs(Math.cos(Math.atan2(b[1] - a[1], b[0] - a[0]) - bedWay)) - 1) < 0.01 && distTo([a, b], c) < 1.4, `${y.house}: its bed not along a wall`);
+      }
+      for (const [u, v] of around) {
+        const p = world(u, v);
+        assert.ok(inside(g.outline, p), `${y.house}: its ${d.kind} out of its garden`);
+        assert.ok(WALLS.every((w) => distTo([w.a, w.b], p) > 0.2), `${y.house}: its ${d.kind} against a wall`);
+        assert.ok(!inPart(h, p), `${y.house}: its ${d.kind} in the house`);
+      }
+      if (y.pool) assert.ok(d.u + hu < y.pool.u0 - 0.3 || d.u - hu > y.pool.u1 + 0.3 || d.v + hv < y.pool.v0 - 0.3 || d.v - hv > y.pool.v1 + 0.3, `${y.house}: its ${d.kind} in the pool`);
+      for (const e of things) if (e !== d) assert.ok(Math.hypot(e.u - d.u, e.v - d.v) > DRESS_R[e.kind] + DRESS_R[d.kind] - 0.01, `${y.house}: its ${d.kind} on its ${e.kind}`);
+      for (const e of y.extras) assert.ok(Math.hypot(e.u - d.u, e.v - d.v) > DRESS_R[d.kind] + 0.7, `${y.house}: its ${d.kind} on its ${e.kind}`);
+    }
+    for (const d of y.dress)
+      if (d.kind === 'stones') {
+        assert.ok(d.pts.length >= 3);
+        for (const [u, v] of d.pts) {
+          assert.ok(inside(g.outline, world(u, v)), `${y.house}: a stepping stone out of its garden`);
+          assert.ok(!inPart(h, world(u, v)), `${y.house}: a stepping stone in the house`);
+          if (y.pool) assert.ok(!(u > y.pool.u0 - 0.3 && u < y.pool.u1 + 0.3 && v > y.pool.v0 - 0.3 && v < y.pool.v1 + 0.3), `${y.house}: a stepping stone in the pool`);
+        }
+      }
+  }
+  // (not in every big garden, but in most; every kind of each)
+  assert.ok(dressed > big * 0.45 && dressed < big * 0.85, `${dressed} of ${big} big gardens dressed`);
+  for (const k of ['treelemon', 'treemesquite', 'treeshade', 'bedveg', 'bedflowers', 'firepit', 'stones']) assert.ok((kinds.get(k) ?? 0) >= 2, `only ${kinds.get(k) ?? 0} ${k}`);
 });
