@@ -116,6 +116,12 @@ every cheap build and make it premium.** A hunt run:
 
 A hunt runs whenever no job is ready, and once a week otherwise.
 
+**The first night (2026-11-21, the owner's call):** pass 1 takes J1, pass 2
+J2, pass 3 the hunt of Endswood, Aldwyn's Green and Lot 9. Passes 4 to 6 take
+the owner's next jobs (J3 on), added below after J2 in the owner's order, or
+R1's sweep if none have arrived. The Works Board (the owner's kanban) mirrors
+this list; this plan is what the loop reads.
+
 ### Model repairs
 
 #### R1. Bare slab
@@ -253,8 +259,8 @@ A hunt runs whenever no job is ready, and once a week otherwise.
 
 `docs/exits-plan.md`, signed off as written: nine exits become four
 interchanges with two-lane slip ramps, frontage roads, a three-lane deck and
-the high-tech kit. Order: after Track A's open jobs (J1, J2), one phase or
-lettered step a pass, in the plan's order (1, 2a, 2b, 3a...). The new
+the high-tech kit. Order: from the first pass after the first night's list (J1, J2, the south
+hunt), one phase or lettered step a pass, in the plan's order (1, 2a, 2b, 3a...). The new
 interchanges stay behind `?exits=new` until Phase 7. Each pass follows the
 exits plan's own rules on top of this plan's; Phase 7's snapshot rewrite is
 the owner's, on purpose, for the ramps and exits only. Track A's sweeps and
