@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { gloveColour, headless, items, lookOutfit, PLAYER, useHeads, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
 import { CHARACTERS, CHARACTER_LOOKS, DEFAULT_LOOK, PALETTE, cleanLook, type CharacterId, type Look } from '../src/scripts/net/profile-data';
 import { SKIN_TONES } from '../src/scripts/city3d/crowdlook';
-import { describe as describeLook } from '../src/scripts/city3d/lookrows';
+import { CHOICES, describe as describeLook, isPlaying, pickCharacter, theirOutfit, wearsTheirOutfit } from '../src/scripts/city3d/lookrows';
 import { DEGEN_HEAD, HEAD_ROWS, headGeometry, headModel, type HeadDef } from '../src/scripts/city3d/body';
 import { CHARACTER_IDS, characterChain, characterGloves, characterParts, characterPendant, setHeadModel, SMILEX, SMILEX_HEAD, inSmilexBlock, smilex, SLIME, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
 import { newPose, poseSkeleton, weigh, type Influence } from '../src/scripts/city3d/skeleton';
@@ -485,4 +485,38 @@ test('heads: the character screen names Smilex, his skin only (no hair)', () => 
   assert.equal(rows.get('Head')!.v, 'Nothing');
   // (his necklace carries the PulseChain pendant, not the diamond)
   assert.ok(rows.get('Extras')!.v.includes('Gold Chain') && !rows.get('Extras')!.v.includes('Diamond'));
+});
+
+/* ----- The character picker (the fitting room's Characters tab) ----- */
+
+test('heads: the picker offers Degen, then every character; one is played at a time', () => {
+  assert.deepEqual(
+    CHOICES.map((c) => c.name),
+    ['Degen', ...CHARACTERS.map((c) => c.name)]
+  );
+  const l = cleanLook({ ...DEFAULT_LOOK, character: 'smilex' });
+  assert.deepEqual(
+    CHOICES.filter((c) => isPlaying(l, c.id)).map((c) => c.name),
+    ['Smilex']
+  );
+  assert.ok(isPlaying(DEFAULT_LOOK, null));
+});
+
+test('heads: picking a character swaps the head only; their outfit puts on their look; Degen’s is the classic', () => {
+  const mine = cleanLook({ ...DEFAULT_LOOK, kind: 'tee', top: '#ff6a3d', bag: 'backpack', hat: 'beanie' });
+  for (const c of CHOICES) {
+    const picked = pickCharacter(mine, c.id);
+    // (the clothes kept, the head swapped, and still clean)
+    assert.equal(picked.kind, 'tee');
+    assert.equal(picked.top, '#ff6a3d');
+    assert.equal(picked.bag, 'backpack');
+    assert.equal(picked.character, c.id);
+    assert.deepEqual(cleanLook(picked), picked);
+    const dressed = cleanLook(theirOutfit(picked, c.id));
+    assert.ok(wearsTheirOutfit(dressed, c.id), c.name);
+    assert.ok(!wearsTheirOutfit(picked, c.id) || c.id === null, `${c.name}: not pressed before`);
+    assert.ok(isPlaying(dressed, c.id), c.name);
+  }
+  // (Degen's outfit is his look from the art, the balaclava and all)
+  assert.deepEqual(theirOutfit(mine, null), DEFAULT_LOOK);
 });

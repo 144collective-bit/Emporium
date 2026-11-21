@@ -8,8 +8,10 @@ keep it up to date when what it describes changes.
 - Drop 001's panel (`data-panel-tpl="shop"` in `CityMap.astro`) has the
   fitting room (`fitting.ts`): the ranges (Streetwear, Business, Work:
   `RANGES` in `profile-data.ts`, `[data-fit-ranges]`), then item cards by
-  slot (Tops, Bottoms, Shoes, Head, Face, Eyewear, Gear, Bags, Extras,
-  Merch: `TABS`, two rows of five; Face is the faces plan's, docs/faces-plan.md:
+  slot (Characters, a row of its own (`docs/characters-plan.md`: who you
+  play as, Degen, SlimeWhale or Smilex, the head only, and their own
+  outfit in one tap), then Tops, Bottoms, Shoes, Head, Face, Eyewear, Gear,
+  Bags, Extras, Merch: `TABS`, two rows of five; Face is the faces plan's, docs/faces-plan.md:
   the balaclava or a haircut, the skin tone and hair colour; Gear the face
   gear), colours, and a turning preview of the player's Degen drawn by a
   small second renderer with the same ink outlines (`stage.ts`), only while the panel is

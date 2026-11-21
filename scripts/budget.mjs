@@ -69,7 +69,8 @@ const BUDGETS = {
    * it for the settings too ("raise the boot budget to 772 KB for the settings", docs/settings-plan.md): the settings
    * record and its store (settings.ts, settings-store.ts: the tier, time, sky and labels are read before the city is
    * built), about 1.2 KB, inside the 775; the Settings tab's rows, pickers and screen are their own chunks
-   * (settings-rows.ts, settings-ui.ts)
+   * (settings-rows.ts, settings-ui.ts); and Northgate's visitors' stair (Phase 6, the owner's call: its floor in the
+   * ground's layers and its rails in walk.ts, both at the boot), about 0.5 KB, inside the 775 too
    */
   bootJs: 775,
   /** Any one piece loaded later (a feature, when it's used) */
