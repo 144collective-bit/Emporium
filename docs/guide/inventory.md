@@ -126,7 +126,7 @@ keep it up to date when what it describes changes.
   while it's up (`.is-guard`), in Fire's, Aim's and Reload's places;
   gamepad LB held the guard, then X punch, Y kick, A dodge, the run on
   L3. Hold or toggle: the guard is its own job (comfort.ts `guard`, held
-  on the keys and the pad, toggled on touch; Settings > Guard), the
+  on the keys and the pad, toggled on touch; Settings > Controls > Guard), the
   ring's block keeps `block` ("Ring block"). A swing makes anyone near
   step aside (`swing` in life.ts, a `bump`): the crowd is never a target.
   The lab's Brawl program (`?anim&prog=brawl`) plays them.

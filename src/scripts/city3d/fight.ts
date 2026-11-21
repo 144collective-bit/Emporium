@@ -45,6 +45,7 @@ import { fx, glowTex } from './kit';
 import { finishFight } from './fightsave';
 import { live } from './live-client';
 import { RING_FAR, RING_ORDER, START_VIEW, nextView, type ViewId } from './views';
+import { settings as storedSettings } from './settings-store';
 
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
 const BOUT = { rounds: 3, seconds: 90 };
@@ -545,6 +546,8 @@ export function createFight(d: FightDeps): Fight {
       camera.position.z -= fz * nudge;
       camera.position.y -= nudge * 0.3;
     }
+    // (Settings > Camera > Camera shake off: none)
+    if (!storedSettings().shake) shake = 0;
     if (shake > 0 && !d.reduced) {
       camera.position.x += (Math.random() - 0.5) * shake;
       camera.position.y += (Math.random() - 0.5) * shake * 0.6;
