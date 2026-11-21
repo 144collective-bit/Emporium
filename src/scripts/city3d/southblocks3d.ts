@@ -1,15 +1,17 @@
 /*
  * Endswood's blocks drawn (docs/south-plan.md Phase 2, step 2b; the data is southblocks.ts), a district loaded as you
- * approach (districts.ts `LAZY_DISTRICTS` id `south-blocks`), as sites (tilework.ts), in the owner's 70s retro-future:
- * warm board-marked concrete, the precast panels' ribbon windows from the wall atlas (lit at night), rounded ends,
- * each block's accent on its gallery and balcony fronts and its ground floor's fascia.
+ * approach (districts.ts `LAZY_DISTRICTS` id `south-blocks`), as sites (tilework.ts). Brutalist since
+ * docs/brutalist-plan.md Phase 1 (the owner's ask, 2026-11-21): raw board-marked concrete in a cool grey, the wall
+ * atlas's `brutal` band (deep balcony recesses between fins, the slab's edge at each floor, life in the recesses, rain
+ * streaks), hard chamfered corners, the trim all concrete, each block's colour a stripe down its ends.
  *
  * - **The slabs and the Rampart**, a step at a time: walls (a glazed ground floor on the galleried side and the ends,
  *   concrete on the other), the steps' walls where a taller one meets a lower, roofs and parapets, sky gardens on the
  *   roofs (near only); the Rampart's archway (its soffit and its piers' faces); the galleries at every third floor
- *   (deck, accent front, a warm strip light under it at night); balconies with curved accent fronts on the slabs'
- *   other sides (near only).
- * - **The towers**: their walls, a ledge ring every third floor, the flared plant room on top, the beacon.
+ *   (deck, concrete front, a warm strip light under it at night); balconies with concrete fronts on the slabs'
+ *   other sides (near only); the block's colour a stripe down each end.
+ * - **The towers**: their walls, a ledge ring every third floor, the plant room (a concrete box) on top, the beacon,
+ *   the tower's colour a stripe down its face away from The Core.
  * - **The cores**: concrete towers with a lit stair slot down their outer faces.
  * - **The bridges**: covered, a band of glass along each side lit warm at night, a strip light under each.
  * - **The podium deck** on its columns; **Teasel House's** hoarded half (boarded windows, hoarding at the ground) and
@@ -20,7 +22,7 @@
  */
 import * as THREE from 'three';
 import type { Tick } from './world';
-import { Batch, neon, toon } from './kit';
+import { Batch, lit, neon, toon } from './kit';
 import { ATLAS, kit, type Frame } from './infill';
 import { site } from './tilework';
 import { PLANT } from './palette';
@@ -45,21 +47,23 @@ const WORLD: Frame = { M: new THREE.Matrix4(), w: 0, d: 0, L: [0, 0], t: [1, 0],
 /* ---------- Materials ---------- */
 
 const CONC = toon(CONCRETE);
-const CONC_DARK = toon('#8b8277');
-const ROOF = toon('#6d6862');
-const PAVING = toon('#9b958c');
+const CONC_DARK = toon('#54575c');
+const ROOF = toon('#424448');
+const PAVING = toon('#7e8085');
 const PLY = toon('#a3804f');
 const HOARDING = toon('#55697f');
 const DOOR = toon('#1b1820');
 const GREEN = toon(PLANT.shrub);
 const ACCENT: Record<keyof typeof ACCENTS, THREE.Material> = { orange: toon(ACCENTS.orange), teal: toon(ACCENTS.teal), mustard: toon(ACCENTS.mustard) };
-/** Warm strip lights (under the galleries and bridges), the bridges' glass, the stair slots: dim by day, lit at night */
-const STRIP = neon('#ffcf86', 0.25, 1.25);
-const GLASS = neon('#ffe2b4', 0.16, 0.95);
-const SLOT = neon('#ffe0a6', 0.14, 0.9);
+/** Warm strip lights (under the galleries and bridges), the bridges' glass, the stair slots: dark glass by day (against the
+ * grey concrete, not a tan band), lit warm at night */
+const STRIP = neon('#ffcf86', 0.1, 1.25);
+const GLASS = lit(toon('#3b4656', { emissive: '#ffe2b4' }), 0, 0.95);
+const SLOT = lit(toon('#323b48', { emissive: '#ffe0a6' }), 0, 0.9);
 const BEACON = neon('#ff4a3a', 0.8, 2.2);
 const BUNKER_NEON = neon('#ff3fb0', 0.6, 1.7);
-const WALL = ATLAS.wall.panel;
+// (brutalist: board-marked grey concrete, deep balcony recesses with life in them; docs/brutalist-plan.md Phase 1)
+const WALL = ATLAS.wall.brutal;
 /** The entrance halls: the city's lobby glazing, warm and patchy at night (infill.ts `lobbyWarm`, Phase 6d) */
 const LOBBY = ATLAS.ground.lobbyWarm;
 /** The lobby band's height (downtown's `SHOP_H`); the ground floor's fascia over it to the first floor */
@@ -190,6 +194,17 @@ function parapet(b: Batch, a: Pt, c: Pt, n: Pt, top: number) {
   flat(b, [a, c, ci, ai], top + PARAPET, CONC);
 }
 
+/** A block's colour: a stripe `STRIPE_W` wide down the middle of a face, from `y0` to `y1`, standing just off it */
+const STRIPE_W = 1.6;
+function stripe(b: Batch, a: Pt, c: Pt, n: Pt, y0: number, y1: number, m: THREE.Material) {
+  const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  if (len < STRIPE_W + 0.4) return;
+  const t: Pt = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
+  const mid: Pt = [(a[0] + c[0]) / 2 + n[0] * 0.012, (a[1] + c[1]) / 2 + n[1] * 0.012];
+  const h = STRIPE_W / 2;
+  quad(b, [mid[0] - t[0] * h, mid[1] - t[1] * h], [mid[0] + t[0] * h, mid[1] + t[1] * h], y0, y1, n, m);
+}
+
 /** A gallery's line in runs, broken where a core stands out from it (the Rampart's: the way into its landing) */
 function openRuns(blk: Block, part: Pt[]): Pt[][] {
   const cores = CORES.filter((c) => c.of === blk.id && blk.kind === 'rampart').map((c) => alongOf(blk.spine!, c.at));
@@ -247,7 +262,7 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
         if (refit) along(b, a, c, 0.1, base, base + GROUND_H, HOARDING, -0.05 - 0.006);
         else if (glazed) {
           k.wall(LOBBY, a, c, base, base + LOBBY_H, n, u0 * 3);
-          quad(b, a, c, base + LOBBY_H, base + GROUND_H, n, acc);
+          quad(b, a, c, base + LOBBY_H, base + GROUND_H, n, CONC_DARK);
         } else quad(b, a, c, base, base + GROUND_H, n, CONC);
       } else quad(b, a, c, y0, base + GROUND_H + 2 * 1, n, CONC);
       const upper = arch ? floorY(base, 3) : base + GROUND_H;
@@ -255,6 +270,8 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
       else k.wall(WALL, a, c, upper, top, n, u0, 1);
       // The parapet over it (its outer face the wall's, carried up)
       parapet(b, a, c, n, top);
+      // Its colour: a bold stripe down the middle of each end, the block told apart by it
+      if (tag === 'start' || tag === 'end') stripe(b, a, c, n, upper, top + PARAPET, acc);
     });
     // Where it's taller than its neighbour, the parapet along that cut too
     ring.forEach((a, j) => {
@@ -278,14 +295,14 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
       const deck = [...inner, ...[...outer].reverse()];
       flat(b, deck, y, CONC);
       flat(b, deck, y - 0.16, CONC_DARK, false);
-      // (the front: a solid upstand, the block's colour, its outer face on the gallery's edge; open where a core stands
-      // out from it, southsky.ts `CORE_GAP`)
-      for (const run of openRuns(blk, part)) upstand(b, run, s * (blk.depth! / 2 + GALLERY_W), 0.12, y - 0.16, y + 0.62, acc);
+      // (the front: a solid concrete upstand, its outer face on the gallery's edge; open where a core stands out from
+      // it, southsky.ts `CORE_GAP`)
+      for (const run of openRuns(blk, part)) upstand(b, run, s * (blk.depth! / 2 + GALLERY_W), 0.12, y - 0.16, y + 0.62, CONC);
     });
     stripAlong(b, part, s * (blk.depth! / 2 + GALLERY_W - 0.3), 0.08, y - 0.18, STRIP);
   }
 
-  // Balconies on its other side (the slabs': the Rampart's road side has none), curved fronts in its colour
+  // Balconies on its other side (the slabs': the Rampart's road side has none), solid concrete fronts
   if (!low && blk.kind === 'slab')
     b.detail(() => {
       const face = shift(part, (-s * blk.depth!) / 2);
@@ -296,7 +313,7 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
         if (pts.length < 2) continue;
         const deck = [...face.filter((p) => !inRefit(p)), ...[...pts].reverse()];
         flat(b, deck, y + 0.04, CONC);
-        upstand(b, part.filter((p) => !inRefit(p)), -s * (blk.depth! / 2 + 0.55), 0.08, y - 0.04, y + 0.45, acc);
+        upstand(b, part.filter((p) => !inRefit(p)), -s * (blk.depth! / 2 + 0.55), 0.08, y - 0.04, y + 0.45, CONC);
       }
     });
   // Teasel's hoarded half: its windows boarded
@@ -330,32 +347,40 @@ function drawTower(b: Batch, t: Block, low: boolean) {
   const base = t.base;
   const top = roofY(base, storeysOf(t));
   const acc = accentOf(t);
+  const c = t.foot.reduce((m, p) => [m[0] + p[0] / t.foot.length, m[1] + p[1] / t.foot.length] as Pt, [0, 0] as Pt);
+  // (its colour's face: the one looking away from The Core between the twins)
+  const core = centre(blockById('twin-core').foot);
+  let away = 0;
+  let best = -Infinity;
+  ring.forEach((a, j) => {
+    const n = outward(ring, j);
+    const d = n[0] * (c[0] - core[0]) + n[1] * (c[1] - core[1]);
+    if (d > best) [best, away] = [d, j];
+  });
   let u = 0;
   k.all(() => {
     ring.forEach((a, j) => {
-      const c = ring[(j + 1) % ring.length];
+      const e = ring[(j + 1) % ring.length];
       const n = outward(ring, j);
       const u0 = u;
-      u += Math.hypot(c[0] - a[0], c[1] - a[1]) / WALL.tw;
-      k.wall(LOBBY, a, c, base, base + LOBBY_H, n, u0 * 3);
-      quad(b, a, c, base + LOBBY_H, base + GROUND_H, n, acc);
-      k.wall(WALL, a, c, base + GROUND_H, top, n, u0, 1);
-      parapet(b, a, c, n, top);
+      u += Math.hypot(e[0] - a[0], e[1] - a[1]) / WALL.tw;
+      k.wall(LOBBY, a, e, base, base + LOBBY_H, n, u0 * 3);
+      quad(b, a, e, base + LOBBY_H, base + GROUND_H, n, CONC_DARK);
+      k.wall(WALL, a, e, base + GROUND_H, top, n, u0, 1);
+      parapet(b, a, e, n, top);
+      if (j === away) stripe(b, a, e, n, base + GROUND_H, top + PARAPET, acc);
     });
     flat(b, ring, top - 0.002, ROOF);
-    // A ledge ring every third floor, its edge in the tower's colour
+    // A ledge ring every third floor, all concrete: a slab's edge standing out
     const out = grow(ring, 0.35);
     for (const f of SKY_FLOORS) {
       const y = floorY(base, f);
-      out.forEach((p, j) => quad(b, p, out[(j + 1) % out.length], y - 0.12, y + 0.14, outward(out, j), acc));
+      out.forEach((p, j) => quad(b, p, out[(j + 1) % out.length], y - 0.12, y + 0.14, outward(out, j), CONC));
       flat(b, out, y + 0.14, CONC);
       flat(b, out, y - 0.12, CONC_DARK, false);
     }
-    // The plant room, flared, and its beacon
-    const c = t.foot.reduce((m, p) => [m[0] + p[0] / t.foot.length, m[1] + p[1] / t.foot.length] as Pt, [0, 0] as Pt);
-    const seg = low ? 12 : 20;
-    b.add(plain(new THREE.CylinderGeometry(TOWER_HALF * 0.8, TOWER_HALF * 0.62, PLANT_H, seg).translate(c[0], top + PLANT_H / 2, c[1])), CONC);
-    b.add(plain(new THREE.CylinderGeometry(TOWER_HALF * 0.82, TOWER_HALF * 0.82, 0.18, seg).translate(c[0], top + PLANT_H - 0.05, c[1])), acc);
+    // The plant room: a plain concrete box set back on the roof, its corners cut as the tower's, and its beacon
+    prism(b, grow(ring, -TOWER_HALF * 0.3), top, top + PLANT_H, CONC, ROOF);
     b.add(plain(new THREE.CylinderGeometry(0.05, 0.05, BEACON_H, 6).translate(c[0], top + PLANT_H + BEACON_H / 2, c[1])), CONC_DARK);
     b.add(plain(new THREE.SphereGeometry(0.13, 8, 6).translate(c[0], top + PLANT_H + BEACON_H, c[1])), BEACON);
   });

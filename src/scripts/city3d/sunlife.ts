@@ -255,9 +255,11 @@ export const SUN_IDLE: Idle[] = (() => {
       }
     }
     if (i % 5 === 1) {
-      // (beside the grill on the patio, facing it along the house's back)
+      // (beside the grill on the patio, facing it along the house's back; not where a turned house's solid cells reach
+      // past its back wall, as they do over a shallow back yard: Phase 6's houses round Ocotillo Court)
       const [x, z] = toWorld(h, y.grill.u - 0.6, y.grill.v);
-      out.push({ x, z, y: SLAB_Y, ry: facing(h.u[0], h.u[1]), act: 'cook' });
+      const cells = h.parts.flatMap((q) => partBoxes(h, q.u0, q.u1, q.v0, q.v1, 0));
+      if (!cells.some((b) => x > b[0] - 0.15 && x < b[2] + 0.15 && z > b[1] - 0.15 && z < b[3] + 0.15)) out.push({ x, z, y: SLAB_Y, ry: facing(h.u[0], h.u[1]), act: 'cook' });
     }
     if (i % 8 === 2) {
       const [pu0, pv0, pu1, pv1] = y.patio;

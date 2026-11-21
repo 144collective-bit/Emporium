@@ -24,6 +24,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { FONT_DISPLAY, canvasTex, fx, glowTex, neon, paintMat, sharedFor, toon } from './kit';
+import { lazy } from './lazy';
+import { FAR_PHONE, LOD_EYE } from './lod';
+import { isNear } from './tiles';
 import type { AircraftKind, Pose } from './airfield';
 import {
   BIZ_BODY,
@@ -53,7 +56,7 @@ import {
 /** Every model: the airport's three kinds, the freighter (an airliner in cargo trim) and the players' small jet (Phase 2) */
 export type ModelKind = AircraftKind | 'bizjet' | 'freighter';
 
-type Role = 'body' | 'accent' | 'neon' | 'strobe' | 'gear' | 'decal';
+export type Role = 'body' | 'accent' | 'neon' | 'strobe' | 'gear' | 'decal';
 interface Spinner {
   blades: THREE.BufferGeometry;
   blur: THREE.BufferGeometry;
@@ -78,10 +81,10 @@ export interface AircraftModel {
 /* ---------- Building blocks ---------- */
 
 const C = (hex: string) => new THREE.Color(hex);
-const WHITE = C('#eceaf6');
+export const WHITE = C('#eceaf6');
 const BELLY = C('#b9b4d6');
-const GREY = C('#d9d4ef');
-const INK = C('#1b1830');
+export const GREY = C('#d9d4ef');
+export const INK = C('#1b1830');
 const GLASS = C('#24305e');
 const METAL = C('#8f8ab0');
 const TYRE = C('#17151f');
@@ -94,7 +97,7 @@ const pulseAt = (f: number, out = new THREE.Color()) => {
 };
 
 /** Strip a geometry to positions and normals (and uvs or vertex colours), non-indexed, so the parts merge */
-function clean(g: THREE.BufferGeometry, uv = false, color = false) {
+export function clean(g: THREE.BufferGeometry, uv = false, color = false) {
   const n = g.index ? g.toNonIndexed() : g;
   for (const k of Object.keys(n.attributes)) if (k !== 'position' && k !== 'normal' && !(uv && k === 'uv') && !(color && k === 'color')) n.deleteAttribute(k);
   if (!n.attributes.normal) n.computeVertexNormals();
@@ -658,6 +661,16 @@ function materials() {
   return mats;
 }
 
+/* ---------- Far off (docs/phone-far-plan.md Phase 2) ---------- */
+
+/** The far pieces (aircraftfar.ts): loaded the first time a fleet on a phone has one far off, so the boot doesn't carry them */
+const loadFar = lazy(() => import('./aircraftfar'), 'far aircraft');
+
+/** Whether an aircraft at x, y, z (its half size `r`) is drawn near, by the camera's last place (`LOD_EYE`), as the places are */
+export function aircraftNear(x: number, y: number, z: number, r: number, wasNear: boolean, eye = LOD_EYE) {
+  return isNear(Math.max(0, Math.hypot(x - eye.x, y - eye.y, z - eye.z) - r), eye.far, wasNear);
+}
+
 /* ---------- Fleets ---------- */
 
 const Q = new THREE.Quaternion();
@@ -723,6 +736,20 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
   const legs = model.legs.map((k) => ({ ...k, im: inst(k.geo, m.gear, true, n * k.legs.length) }));
   const frame: Airframe[] = Array.from({ length: n }, () => newAirframe());
   const L = new THREE.Matrix4();
+  // Far off on phones: the fleet's far ones in one piece each, one instanced mesh (made the first time one's far), and
+  // each aircraft near or far by its own distance; the near parts drawn only while one is near
+  let far: THREE.InstancedMesh | null = null;
+  let farLoading = false;
+  const near = new Array<boolean>(n).fill(true);
+  const reach = Math.max(model.length, model.span) / 2;
+  /** Every near part, and how many instances each has an aircraft (the surfaces and legs several) */
+  const nearParts: [THREE.InstancedMesh, number][] = [
+    ...parts.map((x) => [x.im, 1] as [THREE.InstancedMesh, number]),
+    ...spins.flatMap((sp) => [sp.blades, sp.blur].map((im) => [im, 1] as [THREE.InstancedMesh, number])),
+    ...legs.map((k) => [k.im, k.legs.length] as [THREE.InstancedMesh, number]),
+    ...(surf ? [[surf, F.length] as [THREE.InstancedMesh, number]] : []),
+    [shadow, 1],
+  ];
 
   return {
     group,
@@ -744,17 +771,42 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
         F.forEach((f, j) => f.paint === 'accent' && surf.setColorAt(i * F.length + j, paintOf(f, i)));
         surf.instanceColor!.needsUpdate = true;
       }
+      if (far) {
+        far.setColorAt(i, new THREE.Color(hex));
+        far.instanceColor!.needsUpdate = true;
+      }
       if (!accent) return;
       accent.setColorAt(i, new THREE.Color(hex));
       accent.instanceColor!.needsUpdate = true;
     },
     update(t: number, dt: number) {
+      // (phones: each aircraft past the tier's `far` in one piece, a fleet's far ones one draw: lod.ts `FAR_PHONE`;
+      // its piece loaded the first time, every one drawn near till then)
+      if (FAR_PHONE.on && !far && !farLoading) {
+        farLoading = true;
+        void loadFar().then((m) => {
+          far = inst(m.farGeometry(model), m.farMaterial(), false);
+          liveries.forEach((c, i) => far!.setColorAt(i, new THREE.Color(c)));
+        });
+      }
+      let nNear = 0;
+      let nPosed = 0;
       for (let i = 0; i < n; i++) {
         const p = poses[i];
         if (!p) continue;
+        nPosed++;
         poseMatrix(p, M);
         // Hidden parts shrink to nothing where the aircraft is (not at the world's origin, which would stretch the bounds)
         HIDE.copy(M).scale(NONE);
+        near[i] = !far || aircraftNear(p.x, p.y, p.z, reach, near[i]);
+        far?.setMatrixAt(i, near[i] ? HIDE : M);
+        if (!near[i]) {
+          // (far: in one piece; its near parts hidden, its airframe still kept up to date for when it's near again)
+          stepAirframe(frame[i], p, dt);
+          for (const [im, per] of nearParts) for (let j = 0; j < per; j++) im.setMatrixAt(i * per + j, HIDE);
+          continue;
+        }
+        nNear++;
         for (const { role, im } of parts) {
           if (role === 'strobe' && (t * 1.1 + i * 0.37) % 1 > 0.12) im.setMatrixAt(i, HIDE);
           else im.setMatrixAt(i, M);
@@ -781,9 +833,17 @@ export function createFleet(kind: ModelKind, liveries: string[]) {
           T.compose(V.set(p.x, 0.04, p.z), Q.setFromAxisAngle(UP, p.yaw), SIZE.set(Math.max(1e-4, model.length * k * 1.05), 1, Math.max(1e-4, model.span * 0.55 * k)))
         );
       }
-      for (const im of [...parts.map((x) => x.im), ...spins.flatMap((sp) => [sp.blades, sp.blur]), ...legs.map((k) => k.im), ...(surf ? [surf] : []), shadow]) {
+      // (the near parts drawn only while one of the fleet is near, the far piece only while one's far)
+      for (const [im] of nearParts) {
+        im.visible = nNear > 0;
+        if (!im.visible) continue;
         im.instanceMatrix.needsUpdate = true;
         im.computeBoundingSphere();
+      }
+      if (far) {
+        far.visible = nNear < nPosed;
+        far.instanceMatrix.needsUpdate = true;
+        if (far.visible) far.computeBoundingSphere();
       }
     },
   };

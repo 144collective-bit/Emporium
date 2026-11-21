@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { boxDistance, isNear } from './tiles';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { litOf, nightU, toon } from './kit';
+import { OCCLUDED, litOf, nightU, toon } from './kit';
 
 interface Switch {
   /** Show the near form (true) or the far one */
@@ -48,8 +48,97 @@ export function addLod(near: THREE.Object3D[], far: THREE.Object3D[], box: THREE
   }, box);
 }
 
+/** Where the camera was at the last `updateLods()`, and the tier's `far`: what swaps its own far forms (aircraft.ts) reads it */
+export const LOD_EYE = { x: 0, y: 0, z: 0, far: Infinity };
+
+/**
+ * Phones (index.ts; docs/phone-far-plan.md): the far city in fewer draws. The places' far forms in one piece (facades
+ * flattened too), each aircraft in one piece (aircraft.ts), small cut-out signs and what's given to `hideFar()` not
+ * drawn past `far`, and the places' kept glows not drawn while they're dark
+ */
+export const FAR_PHONE = { on: false };
+
+/** Hidden past `far` on phones: its place (a sphere round it, worked out now and then) and whether it's near */
+interface Hide {
+  o: THREE.Object3D;
+  at: THREE.Vector3;
+  r: number;
+  near: boolean;
+}
+const HIDES: Hide[] = [];
+/** Phones: `o` (every mesh in it) not drawn past `far`, by its layers, so code that shows or hides it still can */
+export function hideFar(o: THREE.Object3D) {
+  HIDES.push({ o, at: new THREE.Vector3(), r: 0, near: true });
+}
+/** The kept parts' see-through materials: on phones not drawn while they're clear (a floodlight's glow by day) */
+const FADES = new Set<THREE.Material>();
+/** Cut-out signs smaller than this (tiles², its face) are hidden far off on phones, as the far forms leave them out */
+const SIGN_FAR = 1.5;
+let hideTick = 0;
+const BOX = new THREE.Box3();
+const SPHERE = new THREE.Sphere();
+const SIZE3 = new THREE.Vector3();
+
+/** In the scene still (not taken out, as a rebuilt unit's old sign is) */
+const inScene = (o: THREE.Object3D) => {
+  let p = o;
+  while (p.parent) p = p.parent;
+  return (p as THREE.Scene).isScene === true;
+};
+/** Take the new cut-out signs, and every couple of seconds work out where each is again (and drop those gone) */
+function refreshHides() {
+  while (OCCLUDED.length) {
+    const m = OCCLUDED.pop()!;
+    if (!m.geometry.boundingBox) m.geometry.computeBoundingBox();
+    m.geometry.boundingBox!.getSize(SIZE3).multiply(m.scale);
+    const [a, b] = [SIZE3.x, SIZE3.y, SIZE3.z].sort((p, q) => q - p);
+    if (a * b < SIGN_FAR) hideFar(m);
+  }
+  if (hideTick++ % 120) return;
+  for (let i = HIDES.length - 1; i >= 0; i--) {
+    const h = HIDES[i];
+    if (!h.o.parent) continue;
+    if (!inScene(h.o)) {
+      HIDES.splice(i, 1);
+      continue;
+    }
+    BOX.setFromObject(h.o).getBoundingSphere(SPHERE);
+    h.at.copy(SPHERE.center);
+    h.r = SPHERE.radius;
+  }
+}
+/** Show or hide each mesh in `o` by its layers (its own saved while hidden) */
+function layersFar(o: THREE.Object3D, far: boolean) {
+  o.traverse((c) => {
+    if (far) {
+      if (c.userData.farMask === undefined) c.userData.farMask = c.layers.mask;
+      c.layers.mask = 0;
+    } else if (c.userData.farMask !== undefined) {
+      c.layers.mask = c.userData.farMask as number;
+      delete c.userData.farMask;
+    }
+  });
+}
+/** Phones, each frame: the small things hidden past `far`, the dark glows not drawn */
+function updatePhoneFar(x: number, y: number, z: number, far: number) {
+  refreshHides();
+  for (const h of HIDES) {
+    if (!h.r) continue;
+    const near = isNear(Math.max(0, Math.hypot(h.at.x - x, h.at.y - y, h.at.z - z) - h.r), far, h.near);
+    if (near === h.near) continue;
+    h.near = near;
+    layersFar(h.o, !near);
+  }
+  for (const m of FADES) m.visible = m.opacity > 0.002;
+}
+
 /** Swap every switch for a camera at x, y, z (near within `far`); `now` (ms) times the freeing of near forms */
 export function updateLods(x: number, y: number, z: number, far: number, now = performance.now()) {
+  LOD_EYE.x = x;
+  LOD_EYE.y = y;
+  LOD_EYE.z = z;
+  LOD_EYE.far = far;
+  if (FAR_PHONE.on) updatePhoneFar(x, y, z, far);
   for (const s of SWITCHES) {
     const { min, max } = s.box;
     const near = isNear(boxDistance(x, y, z, min.x, min.y, min.z, max.x, max.y, max.z), far, s.isNear);
@@ -226,7 +315,8 @@ function wanted(group: THREE.Object3D) {
   const want = new Set<THREE.Texture>();
   group.updateMatrixWorld(true);
   const parts = group.children.filter((c) => !keeps(c));
-  const facades = new Set(parts.filter(isFacade));
+  // (phones: no facades kept, every one flattened)
+  const facades = new Set(FAR_PHONE.on ? [] : parts.filter(isFacade));
   collecting = want;
   try {
     for (const part of parts)
@@ -385,7 +475,8 @@ function keeps(o: THREE.Object3D) {
       if ((mat as THREE.ShaderMaterial).isShaderMaterial || mat.blending === THREE.AdditiveBlending || (mat.transparent && mat.opacity < 0.95)) keep = true;
     if ((c as THREE.InstancedMesh).isInstancedMesh && (c as THREE.InstancedMesh).instanceMatrix.usage !== THREE.StaticDrawUsage) keep = true;
     // Inside a group, a big textured surface stays too (a facade of windows: flattened it would lose them)
-    if (c !== o && isFacade(c)) keep = true;
+    // (phones flatten them too: the far form in one piece)
+    if (c !== o && !FAR_PHONE.on && isFacade(c)) keep = true;
   });
   return keep;
 }
@@ -467,6 +558,14 @@ function areaOf(m: THREE.Mesh) {
 export function farForm(group: THREE.Object3D) {
   group.updateMatrixWorld(true);
   const parts = [...group.children].filter((c) => !keeps(c));
+  // (phones: the kept parts' see-through materials not drawn while they're clear)
+  if (FAR_PHONE.on)
+    for (const c of group.children)
+      if (!parts.includes(c))
+        c.traverse((o) => {
+          const m = (o as THREE.Mesh).material;
+          for (const x of m ? (Array.isArray(m) ? m : [m]) : []) if (x.transparent) FADES.add(x);
+        });
   if (!parts.length) return null;
   const nearRoot = new THREE.Group();
   nearRoot.name = `${group.name || 'place'}-near`;
@@ -474,8 +573,8 @@ export function farForm(group: THREE.Object3D) {
   group.add(nearRoot);
   nearRoot.updateMatrixWorld(true);
   const inv = group.matrixWorld.clone().invert();
-  // The facades keep their textures (merged per material); everything else is flattened
-  const facades = parts.filter(isFacade) as THREE.Mesh[];
+  // The facades keep their textures (merged per material); everything else is flattened (phones: all of it, one piece)
+  const facades = (FAR_PHONE.on ? [] : parts.filter(isFacade)) as THREE.Mesh[];
   const geo = flatten(nearRoot, inv, new Set(facades));
   const farRoot = new THREE.Group();
   farRoot.name = `${group.name || 'place'}-far`;

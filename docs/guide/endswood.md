@@ -12,6 +12,10 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   night and sound (6). What's left over (the plan's last section): the city-wide far view on phones (its own plan),
   a grassed block's straight edge in the estate band, the platform benches' collisions, the ride bar naming a
   two-line trip's last stop.
+- **The estate made brutalist** (the owner's ask, 2026-11-21, `docs/brutalist-plan.md`, for the owner's sign-off):
+  the blocks re-dressed in raw grey concrete, separate service towers, the twins joined at the top under a hexagonal
+  lookout, pipes and kit on the walls, grit at street level; then lobbies, a flat of Degen's own, a launderette and a
+  corner shop under the deck, and the lookout as a rooftop hangout. Until it's built, the blocks below are as they are.
 - **The street web** is `south.ts` (DOM-free, the boot's, tested in `tests/south.test.ts`), built on `streetfaces.ts`
   (DOM-free: `smooth()` lines through control points, `node()` putting a shared point wherever lines meet or cross,
   `faces()` tracing the blocks between them, Sunridge's way made general). In it:
@@ -62,16 +66,22 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   their streets (`alongStreet()`: the street moved off to its side); a block's base is its slab over the highest ground
   under it. `stepShape()` gives each step's outline with its edges tagged (its sides, rounded corners, ends, the cuts
   where steps meet; `outward()` their normals), which is what's drawn.
-- **The blocks drawn** (`southblocks3d.ts`, sites a step, a tower, a core, a bridge span, the deck): the wall atlas's
-  `panel` band (precast panels, ribbon windows lit at night) over a glazed ground floor (`lobby` band and an accent
-  fascia) on the galleried side and the ends, concrete on the other; the taller step's wall where steps meet; roofs and
-  parapets; the Rampart's arch (soffit, piers' faces); galleries at every third floor (deck, accent upstand, warm strip
-  light under it); balconies with accent fronts on the slabs' other sides, Teasel's boarded windows and hoarding, sky
-  garden planters on the roofs (near only, not on phones); the towers' ledge rings, flared plant room and beacon; the
-  cores' lit stair slots; the bridges (concrete, a glass band each side lit warm at night, a strip light under); the
-  podium deck on its columns; Bunker Sound's door with its neon. Built with `lift: false` (kit.ts `Batch.build()`):
-  they stand level on their plinths, not on the rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in
-  solids.ts. Bench views `south-blocks` and `south-rampart`.
+- **The blocks drawn** (`southblocks3d.ts`, sites a step, a tower, a core, a bridge span, the deck), brutalist since
+  `docs/brutalist-plan.md` Phase 1 (2026-11-21): the wall atlas's `brutal` band (infill.ts `recessRow()`: board-marked
+  grey concrete, the slab's edge at each floor, a fin between each two-bay balcony recess, the window and door at the
+  back, a solid front over the recess's foot with its life on it, `recessLife()` in facade.ts: a plant, a dish, an
+  air-con unit, a bike, washing now and then, the odd front painted, mostly plain; rain streaks) over a glazed ground
+  floor (`lobby` band and a dark concrete fascia) on the galleried side and the ends, concrete on the other; the taller
+  step's wall where steps meet; roofs and parapets; each block's colour (`ACCENTS`) a stripe down its ends (a tower's
+  down its face away from The Core), the rest all concrete (`CONCRETE`, a cool grey); the corners chamfered
+  (southblocks.ts `CUT`, `CORNER_R`); the Rampart's arch (soffit, piers' faces); galleries at every third floor (deck,
+  concrete upstand, warm strip light under it); balconies with concrete fronts on the slabs' other sides, Teasel's
+  boarded windows and hoarding, sky garden planters on the roofs (near only, not on phones); the towers' ledge rings, a
+  concrete plant room box and beacon; the cores' stair slots; the bridges (concrete, a glass band each side); the glass
+  and the slots dark glass by day, lit warm at night (`lit()` toons); the podium deck on its columns; Bunker Sound's door
+  with its neon. Built with `lift: false` (kit.ts `Batch.build()`): they stand level on their plinths, not on the
+  rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in solids.ts. Bench views `south-blocks` and
+  `south-rampart`.
 - **The sky network walked** (`southsky.ts`, DOM-free, tested in `tests/southsky.test.ts`, docs/south-plan.md 2c):
   `SKY_SHAPES` (the galleries, the bridges, the podium deck, the cores' open landings, the ways through the Rampart's
   gallery fronts, The Core's stair and landing), `skyFloorAt()` (groundheight.ts's `sky` layer, before `south`),
