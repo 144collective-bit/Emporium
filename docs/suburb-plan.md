@@ -344,8 +344,7 @@ These are my recommendations, made so the plan is complete; any can change.
      their garage doors, kids on bikes and scooters and hoops over the
      garages, the ice-cream van at the park, swimmers, seasonal porch
      decorations, the rest of Ocotillo Court's lots.
-8. **The gardens and the land behind** (built, waiting on the owner's
-   sign-off; the owner, 2026-11-21: "do them all then lets work fixing the
+8. **The gardens and the land behind** (built, signed off 2026-11-21; the owner, 2026-11-21: "do them all then lets work fixing the
    garden fences. i want the fences to be moved to suit the existing wasted
    space. scan the entire area of sunridge ... extend some gardens to use the
    wasted space"):
