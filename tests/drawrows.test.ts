@@ -3,7 +3,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import * as THREE from "three";
-import { captureDraws, drawName, makerOf } from "../src/scripts/city3d/drawrows";
+import { captureDraws, drawName, makerOf, nearestCopy } from "../src/scripts/city3d/drawrows";
 
 const box = new THREE.BoxGeometry(1, 1, 1);
 const mesh = (name = "", color = "#ff0000") => {
@@ -150,4 +150,18 @@ test('the draw breakdown counts only what three draws: not an instanced mesh wit
     out.rows.map((r) => r.what),
     ['cars']
   );
+});
+
+test('the draw breakdown puts an instanced mesh as far off as its nearest copy, not its bounds', () => {
+  const m = new THREE.InstancedMesh(new THREE.BoxGeometry(2, 2, 2), new THREE.MeshBasicMaterial(), 3);
+  const M = new THREE.Matrix4();
+  m.setMatrixAt(0, M.makeTranslation(-400, 0, 0));
+  m.setMatrixAt(1, M.makeTranslation(400, 0, 0));
+  // (a hidden copy, scaled to nothing, right by the eye: not counted)
+  m.setMatrixAt(2, M.makeScale(0, 0, 0).setPosition(1, 0, 0));
+  m.updateMatrixWorld();
+  const at = new THREE.Sphere();
+  const d = nearestCopy(m, new THREE.Vector3(300, 0, 0), at);
+  assert.ok(Math.abs(d - (100 - Math.sqrt(3))) < 1e-6, String(d));
+  assert.equal(at.center.x, 400);
 });

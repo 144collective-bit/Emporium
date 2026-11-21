@@ -58,6 +58,28 @@ export function drawsAnything(obj: THREE.Object3D) {
   return true;
 }
 
+const IM = new THREE.Matrix4();
+const IP = new THREE.Vector3();
+/** How far an instanced mesh's nearest copy (that's drawn) is from `eye`, its geometry's size off; `at` set to it */
+export function nearestCopy(m: THREE.InstancedMesh, eye: THREE.Vector3, at: THREE.Sphere) {
+  if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
+  const r = m.geometry.boundingSphere?.radius ?? 0;
+  let best = Infinity;
+  for (let i = 0; i < m.count; i++) {
+    m.getMatrixAt(i, IM);
+    IM.premultiply(m.matrixWorld);
+    // (a hidden copy is scaled to nothing)
+    if (IM.determinant() === 0) continue;
+    IP.setFromMatrixPosition(IM);
+    const d = eye.distanceTo(IP);
+    if (d < best) {
+      best = d;
+      at.center.copy(IP);
+    }
+  }
+  return best === Infinity ? Infinity : Math.max(0, best - r);
+}
+
 export function captureDraws(renderer: { renderBufferDirect: Draw; info?: { render: { calls: number } } }, scene: THREE.Object3D, camera: THREE.Camera, render: () => void, far: number): DrawBreakdown {
   const rows = new Map<string, DrawRow & { seen: Set<THREE.Object3D> }>();
   const byPass: Record<DrawPass, number> = { main: 0, outline: 0, shadow: 0, post: 0 };
@@ -71,7 +93,8 @@ export function captureDraws(renderer: { renderBufferDirect: Draw; info?: { rend
     const pass: DrawPass = sc !== scene ? 'post' : cam === camera ? 'main' : (cam as THREE.OrthographicCamera).isOrthographicCamera ? 'shadow' : 'outline';
     if (!geo.boundingSphere) geo.computeBoundingSphere();
     sphere.copy(geo.boundingSphere ?? sphere.set(new THREE.Vector3(), 0)).applyMatrix4(obj.matrixWorld);
-    const d = Math.max(0, eye.distanceTo(sphere.center) - sphere.radius);
+    // (an instanced mesh: how far its nearest copy is, not its bounds, which can span the city)
+    const d = (obj as THREE.InstancedMesh).isInstancedMesh ? nearestCopy(obj as THREE.InstancedMesh, eye, sphere) : Math.max(0, eye.distanceTo(sphere.center) - sphere.radius);
     const what = drawName(obj, mat);
     const key = `${pass}|${what}`;
     let row = rows.get(key);
