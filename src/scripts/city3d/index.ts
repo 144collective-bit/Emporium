@@ -653,8 +653,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   bootAt.tiled = performance.now();
   // Each place's far form (growth plan Phase 2): a couple of draws far away instead of one per material.
   // Made after the boot, a place at a time in spare moments (each stays near until it has one)
-  // (phones: the swing bridge too, its turning span kept as it is: docs/phone-far-plan.md Phase 3)
-  const farQueue = [...spots.map((sp) => sp.group), ...['garage', 'market', ...(FAR_PHONE.on ? ['swing-bridge'] : [])].flatMap((n) => scene.getObjectByName(n) ?? [])];
+  const farQueue = [...spots.map((sp) => sp.group), ...['garage', 'market'].flatMap((n) => scene.getObjectByName(n) ?? [])];
   const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(() => f(), { timeout: 400 }) : setTimeout(f, 60));
   const nextFar = () => {
     const g = farQueue.shift();
