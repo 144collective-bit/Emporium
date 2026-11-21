@@ -58,12 +58,16 @@ const ACCENT: Record<keyof typeof ACCENTS, THREE.Material> = { orange: toon(ACCE
 /** Warm strip lights (under the galleries and bridges), the bridges' glass, the stair slots: dark glass by day (against the
  * grey concrete, not a tan band), lit warm at night */
 const STRIP = neon('#ffcf86', 0.1, 1.25);
+/** A tired tube: the odd link's light stuttering (still under reduced motion: kit.ts `lit()`) */
+const STRIP_TIRED = neon('#ffcf86', 0.1, 1.25, 0.55);
 const GLASS = lit(toon('#3b4656', { emissive: '#ffe2b4' }), 0, 0.95);
 const SLOT = lit(toon('#323b48', { emissive: '#ffe0a6' }), 0, 0.9);
 const BEACON = neon('#ff4a3a', 0.8, 2.2);
 const BUNKER_NEON = neon('#ff3fb0', 0.6, 1.7);
 // (brutalist: board-marked grey concrete, deep balcony recesses with life in them; docs/brutalist-plan.md Phase 1)
 const WALL = ATLAS.wall.brutal;
+/** The gallery sides: the flats' front doors and kitchen windows off the deck, tags, grime (the brutalist plan's polish) */
+const WALL_DECK = ATLAS.wall.brutalDeck;
 /** The entrance halls: the city's lobby glazing, warm and patchy at night (infill.ts `lobbyWarm`, Phase 6d) */
 const LOBBY = ATLAS.ground.lobbyWarm;
 /** The lobby band's height (downtown's `SHOP_H`); the ground floor's fascia over it to the first floor */
@@ -267,7 +271,7 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
       } else quad(b, a, c, y0, base + GROUND_H + 2 * 1, n, CONC);
       const upper = arch ? floorY(base, 3) : base + GROUND_H;
       if (refit) quad(b, a, c, upper, top, n, CONC_DARK);
-      else k.wall(WALL, a, c, upper, top, n, u0, 1);
+      else k.wall(tag === galleryTag ? WALL_DECK : WALL, a, c, upper, top, n, u0, 1);
       // The parapet over it (its outer face the wall's, carried up)
       parapet(b, a, c, n, top);
       // Its colour: a bold stripe down the middle of each end, the block told apart by it
@@ -479,7 +483,7 @@ const centre = (ring: Pt[]): Pt => [ring.reduce((s, p) => s + p[0], 0) / ring.le
 
 /* ---------- The bridges, the podium deck, Bunker Sound's door ---------- */
 
-function drawBridge(b: Batch, a: Pt, c: Pt, y: number) {
+function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material = STRIP) {
   const k = kit(b, WORLD);
   const w = BRIDGE_HALF * 2;
   k.all(() => {
@@ -490,7 +494,26 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number) {
     }
     along(b, a, c, w + 0.12, y + 1.5, y + 1.68, CONC);
   });
-  along(b, a, c, 0.1, y - 0.24, y - 0.2, STRIP);
+  along(b, a, c, 0.1, y - 0.24, y - 0.2, strip);
+}
+
+/**
+ * A link's mouth on the gallery (the brutalist plan's polish): a concrete portal, a post each side and a lintel across,
+ * so the gallery's front and the link's parapets meet at it, not at a kink
+ */
+function drawPortal(b: Batch, a: Pt, c: Pt, y: number) {
+  const k = kit(b, WORLD);
+  const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+  const t: Pt = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+  const r: Pt = [-t[1], t[0]];
+  const h = BRIDGE_HALF + 0.08;
+  k.all(() => {
+    for (const side of [-1, 1]) {
+      const m: Pt = [a[0] + r[0] * side * h, a[1] + r[1] * side * h];
+      along(b, [m[0] - t[0] * 0.15, m[1] - t[1] * 0.15], [m[0] + t[0] * 0.15, m[1] + t[1] * 0.15], 0.3, y - 0.2, y + 1.7, CONC);
+    }
+    along(b, [a[0] - t[0] * 0.15, a[1] - t[1] * 0.15], [a[0] + t[0] * 0.15, a[1] + t[1] * 0.15], h * 2 + 0.3, y + 1.68, y + 1.92, CONC);
+  });
 }
 
 function drawDeck(b: Batch, poly: Pt[], y: number, base: number) {
@@ -793,7 +816,13 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       const landings = coreFloors(c.id).map((f) => floorY(blk.base, f));
       drawCore(b, c.foot, blk.base, c.top, c.at, [near], landings, lift.door);
       // A service tower standing off its block: a covered link from the gallery to it at each landing
-      if (c.link) for (const y of landings) drawBridge(b, c.link[0], c.link[1], y);
+      // (its portal at the gallery; every fourth tower's link lights tired, stuttering)
+      const tired = CORES.indexOf(c) % 4 === 3;
+      if (c.link)
+        for (const y of landings) {
+          drawBridge(b, c.link[0], c.link[1], y, tired ? STRIP_TIRED : STRIP);
+          drawPortal(b, c.link[0], c.link[1], y);
+        }
       drawBoilerHouse(b, c, near);
       b.build(into, opts);
     })

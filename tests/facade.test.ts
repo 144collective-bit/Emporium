@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BALCONY_DOOR, CELL_W, COLS, END_MIN, LINTEL, PANES, PX, RECESS, RECESS_LIFE, REACH, ROWS, baysOf, recessLife, styleOf, windowsOf, type FacadeStyle } from '../src/scripts/city3d/facade';
+import { BALCONY_DOOR, CELL_W, COLS, END_MIN, LINTEL, PANES, PX, DECK, DECK_LIFE, RECESS, RECESS_LIFE, REACH, ROWS, baysOf, deckLife, recessLife, styleOf, windowsOf, type FacadeStyle } from '../src/scripts/city3d/facade';
 import { FLOOR, INFILL, bodyOf } from '../src/scripts/city3d/downtown';
 import { WINDOW_TYPE } from '../src/scripts/city3d/windows';
 
@@ -101,4 +101,16 @@ test('the brutalist recesses (docs/brutalist-plan.md Phase 1): the window inside
   assert.ok(share('none') >= 0.25, `plain ${share('none')}`);
   assert.ok(share('washing') <= 0.1, `washing ${share('washing')}`);
   for (const k of new Set(RECESS_LIFE)) assert.ok(share(k) > 0, k);
+});
+
+test('the gallery sides (the brutalist plan): a door and a kitchen window a flat, mostly plain, rough at the edges', () => {
+  const p = PANES.deck;
+  // (the window clear of the door and the meter cupboard, inside its two bays)
+  assert.equal(p.span, 2);
+  assert.ok(p.x > DECK.meter.x + DECK.meter.w && DECK.meter.x > DECK.door.x + DECK.door.w && p.x + p.w < 96);
+  const all = Array.from({ length: 40 }, (_, seed) => Array.from({ length: ROWS }, (_, row) => Array.from({ length: COLS / 2 }, (_, i) => deckLife(60 + seed, row, i)))).flat(2);
+  const share = (k: string) => all.filter((x) => x === k).length / all.length;
+  assert.ok(share('plain') >= 0.4, `plain ${share('plain')}`);
+  assert.ok(share('boarded') <= 0.12 && share('tag') <= 0.2, `boarded ${share('boarded')}, tags ${share('tag')}`);
+  for (const k of new Set(DECK_LIFE)) assert.ok(share(k) > 0, k);
 });
