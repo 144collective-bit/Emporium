@@ -49,10 +49,9 @@ const Y = { apron: 0.024, avenue: 0.026, line: 0.032, park: 0.025, bay: 0.031 };
 const STEEL = toon('#8d93a6');
 const STEEL_DARK = toon('#5f6478');
 const WIRE = toon('#4d5163');
-/** The wall's precast concrete, its footing and its panels' posts (a cooler grey than the city's wall, a touch lighter) */
+/** The wall's precast concrete (a cooler grey than the city's wall, a touch lighter); its footing, capping and posts are
+ * `CONCRETE_DARK`: two materials a stretch, so two draws on a phone (Phase 6's polish) */
 const PANEL = toon('#aeacbb');
-const FOOT = toon('#858294');
-const PANEL_POST = toon('#9896a8');
 const WALL_LAMP = soft('#fff1d0');
 const ASPHALT = toon(ROAD.asphalt);
 const LINE = toon(ROAD.line);
@@ -129,8 +128,8 @@ function wall(b: Batch, a: Pt, c: Pt, low: boolean) {
   bar(b, a, c, (FENCE_H - CAP_H) / 2, FENCE_T, PANEL, FENCE_H - CAP_H);
   bar(b, a, c, FENCE_H - CAP_H / 2, FENCE_T + 2 * WALL_CAP, CONCRETE_DARK, CAP_H);
   // (the footing: a darker band at the foot, standing a little proud of both faces)
-  bar(b, a, c, FOOT_H / 2, FENCE_T + 0.1, FOOT, FOOT_H);
-  const post = (x: number, z: number, w: number, d: number, h: number) => b.add(new THREE.BoxGeometry(w, h, d).rotateY(-Math.atan2(uz, ux)).translate(x, h / 2, z), PANEL_POST);
+  bar(b, a, c, FOOT_H / 2, FENCE_T + 0.1, CONCRETE_DARK, FOOT_H);
+  const post = (x: number, z: number, w: number, d: number, h: number) => b.add(new THREE.BoxGeometry(w, h, d).rotateY(-Math.atan2(uz, ux)).translate(x, h / 2, z), CONCRETE_DARK);
   for (const [x, z] of [a, c]) post(x, z, 0.34, FENCE_T + 0.08, FENCE_H - CAP_H + 0.01);
   if (low) return;
   b.detail(() => {
@@ -182,7 +181,7 @@ function gate(b: Batch, g: Gate, low: boolean) {
   const LEAF = FENCE_H - 0.35;
   bar(b, w, e, 0.03, 0.22, STEEL_DARK, 0.06);
   bar(b, w, e, 0.08 + LEAF / 2, 0.12, STEEL_DARK, LEAF);
-  bar(b, w, e, 0.08 + LEAF + 0.05, 0.18, STEEL, 0.1);
+  bar(b, w, e, 0.08 + LEAF + 0.05, 0.18, STEEL_DARK, 0.1);
   if (!low)
     b.detail(() => {
       // (a lamp on each pier's outer face, as the wall's: its wash is wallWash()'s)

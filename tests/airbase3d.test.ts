@@ -47,6 +47,13 @@ test("the base's sites build: the wall a stretch a site, the gates, the avenue, 
   const lg = new THREE.Group();
   low.build(lg);
   lg.traverse((o) => assert.ok(!(o as InstanceType<typeof THREE.Mesh>).isMesh || o.userData.lod !== 'near', 'near detail on a phone'));
+  // (two materials a stretch, so two draws on a phone: the slab, and the footing, capping and posts; Phase 6's polish)
+  const mats = new Set<unknown>();
+  lg.traverse((o) => {
+    const m = o as InstanceType<typeof THREE.Mesh>;
+    if (m.isMesh) for (const x of [m.material].flat()) mats.add(x);
+  });
+  assert.ok(mats.size <= 2, `${mats.size} materials on a stretch of wall on a phone`);
 });
 
 test("the visitors' terrace has its rail round the roof on phones too (Phase 6's polish)", async () => {
