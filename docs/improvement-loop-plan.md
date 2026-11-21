@@ -343,3 +343,8 @@ session.)
 ## The log
 
 (One line for each run: the date, the item, the pull request, the numbers.)
+
+- 2026-11-21, pass 1 (22:07): main's "Build site" #361 failed at typecheck after #238
+  (`farLods` imported but unused in `index.ts` since the readout moved to `readout.ts`).
+  Fixed by dropping the import (rule 1); typecheck, lint, test, test:wide, build and budget
+  pass. J1 moves to the next pass. PR: see "Loop: fix main's build".
