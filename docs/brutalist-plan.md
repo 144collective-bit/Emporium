@@ -45,7 +45,7 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
    fronts plain concrete upstands; the concrete a cool grey, each block's own accent (mustard, teal, orange) kept bold
    as a stripe down its end so the blocks are told apart, and colour otherwise only in small doses (doors, balcony
    panels). Night: the patchy windows as now, the stair slots lit. No new draws.
-2. **The service towers.** The slabs' stair cores pulled out of the galleries into towers of their own, standing a
+2. **The service towers.** Done (2026-11-21, below). The slabs' stair cores pulled out of the galleries into towers of their own, standing a
    bridge's length off the block, a bridge to each gallery (every third floor), a boiler house jutting from the top
    with its flue; the Rampart's along its estate side, the Courts' at their ends. The Core's flared top made the same.
    Walked as the cores are now (their lifts and stairs).
@@ -88,6 +88,17 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
   before (the north heading's difference all far city, the run-to-run spread).
 - The boot: the band is painted with the atlas at the boot; the far aircraft moved to a chunk of their own to make
   room, and the budget raised from 770 to 775 KB (the owner's call, 2026-11-21).
+
+## What Phase 2 did (2026-11-21)
+
+- The slabs' and the Rampart's stair cores stand off their blocks as service towers (southblocks.ts `SERVICE_GAP`, 3,
+  a bridge's length), each with a covered link from its gallery at every landing (`Core.link`, walked by southsky.ts
+  `linkShapes()`, drawn as the estate's bridges are), a boiler house jutting from its top and its flue beside it.
+- Where there wasn't the room (measured: a street, a parking court or the underpass's ramp near) a tower stands nearer
+  (`CORE_GAPS`): Sorrel's west one 1.5 off, Fennel's east one and the Rampart's fourth 1, the Rampart's third and
+  Linnet's south one against their blocks as before. 12 of the 17 stand a full bridge off.
+- The bridges between the towers follow them (worked out from where they stand); the lifts' doors with them. Nothing
+  held in place moved (the snapshot unchanged).
 
 ## The owner's decisions (2026-11-21)
 
