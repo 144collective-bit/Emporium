@@ -49,6 +49,26 @@ test("the base's sites build: the wall a stretch a site, the gates, the avenue, 
   lg.traverse((o) => assert.ok(!(o as InstanceType<typeof THREE.Mesh>).isMesh || o.userData.lod !== 'near', 'near detail on a phone'));
 });
 
+test("the visitors' terrace has its rail round the roof on phones too (Phase 6's polish)", async () => {
+  const THREE = await import('three');
+  const { takeSites } = await import('../src/scripts/city3d/tilework');
+  const { VISITOR_CENTRE_H, VISITOR_TERRACE } = await import('../src/scripts/city3d/airbase');
+  const mod = await import('../src/scripts/city3d/airbase3d');
+  for (const low of [false, true]) {
+    takeSites();
+    mod.register({ low });
+    const g = new THREE.Group();
+    takeSites()
+      .find((s) => s.id === 'airbase visitors')!
+      .build(g);
+    // (out east from the terrace's middle at a rail's top: the roof's rail is all that stands there)
+    const z = (VISITOR_TERRACE[1] + VISITOR_TERRACE[3]) / 2;
+    const at = new THREE.Raycaster(new THREE.Vector3(VISITOR_TERRACE[2] - 1, VISITOR_CENTRE_H + 1.0, z), new THREE.Vector3(1, 0, 0));
+    const hits = at.intersectObject(g, true).filter((h) => h.distance < 2);
+    assert.ok(hits.length, `no rail round the roof (${low ? 'phone' : 'desktop'})`);
+  }
+});
+
 test("the airfield's strips build (Phase 2): runway, taxiways, apron, its lights small and lit", async () => {
   const THREE = await import('three');
   const { takeSites } = await import('../src/scripts/city3d/tilework');

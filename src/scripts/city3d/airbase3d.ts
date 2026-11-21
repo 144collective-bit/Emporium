@@ -291,12 +291,14 @@ function centre(b: Batch, low: boolean) {
     g.rotateZ(Math.atan2(y1 - y0, len)).rotateY(-Math.atan2(c[1] - a[1], c[0] - a[0])).translate((a[0] + c[0]) / 2, (y0 + y1) / 2 + 1.0, (a[1] + c[1]) / 2);
     b.add(g, STEEL);
   };
-  // (the flight's rail: always, it's how you read the stair from afar; the rest near only)
+  // (the flight's rail: always, it's how you read the stair from afar; the rest near only, but on phones, which draw no
+  // near detail, in with the rest: up there a phone's visitor would see no rail round the roof, Phase 6's polish)
   rail([sx0 - 0.05, sz1], [sx0 - 0.05, sz0], stairY(sz1), H);
-  if (low) return;
-  b.detail(() => {
+  const rest = () => {
     for (const [a, c] of [...roofRail, ...landingRail]) rail(a, c, H, H);
-  });
+  };
+  if (low) rest();
+  else b.detail(rest);
 }
 
 /** The base's name on its low wall by the main gate */
