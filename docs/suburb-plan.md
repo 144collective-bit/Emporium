@@ -408,8 +408,8 @@ These are my recommendations, made so the plan is complete; any can change.
      school and two in the gap on the south row; their houses are built
      after every other (sunhouses.ts, `rng(8823)`), so every house, yard
      and resident before keeps its id.
-   - **The big gardens dressed** (the owner's call, 2026-11-21, after the
-     sign-off: "a varied mix of these, not in every garden"): about two in
+   - **The big gardens dressed** (built and signed off 2026-11-21; the
+     owner's call, after Phase 8's sign-off: "a varied mix of these, not in every garden"): about two in
      three gardens with 30 square tiles or more behind the house get one
      to three of a tree out toward the far end (a lemon, a mesquite or a
      shade tree), a raised timber bed along a wall (vegetables or flowers)
