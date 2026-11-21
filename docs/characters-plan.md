@@ -213,7 +213,8 @@ How he's built (Phase 1 for him, in the lab): his `HeadDef` in heads.ts
 (`SMILEX_HEAD`: Degen's neck rows, then the hexagon as rows whose
 half-width runs straight from the flats to the points, every row a ring
 so the points stay sharp, its edges rounded a few millimetres), his ink
-(`smilex()`, `inkOn()`, the edges `hexEdges()`), the pendant (`pulsePendant()`, handed to the
+(`smilex()`, `inkOn()`, the edges `hexEdges()`, `inSmilexBlock()` for the
+checks), the pendant (`pulsePendant()`, handed to the
 wardrobe as `characterPendant()`: the `necklace-smilex-<top>` items in
 place of `necklace-<top>`) and the gloves (`characterGloves()`: the
 `gloves-smilex` item in place of `fingers`). All in the heads' chunk (now
@@ -230,13 +231,21 @@ everyone else); the pendant clear of five tops and centred. Shots:
 `docs/characters-shots/smilex-phase1.png`.
 
 **More detail** (the owner's answers, 2026-11-21, after the first shots):
-- **The head's edges inked:** bold black lines along the block's own
-  edges, as in the owner's second reference: round the face where it turns
-  onto the sides, round the back, and down each of the six corners
-  (`hexEdges()`: black tubes half sunk into the rounded edges, a ball at
-  each corner). A ring drawn inside the face was tried first and taken out
-  (the owner: "the hexagon on his face isn't correct"). One flat yellow, no
-  darker sides (the owner's call).
+- **The head's edges inked:** thin black lines along the block's own
+  edges, as in the owner's second reference, meeting exactly at the
+  corners (the owner's calls: a ring drawn inside the face was tried first
+  and taken out; then thinner lines, "aligned correctly at the
+  intersections"). The block is a bevelled hexagon (`smilex()`: a flat-top
+  hexagon extruded front to back, every edge rounded `HEX_BEVEL`, on
+  Degen's neck), so its rounded edges are one exact curve; the lines
+  (`hexEdges()`, `EDGE_R` 2.4 mm) run straight between exact corner points
+  along the middle of that curve (round the face, round the back, and down
+  each of the six corners over the edge, along the walls' corner and back
+  over the edge), with a ball of the same width at every corner. The block,
+  its ink and its edges ride the head bone as one (`rigid`: weighted by
+  height, the big flat face bent under the smile when he nodded and buried
+  it); the neck bends as Degen's. One flat yellow, no darker sides (the
+  owner's call).
 - **The pendant set like a jewel:** a gold back plate and a bezel standing
   round the edge, the four colour facets bevelled and set into it, the
   pulse line thicker with rounded joins, edge to edge, a chunkier bail. Its

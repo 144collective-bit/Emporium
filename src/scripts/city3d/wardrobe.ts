@@ -5194,7 +5194,7 @@ export function items(q: Detail, hero = false): Item[] {
           (id): Item => ({
             id: `character-${id}`,
             when: (o) => o.character === id,
-            pieces: heads!.parts(id, q as 2 | 3).map((h) => P('head', one(h.geos), h.color, { ...(h.shade ? { shade: h.shade } : {}), ...(h.detail ? { detail: true } : {}) })),
+            pieces: heads!.parts(id, q as 2 | 3).map((h) => P('head', one(h.geos), h.color, { ...(h.shade ? { shade: h.shade } : {}), ...(h.detail ? { detail: true } : {}), ...(h.rigid ? { bone: 'head' as BoneName } : {}) })),
           })
         )
       : []),

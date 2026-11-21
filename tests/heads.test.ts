@@ -11,7 +11,7 @@ import { CHARACTERS, CHARACTER_LOOKS, DEFAULT_LOOK, PALETTE, cleanLook, type Cha
 import { SKIN_TONES } from '../src/scripts/city3d/crowdlook';
 import { describe as describeLook } from '../src/scripts/city3d/lookrows';
 import { DEGEN_HEAD, HEAD_ROWS, headGeometry, headModel, type HeadDef } from '../src/scripts/city3d/body';
-import { CHARACTER_IDS, characterChain, characterGloves, characterParts, characterPendant, setHeadModel, SMILEX, SMILEX_HEAD, smilex, SLIME, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
+import { CHARACTER_IDS, characterChain, characterGloves, characterParts, characterPendant, setHeadModel, SMILEX, SMILEX_HEAD, inSmilexBlock, smilex, SLIME, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
 import { newPose, poseSkeleton, weigh, type Influence } from '../src/scripts/city3d/skeleton';
 import { dress, inside, posed, shells, type Worn } from './dress';
 
@@ -288,21 +288,64 @@ test("heads: Smilex's smile and eyes on the flat of his face, never inside his h
   }
 });
 
-test("heads: Smilex's block edges inked: every line on the head's rounded edges, none floating or sunk", () => {
+test("heads: Smilex's block edges inked: thin lines on the block's rounded edges, none floating or sunk, joined at the corners", () => {
   for (const q of [3, 2] as const) {
     const edges = smilex(q).edges;
-    assert.ok(edges.length >= 12 + 12 + 6, `detail ${q}: ${edges.length} lines and corners`);
+    // (18 lines round the face, round the back and down the corners' walls, 12 over the rounded edges, 24 balls)
+    assert.equal(edges.length, 6 * 5 + 24, `detail ${q}`);
     const mid = SMILEX_HEAD.rows.reduce((a, r) => (r[1] > a[1] ? r : a));
     const c = new THREE.Vector3(0, mid[0], mid[4]);
     const d = new THREE.Vector3();
+    let thick = 0;
     each(edges, (v) => {
-      // (a step in towards the head's middle is inside it, a step out isn't: the line hugs the surface)
+      // (a step in towards the block's middle is inside it, a step out isn't: the lines hug its edges)
       d.subVectors(v, c).normalize();
       const inP = v.clone().addScaledVector(d, -0.009);
       const outP = v.clone().addScaledVector(d, 0.009);
-      assert.ok(SMILEX.inside(inP.x, inP.y, inP.z), `detail ${q}: an edge line floating at ${v.toArray().map((n) => n.toFixed(3))}`);
-      assert.ok(!SMILEX.inside(outP.x, outP.y, outP.z), `detail ${q}: an edge line sunk at ${v.toArray().map((n) => n.toFixed(3))}`);
+      assert.ok(inSmilexBlock(inP.x, inP.y, inP.z), `detail ${q}: an edge line floating at ${v.toArray().map((n) => n.toFixed(3))}`);
+      assert.ok(!inSmilexBlock(outP.x, outP.y, outP.z), `detail ${q}: an edge line sunk at ${v.toArray().map((n) => n.toFixed(3))}`);
     });
+    // (thin: every line's radius under 3 mm)
+    for (const g of edges) {
+      g.computeBoundingBox();
+      const s3 = g.boundingBox!.getSize(new THREE.Vector3());
+      thick = Math.max(thick, Math.min(s3.x, s3.y, s3.z));
+    }
+    assert.ok(thick < 0.006, `detail ${q}: ${thick}`);
+  }
+  // (every line ends on a ball: the corners meet exactly)
+  const e = smilex(3).edges;
+  const balls = e.filter((g) => g.type === 'SphereGeometry').map((g) => {
+    g.computeBoundingBox();
+    return g.boundingBox!.getCenter(new THREE.Vector3());
+  });
+  for (const g of e.filter((g2) => g2.type === 'CylinderGeometry')) {
+    const p = g.attributes.position;
+    // (the tube's two ends, its first and last rings: each ring's middle is a ball's middle)
+    // (a ring repeats its first point at the seam: left out of the average)
+    const ring = (from: number) => {
+      const m = new THREE.Vector3();
+      const n = ((p.count / 2) | 0) - 1;
+      for (let i = from; i < from + n; i++) m.add(new THREE.Vector3().fromBufferAttribute(p, i));
+      return m.divideScalar(n);
+    };
+    for (const end of [ring(0), ring(p.count - ((p.count / 2) | 0))]) assert.ok(balls.some((b) => b.distanceTo(end) < 1e-4), `a line end off its corner at ${end.toArray().map((n) => n.toFixed(4))}`);
+  }
+});
+
+test("heads: Smilex's eyes and smile stay in front of his face as he nods and turns (never buried in the block)", () => {
+  const d = dress(SMILEX_OUTFIT, 3);
+  const item = items(3, true).find((i) => i.id === 'character-smilex')!;
+  const block = d.worn.find((w) => w.piece === item.pieces[0])!;
+  const ink = d.worn.find((w) => w.piece === item.pieces[2])!;
+  for (const [name, p] of POSES) {
+    poseSkeleton(d.sk, { ...newPose(), ...p });
+    d.sk.root.updateMatrixWorld(true);
+    const sh = shells([posed(d, block)]);
+    const at = posed(d, ink);
+    let buried = 0;
+    for (let i = 0; i < at.length; i += 3) if (inside(sh, at[i], at[i + 1], at[i + 2])) buried++;
+    assert.equal(buried, 0, `${name}: ${buried} points of his face's ink inside the block`);
   }
 });
 

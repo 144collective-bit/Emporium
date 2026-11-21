@@ -79,6 +79,7 @@ export let SLIME: HeadModel;
 export function setHeadModel(make: typeof headModel) {
   SLIME = make(SLIME_HEAD);
   SMILEX = make(SMILEX_HEAD);
+  SMILEX_NECK = make(NECK_DEF);
 }
 
 /** Where things sit on his face */
@@ -314,18 +315,44 @@ const SMILEX_ROWS: Row[] = [
 /** Every row a ring (the hexagon's points and edges stay sharp where they should), and a few up the neck and lower face */
 const smilexRings = () => [...new Set([...SMILEX_ROWS.map((r) => r[0]), -0.06, -0.035, -0.015, 0.03, 0.05, 0.075, 0.18])].sort((a, b) => a - b);
 export const SMILEX_HEAD: HeadDef = { rows: SMILEX_ROWS, features: () => 0, rings: smilexRings };
-/** Smilex's head as functions (handed in with SlimeWhale's, `setHeadModel()`) */
+/** Smilex's head as functions (handed in with SlimeWhale's, `setHeadModel()`): his shape for the checks */
 export let SMILEX: HeadModel;
+/** His neck (Degen's, up into the block), drawn from rows; the block itself is a bevelled hexagon (`smilexBlock()`) */
+let SMILEX_NECK: HeadModel;
+const NECK_DEF: HeadDef = {
+  rows: [
+    [-0.085, 0.05, 0.051, 0.05, -0.01, 2],
+    [-0.045, 0.047, 0.048, 0.049, -0.009, 2],
+    [-0.008, 0.046, 0.05, 0.048, -0.008, 2],
+    [HEX_Y0 + 0.012, 0.047, 0.049, 0.048, -0.006, 2],
+  ],
+  features: () => 0,
+  rings: () => [-0.085, -0.06, -0.035, -0.015, -0.008, 0.004, HEX_Y0 + 0.012],
+};
+/** The block's edges are rounded this much, front, back and round the sides */
+const HEX_BEVEL = 0.006;
+const COS30 = Math.cos(Math.PI / 6);
+/** The hexagon the block is extruded from (its walls stand HEX_BEVEL out from it: HEX_R, point to middle) */
+const HEX_RS = HEX_R - HEX_BEVEL / COS30;
+/** The block's straight walls, front to back (the bevels add HEX_BEVEL at each end: HEX_D either side of the middle) */
+const HEX_WALL = 2 * (HEX_D - HEX_BEVEL);
+/** His flat face */
+const FACE_Z = HEX_ZC + HEX_D;
+/** Whether a point is inside his block (the hexagon prism, its bevels ignored): for the checks */
+export function inSmilexBlock(x: number, y: number, z: number) {
+  const dy = Math.abs(y - HEX_MID);
+  return Math.abs(z - HEX_ZC) <= HEX_D && dy <= HEX_H / 2 && dy <= Math.sqrt(3) * (HEX_R - Math.abs(x));
+}
 export const SMILEX_EYE_Y = 0.15;
 export const SMILEX_MOUTH_Y = 0.085;
 
 /** A flat outline in ink laid on a head's front, `lift` off it (with holes: a border) */
-function inkOn(m: HeadModel, outline: [number, number][], lift: number, depth = 0.0012, holes: [number, number][][] = []) {
+function inkOn(front: (x: number, y: number) => number, outline: [number, number][], lift: number, depth = 0.0012, holes: [number, number][][] = []) {
   const shape = new THREE.Shape(outline.map(([x, y]) => new THREE.Vector2(x, y)));
   for (const h of holes) shape.holes.push(new THREE.Path(h.map(([x, y]) => new THREE.Vector2(x, y))));
   const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 6 });
   const p = g.attributes.position as THREE.BufferAttribute;
-  for (let i = 0; i < p.count; i++) p.setZ(i, m.front(p.getX(i), p.getY(i)) + lift + p.getZ(i));
+  for (let i = 0; i < p.count; i++) p.setZ(i, front(p.getX(i), p.getY(i)) + lift + p.getZ(i));
   g.computeVertexNormals();
   return g;
 }
@@ -346,11 +373,17 @@ const bar = ([ax, ay]: [number, number], [bx, by]: [number, number], w: number):
 export function smilex(q: 2 | 3) {
   const S = q === 3 ? 1 : 0.7;
   const R = (n: number) => Math.max(6, Math.round(n * S));
-  const head = SMILEX.geometry(R(40), q);
+  // The block: a flat-topped hexagon extruded front to back, every edge rounded the same (so the inked edges below
+  // run straight between exact corners), on Degen's neck
+  const hexShape = new THREE.Shape(Array.from({ length: 6 }, (_, k) => new THREE.Vector2(Math.cos((k * Math.PI) / 3) * HEX_RS, HEX_MID + Math.sin((k * Math.PI) / 3) * HEX_RS)));
+  const block = new THREE.ExtrudeGeometry(hexShape, { depth: HEX_WALL, bevelEnabled: true, bevelThickness: HEX_BEVEL, bevelSize: HEX_BEVEL, bevelSegments: q === 3 ? 3 : 2, curveSegments: 1 }).translate(0, 0, HEX_ZC - HEX_WALL / 2);
+  block.deleteAttribute('uv');
+  const neck = SMILEX_NECK.geometry(R(24), q);
+  const face = () => FACE_Z;
   // Two tall oval eyes
   const eyes = [-1, 1].map((s) =>
     inkOn(
-      SMILEX,
+      face,
       Array.from({ length: R(20) }, (_, k): [number, number] => {
         const a = (k / R(20)) * Math.PI * 2;
         return [s * 0.038 + Math.cos(a) * 0.0095, SMILEX_EYE_Y + Math.sin(a) * 0.018];
@@ -375,94 +408,51 @@ export function smilex(q: 2 | 3) {
     const a = A0 + ((A1 - A0) * k) / n;
     arc.push([CX + Math.cos(a) * (RAD - W / 2), CY + Math.sin(a) * (RAD - W / 2)]);
   }
-  const smile = inkOn(SMILEX, arc, 0.0006);
+  const smile = inkOn(face, arc, 0.0006);
   // (the ticks a hair further off than the smile, so the two never share a plane)
   const ticks = [A0, A1].map((a) => {
     const end: [number, number] = [CX + Math.cos(a) * RAD, CY + Math.sin(a) * RAD];
     const d = 0.012;
-    return inkOn(SMILEX, bar([end[0] - Math.cos(a) * d, end[1] - Math.sin(a) * d], [end[0] + Math.cos(a) * d, end[1] + Math.sin(a) * d], 0.006), 0.0011);
+    return inkOn(face, bar([end[0] - Math.cos(a) * d, end[1] - Math.sin(a) * d], [end[0] + Math.cos(a) * d, end[1] + Math.sin(a) * d], 0.006), 0.0011);
   });
-  return { head: [head], ink: [...eyes, smile, ...ticks], edges: hexEdges(q) };
+  return { head: [block], neck: [neck], ink: [...eyes, smile, ...ticks], edges: hexEdges(q) };
 }
 
 /**
- * The block's edges inked (the owner's call, after the art: a cartoon block, black lines along its edges, not a ring
- * drawn on the face): round the face where it turns onto the sides, round the back the same, and along each of the
- * six corners from front to back, following the rounded edge. Black tubes half sunk into the rounded edges, so each
- * reads as a bold line from the face and from the side alike; a ball at each corner joins them.
+ * The block's edges inked (the owner's calls, after the art: a cartoon block, thin black lines along its edges, meeting
+ * cleanly at the corners): round the face and round the back along the middle of the rounded edge, and down each of
+ * the six corners from front to back. Every line a straight tube between exact corner points, a ball of the same width
+ * at every corner, so the joins line up.
  */
-export const EDGE_R = 0.0038;
+export const EDGE_R = 0.0024;
 function hexEdges(q: 2 | 3) {
-  const M = SMILEX;
-  const seg = q === 3 ? 6 : 4;
-  // (the rounded edge's middle on a row: its squircle at 45 degrees, front or back)
-  const rim = (x: number, y: number, side: 1 | -1, k = 0.5) => {
-    const [, hw, fr, back, zc, n] = M.rowAt(y);
-    const e = 2 / n;
-    const a = (Math.PI / 2) * k;
-    return new THREE.Vector3(Math.sign(x) * Math.cos(a) ** e * hw, y, zc + side * Math.sin(a) ** e * (side > 0 ? fr : back));
-  };
-  // (the top and bottom flats: the edge between face and flat, a couple of millimetres in from each)
-  const yTop = HEX_Y1 - 0.0012;
-  const yBot = HEX_Y0 + 0.0012;
-  const flatZ = (side: 1 | -1) => HEX_ZC + side * (HEX_D - 0.0028);
-  const corners = (side: 1 | -1) => {
-    const top = hexHW(HEX_Y1) - 0.002;
-    const bot = hexHW(HEX_Y0) - 0.002;
-    const c = rim(1, HEX_MID, side).x;
-    return [
-      new THREE.Vector3(c, HEX_MID, rim(1, HEX_MID, side).z),
-      new THREE.Vector3(top * 0.97, yTop, flatZ(side)),
-      new THREE.Vector3(-top * 0.97, yTop, flatZ(side)),
-      new THREE.Vector3(-c, HEX_MID, rim(1, HEX_MID, side).z),
-      new THREE.Vector3(-bot * 0.97, yBot, flatZ(side)),
-      new THREE.Vector3(bot * 0.97, yBot, flatZ(side)),
-    ];
-  };
+  const seg = q === 3 ? 8 : 5;
+  const at = (r: number, k: number, z: number) => new THREE.Vector3(Math.cos((k * Math.PI) / 3) * r, HEX_MID + Math.sin((k * Math.PI) / 3) * r, z);
+  // (the rounded edge's middle: out from the extruded hexagon and beyond the walls by the bevel's 45 degrees)
+  const rMid = HEX_RS + (Math.SQRT1_2 * HEX_BEVEL) / COS30;
+  const zMid = HEX_WALL / 2 + Math.SQRT1_2 * HEX_BEVEL;
   const out: THREE.BufferGeometry[] = [];
-  const tube = (pts: THREE.Vector3[], n: number) => out.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0), n, EDGE_R, seg, false));
-  const ball = (p: THREE.Vector3) => out.push(new THREE.SphereGeometry(EDGE_R * 1.05, seg + 2, Math.max(3, seg - 1)).translate(p.x, p.y, p.z));
-  for (const side of [1, -1] as const) {
-    const c = corners(side);
-    // Round the face (or the back): the slanted sides follow the rim row by row, the flats run straight
-    for (let i = 0; i < 6; i++) {
-      const a = c[i];
-      const b = c[(i + 1) % 6];
-      if (Math.abs(a.y - b.y) < 1e-6) tube([a, b], 2);
-      else {
-        const pts: THREE.Vector3[] = [];
-        for (let k = 0; k <= 8; k++) {
-          const y = a.y + ((b.y - a.y) * k) / 8;
-          const p = rim(a.x, y, side);
-          // (towards the flats the line eases onto the flat's edge line)
-          pts.push(k === 8 ? b.clone() : k === 0 ? a.clone() : p);
-        }
-        tube(pts, 10);
-      }
-      ball(c[i]);
-    }
-  }
-  // Along each corner, front to back: the side points round their rows' rounded ends, the four flats' corners along
-  // where the flat meets the slanted side
-  for (const [x, y] of [
-    [1, HEX_MID],
-    [-1, HEX_MID],
-  ] as const) {
-    const pts: THREE.Vector3[] = [];
-    for (let k = 0; k <= 8; k++) {
-      const t = 1 - k / 4;
-      pts.push(rim(x, y, t >= 0 ? 1 : -1, Math.abs(t) * 0.5));
-    }
-    tube(pts, 10);
-  }
-  for (const [sx, y] of [
-    [1, yTop],
-    [-1, yTop],
-    [1, yBot],
-    [-1, yBot],
-  ] as const) {
-    const w = (y === yTop ? hexHW(HEX_Y1) : hexHW(HEX_Y0)) - 0.002;
-    tube([new THREE.Vector3(sx * w * 0.97, y, flatZ(1)), new THREE.Vector3(sx * w * 1.0, y, HEX_ZC), new THREE.Vector3(sx * w * 0.97, y, flatZ(-1))], 6);
+  const up = new THREE.Vector3(0, 1, 0);
+  const line = (a: THREE.Vector3, b: THREE.Vector3) => {
+    const d = new THREE.Vector3().subVectors(b, a);
+    const g = new THREE.CylinderGeometry(EDGE_R, EDGE_R, d.length(), seg, 1, true);
+    g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(up, d.normalize()));
+    out.push(g.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2));
+  };
+  const ball = (p: THREE.Vector3) => out.push(new THREE.SphereGeometry(EDGE_R, seg, Math.max(4, seg - 2)).translate(p.x, p.y, p.z));
+  for (let k = 0; k < 6; k++) {
+    const front = at(rMid, k, HEX_ZC + zMid);
+    const back = at(rMid, k, HEX_ZC - zMid);
+    const wallF = at(HEX_R, k, HEX_ZC + HEX_WALL / 2);
+    const wallB = at(HEX_R, k, HEX_ZC - HEX_WALL / 2);
+    // Round the face and the back
+    line(front, at(rMid, k + 1, HEX_ZC + zMid));
+    line(back, at(rMid, k + 1, HEX_ZC - zMid));
+    // Down the corner: over the rounded edge to the walls' corner, along it, and back over the edge behind
+    line(front, wallF);
+    line(wallF, wallB);
+    line(wallB, back);
+    for (const p of [front, back, wallF, wallB]) ball(p);
   }
   return out;
 }
@@ -556,6 +546,8 @@ export interface HeadPart {
   shade?: number;
   /** Fine detail (left off where the wardrobe leaves `detail` off) */
   detail?: boolean;
+  /** On the head bone alone, unbent (a block's big flat faces: weighted by height, they'd bend under its ink) */
+  rigid?: boolean;
 }
 
 /** A character's head at a detail level, part by part, as the wardrobe draws it */
@@ -575,9 +567,11 @@ export function characterParts(id: CharacterId, q: 2 | 3): HeadPart[] {
     case 'smilex': {
       const s = smilex(q);
       return [
-        { geos: s.head, color: SMILEX_YELLOW },
-        { geos: s.ink, color: SLIME_INK },
-        { geos: s.edges, color: SLIME_INK },
+        // (the block, its ink and its edges ride the head bone as one; the neck bends as Degen's)
+        { geos: s.head, color: SMILEX_YELLOW, rigid: true },
+        { geos: s.neck, color: SMILEX_YELLOW },
+        { geos: s.ink, color: SLIME_INK, rigid: true },
+        { geos: s.edges, color: SLIME_INK, rigid: true },
       ];
     }
   }
