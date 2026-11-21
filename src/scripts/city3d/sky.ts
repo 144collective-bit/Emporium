@@ -9,6 +9,7 @@ import { CENTER } from './world';
 import { SKY_RADIUS } from './bounds';
 import { newStorm, stormStep } from './dusk';
 import { SHADOW, markDrawn, newFixedMap, patchShadowChunks, shadowCentre, staticDue } from './shadows';
+import { hazeThin as thinFor, nightHazeMix } from './skyhaze';
 
 // The near-only shadows' fade and the moving map, in every lit material (shadows.ts): before anything compiles
 patchShadowChunks(THREE.ShaderChunk as unknown as Record<string, string>);
@@ -265,16 +266,18 @@ export function createSky(scene: THREE.Scene, opts: { shadows: number; shadowRad
     }
     domeMat.uniforms.top.value.copy(tmpTop);
     domeMat.uniforms.hor.value.copy(tmpHor);
-    fog.color.copy(tmpHor);
     (scene.background as THREE.Color).copy(tmpHor);
     // Thin haze by day so colours stay crisp; thicker at night and in rain
     // and thinner when pulled far back (the benchmark's view from high takes in the whole map), so the edges don't drown
     // (only the City view pulls back: down on the ground the haze is the same wherever you are, the owner's call.
     // It used to thin with the distance to wherever the City view last looked, on foot too. Eased, so going
     // between the two never jumps)
-    const thin = ground ? 1 : THREE.MathUtils.clamp(70 / Math.max(1, eye.distanceTo(focus)), 0.55, 1);
+    // (and at night thinner still, pulled far back, so the night's thick haze doesn't drown the city: skyhaze.ts)
+    const thin = thinFor(eye.distanceTo(focus), night, ground);
     hazeThin = Number.isNaN(hazeThin) || dt <= 0 ? thin : hazeThin + (thin - hazeThin) * Math.min(1, dt * 2.5);
     fog.density = (0.0105 - day * 0.0068 + rainAmt * 0.0055 + dusk * 0.002) * hazeThin;
+    // (and at night, pulled far back, the haze the night's dark rather than the horizon's pale: skyhaze.ts, the owner's call)
+    fog.color.copy(tmpHor).lerp(tmpTop, nightHazeMix(night, hazeThin, ground));
 
     // Sun by day, moon by night, both from the south-east
     const az = ang * 0.5 + 0.6;
