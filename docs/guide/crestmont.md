@@ -71,12 +71,12 @@ keep it up to date when what it describes changes.
   `tests/crestsites.test.ts`): the grand hotel (`HOTEL`, THE CORALLINE,
   on crest-2-0, `HOTEL_PALMS`), the civic hall at the boulevard's head
   (`CIVIC`), the country club's clubhouse and six holes on the lower slopes
-  (`CLUB`, `HOLES`; to be retired for the new course in the north-east corner, the owner's call 2026-11-21:
-  `docs/golf-plan.md` Phase 4), the overlook on Vista Lane (`OVERLOOK`) and the
+  (retired, the owner's call 2026-11-21, for Knob Hill Golf Club in the north-east corner: `docs/golf-plan.md` Phase
+  4; the place `golfclub` moved there), the overlook on Vista Lane (`OVERLOOK`) and the
   reservoir with its dams and fence (`RESERVOIR`, `FENCE`); their ground
   `SITE_LEVELS` (in terrain.ts's `LEVELS`), `SITE_SOLIDS` (in `SOLIDS`),
   `onSite()`; drawn by `crestsites3d.ts`. Step 2 (each a place) is built:
-  spots `hotel`, `civichall`, `golfclub`, `overlook`, `reservoir`
+  spots `hotel`, `civichall`, `overlook`, `reservoir` (and `golfclub`, at Knob Hill since the golf plan's Phase 4)
   (`crestspots.ts`: pick boxes and rings at the boot, the drawing in the
   chunk), pins, directory entries, panels with Walk in (`data-crest-walkin`
   to `SITE_SPAWNS`), `PLACES` and `LIVE_PLACES` entries; a taxi aims only

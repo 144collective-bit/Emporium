@@ -34,7 +34,8 @@ import { HIGHWAY_BOX } from './highway';
 import { FACADE as STADIUM_FACADE, STADIUM_AREA, oval as stadiumOval } from './stadium';
 import { RESORTS } from './resorts';
 import { HARBOUR_MASTER, SHED, STACK_BLOCKS, WAREHOUSES } from './docksport';
-import { CIVIC, CLUB as GOLF_CLUB, HOTEL as CREST_HOTEL } from './crestsites';
+import { CIVIC, HOTEL as CREST_HOTEL } from './crestsites';
+import { GOLF_CLUBHOUSE } from './golflift';
 import { LAUNDRY as LOT9_LAUNDRY, LOT9_FENCE, OFFICE as LOT9_OFFICE } from './lot9';
 import { CLUBHOUSE as SUN_CLUBHOUSE, SCHOOL as SUN_SCHOOL } from './sunplaces';
 import { ANCHORS as MALL_ANCHORS, CINEMA as MALL_CINEMA, HALL as MALL_HALL, MSCP as MALL_MSCP, PAVILION as MALL_PAVILION, SHOPS as MALL_SHOPS } from './mall';
@@ -272,7 +273,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
         } else rect(p.rect, C.tower);
       }
     for (const r of [SHED.rect, HARBOUR_MASTER.rect, ...WAREHOUSES.map((w) => w.rect), ...STACK_BLOCKS]) rect(r, C.tower);
-    for (const r of [CREST_HOTEL.body, CREST_HOTEL.tower, CIVIC.hall, CIVIC.tower, GOLF_CLUB.house, SUN_CLUBHOUSE.rect, ...SUN_SCHOOL.wings, LOT9_OFFICE.rect, LOT9_LAUNDRY.rect]) rect([...r], C.tower);
+    for (const r of [CREST_HOTEL.body, CREST_HOTEL.tower, CIVIC.hall, CIVIC.tower, GOLF_CLUBHOUSE.house, SUN_CLUBHOUSE.rect, ...SUN_SCHOOL.wings, LOT9_OFFICE.rect, LOT9_LAUNDRY.rect]) rect([...r], C.tower);
     // (Lot 9's fence, wandering round the park and its camp: lot9.ts)
     poly(LOT9_FENCE);
     ctx.closePath();

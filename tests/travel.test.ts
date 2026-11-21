@@ -117,6 +117,13 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // long way round through town, from the stadium to the airport's metro station about 77 s)
       // (since Phase 3 by its exits, quicker up there: routes.ts rideTime, HIGHWAY_PACE)
       const time = rideTime(r!, 0, TAXI_SPEED);
+      // (Knob Hill Golf Club past the hills in the far north-east corner, docs/golf-plan.md Phase 4: its drive isn't a
+      // street yet, so a taxi stops at the nearest that is, Ridge Road's top; from the tube's Aldwyn's Green station,
+      // the world's far south-west, about 120 s. Making the drive a street the taxis take is the plan's open question)
+      if (a.id === 'golfclub' || b.id === 'golfclub') {
+        assert.ok(time < 124, `${a.id} to ${b.id}: ${time.toFixed(0)} s`);
+        continue;
+      }
       assert.ok(time < Math.min(most, 66 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${time.toFixed(0)} s`);
     }
 });

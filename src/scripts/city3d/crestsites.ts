@@ -10,9 +10,8 @@
  *   with cabanas and loungers; palms round it all (`HOTEL_PALMS`).
  * - **The civic hall** (`CIVIC`) at the boulevard's head, north of Foothill Road on ground held level: a white hall with
  *   a colonnade and a tower under a tiled dome, a park in front with a walk up the boulevard's line and two fountains.
- * - **The country club** (`CLUB`) on the lower slopes west of Canyon Drive: a clubhouse by Foothill Road, six holes
- *   (`HOLES`: tees, fairways, greens with their flags, bunkers) up the strip and back, laid on the ground as it is,
- *   carts by the clubhouse.
+ * - (The country club that stood on the lower slopes west of Canyon Drive, six holes and a clubhouse, is retired: the
+ *   owner's call, 2026-11-21, for Knob Hill Golf Club's eighteen in the north-east corner, docs/golf-plan.md Phase 4.)
  * - **The overlook** (`OVERLOOK`) past Ridge Road's end: a little paved park held level, a stone balustrade on the
  *   sides that fall away, benches and coin viewers looking back over Sector 7. No sign on the hillside (the owner's call).
  * - **The reservoir** (`RESERVOIR`) in a bowl of the hills east of the ridge: still water held at `y` over a basin,
@@ -89,51 +88,6 @@ export const CIVIC = {
   fountains: [[AXIS - 6.5, -73.5], [AXIS + 6.5, -73.5]] as Pt[],
   fountainR: 1.6,
   benches: [[AXIS - 3, -78], [AXIS + 3, -78], [AXIS - 3, -69.5], [AXIS + 3, -69.5]] as Pt[],
-};
-
-/* ---------- The country club ---------- */
-
-export interface Hole {
-  n: number;
-  par: 3 | 4;
-  tee: Pt;
-  green: Pt;
-}
-/** Six holes up the strip west of Canyon Drive and back down (kept off the mansions' pads and every road) */
-export const HOLES: Hole[] = [
-  { n: 1, par: 4, tee: [300, -92], green: [300, -136] },
-  { n: 2, par: 4, tee: [300, -144], green: [300.5, -192] },
-  { n: 3, par: 4, tee: [300.5, -200], green: [302, -246] },
-  { n: 4, par: 4, tee: [314, -248], green: [313, -202] },
-  { n: 5, par: 3, tee: [313, -194], green: [310.5, -158] },
-  { n: 6, par: 4, tee: [309.5, -150], green: [310, -100] },
-];
-/** A fairway's half width, a green's radius, its fringe, a bunker's, a tee box's half size */
-export const FAIRWAY = 3.4;
-export const GREEN_R = 2.6;
-export const FRINGE = 3.3;
-export const BUNKER_R = 1.3;
-export const TEE = { half: [1.6, 1.1] as Pt };
-/** Each green's bunkers: either side of it, a little short */
-export function bunkersOf(h: Hole): Pt[] {
-  const [dx, dz] = [h.green[0] - h.tee[0], h.green[1] - h.tee[1]];
-  const L = Math.hypot(dx, dz);
-  const [ux, uz] = [dx / L, dz / L];
-  return [-1, 1].map((s): Pt => [h.green[0] - ux * 1.4 + -uz * s * (FRINGE + 1.4), h.green[1] - uz * 1.4 + ux * s * (FRINGE + 1.4)]);
-}
-/** The flag on each green, a little off its middle */
-export const flagOf = (h: Hole): Pt => [h.green[0] + 0.7, h.green[1] - 0.4];
-export const CLUB = {
-  name: 'Crestmont Hills Club',
-  pad: [292, -86, 320, -66] as Rect,
-  y: 0,
-  house: [298, -82, 314, -73] as Rect,
-  floors: 2,
-  storey: { ground: 2.4, upper: 2 },
-  /** The terrace in front, the carts parked by the cart shed */
-  terrace: [298, -73, 314, -70] as Rect,
-  shed: [315.5, -82, 319, -76] as Rect,
-  carts: [[316.2, -74.5], [317.6, -74.5], [319, -74.5]] as Pt[],
 };
 
 /* ---------- The overlook ---------- */
@@ -297,8 +251,6 @@ export const SITE_SPAWNS = {
   hotel: { x: HOTEL.block[0] + 0.6, z: (HOTEL.porte[1] + HOTEL.porte[3]) / 2, yaw: facing(1, 0) },
   /** At the foot of the civic hall's park by Foothill Road, facing up the walk */
   civichall: { x: AXIS, z: CIVIC.pad[3] - 1, yaw: facing(0, -1) },
-  /** In front of the clubhouse's terrace, facing it */
-  golfclub: { x: (CLUB.house[0] + CLUB.house[2]) / 2, z: CLUB.terrace[3] + 2.2, yaw: facing(0, -1) },
   /** On the overlook, facing out over the view */
   overlook: { x: (OVERLOOK.rect[0] + OVERLOOK.rect[2]) / 2 - OVERLOOK.look[0] * 2, z: (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2 - OVERLOOK.look[1] * 2, yaw: facing(OVERLOOK.look[0], OVERLOOK.look[1]) },
   /** Outside the reservoir's fence on its west bank, facing the water */
@@ -313,16 +265,15 @@ export const SITE_SPAWNS = {
 
 /**
  * Their doors and viewpoints (the polish plan's Phase 7): a walk prompt at each opens the place's panel. The hotel's
- * door under its porte-cochère on the west front, the civic hall's in its colonnade, the clubhouse's off its terrace;
+ * door under its porte-cochère on the west front, the civic hall's in its colonnade;
  * the overlook's at its rail, the reservoir's by its fence on the west bank ("Look out")
  */
-export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'golfclub' | 'overlook' | 'reservoir' | 'asterly' | 'belvedere' | 'glasshouse'; x: number; z: number }[] = (() => {
+export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'overlook' | 'reservoir' | 'asterly' | 'belvedere' | 'glasshouse'; x: number; z: number }[] = (() => {
   const oc: Pt = [(OVERLOOK.rect[0] + OVERLOOK.rect[2]) / 2, (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2];
   const half = (OVERLOOK.rect[2] - OVERLOOK.rect[0]) / 2;
   return [
     { id: 'hotel', x: HOTEL.body[0] - 0.7, z: (HOTEL.porte[1] + HOTEL.porte[3]) / 2 },
     { id: 'civichall', x: (CIVIC.hall[0] + CIVIC.hall[2]) / 2, z: CIVIC.hall[3] + 0.7 },
-    { id: 'golfclub', x: (CLUB.house[0] + CLUB.house[2]) / 2, z: CLUB.house[3] + 0.7 },
     { id: 'overlook', x: oc[0] + OVERLOOK.look[0] * (half - 2.3), z: oc[1] + OVERLOOK.look[1] * (half - 2.3) },
     { id: 'reservoir', x: FENCE[0] - 0.9, z: (FENCE[1] + FENCE[3]) / 2 },
     // (THE ASTERLY's at the overlook's end of its bridge)
@@ -337,7 +288,6 @@ export const SITE_DOORS: { id: 'hotel' | 'civichall' | 'golfclub' | 'overlook' |
 
 export const SITE_LEVELS: { rect: Rect; y: number; ease: number; of?: string }[] = [
   { rect: CIVIC.pad, y: CIVIC.y, ease: EASE },
-  { rect: CLUB.pad, y: CLUB.y, ease: EASE },
   { rect: OVERLOOK.rect, y: OVERLOOK.y, ease: EASE },
   // (the reservoir's apron at its coping's height, then its basin a little lower inside it, eased under the coping)
   { rect: [RESERVOIR.rect[0] - RESERVOIR.apron, RESERVOIR.rect[1] - RESERVOIR.apron, RESERVOIR.rect[2] + RESERVOIR.apron, RESERVOIR.rect[3] + RESERVOIR.apron] as Rect, y: RESERVOIR.crest, ease: EASE, of: 'reservoir' },
@@ -360,10 +310,6 @@ export const SITE_SOLIDS: Box[] = [
   box(CIVIC.hall, CIVIC.y + CIVIC.storey.ground + CIVIC.storey.upper + 0.5),
   box(CIVIC.tower, CIVIC.y + CIVIC.towerTop + CIVIC.dome),
   ...CIVIC.fountains.map((f) => sq(f, CIVIC.fountainR * 0.8, CIVIC.y + 1.2)),
-  // The clubhouse, its shed, the carts
-  box(CLUB.house, CLUB.y + CLUB.storey.ground + CLUB.storey.upper + 1.3),
-  box(CLUB.shed, CLUB.y + 2.4),
-  ...CLUB.carts.map((c) => [c[0] - 0.5, c[1] - 0.9, c[0] + 0.5, c[1] + 0.9, CLUB.y + 1.5] as Box),
   // The overlook's viewers and benches
   ...OVERLOOK.viewers.map((v) => sq(v, 0.2, OVERLOOK.y + 1.3)),
   // The reservoir's fence (a run a side), its tower
@@ -386,7 +332,7 @@ export const SITE_SOLIDS: Box[] = [
 ];
 /** In the hotel's drive off the boulevard (the street's palms keep off) */
 export const inHotelDrive = (x: number, z: number, m = 0) => x > HOTEL.drive[0] - m && x < HOTEL.drive[2] + m && z > HOTEL.drive[1] - m && z < HOTEL.drive[3] + m;
-/** On a site's ground (with its ease, padded `m`), a fairway, a green or the overlook's path: the planting keeps off */
+/** On a site's ground (with its ease, padded `m`) or the overlook's path: the planting keeps off */
 export function onSite(x: number, z: number, m = 0) {
   for (const l of SITE_LEVELS) {
     const e = l.ease + m;
@@ -397,7 +343,6 @@ export function onSite(x: number, z: number, m = 0) {
     const t = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / (vx * vx + vz * vz || 1)));
     return Math.hypot(x - ax - vx * t, z - az - vz * t) < r + m;
   };
-  if (HOLES.some((h) => near(h.tee, h.green, FAIRWAY + 1.5) || near(h.green, h.green, FRINGE + 3))) return true;
   if (near(OVERLOOK.path[0], OVERLOOK.path[1], 1.6)) return true;
   // (and the Belvedere's round on the walk)
   if (Math.hypot(x - BELVEDERE.x, z - BELVEDERE.z) < BELVEDERE.r + 0.8 + m) return true;

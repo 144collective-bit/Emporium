@@ -9,7 +9,8 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   the east arm down Crestmont's east side, the clubhouse where they meet, Clubhouse Drive up from the country road east
   (`ew0-e`). Built a phase at a time, each with the owner's sign-off. Phase 1 (the layout and the ground, as data) is
   built, Phase 2 (the ground in the city: its hills walked on, its turf and its lakes drawn) and Phase 3 (Clubhouse
-  Drive, the cart paths and the footpath, the woods, the fence round its edge, reeds).
+  Drive, the cart paths and the footpath, the woods, the fence round its edge, reeds) and Phase 4 (Knob Hill Golf
+  Club's clubhouse, the place `golfclub` moved to it, Crestmont Hills Club retired).
 - **`golf.ts`** (DOM-free, on `DOM_FREE`; tested in `tests/golf.test.ts`): the layout (its top-level values marked
   `/* @__PURE__ */` so the bundler can drop what isn't used).
   - `COURSE` (the club's land: `wander()` round `COURSE_BASE`, `EDGE_AMP`, `EDGE_STEP`, no ruler-straight edge),
@@ -74,5 +75,9 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
 - **The design map:** `npm run golfmap -- <label>` (`scripts/golfmap.mjs`) draws the course from the data (what's
   underfoot, shading, contours every tile, each hole's line and number) into `docs/golf-shots/<label>.png`. Draw one
   for each phase's sign-off.
-- **Crestmont Hills Club** (the old six holes, `crestsites.ts` `CLUB`, `HOLES`; the `golfclub` spot) stays until the new
-  clubhouse opens (the plan's Phase 4), when the spot moves to the new club and the old holes are taken off the hills.
+- **Knob Hill Golf Club** (Phase 4): golflift.ts `GOLF_CLUBHOUSE` (the grounds, house, storeys, roof, porch, terrace,
+  car park, cart shed, putting green, nets, `spawn`, `door`), `CLUB_NAME`, `clubLevel()`, `GOLF_CLUBHOUSE_H`,
+  `golfSolids()` (in solids.ts `SOLIDS`, tops over the grounds' level); drawn by golf3d.ts `drawClubhouse()` (its name
+  `nameMat()`, `golf-name`; the nets `golf-net`), the putting green in the turf. The place `golfclub`: crestspots.ts
+  (its spot), places.ts, index.ts (`data-golf-walkin`), walk.ts (its door), live.ts, CityMap.astro (its panel),
+  worldmap.ts. Crestmont Hills Club, the old six holes on the hills, is retired (the owner's call, 2026-11-21).

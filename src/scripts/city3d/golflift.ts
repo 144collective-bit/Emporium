@@ -460,3 +460,53 @@ export function golfTrees(keep = 1): { x: number; z: number; s: number; pine: bo
     }
   return out;
 }
+
+/* ---------- Knob Hill Golf Club's clubhouse (docs/golf-plan.md Phase 4) ---------- */
+
+/** The club's name (made up: the owner's call, 2026-11-21) */
+export const CLUB_NAME = 'KNOB HILL GOLF CLUB';
+/**
+ * The clubhouse's grounds (golf.ts `CLUB_GROUNDS`, level at the rise's top: golfground.ts) and what stands on them: the
+ * clubhouse (two storeys, a hipped roof, a columned porch south over the car park with the club's name over it, a
+ * terrace north over the course), the car park where the drive comes in, the cart shed, the putting green and the
+ * practice nets (the short range: the owner's call). The boot's: the place, its door, its solids (golf3d.ts draws it).
+ */
+export const GOLF_CLUBHOUSE = {
+  grounds: [500, -520, 572, -470] as Rect,
+  house: [510, -514, 546, -498] as Rect,
+  storey: { ground: 3, upper: 2.6 },
+  roof: 1.6,
+  porch: [520, -498, 536, -495] as Rect,
+  terrace: [510, -519, 546, -514] as Rect,
+  carpark: [506, -492, 548, -474] as Rect,
+  shed: [552, -492, 568, -484] as Rect,
+  putting: { at: [559, -505] as [number, number], r: [9, 6.5] as [number, number] },
+  nets: [501, -516, 508, -494] as Rect,
+  /** Where you arrive (Walk in: in the car park, facing the porch) and the door's prompt (in the porch) */
+  spawn: { x: 528, z: -486, yaw: 0 },
+  door: { x: 528, z: -496.6 },
+};
+/** The grounds' level (the baked grid's, at their middle) */
+export const clubLevel = () => golfLift((GOLF_CLUBHOUSE.grounds[0] + GOLF_CLUBHOUSE.grounds[2]) / 2, (GOLF_CLUBHOUSE.grounds[1] + GOLF_CLUBHOUSE.grounds[3]) / 2);
+/** The clubhouse's full height over its grounds (to the roof's ridge) */
+export const GOLF_CLUBHOUSE_H = GOLF_CLUBHOUSE.storey.ground + GOLF_CLUBHOUSE.storey.upper + GOLF_CLUBHOUSE.roof;
+/** What's solid at the club (x0, z0, x1, z1, top: their tops over today's ground, the grounds' level added): the
+ * clubhouse, the porch's columns, the cart shed, the nets' frame */
+export function golfSolids(): [number, number, number, number, number][] {
+  const y = clubLevel();
+  const { house, porch, shed, nets } = GOLF_CLUBHOUSE;
+  const cols = [0, 1, 2, 3].map((k): [number, number, number, number, number] => {
+    const x = porch[0] + 1 + ((porch[2] - porch[0] - 2) * k) / 3;
+    return [x - 0.25, porch[1] - 0.25, x + 0.25, porch[1] + 0.25, y + GOLF_CLUBHOUSE.storey.ground];
+  });
+  return [
+    [house[0], house[1], house[2], house[3], y + GOLF_CLUBHOUSE_H],
+    ...cols,
+    [shed[0], shed[1], shed[2], shed[1] + 0.3, y + 2.6],
+    [shed[0], shed[1], shed[0] + 0.3, shed[3], y + 2.6],
+    [shed[2] - 0.3, shed[1], shed[2], shed[3], y + 2.6],
+    [nets[0], nets[1], nets[0] + 0.2, nets[3], y + 3],
+    [nets[0], nets[1], nets[2], nets[1] + 0.2, y + 3],
+    [nets[0], nets[3] - 0.2, nets[2], nets[3], y + 3],
+  ];
+}

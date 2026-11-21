@@ -203,3 +203,55 @@ test("Phase 3's drawing: the drive on the ground, its lamps beside it, the fence
   // (the turf over every path)
   for (const p of PATHS) for (const q of p.pts) if (insetOf(...q) > 0) assert.ok(mownNear(...q, 0), `${p.id} not mown at ${q}`);
 });
+
+test('Knob Hill Golf Club (Phase 4): the clubhouse on its grounds, under the Emporium, its door clear, Walk in by it, the place moved here', async () => {
+  const { GOLF_CLUBHOUSE: C, GOLF_CLUBHOUSE_H, clubLevel, golfSolids, CLUB_NAME } = await import('../src/scripts/city3d/golflift');
+  const { CLUB_GROUNDS, fromPaths, fromDrive } = await import('../src/scripts/city3d/golf');
+  const { SOLIDS } = await import('../src/scripts/city3d/solids');
+  const { PLACES } = await import('../src/scripts/city3d/places');
+  const within = (r: readonly number[], o: readonly number[]) => r[0] >= o[0] && r[1] >= o[1] && r[2] <= o[2] && r[3] <= o[3];
+  assert.deepEqual(C.grounds, CLUB_GROUNDS);
+  for (const r of [C.house, C.porch, C.terrace, C.carpark, C.shed, C.nets]) assert.ok(within(r, C.grounds), `${r} off the grounds`);
+  // (the grounds level all over, the clubhouse under the Emporium's 12.5 over its ground)
+  const y = clubLevel();
+  for (let x = C.grounds[0]; x <= C.grounds[2]; x += 4) for (let z = C.grounds[1]; z <= C.grounds[3]; z += 4) assert.ok(Math.abs(golfLift(x, z) - y) < 0.02, `the grounds not level at ${x}, ${z}`);
+  assert.ok(GOLF_CLUBHOUSE_H < 12.5 && y > 1);
+  // (its solids in the city's, over the grounds' level; none on a hole, a path or the drive's way in)
+  for (const s of golfSolids()) {
+    assert.ok(SOLIDS.some((t) => t.every((v, i) => Math.abs(v - s[i]) < 1e-9)), "in the city's solids");
+    assert.ok(s[4] > y, 'its top over the grounds');
+  }
+  // (the door in the porch, in no solid; Walk in in the car park, facing it, a few steps off)
+  const d = C.door;
+  assert.ok(d.x > C.porch[0] && d.x < C.porch[2] && d.z > C.porch[1] && d.z < C.porch[3], 'the door in the porch');
+  for (const s of SOLIDS) assert.ok(!(d.x > s[0] && d.x < s[2] && d.z > s[1] && d.z < s[3]), `the door in a solid ${s.join()}`);
+  const at = C.spawn;
+  assert.ok(at.x > C.carpark[0] && at.x < C.carpark[2] && at.z > C.carpark[1] && at.z < C.carpark[3], 'Walk in in the car park');
+  for (const s of SOLIDS) assert.ok(!(at.x > s[0] && at.x < s[2] && at.z > s[1] && at.z < s[3]), 'Walk in in a solid');
+  assert.ok(Math.hypot(at.x - d.x, at.z - d.z) < 14);
+  const [fx, fz] = [-Math.sin(at.yaw), -Math.cos(at.yaw)];
+  assert.ok(fx * (d.x - at.x) + fz * (d.z - at.z) > 0, 'facing the door');
+  // (clear of the holes, the paths and the drive but where they come in)
+  for (const h of HOLES) for (const r of [C.house, C.shed, C.nets]) assert.ok(nearestOnRect(h, r) > 12, `hole ${h.n} by the clubhouse`);
+  assert.ok(fromPaths((C.house[0] + C.house[2]) / 2, (C.house[1] + C.house[3]) / 2) > 5 && fromDrive(...([(C.house[0] + C.house[2]) / 2, C.house[3]] as [number, number])) > 5);
+  // (the place: here now, the old club's gone from Crestmont)
+  const place = PLACES.find((p) => p.id === 'golfclub')!;
+  assert.ok(place && place.at && Math.hypot(place.at.x - at.x, place.at.z - at.z) < 1e-9, 'the place moved here');
+  assert.ok(/^[A-Z ]+$/.test(CLUB_NAME) && !/\d/.test(CLUB_NAME), 'a made-up name, no number');
+});
+
+function nearestOnRect(h: (typeof HOLES)[number], r: readonly number[]) {
+  let m = Infinity;
+  for (let x = r[0]; x <= r[2]; x += 1) for (let z = r[1]; z <= r[3]; z += 1) m = Math.min(m, nearestTo(h, x, z));
+  return m;
+}
+function nearestTo(h: (typeof HOLES)[number], x: number, z: number) {
+  let m = Infinity;
+  for (let i = 1; i < h.line.length; i++) {
+    const [a, b] = [h.line[i - 1], h.line[i]];
+    const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (z - a[1]) * vz) / (vx * vx + vz * vz || 1)));
+    m = Math.min(m, Math.hypot(x - a[0] - vx * t, z - a[1] - vz * t));
+  }
+  return m;
+}

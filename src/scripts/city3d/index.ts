@@ -57,6 +57,7 @@ import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
 import { SITE_SPAWNS } from './crestsites';
+import { GOLF_CLUBHOUSE } from './golflift';
 import { CORAL_SPAWNS } from './coral';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
@@ -903,13 +904,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(INSIDE_SPAWN);
       });
     // Crestmont's landmarks (crestsites.ts): Walk in where you arrive at each, facing it
-    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir' || id === 'asterly' || id === 'belvedere' || id === 'glasshouse') {
+    if (id === 'hotel' || id === 'civichall' || id === 'overlook' || id === 'reservoir' || id === 'asterly' || id === 'belvedere' || id === 'glasshouse') {
       const at = SITE_SPAWNS[id];
       panelBody.querySelector('[data-crest-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(at);
       });
     }
+    // Knob Hill Golf Club (docs/golf-plan.md Phase 4): Walk in in its car park, facing the clubhouse
+    if (id === 'golfclub')
+      panelBody.querySelector('[data-golf-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(GOLF_CLUBHOUSE.spawn);
+      });
     // Coral Drive's showroom and spa (the premium upgrade's Phase 4): Walk in on the strip in front of each
     if (id === 'vellano' || id === 'solenne') {
       const at = CORAL_SPAWNS[id];

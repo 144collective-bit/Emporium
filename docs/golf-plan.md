@@ -171,15 +171,39 @@ The owner's go: 2026-11-21 ("1": the drive, the paths and the woods). The map: `
 - **Not done** (the owner's to choose, later): bridges over the water (the paths keep off it instead), the cart path a
   street for the carts (Phase 5's carts ride it).
 
-### Phase 4: the clubhouse, and the old club retired
+### Phase 4: the clubhouse, and the old club retired (built)
 
-- The clubhouse on its rise (Knob Hill Golf Club, its name on its roof), the car park, the putting green and a short
-  practice range on the grounds (the owner's call), the cart shed; collision boxes and doors.
-- It's a place: the `golfclub` spot moves here (its door, panel and pin; `PLACES` and `LIVE_PLACES`, its marquee and live
-  lines), renamed for the new club. The snapshot test is rewritten for the move (the owner's call).
-- Crestmont Hills Club retired: its six holes, clubhouse, carts and terrace taken off the hills (`crestsites.ts`,
-  `crestbanks.ts`, `crestdrape.ts`, `crestgardens.ts`, `crestlife.ts`, the world map), the land given back to the hills'
-  gardens and meadows.
+The owner's go: 2026-11-21 ("2": slim the boot first rather than raise its budget).
+
+**The boot's room** (option 2): tried first was taking the guns' shapes out of the boot (character.ts imported guns.ts
+only for a parading soldier's rifle: 18.5 KB minified). Undone: with that import gone the bundler still filed guns.ts
+in a chunk the boot loads (every chunk that uses it loads after the boot), and the bundler's way to keep it apart
+(`includeDependenciesRecursively: false`) needs `strictExecutionOrder` and `preserveEntrySignatures` across the whole
+site, too big a change for a few KB. What made the room instead: the old club's data left the boot (crestsites.ts)
+and the new one is small (golflift.ts `GOLF_CLUBHOUSE`), so the boot stays under its 775 KB (the number below).
+
+**What's built:**
+
+- **Knob Hill Golf Club's clubhouse** (golflift.ts `GOLF_CLUBHOUSE`, the boot's: the place, its door, its solids;
+  `CLUB_NAME`; golf.ts `CLUB_GROUNDS` is its grounds): on the grounds where the arms meet, level at the rise's top
+  (`clubLevel()`): two storeys, white with trim and a green hipped roof (`GOLF_CLUBHOUSE_H` 7.2, under the Emporium), a
+  porch of four columns south over the car park with the club's name over it (a sign board, gold on green, lit at
+  night), glass doors onto a terrace north over the course (a rail, tables under umbrellas, near only), the car park
+  where the drive comes in (its bays' lines), the cart shed with four carts, the putting green on the east (in the turf,
+  its three flags) and the practice nets on the west (three bays, mats: the short range, the owner's call). Drawn by
+  golf3d.ts (`drawClubhouse()`, the site `golf clubhouse`); its solids (`golfSolids()`) in solids.ts.
+- **The place `golfclub` moved here** (the owner's call, 2026-11-21: "delete the old club"): its spot and pin over the
+  clubhouse (crestspots.ts), its door in the porch (walk.ts `ALL_DOORS`), Walk in in the car park facing it (places.ts,
+  index.ts `data-golf-walkin`), its panel (CityMap.astro: "Knob Hill Golf Club", "Eighteen holes over the hills past
+  Crestmont. Golf coming soon.", draft copy), its live name (live.ts), its square on the world map (worldmap.ts). The
+  snapshot holds no door or spawn of it, so it needed no rewrite.
+- The tests: `tests/golflift.test.ts` (the clubhouse, its door, Walk in, the place moved); solids.test.ts, terrain.test.ts
+  and travel.test.ts take the club as they take Crestmont's landmarks up the hills (its solids and its arrival on the
+  course's ground; a taxi's ride to it, which stops at Ridge Road's top: the open question below).
+- **Crestmont Hills Club retired**: its six holes, clubhouse, carts, terrace, garden, bank, people and level pad gone
+  from crestsites.ts, crestbanks.ts, crestgardens.ts, crestlife.ts, crestsites3d.ts and their tests; the land back to
+  the hills' own cover (the drifts, oaks and scrub now reach it; a drift the paths cut down to under three clumps is
+  left out, crestcover.ts).
 
 ### Phase 5: its life, night and sound
 
@@ -195,5 +219,10 @@ The owner's go: 2026-11-21 ("1": the drive, the paths and the woods). The map: `
   key in `BACKUP_KEYS`; in through `live.closed()`; touch controls.
 
 ## Open questions (for the owner, later)
+
+- **Taxis to the club** (found in Phase 4): Clubhouse Drive is a private drive, not a street of the plan, so a taxi to
+  Knob Hill Golf Club stops at the nearest street there is, the top of Ridge Road, about 175 tiles over the hills'
+  shoulder from the clubhouse (fast travel goes straight there). Making the drive a street (the taxis and a little
+  traffic driving up it) touches the street plan, the baked routes and how streets are drawn on raised ground.
 
 - How long the golf game's rounds should be on a phone (a hole, nine, or eighteen).

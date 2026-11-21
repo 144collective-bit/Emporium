@@ -22,7 +22,7 @@
  * Distances are tiles (about 1.8 m): the holes about half real length (the city's scale), so a par 4 is 145 to 185.
  */
 import { distTo, inside } from './streetfaces';
-import { DRIVE, DRIVE_HALF, FOOTPATH, PATH_HALF } from './golflift';
+import { GOLF_CLUBHOUSE, DRIVE, DRIVE_HALF, FOOTPATH, PATH_HALF } from './golflift';
 
 export type Pt = [number, number];
 type Rect = [number, number, number, number];
@@ -80,7 +80,7 @@ export const inCourse = (x: number, z: number) => x > COURSE_RECT[0] && x < COUR
 export const insetOf = (x: number, z: number) => (inCourse(x, z) ? distTo(COURSE, [x, z], true) : -distTo(COURSE, [x, z], true));
 
 /** The clubhouse's grounds where the arms meet (Phase 4: the clubhouse, its car park, the putting green, the range's tee) */
-export const CLUB_GROUNDS: Rect = [500, -520, 572, -470];
+export const CLUB_GROUNDS: Rect = GOLF_CLUBHOUSE.grounds;
 export const CLUB_CENTRE: Pt = [(CLUB_GROUNDS[0] + CLUB_GROUNDS[2]) / 2, (CLUB_GROUNDS[1] + CLUB_GROUNDS[3]) / 2];
 /** The drive in and the footpath out (golflift.ts: their lines are the boot's, for the clearing rule and the country
  * road's fences) */

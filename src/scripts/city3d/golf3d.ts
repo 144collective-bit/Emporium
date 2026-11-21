@@ -19,12 +19,13 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { Batch, canvasTex, neon, siteMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
+import { hip } from './roofs3d';
 import { site } from './tilework';
 import { COVER, LAMP, LAMP_POST, ROAD, STONE } from './palette';
 import { waterMat } from './world';
 import { TILE } from './tiles';
-import { DRIVE, DRIVE_HALF, FOOTPATH, GOLF_RECT, PATH_HALF, golfIn, golfLift, golfMesh, golfWater } from './golflift';
+import { CLUB_NAME, DRIVE, DRIVE_HALF, FOOTPATH, GOLF_CLUBHOUSE, GOLF_RECT, PATH_HALF, clubLevel, golfIn, golfLift, golfMesh, golfWater } from './golflift';
 import {
   COURSE,
   FIRST_CUT,
@@ -187,6 +188,21 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
     }
     ctx.restore();
   }
+  // The clubhouse's putting green (docs/golf-plan.md Phase 4), its fringe and stripes
+  {
+    const { at, r } = GOLF_CLUBHOUSE.putting;
+    ctx.fillStyle = COVER.fringe;
+    ellipse(at, [1, 0], [r[0] + FRINGE, r[1] + FRINGE]);
+    ctx.fill();
+    ctx.save();
+    ellipse(at, [1, 0], r);
+    ctx.fillStyle = COVER.green;
+    ctx.fill();
+    ctx.clip();
+    ctx.fillStyle = COVER.greenStripe;
+    for (let u = -r[0], k = 0; u < r[0]; u += GREEN_STRIPE, k++) if (!(k % 2)) ctx.fillRect((at[0] + u - X0) * sx, (at[1] - r[1] - Z0) * sz, GREEN_STRIPE * sx, 2 * r[1] * sz);
+    ctx.restore();
+  }
   // The bunkers: the lip, then the sand
   for (const hole of HOLES)
     for (const b of bunkersOf(hole)) {
@@ -213,6 +229,8 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
  * bunker with its lip) */
 export function mownNear(x: number, z: number, pad: number) {
   if (fromPaths(x, z) <= PATH_HALF + pad) return true;
+  const { at, r } = GOLF_CLUBHOUSE.putting;
+  if ((Math.hypot((x - at[0]) / r[0], (z - at[1]) / r[1]) - 1) * Math.min(...r) <= FRINGE + pad) return true;
   for (const h of HOLES) {
     const n = nearestOn(h, x, z);
     if (n.d > Math.max(h.fairway ? h.fairway.half + 4 : 0, ...h.green, TEE[0]) + FRINGE + FIRST_CUT + 16 + pad) continue;
@@ -391,7 +409,149 @@ export function reedsOf(l: Lake): Pt[] {
   });
 }
 
-export function register({ scene }: { low: boolean; scene: THREE.Scene | null }) {
+/* ---------- Knob Hill Golf Club's clubhouse (Phase 4) ---------- */
+
+/** The name over the porch: gold capitals on the club's green, a fine gold rule round it */
+const NAME_W = 12;
+const NAME_H = 1.1;
+let NAME_MAT: THREE.Material | null = null;
+function nameMat() {
+  NAME_MAT ??= siteMat(
+    'golf-name',
+    lit(
+      new THREE.MeshBasicMaterial({
+        map: canvasTex(1024, 96, (c, w, h) => {
+          c.fillStyle = '#1f4a33';
+          c.fillRect(0, 0, w, h);
+          c.strokeStyle = '#d9b45a';
+          c.lineWidth = h * 0.05;
+          c.strokeRect(h * 0.08, h * 0.08, w - h * 0.16, h - h * 0.16);
+          c.fillStyle = '#e6c46a';
+          c.font = `bold ${Math.round(h * 0.56)}px ${FONT_DISPLAY}`;
+          c.textAlign = 'center';
+          c.textBaseline = 'middle';
+          c.fillText(CLUB_NAME, w / 2, h * 0.54);
+        }),
+      }),
+      0.95,
+      1.25
+    )
+  );
+  return NAME_MAT;
+}
+/** A box from corner to corner (any order) */
+const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, m: THREE.Material) => b.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.abs(x1 - x0), y1 - y0, Math.abs(z1 - z0), m);
+/** A flat rect laid over the grounds */
+const flatRect = (b: Batch, r: Rect, y: number, m: THREE.Material) => b.add(new THREE.PlaneGeometry(r[2] - r[0], r[3] - r[1]).rotateX(-Math.PI / 2).translate((r[0] + r[2]) / 2, y, (r[1] + r[3]) / 2), m);
+
+/** The clubhouse and what stands round it on the grounds, into a Batch (a site's) */
+export function drawClubhouse(b: Batch, low: boolean) {
+  const C = GOLF_CLUBHOUSE;
+  const y0 = clubLevel();
+  const { ground, upper } = C.storey;
+  const top = y0 + ground + upper;
+  const wall = toon('#efe7d6');
+  const trim = toon('#fbf8f0');
+  const roof = toon('#2f5a3e');
+  const glass = toon('#33465c');
+  const pave = toon(STONE.paving);
+  const asphalt = toon(ROAD.asphalt);
+  const line = toon(ROAD.line);
+  const timber = toon('#7a5b40');
+  const cart = toon('#f1ede2');
+  const canopy = toon('#2f6a3a');
+  const iron = toon(LAMP_POST.black);
+  const mat = toon('#3f8a4c');
+  const net = siteMat('golf-net', toon('#20232c', { transparent: true, opacity: 0.32, depthWrite: false }));
+  const [hx0, hz0, hx1, hz1] = C.house;
+  // The paving: round the house, the terrace, the porch, the walk from the car park
+  flatRect(b, [hx0 - 1.2, hz0 - 0.6, hx1 + 1.2, hz1 + 1.2], y0 + 0.02, pave);
+  flatRect(b, C.terrace, y0 + 0.025, pave);
+  flatRect(b, [C.porch[0], C.porch[1], C.porch[2], C.carpark[1]], y0 + 0.025, pave);
+  // The house: two storeys, a cornice between them and under the eaves, windows all round, the door in the porch
+  box(b, hx0, y0, hz0, hx1, top, hz1, wall);
+  box(b, hx0 - 0.08, y0 + ground - 0.12, hz0 - 0.08, hx1 + 0.08, y0 + ground + 0.08, hz1 + 0.08, trim);
+  box(b, hx0 - 0.1, top - 0.18, hz0 - 0.1, hx1 + 0.1, top, hz1 + 0.1, trim);
+  for (const [ya, hgt] of [[y0 + 0.9, 1.5], [y0 + ground + 0.6, 1.3]] as [number, number][]) {
+    for (let x = hx0 + 2; x < hx1 - 1; x += 2.6) {
+      // (the front's ground floor is the porch's: its doors there)
+      if (ya < y0 + ground && x > C.porch[0] && x < C.porch[2]) continue;
+      box(b, x, ya, hz1, x + 1.2, ya + hgt, hz1 + 0.05, glass);
+      box(b, x, ya, hz0 - 0.05, x + 1.2, ya + hgt, hz0, glass);
+    }
+    for (let z = hz0 + 2; z < hz1 - 1; z += 2.6) {
+      box(b, hx0 - 0.05, ya, z, hx0, ya + hgt, z + 1.2, glass);
+      box(b, hx1, ya, z, hx1 + 0.05, ya + hgt, z + 1.2, glass);
+    }
+  }
+  // (the terrace's glass doors along the back, onto the course)
+  box(b, hx0 + 4, y0 + 0.05, hz0 - 0.05, hx1 - 4, y0 + 2.4, hz0, glass);
+  const [r, soffit] = hip(hx0, hz1, hx1, hz0, top, C.roof, 0.5);
+  b.add(r, roof);
+  b.add(soffit, trim);
+  // The porch: four columns, its roof, the doors under it, the club's name over its front
+  const [px0, pz0, px1, pz1] = C.porch;
+  for (let k = 0; k < 4; k++) {
+    const x = px0 + 1 + ((px1 - px0 - 2) * k) / 3;
+    b.add(new THREE.CylinderGeometry(0.2, 0.24, ground, 10).translate(x, y0 + ground / 2, pz1 - 0.25), trim);
+  }
+  box(b, px0 - 0.3, y0 + ground, pz0, px1 + 0.3, y0 + ground + 0.35, pz1 + 0.2, trim);
+  box(b, (px0 + px1) / 2 - 1.2, y0 + 0.05, hz1, (px0 + px1) / 2 + 1.2, y0 + 2.5, hz1 + 0.06, glass);
+  b.add(new THREE.PlaneGeometry(NAME_W, NAME_H).translate((px0 + px1) / 2, y0 + ground + 0.35 + NAME_H / 2 + 0.05, pz1 + 0.22), nameMat());
+  // The terrace: a rail along its edge; tables under umbrellas (near only)
+  const [tx0, tz0, tx1] = C.terrace;
+  box(b, tx0, y0 + 0.95, tz0, tx1, y0 + 1.02, tz0 + 0.06, trim);
+  for (let x = tx0 + 1; x <= tx1 - 0.9; x += 2) box(b, x, y0, tz0, x + 0.08, y0 + 0.95, tz0 + 0.08, trim);
+  b.detail(() => {
+    for (let x = tx0 + 3; x < tx1 - 2; x += 5) {
+      const z = (tz0 + C.terrace[3]) / 2;
+      b.add(new THREE.CylinderGeometry(0.5, 0.5, 0.05, 12).translate(x, y0 + 0.75, z), trim);
+      b.add(new THREE.CylinderGeometry(0.03, 0.03, 2.2, 5).translate(x, y0 + 1.1, z), iron);
+      b.add(new THREE.ConeGeometry(1.3, 0.45, 8, 1, true).translate(x, y0 + 2.3, z), canopy);
+    }
+  });
+  // The car park: asphalt, its bays' lines either side of the aisle
+  const [cx0, cz0, cx1, cz1] = C.carpark;
+  flatRect(b, C.carpark, y0 + 0.03, asphalt);
+  for (const [za, zb] of [[cz0, cz0 + 5], [cz1 - 5, cz1]])
+    for (let x = cx0 + 0.5; x <= cx1 - 0.5; x += 2.6) box(b, x - 0.06, y0 + 0.04, za + 0.3, x + 0.06, y0 + 0.05, zb - 0.3, line);
+  // The cart shed: a green roof on posts, a back wall, its carts in a row
+  const [sx0, sz0, sx1, sz1] = C.shed;
+  box(b, sx0, y0 + 2.4, sz0, sx1, y0 + 2.6, sz1, canopy);
+  box(b, sx0, y0, sz0, sx1, y0 + 2.4, sz0 + 0.2, timber);
+  for (const [x, z] of [[sx0, sz1], [sx1, sz1], [sx0, sz0], [sx1, sz0]]) box(b, x - 0.1, y0, z - 0.1, x + 0.1, y0 + 2.4, z + 0.1, timber);
+  for (let x = sx0 + 1.4; x < sx1 - 1; x += 2.4) {
+    const z = (sz0 + sz1) / 2;
+    box(b, x - 0.5, y0 + 0.25, z - 1, x + 0.5, y0 + 0.75, z + 1, cart);
+    box(b, x - 0.5, y0 + 1.6, z - 0.7, x + 0.5, y0 + 1.68, z + 1, canopy);
+    for (const dz of [-0.65, 0.9]) for (const dx of [-0.45, 0.45]) box(b, x + dx - 0.02, y0 + 0.75, z + dz - 0.02, x + dx + 0.02, y0 + 1.6, z + dz + 0.02, iron);
+    for (const dz of [-0.65, 0.65]) for (const dx of [-0.5, 0.5]) b.add(new THREE.CylinderGeometry(0.2, 0.2, 0.12, low ? 6 : 10).rotateZ(Math.PI / 2).translate(x + dx, y0 + 0.2, z + dz), iron);
+  }
+  // The practice nets: three bays, a frame of posts, the nets hung round, a mat in each
+  const [nx0, nz0, nx1, nz1] = C.nets;
+  for (let z = nz0; z <= nz1 + 1e-6; z += (nz1 - nz0) / 3) {
+    for (const x of [nx0, nx1]) box(b, x - 0.07, y0, z - 0.07, x + 0.07, y0 + 3, z + 0.07, iron);
+    box(b, nx0, y0 + 2.95, z - 0.05, nx1, y0 + 3.02, z + 0.05, iron);
+    b.add(new THREE.PlaneGeometry(nx1 - nx0, 3).translate((nx0 + nx1) / 2, y0 + 1.5, z), net);
+  }
+  b.add(new THREE.PlaneGeometry(nz1 - nz0, 3).rotateY(Math.PI / 2).translate(nx0, y0 + 1.5, (nz0 + nz1) / 2), net);
+  b.add(new THREE.PlaneGeometry(nx1 - nx0, nz1 - nz0).rotateX(-Math.PI / 2).translate((nx0 + nx1) / 2, y0 + 3, (nz0 + nz1) / 2), net);
+  for (let k = 0; k < 3; k++) {
+    const z = nz0 + ((nz1 - nz0) * (k + 0.5)) / 3;
+    box(b, nx1 - 2.2, y0 + 0.03, z - 0.8, nx1 - 0.6, y0 + 0.06, z + 0.8, mat);
+  }
+  // The putting green's flags (the green's in the turf)
+  b.detail(() => {
+    const { at, r } = C.putting;
+    for (const [u, v] of [[-0.55, -0.3], [0.1, 0.4], [0.6, -0.2]]) {
+      const [x, z] = [at[0] + u * r[0], at[1] + v * r[1]];
+      b.add(new THREE.CylinderGeometry(0.025, 0.025, 1, 5).translate(x, y0 + 0.5, z), trim);
+      box(b, x, y0 + 0.75, z, x + 0.35, y0 + 0.97, z + 0.02, toon('#e23b3b'));
+    }
+  });
+}
+
+export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
   const mat = turfMat();
   // The turf, a site a tile, over every tile the course's land comes into
   for (let tx = Math.floor(X0 / TILE) * TILE; tx < X1; tx += TILE)
@@ -490,6 +650,15 @@ export function register({ scene }: { low: boolean; scene: THREE.Scene | null })
         b.build(into, { cast: false, receive: true });
       });
     }
+  // Knob Hill Golf Club's clubhouse and its grounds (Phase 4)
+  {
+    const [gx0, gz0, gx1, gz1] = GOLF_CLUBHOUSE.grounds;
+    site('golf clubhouse', [gx0 - 1, gz0 - 1, gx1 + 1, gz1 + 1], (into) => {
+      const b = new Batch();
+      drawClubhouse(b, low);
+      b.build(into, { cast: true, receive: true });
+    });
+  }
   // The lakes' water, on the main thread (the city's water shader), all in one mesh: one draw
   if (scene) {
     const lakes = LAKES.map((l, i) => {

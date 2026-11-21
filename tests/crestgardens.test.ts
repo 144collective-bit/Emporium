@@ -12,7 +12,7 @@ import { CREST_IDLE, GARDENERS } from '../src/scripts/city3d/crestlife';
 import { CREST_LAMPS } from '../src/scripts/city3d/crestmont';
 import { PALMS } from '../src/scripts/city3d/landscape';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
-import { CIVIC, CLUB, HOTEL, SITE_SOLIDS } from '../src/scripts/city3d/crestsites';
+import { CIVIC, HOTEL, SITE_SOLIDS } from '../src/scripts/city3d/crestsites';
 
 const overlap = (a: FR, b: FR, m = 0) => a[0] < b[2] - m && b[0] < a[2] - m && a[1] < b[3] - m && b[1] < a[3] - m;
 const inside = (r: FR, x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
@@ -123,7 +123,8 @@ test("the gardens' solids: under the houses, off the streets, the street's palms
 
 test("the landmarks' gardens: the hotel's terrace and pool garden, the civic hall's park, clear of what's there", () => {
   const ids = SITE_GARDENS.map((s) => s.id);
-  assert.deepEqual(ids, ['hotel', 'civic', 'club']);
+  // (the country club's went with it: docs/golf-plan.md Phase 4)
+  assert.deepEqual(ids, ['hotel', 'civic']);
   const there: FR[] = SITE_SOLIDS.map((b) => [b[0], b[1], b[2], b[3]]);
   for (const { id, g } of SITE_GARDENS) {
     const own = g.feats.filter((f) => !['umbrella', 'gravel'].includes(f.kind));
@@ -135,7 +136,8 @@ test("the landmarks' gardens: the hotel's terrace and pool garden, the civic hal
   // (the hotel's pool garden on its deck and the terrace behind it; the civic hall's on its pad)
   for (const f of SITE_GARDENS[0].g.feats) assert.ok(f.r[0] >= HOTEL.block[0] && f.r[2] <= HOTEL.block[2] && f.r[1] >= HOTEL.body[3] && f.r[3] <= HOTEL.deck[3] + 0.6);
   for (const f of SITE_GARDENS[1].g.feats) assert.ok(f.r[0] >= CIVIC.pad[0] && f.r[2] <= CIVIC.pad[2] && f.r[1] >= CIVIC.pad[1] && f.r[3] <= CIVIC.pad[3]);
-  for (const f of SITE_GARDENS[2].g.feats) assert.ok(f.r[0] >= CLUB.pad[0] && f.r[2] <= CLUB.pad[2] && f.r[1] >= CLUB.pad[1] && f.r[3] <= CLUB.pad[3], `the club's ${f.kind} off its pad`);
+  // (and no others: the country club's went with it, docs/golf-plan.md Phase 4)
+  assert.equal(SITE_GARDENS.length, 2);
 });
 
 test("the estates' boundaries and verges: trees and shrubs along the hedges, the strips outside them planted, clear of the gate, the street's trees and lamps", () => {
@@ -169,7 +171,7 @@ test("the estates' boundaries and verges: trees and shrubs along the hedges, the
   assert.ok(ESTATE_GARDENS.some((g) => g.feats.some((f) => f.kind === 'specimen')));
 });
 
-test("the landmarks' grounds: the hotel's edges planted clear of its drive, buildings, palms, lamps and people; the civic hall's and club's pads banked", async () => {
+test("the landmarks' grounds: the hotel's edges planted clear of its drive, buildings, palms, lamps and people; the civic hall's pad banked", async () => {
   const SITE_BANKS = (await import('../src/scripts/city3d/crestbanks')).siteBanks();
   const streets = PLAN.streets.filter((s) => s.kind !== 'alley');
   const hotel = SITE_GARDENS.find((g) => g.id === 'hotel')!;
@@ -184,7 +186,7 @@ test("the landmarks' grounds: the hotel's edges planted clear of its drive, buil
     for (const p of CREST_IDLE) assert.ok(!inside(f.r, p.x, p.z, 0.25), `a hotel verge on someone (${p.act})`);
     for (const g of hotel.g.feats) assert.ok(!overlap(f.r, g.r), `a hotel verge on its ${g.kind}`);
   }
-  assert.deepEqual(SITE_BANKS.map((b) => b.id), ['civic', 'club']);
+  assert.deepEqual(SITE_BANKS.map((b) => b.id), ['civic']);
   for (const b of SITE_BANKS) {
     assert.ok(b.plants.length > 30, `the ${b.id}'s bank is bare`);
     for (const t of [...b.plants, ...b.walls.flat()]) for (const st of streets) assert.ok(distToStreet(st, [t.x, t.z]) > st.half + 0.5, `the ${b.id}'s bank on a street`);

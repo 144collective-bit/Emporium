@@ -47,7 +47,7 @@ export const LIVE_PLACES = [
   { id: 'mall', name: 'Starlight Mall' },
   { id: 'hotel', name: 'The Coralline' },
   { id: 'civichall', name: 'Civic Hall' },
-  { id: 'golfclub', name: 'Crestmont Hills Club' },
+  { id: 'golfclub', name: 'Knob Hill Golf Club' },
   { id: 'overlook', name: 'The Overlook' },
   { id: 'reservoir', name: 'The Reservoir' },
   { id: 'asterly', name: 'The Asterly' },

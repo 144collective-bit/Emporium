@@ -18,6 +18,7 @@ import { KART_PARK } from '../src/scripts/city3d/kartpark';
 import { HIGHWAY, HIGHWAY_HALF } from '../src/scripts/city3d/highway';
 import { AIRSIDE, FLIGHTS, PERIOD, poseAt } from '../src/scripts/city3d/airfield';
 import { MANSION_SOLIDS } from '../src/scripts/city3d/mansions';
+import { golfSolids } from '../src/scripts/city3d/golflift';
 import { SITE_SOLIDS } from '../src/scripts/city3d/crestsites';
 
 const TILE_M = 1.8;
@@ -63,10 +64,14 @@ test('flat everywhere but the hills: 0 outside their land, and under every stree
   ])
     assert.equal(crestAt(x, z), 0);
   // (but the hills' mansions and landmarks, which stand on their ground up there: tests/mansions.test.ts, tests/crestsites.test.ts)
-  for (const b of SOLIDS.filter((b) => !MANSION_SOLIDS.includes(b) && !SITE_SOLIDS.includes(b))) for (const [x, z] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) assert.equal(crestAt(x, z), 0, `a solid at ${x}, ${z} is on the hills`);
+  // (and Knob Hill Golf Club's on the course's ground, tests/golflift.test.ts)
+  const golf = golfSolids();
+  const isGolf = (b: readonly number[]) => golf.some((g) => g.every((v, i) => v === b[i]));
+  for (const b of SOLIDS.filter((b) => !MANSION_SOLIDS.includes(b) && !SITE_SOLIDS.includes(b) && !isGolf(b))) for (const [x, z] of [[b[0], b[1]], [b[2], b[1]], [b[0], b[3]], [b[2], b[3]]]) assert.equal(crestAt(x, z), 0, `a solid at ${x}, ${z} is on the hills`);
   // (but the landmarks up in the hills: the overlook and the reservoir, tests/crestsites.test.ts)
   // (and THE ASTERLY and the cable car's top station, arrived at on the overlook: the premium upgrade's Phase 4)
-  for (const p of PLACES.filter((p) => p.id !== 'overlook' && p.id !== 'reservoir' && p.id !== 'asterly' && p.id !== 'cable-top' && p.id !== 'belvedere' && p.id !== 'glasshouse')) assert.equal(crestAt(p.at.x, p.at.z), 0, `${p.id} is on the hills`);
+  // (and Knob Hill Golf Club, arrived at on the course's ground: docs/golf-plan.md Phase 4, tests/golflift.test.ts)
+  for (const p of PLACES.filter((p) => p.id !== 'overlook' && p.id !== 'reservoir' && p.id !== 'asterly' && p.id !== 'cable-top' && p.id !== 'belvedere' && p.id !== 'glasshouse' && p.id !== 'golfclub')) assert.equal(crestAt(p.at.x, p.at.z), 0, `${p.id} is on the hills`);
 });
 
 test("gentle hills to 45-60 m (the owner's call), never under the ground, smooth enough to walk and drive", () => {
