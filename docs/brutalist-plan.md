@@ -49,7 +49,7 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
    bridge's length off the block, a bridge to each gallery (every third floor), a boiler house jutting from the top
    with its flue; the Rampart's along its estate side, the Courts' at their ends. The Core's flared top made the same.
    Walked as the cores are now (their lifts and stairs).
-3. **The twins joined at the top.** A bridge from The Core to Harrier and to Kite at their top floor, and on The Core's
+3. **The twins joined at the top.** Done (2026-11-21, below). A bridge from The Core to Harrier and to Kite at their top floor, and on The Core's
    top, the lookout: a hexagonal concrete drum wider than the Core (the owner's pick), a glass band all round, lit at
    night. It's the estate's landmark from across the city (and in its far form).
 4. **Pipes and kit on the walls.** Bundles of ducts snaking up the ends of a few blocks (bends, joints, brackets),
@@ -120,13 +120,30 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
   (`perf.ts`) load only with `?fps`, `?bench` and `__mem()`. 774.6 KB after. Main's next merge took it to 775.6
   again: the readout's text moved to its own chunk too (`readout.ts`), 774.6 KB after.
 
+## What Phase 3 did (2026-11-21)
+
+- **The Perch** (the owner's name; southblocks.ts `PERCH`, `TOP_FLOOR`): a hexagonal concrete drum round The Core's top
+  two floors (the owner's pick: wrapped, not set on top), 4.3 from its middle to a face against The Core's 3, a flat face
+  to each tower. Its floor is the top floor (17); its roof is The Core's, so The Core is no taller (`topOf()` as it was,
+  about 20). Drawn by southblocks3d.ts `drawPerch()`: its floor slab and soffit, a glass band all round (its outer face
+  only, so from inside you see the city through it), dark by day and lit warm at night, the concrete band over it with
+  its name stencilled on two faces, the ceiling and a strip light round it inside, the lift house on its roof; near, a
+  glass lift in its middle and mullions.
+- **The twins joined at the top:** a bridge from The Perch to Harrier and to Kite at the top floor (`core-harrier-17`,
+  `core-kite-17`: a bridge's end at The Core is The Perch's face from that floor, `footOf()`), through doorways left in
+  its glass; each tower's door where it lands.
+- **Walked** (the owner's pick: now, not at Phase 8): its whole floor inside the glass (southsky.ts `PERCH_IN`), held in
+  by it but for the bridges; The Core's lift up to it by name (`SkyLift.names`, `liftFloorName()`: "The Perch").
+  Phase 8 brings its seats, lounge and pin.
+- The fifteenth floor's bridges pass under its soffit (tested); the boot 774.9 KB of 775.
+
 ## The owner's decisions (2026-11-21)
 
 - **The concrete:** a cool grey, each block's own accent kept bold as a stripe on its end; after the first look, darker
   and heavier (2026-11-21).
-- **The lookout:** a hexagonal drum on The Core.
+- **The lookout:** a hexagonal drum on The Core, wrapped round its top two floors, walked from Phase 3; named The Perch.
 - **The flats:** a flat of Degen's own to live in (and wake in, if chosen); no flats let out.
 - **The shops under the deck:** a launderette and a corner shop.
 - **The order:** the look first (phases 1 to 5), then the places (6 to 8).
-- Still to pick, at their phases: the lookout's name, the shops' names, which block the flat is in (Claude to
+- Still to pick, at their phases: the shops' names, which block the flat is in (Claude to
   suggest made-up names and a block when each phase starts).
