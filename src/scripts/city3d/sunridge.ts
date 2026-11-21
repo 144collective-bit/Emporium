@@ -457,9 +457,78 @@ function faces(): SunBlock[] {
       runs.reverse();
       for (const r of runs) r.pts.reverse();
     }
-    blocks.push({ id: `sun-${blocks.length}`, poly, runs });
+    blocks.push({ id: `sun-${blocks.length}`, poly: roundCorners(poly), runs });
   }
   return blocks;
+}
+
+/* ---------- The kerb returns (docs/suburb-plan.md Phase 7: no square corners where streets meet) ---------- */
+
+/**
+ * A block's corner on the streets rounded: where two streets meet, or a cul-de-sac's stem meets its turning circle,
+ * the corner of the block (the sidewalk's inner edge) is a quarter round, so the sidewalk and its kerb sweep round it.
+ * `q` is where the square corner of the sidewalk was (the two kerb lines' crossing), `c` the round's centre, `r` the
+ * kerb's radius round it, from `a0` to `a1` (radians, the way the outline runs). sunridge3d.ts fills the asphalt into
+ * the corner (from `q` to the kerb's arc) and lays the kerb round it.
+ */
+export interface KerbReturn {
+  q: Pt;
+  c: Pt;
+  r: number;
+  a0: number;
+  a1: number;
+}
+export const KERB_RETURNS: KerbReturn[] = [];
+/** The round's radius at most (the sidewalk's inner edge), and how far along each side it may reach (the lots keep 1.2 off a run's ends) */
+const RETURN_R = 1.0;
+const RETURN_REACH = 1.1;
+/** Is a point on a street's edge (the sidewalk's inner edge beside a street or a turning circle), not the land's */
+function onStreetEdge(p: Pt) {
+  return (
+    SUN_STREETS.some((st) => Math.abs(distTo(st.pts, p, !!st.loop) - (st.half + WALK_W)) < 0.25) ||
+    COURTS.some((c) => Math.abs(Math.hypot(c.pts[c.pts.length - 1][0] - p[0], c.pts[c.pts.length - 1][1] - p[1]) - (BULB + WALK_W)) < 0.25)
+  );
+}
+function roundCorners(poly: Pt[]): Pt[] {
+  const n = poly.length;
+  const out: Pt[] = [];
+  const sgn = area(poly) < 0 ? -1 : 1;
+  for (let i = 0; i < n; i++) {
+    const [a, p, b] = [poly[(i + n - 1) % n], poly[i], poly[(i + 1) % n]];
+    const [ux, uz] = [p[0] - a[0], p[1] - a[1]];
+    const [vx, vz] = [b[0] - p[0], b[1] - p[1]];
+    const [lu, lv] = [Math.hypot(ux, uz), Math.hypot(vx, vz)];
+    // (a convex corner of the block: it turns the way the outline winds; its inside angle)
+    const turn = (ux * vz - uz * vx) * sgn;
+    const inside = Math.PI - Math.acos(Math.max(-1, Math.min(1, (ux * vx + uz * vz) / (lu * lv))));
+    if (turn <= 0 || inside > (160 * Math.PI) / 180 || !onStreetEdge(p) || !onStreetEdge([p[0] - ux / lu * 0.6, p[1] - uz / lu * 0.6]) || !onStreetEdge([p[0] + vx / lv * 0.6, p[1] + vz / lv * 0.6])) {
+      out.push(p);
+      continue;
+    }
+    const tanHalf = Math.tan(inside / 2);
+    const t = Math.min(RETURN_R / tanHalf, RETURN_REACH, lu * 0.45, lv * 0.45);
+    const R = t * tanHalf;
+    const [du, dv]: [Pt, Pt] = [[ux / lu, uz / lu], [vx / lv, vz / lv]];
+    const t0: Pt = [p[0] - du[0] * t, p[1] - du[1] * t];
+    const t1: Pt = [p[0] + dv[0] * t, p[1] + dv[1] * t];
+    // (the round's centre: in from the corner along its bisector)
+    const bis: Pt = [dv[0] - du[0], dv[1] - du[1]];
+    const bl = Math.hypot(bis[0], bis[1]) || 1;
+    const k = R / Math.sin(inside / 2);
+    const c: Pt = [p[0] + (bis[0] / bl) * k, p[1] + (bis[1] / bl) * k];
+    let a0 = Math.atan2(t0[1] - c[1], t0[0] - c[0]);
+    let a1 = Math.atan2(t1[1] - c[1], t1[0] - c[0]);
+    let sweep = a1 - a0;
+    while (sweep > Math.PI) sweep -= Math.PI * 2;
+    while (sweep < -Math.PI) sweep += Math.PI * 2;
+    a1 = a0 + sweep;
+    const steps = Math.max(3, Math.ceil(Math.abs(sweep) / 0.15));
+    for (let s = 0; s <= steps; s++) out.push([c[0] + Math.cos(a0 + (sweep * s) / steps) * R, c[1] + Math.sin(a0 + (sweep * s) / steps) * R]);
+    // (where the sidewalk's square corner was: the corner moved out across the sidewalk along the bisector)
+    const kq = WALK_W / Math.sin(inside / 2);
+    KERB_RETURNS.push({ q: [p[0] - (bis[0] / bl) * kq, p[1] - (bis[1] / bl) * kq], c, r: R + WALK_W, a0, a1 });
+  }
+  return out;
 }
 export const SUN_BLOCKS: SunBlock[] = faces();
 

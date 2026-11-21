@@ -4,9 +4,9 @@
 // about 120 of them; its wall solid with gaps at the entrances and the footpath; its lamps on the sidewalks.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ENTRIES, LAND, LOT_D, MESA, PARKWAY_LOOP, PATH, SUN_BLOCKS, SUN_CROSSINGS, SUN_LAMPS, SUN_SOLIDS, SUN_STREETS, SUNRIDGE_RECT, WALL_RUNS, ZONES, distTo, inSunridge, inside, type Pt } from '../src/scripts/city3d/sunridge';
+import { ENTRIES, KERB_RETURNS, LAND, LOT_D, MESA, PARKWAY_LOOP, PATH, SUN_BLOCKS, SUN_CROSSINGS, SUN_LAMPS, SUN_SOLIDS, SUN_STREETS, SUNRIDGE_RECT, WALL_RUNS, ZONES, distTo, inSunridge, inside, type Pt } from '../src/scripts/city3d/sunridge';
 import { LOTS, MIN_D, MIN_W, outline } from '../src/scripts/city3d/sunridgelots';
-import { PLAN } from '../src/scripts/city3d/streetplan';
+import { PLAN, onSlab } from '../src/scripts/city3d/streetplan';
 import { COURT } from '../src/scripts/city3d/mall';
 import { fromHighway, HIGHWAY_HALF } from '../src/scripts/city3d/highway';
 import { ROUTES } from '../src/scripts/city3d/routes';
@@ -121,5 +121,18 @@ test('the wall: solid, round the land but at the entrances and the footpath; the
   for (const [x, z] of SUN_LAMPS) {
     assert.ok(!onStreet([x, z], 0.2), `a lamp on the asphalt at ${x}, ${z}`);
     assert.ok(onStreet([x, z], WALK_W), `a lamp off the sidewalk at ${x}, ${z}`);
+  }
+});
+
+test('the kerb returns: every street corner and every stem into its turning circle rounded, the kerb on the sidewalk\'s edge round it, no square corner left (Phase 7)', () => {
+  // (every street junction and each cul-de-sac's stem into its circle: a dozen and more)
+  assert.ok(KERB_RETURNS.length >= 15, `${KERB_RETURNS.length} kerb returns`);
+  for (const k of KERB_RETURNS) {
+    assert.ok(!onSlab(PLAN, k.q), `the square corner at ${k.q} is still sidewalk`);
+    for (let s = 0; s <= 8; s++) {
+      const a = k.a0 + ((k.a1 - k.a0) * s) / 8;
+      const at = (r: number): Pt => [k.c[0] + Math.cos(a) * r, k.c[1] + Math.sin(a) * r];
+      assert.ok(onSlab(PLAN, at(k.r - 0.05)) && !onSlab(PLAN, at(k.r + 0.05)), `the return at ${k.c} isn't the sidewalk's edge`);
+    }
   }
 });
