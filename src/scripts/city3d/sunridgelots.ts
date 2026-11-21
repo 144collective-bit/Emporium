@@ -128,7 +128,42 @@ function lay(): Lot[] {
 }
 /** The lots, laid when the site is built (baked.ts; scripts/bake.mjs: about half a second as the chunk loaded, a freeze on
  * screen as Sunridge came into reach), not on the visit */
-export const LOTS: Lot[] = baked('sun-lots', BUILT ? undefined : lay);
+/**
+ * The lots laid after all the rest (docs/suburb-plan.md Phase 8, the owner's call: houses on the field east of the
+ * school). The amenities' land is drawn as rough rectangles, and the school's reaches across the loop into the block
+ * outside it, so no lot was laid along the loop's outer side there. Laid again here along every block's streets, kept
+ * off only the amenities' land whose middle is in that block (and the footpath), round every lot laid before: their
+ * ids follow on from the rest (`LATE_FROM`), so every lot before keeps its id, house, yard and residents.
+ */
+function late(placed: Lot[]): Lot[] {
+  const out: Lot[] = [];
+  for (const b of SUN_BLOCKS) {
+    const own = ZONES.filter((z) => inside(b.poly, [(z.rect[0] + z.rect[2]) / 2, (z.rect[1] + z.rect[3]) / 2]));
+    // (only a block another's amenity land reaches into)
+    const foreign = ZONES.filter((z) => !own.includes(z) && b.poly.some((p) => p[0] > z.rect[0] - 6 && p[0] < z.rect[2] + 6 && p[1] > z.rect[1] - 6 && p[1] < z.rect[3] + 6));
+    if (!foreign.length) continue;
+    const keep = [...own.map((z) => rectPoly(z.rect)), rectPoly(PATH)];
+    for (const r of b.runs.filter((q) => q.street && !q.street.startsWith('sun-entry'))) {
+      const cum = [0];
+      for (let i = 1; i < r.pts.length; i++) cum.push(cum[i - 1] + Math.hypot(r.pts[i][0] - r.pts[i - 1][0], r.pts[i][1] - r.pts[i - 1][1]));
+      const L = cum[cum.length - 1];
+      for (let s0 = END; s0 + MIN_W < L - END; ) {
+        const lot = fit(b, r.street!, r.pts, cum, s0, Math.min(LOT_W, L - END - s0), [...placed, ...out], keep);
+        if (lot) {
+          out.push({ ...lot, id: `sun-lot-${placed.length + out.length}` });
+          s0 += Math.hypot(lot.front[1][0] - lot.front[0][0], lot.front[1][1] - lot.front[0][1]);
+        } else s0 += 0.5;
+      }
+    }
+  }
+  return out;
+}
+/** How many lots were laid before the late ones: theirs are the ids from here on */
+export const LATE_FROM = 101;
+export const LOTS: Lot[] = baked('sun-lots', BUILT ? undefined : () => {
+  const first = lay();
+  return [...first, ...late(first)];
+});
 
 
 /* ---------- The gardens grown into the land behind (docs/suburb-plan.md Phase 8) ---------- */
