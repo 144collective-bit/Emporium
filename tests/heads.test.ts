@@ -1,11 +1,15 @@
 // The characters' heads (docs/characters-plan.md): SlimeWhale's head on Degen's body. Degen's own head, the hats,
 // the shades, the face gear and the hood up are off while it's on (whatever the outfit says), only on single
 // figures; the eyes and lips seated on the face, the ink on them, the buzz clear of the head; the neck as Degen's,
-// the jaw clear of every top's collar as the head turns and nods; the figure inside its budget.
+// the jaw clear of every top's collar as the head turns and nods; the figure inside its budget. Worn from the look
+// (Phase 2): `character` cleaned and kept apart from what's saved, the whole look in one tap, the character screen's rows.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { headless, items, PLAYER, useHeads, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
+import { headless, items, lookOutfit, PLAYER, useHeads, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
+import { CHARACTERS, CHARACTER_LOOKS, DEFAULT_LOOK, PALETTE, cleanLook, type Look } from '../src/scripts/net/profile-data';
+import { SKIN_TONES } from '../src/scripts/city3d/crowdlook';
+import { describe as describeLook } from '../src/scripts/city3d/lookrows';
 import { DEGEN_HEAD, HEAD_ROWS, headGeometry, headModel } from '../src/scripts/city3d/body';
 import { CHARACTER_IDS, characterParts, setHeadModel, SLIME, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
 import { newPose, poseSkeleton, weigh, type Influence } from '../src/scripts/city3d/skeleton';
@@ -233,4 +237,73 @@ test('heads: SlimeWhale inside the figure’s budget', () => {
       const tris = d.worn.reduce((n, w) => n + w.rest.length / 9, 0);
       assert.ok(tris <= BUDGET[q], `detail ${q}, ${kind}: ${tris} triangles`);
     }
+});
+
+/* ----- Phase 2: worn from the look ----- */
+
+test('heads: the look names the characters the heads chunk draws', () => {
+  assert.deepEqual(
+    CHARACTERS.map((c) => c.id),
+    CHARACTER_IDS
+  );
+  // (made-up names, short enough for a card)
+  for (const c of CHARACTERS) assert.ok(c.name.length <= 14, c.name);
+});
+
+test('heads: cleanLook keeps a character, and Degen for a look from before or one it doesn’t know', () => {
+  assert.equal(cleanLook({}).character, null);
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, character: undefined }).character, null);
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, character: 'nobody' }).character, null);
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, character: 42 }).character, null);
+  assert.equal(cleanLook({ ...DEFAULT_LOOK, character: 'slimewhale' }).character, 'slimewhale');
+  assert.equal(DEFAULT_LOOK.character, null);
+  // (the hat, shades and chain under it stay saved: back as Degen, they're on again)
+  const l = cleanLook({ ...DEFAULT_LOOK, character: 'slimewhale' });
+  assert.equal(l.hat, DEFAULT_LOOK.hat);
+  assert.equal(l.chain, DEFAULT_LOOK.chain);
+  // (cleaned once is clean)
+  assert.deepEqual(cleanLook(l), l);
+});
+
+test('heads: every character’s whole look survives cleaning as it is (its colours are swatches)', () => {
+  for (const c of CHARACTERS) {
+    const preset = CHARACTER_LOOKS[c.id];
+    assert.equal(preset.character, c.id);
+    const l = cleanLook({ ...DEFAULT_LOOK, ...preset });
+    for (const [k, v] of Object.entries(preset)) assert.equal(l[k as keyof Look], v, `${c.id}: ${k}`);
+    assert.ok(PALETTE.tone.includes(l.tone) && PALETTE.hair.includes(l.hair), c.id);
+  }
+});
+
+test('heads: the crowd keeps its twelve skin tones (the players’ swatch for SlimeWhale re-seeds nobody)', () => {
+  assert.deepEqual([...SKIN_TONES], ['#f7e0cc', '#f1d2b6', '#e8c39e', '#dcae86', '#d29f78', '#c99068', '#b07650', '#a06640', '#8f5a3a', '#6e4129', '#52301f', '#3f2418']);
+  assert.ok(!SKIN_TONES.includes(CHARACTER_LOOKS.slimewhale.tone!));
+});
+
+test('heads: lookOutfit wears the character, its buzz in the look’s hair colour, nothing over its head', () => {
+  const look = cleanLook({ ...DEFAULT_LOOK, ...CHARACTER_LOOKS.slimewhale, hat: 'cap', chain: true, faceGear: 'gasmask' });
+  const o = lookOutfit(look);
+  assert.equal(o.character, 'slimewhale');
+  assert.equal(o.hair, look.hair);
+  assert.equal(o.skin, look.tone);
+  for (const q of [3, 2] as Detail[]) {
+    const on = ids(q, o);
+    assert.ok(on.includes('character-slimewhale') && on.includes('hoodie') && on.includes('joggers') && on.includes('sneakers'), `detail ${q}: ${on.join(' ')}`);
+    assert.ok(!on.some((id) => /^(head|mask|features|cap|hair-|shades-|face-|chain-)/.test(id)), `detail ${q}: ${on.join(' ')}`);
+  }
+  // (back as Degen: his cap and gas mask again; without the mask, his shades and their chain)
+  const back = ids(3, lookOutfit({ ...look, character: null }));
+  assert.ok(back.includes('head') && back.includes('cap') && back.includes('face-gasmask'), back.join(' '));
+  const bare = ids(3, lookOutfit({ ...look, character: null, faceGear: null }));
+  assert.ok(bare.includes('shades-classic') && bare.some((id) => id.startsWith('chain-')), bare.join(' '));
+});
+
+test('heads: the character screen names him, nothing on his head or eyes', () => {
+  const rows = new Map(describeLook(cleanLook({ ...DEFAULT_LOOK, ...CHARACTER_LOOKS.slimewhale, hat: 'cap', faceGear: 'gasmask' })).map(([k, v, c]) => [k, { v, c }]));
+  assert.equal(rows.get('Face')!.v, 'SlimeWhale');
+  assert.equal(rows.get('Face')!.c.length, 2);
+  assert.equal(rows.get('Head')!.v, 'Nothing');
+  assert.equal(rows.get('Eyewear')!.v, 'None');
+  assert.equal(rows.get('Gear')!.v, 'Nothing');
+  assert.ok(!rows.get('Extras')!.v.includes('Shades Chain'));
 });

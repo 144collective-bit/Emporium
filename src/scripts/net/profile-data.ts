@@ -193,6 +193,18 @@ export const SHAPE_IDS = HEAD_SHAPES.map((h) => h.id);
 export const HAIR_NATURAL = ['#16141f', '#2b1d14', '#4a2e1c', '#6e4526', '#a87a3e', '#c9a86a', '#d8c08a', '#8a3a22', '#b4532a', '#9d9aa8', '#cfccd6'];
 export const HAIR_DYE = ['#ff6ad5', '#00b8d8', '#8f3dff', '#1f9d6a', '#f3f2f7'];
 
+/*
+ * The characters (docs/characters-plan.md): Degen's body with a head of its own, worn from the fitting room's Face tab
+ * (all free). Their heads are drawn by heads.ts, its own chunk; nothing is worn over one.
+ */
+export type CharacterId = 'slimewhale';
+export const CHARACTERS: { id: CharacterId; name: string }[] = [{ id: 'slimewhale', name: 'SlimeWhale' }];
+export const CHARACTER_IDS = CHARACTERS.map((c) => c.id);
+/** A character's whole look, put on in one tap (the head, the clothes and colours from the owner's art) */
+export const CHARACTER_LOOKS: Record<CharacterId, Partial<Look>> = {
+  slimewhale: { character: 'slimewhale', kind: 'hoodie', top: '#1f2436', hood: false, bottoms: 'joggers', bottom: '#16141f', shoeStyle: 'sneaker', shoes: '#1b1830', tone: '#efc4ae', hair: '#8c7b6b' },
+};
+
 export interface Look {
   kind: LookKind;
   top: string;
@@ -246,6 +258,11 @@ export interface Look {
   shades: boolean;
   /** The head's proportions, unmasked */
   shape: HeadShape;
+  /**
+   * A character's head instead of Degen's (or null: Degen): nothing is worn over it, so the hat, the hood up, the
+   * eyewear, face gear and the shades' chain stay saved but aren't drawn while it's on (`tone` and `hair` are its own)
+   */
+  character: CharacterId | null;
 }
 
 export const PALETTE = {
@@ -263,9 +280,10 @@ export const PALETTE = {
   /** A mark's ink (the whites a shade under white, so they don't bloom) */
   ink: ['#16c7b5', '#dedce8', '#16141f', '#e219e5', '#00b8d8', '#ffd23f', '#d8312f', '#e2b04a'],
   /** Skin tones, pale to deep (the crowd's too, crowdlook.ts): flat tones, none bright enough to bloom */
-  tone: ['#f7e0cc', '#f1d2b6', '#e8c39e', '#dcae86', '#d29f78', '#c99068', '#b07650', '#a06640', '#8f5a3a', '#6e4129', '#52301f', '#3f2418'],
-  /** Hair: the natural shades, then the dyes */
-  hair: [...HAIR_NATURAL, ...HAIR_DYE],
+  // (the crowd's are its own: crowdlook.ts `SKIN_TONES`; SlimeWhale's peach, `#efc4ae`, is the players' only)
+  tone: ['#f7e0cc', '#f1d2b6', '#efc4ae', '#e8c39e', '#dcae86', '#d29f78', '#c99068', '#b07650', '#a06640', '#8f5a3a', '#6e4129', '#52301f', '#3f2418'],
+  /** Hair: the natural shades (and SlimeWhale's grey-brown buzz, the players' only), then the dyes */
+  hair: [...HAIR_NATURAL, '#8c7b6b', ...HAIR_DYE],
 };
 
 /*
@@ -324,6 +342,7 @@ export const DEFAULT_LOOK: Look = {
   cut: 'crop',
   shades: false,
   shape: 'standard',
+  character: null,
 };
 
 /** The hats retired with the costume pieces (docs/wardrobe-plan.md Phase 1): a look saved in one is bare-headed */
@@ -384,6 +403,8 @@ export function cleanLook(raw: unknown): Look {
     cut: from(o.cut, CUT_IDS, DEFAULT_LOOK.cut),
     shades: o.shades === true,
     shape: from(o.shape, SHAPE_IDS, DEFAULT_LOOK.shape),
+    // (looks saved before the characters had none: Degen; one no longer known comes back as Degen)
+    character: orNull(o.character, CHARACTER_IDS, null),
   };
 }
 

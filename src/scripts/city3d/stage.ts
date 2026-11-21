@@ -16,7 +16,7 @@
  */
 import * as THREE from 'three';
 import type { Look } from '../net/profile-data';
-import { createDegen, idlePose, lookOutfit, walkPose, type Degen } from './character';
+import { createDegen, headsReady, idlePose, loadHeads, lookOutfit, walkPose, type Degen } from './character';
 import { emotePose, emoteSeconds } from './emotes';
 import { drawnMirror, newFightPose, sampleClip } from './fight-anim';
 import { plantLegs } from './fightfeet';
@@ -131,15 +131,21 @@ export function createStage(d: { reduced: boolean; low: boolean }, opts: { zoom?
   }
   light('studio');
 
+  /** The look on the stage now */
+  let shown: Look | null = null;
   function dress(l: Look) {
     if (fig) {
       turn.remove(fig.g);
       fig.dispose();
     }
-    fig = createDegen(lookOutfit(l));
+    const o = lookOutfit(l);
+    shown = l;
+    fig = createDegen(o);
     fig.g.traverse((m) => ((m as THREE.Mesh).castShadow = false));
     turn.add(fig.g);
     frame();
+    // (a character's head, docs/characters-plan.md: built again once its chunk is in)
+    if (!headsReady(o)) loadHeads().then(() => void (shown === l && dress(l)), () => {});
   }
 
   // All of him (as the fitting room always shows him), or close on his face

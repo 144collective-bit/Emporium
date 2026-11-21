@@ -87,22 +87,40 @@ it):
   crowd never wears a character's head (levels 0 and 1 aren't built). The
   domes and the lip rim take fewer segments on phones. The figure stays
   under `BUDGET` in `tests/wardrobe.test.ts` (40k / 18k triangles).
-- **The look:** a new field `Look.character` (`null` for Degen, or a
-  character's id from `CHARACTER_IDS`; the outfit's is `Outfit.character`). `cleanLook()` keeps looks saved before it
-  as Degen and anything unknown as Degen (the game server checks the same).
-  With a character's head on, `lookOutfit()` leaves the hat, hood up,
-  eyewear, face gear, shades and chain off **without changing what's
-  saved**, so going back to Degen brings his old hat and shades back.
-- **The fitting room** (`fitting.ts`):
-  - a **Looks** row (one tap dresses him as the character: the head, the
-    navy hoodie, joggers, sneakers, the peach tone and grey-brown buzz);
-  - a **SlimeWhale** card on the Face tab (the head alone, keeping the
-    clothes he has on), with the Skin and Hair rows (no Shape, Cut or Shades
-    rows on a character);
-  - the Head, Eyewear and Gear tabs say nothing fits over his head
-    (`[data-fit-empty]`-style note), and the hoodie's Hood Up is off.
-  - Menu copy stays 1-3 words; checked at every width, upright and on its
-    side.
+- **The look** (built, Phase 2): `Look.character` (`null` for Degen, or a
+  character's id: `CHARACTERS` in profile-data.ts names them, `CHARACTER_IDS`
+  in heads.ts the heads it draws, the tests hold them alike; the outfit's is
+  `Outfit.character`). `cleanLook()` keeps looks saved before it as Degen
+  and anything unknown as Degen (the game server cleans with the same).
+  `lookOutfit()` passes it on, and the hair colour with it (his buzz);
+  the hat, hood up, eyewear, face gear, shades and chain stay saved but
+  aren't drawn (`headless()`), so going back to Degen brings them back.
+  `CHARACTER_LOOKS` is each character's whole look (SlimeWhale's: his head,
+  the navy hoodie, hood down, black joggers, sneakers, the peach tone
+  `#efc4ae` and grey-brown buzz `#8c7b6b`, both new swatches in `PALETTE`
+  for the players only: the crowd keeps its own twelve tones,
+  `SKIN_TONES` in crowdlook.ts, so nobody in it changed).
+- **Built before his head is in:** every place a figure is built from a
+  look asks `headsReady()` (character.ts) and builds again when
+  `loadHeads()` settles: the walker (`setLook` in index.ts waits for the
+  chunk, so he never comes up as Degen first; Degen if it won't load), the
+  fitting room's and character screen's stage (`dress()` in stage.ts) and
+  other players (`refigure()` in remote.ts). The car, boat, kart and the
+  Fight Club take the walker's outfit, built after it's in.
+- **The fitting room** (`fitting.ts`, built, Phase 2):
+  - the Face tab's **Full look** row (`data-char-look`, a chip a
+    character: one tap puts on `CHARACTER_LOOKS`, pressed while all of it is
+    worn as it comes);
+  - a **SlimeWhale** card on the Face tab (`char-slimewhale`: the head
+    alone, the clothes kept), with the Skin and Hair rows; the Balaclava
+    and the cuts take a character's head off; no Shape row on one;
+  - the Head, Eyewear and Gear tabs (`OVER_HEAD`) show no cards and no
+    colours while it's on, only "Nothing goes over SlimeWhale's head."
+    (`[data-fit-empty]`); Extras' Shades Chain isn't offered; the Merch
+    tab's hat says "No hats on SlimeWhale".
+  - The character screen's list (`describe()`, moved to DOM-free
+    `lookrows.ts`): Face "SlimeWhale" with his skin and hair, Head
+    "Nothing", Eyewear "None", Gear "Nothing", whatever's saved.
 - **Everywhere else he's drawn** (all single figures, so all free once
   `createDegen()` builds him): your Degen on foot and at the wheel, the
   fitting room's stage, the character screen (`describe()` names him; its
@@ -118,9 +136,12 @@ it):
   collars at rest, nodding, looking up and turning; in the hood rolled
   down, no higher up his head than Degen's own chin goes there (Degen's chin
   tucks into it on a deep nod too: both heads sampled on one grid); the
-  triangle budget at both levels. Phase 2 adds `cleanLook()`'s migration
-  (no `character`, an unknown one, a character with a hat saved) and
-  `lookOutfit()`. `npm run smoke` before and after.
+  triangle budget at both levels. Phase 2: the two lists of characters
+  alike; `cleanLook()`'s migration (no `character`, an unknown one, a
+  character with a hat saved, kept); every whole look surviving cleaning
+  as it is; the crowd's twelve tones unchanged; `lookOutfit()` wearing the
+  head, the clothes and nothing over it, and back as Degen his hat and
+  gear again; the character screen's rows.
 
 ## The phases
 
@@ -134,10 +155,13 @@ Each with the owner's sign-off.
    phone's detail, the whole figure and running:
    `docs/characters-shots/slimewhale-phase1.png` (the owner's picture is
    left out of the repo). Tests for the geometry and the budget.
-2. **Wearing him.** `Look.character`, `cleanLook()` and its migration,
-   `lookOutfit()`, the Looks row and the Face tab's card, the Head /
-   Eyewear / Gear notes, the hood held down, the character screen.
-   Shots of the fitting room and the character screen at the widths.
+2. **Wearing him** (built, 2026-11-21; waiting on the owner's sign-off).
+   `Look.character`, `cleanLook()` and its migration, `lookOutfit()`, the
+   Full look row and the Face tab's card, the Head / Eyewear / Gear notes,
+   the character screen, every figure built once his head's chunk is in.
+   The boot grew 0.3 KB more (0.9 KB in all since Phase 0: 768.7 of
+   770 KB). Shots of the fitting room and the character screen at 1440
+   and 375 wide: `docs/characters-shots/slimewhale-phase2.png`.
 3. **Checked and written up.** Every width, upright and on its side, both
    tiers, by day and at night (the lime under bloom), `?fps` and `?bench`
    before and after, `npm run smoke`; the guide files (`character.md`,
@@ -162,5 +186,6 @@ crowd unless the owner asks.
 
 ## Status
 
-Planned and signed off (2026-11-21). Phase 1 built (2026-11-21), waiting
-on the owner's sign-off of the likeness before Phase 2.
+Planned and signed off (2026-11-21). Phase 1 built and signed off
+(2026-11-21: the likeness as it is). Phase 2 built (2026-11-21), waiting
+on the owner's sign-off before Phase 3.

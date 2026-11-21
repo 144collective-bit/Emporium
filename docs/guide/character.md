@@ -160,8 +160,12 @@ keep it up to date when what it describes changes.
   (`character-slimewhale`, single figures only), every other item asked
   about the outfit as `headless()` makes it (nothing over the head; Degen's
   own head items off). Tested in `tests/heads.test.ts`; the lab shows him
-  with `?anim&outfit=hoodie&wear=character:slimewhale`. Not in the fitting
-  room yet (Phase 2).
+  with `?anim&outfit=hoodie&wear=character:slimewhale`. Worn from the
+  look (Phase 2): `Look.character` (`CHARACTERS`, `CHARACTER_LOOKS` in
+  profile-data.ts), the fitting room's Face tab; every figure built from a
+  look asks `headsReady()` first and builds again once the chunk is in.
+  The crowd's skin tones are its own twelve (`SKIN_TONES`), apart from
+  the players' swatches.
 - **The suit's tailoring** (the owner's call, after the clothing plan) is
   planned in `docs/tailoring-plan.md`: the suit's tailoring detail
   (buttons, the breast welt, stitching, sleeve buttons, the vent, the

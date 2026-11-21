@@ -20,10 +20,10 @@
  */
 import * as THREE from 'three';
 import type { HeadDef, Row, headModel } from './body';
+import type { CharacterId } from '../net/profile-data';
 type HeadModel = ReturnType<typeof headModel>;
 
-/** The characters (beside Degen himself) */
-export type CharacterId = 'slimewhale';
+/** The characters whose heads are here (profile-data.ts `CHARACTERS` names them: the tests hold the two lists alike) */
 export const CHARACTER_IDS: CharacterId[] = ['slimewhale'];
 
 /** The lime of his eyes and lips: under the palette's white, so it never blooms (visual-rules.md) */

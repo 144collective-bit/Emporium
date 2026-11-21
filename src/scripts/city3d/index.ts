@@ -145,7 +145,8 @@ import { kartRecordsHtml } from './kart-records';
 import { count, destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
-import { CROWD_VIEW, figureDetail } from './character';
+import { CROWD_VIEW, figureDetail, headsReady, loadHeads } from './character';
+import type { Outfit } from './wardrobe';
 import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
@@ -1466,8 +1467,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   }
 
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
+  let wantLook: Outfit | null = null;
   const profileUI = createProfileUI(root, {
-    setLook: (o) => walk.setLook(o),
+    // (a character's head, docs/characters-plan.md: its chunk first, so he doesn't come up as Degen and change; Degen if
+    // it won't load)
+    setLook: (o) => {
+      wantLook = o;
+      if (headsReady(o)) return walk.setLook(o);
+      const then = () => void (wantLook === o && walk.setLook(o));
+      loadHeads().then(then, then);
+    },
     onLifetime: (fn) => walk.combat.onLifetime(fn),
     openFitting: () => open('shop', true),
     // (the character screen comes in its own chunk the first time it's opened: lazy())

@@ -33,7 +33,7 @@ keep it up to date when what it describes changes.
   (`createStage(..., { zoom: true })`): drag turns him, scroll, pinch or
   Full / Face zoom to his face, poses (idle, walk, the fighter's guard and
   the emotes, `StagePose`), lights (studio, day, night, `StageLight`), what
-  he's wearing (`describe()`) and the way to Drop 001. × or Esc closes it;
+  he's wearing (`describe()`, DOM-free in `lookrows.ts`, tested) and the way to Drop 001. × or Esc closes it;
   while it's open no other key handler hears the keyboard (Esc never
   stops walking). Check it upright and on its side at phone widths.
 - **The Face tab** (`docs/faces-plan.md` Phases 2 and 3; `faceItems`):
@@ -41,7 +41,13 @@ keep it up to date when what it describes changes.
   Twists, High-top, Long, Bald), one of them, with Skin (`tone`) and Hair
   (`hair`) rows from `PALETTE.tone` / `PALETTE.hair`, and on a face a
   Shape row of chips (`HEAD_SHAPES`, `data-face-shape`, drawn with the
-  Merch tab's chips); all free. Unmasking turns the shades on; on a face
+  Merch tab's chips); all free. The characters (`docs/characters-plan.md`):
+  a card a character (`char-<id>`: SlimeWhale, his head alone) and a
+  **Full look** row of chips (`data-char-look`: the whole look in one tap,
+  `CHARACTER_LOOKS`); with one on, the Head, Eyewear and Gear tabs
+  (`OVER_HEAD`) show only "Nothing goes over SlimeWhale's head.", the
+  Shades Chain isn't offered and the Merch tab's hat says so; picking the
+  Balaclava or a cut takes it off. Unmasking turns the shades on; on a face
   the Shades tab offers Shades or No shades (`shades`), and Extras' Shades
   Chain shows only with them on. The character screen's `describe()` has a Face row.
 - The look belongs to `profile-ui.ts` (browser and player profile); the

@@ -97,7 +97,18 @@ export const loadHeads = lazy(async () => {
   useHeads({ ids: m.CHARACTER_IDS, parts: m.characterParts });
   delete withRifle['2h'];
   delete withRifle['3h'];
+  headsIn = true;
 }, 'the characters');
+let headsIn = false;
+/**
+ * Whether a figure in this outfit can be built as it should look now (Degen's own head, or a character's once its
+ * chunk is in). If not, the chunk is asked for: build again when `loadHeads()` settles (if it fails, Degen it is).
+ */
+export function headsReady(o: Outfit) {
+  if (!o.character || headsIn) return true;
+  void loadHeads().catch(() => {});
+  return false;
+}
 
 /* ---------- Materials ---------- */
 

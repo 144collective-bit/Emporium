@@ -9,9 +9,9 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { bottomsFor, coversEyes, shoesFor, type Bottoms, type EyeStyle, type FaceGear, type HeadShape, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
+import { bottomsFor, coversEyes, shoesFor, type Bottoms, type CharacterId, type EyeStyle, type FaceGear, type HeadShape, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
 import { EYE_Y as HERO_EYE_Y, HEAD_TOP as HERO_HEAD_TOP, handParts, headFront, headGeometry, headRow, inHead } from './body';
-import type { CharacterId, HeadPart } from './heads';
+import type { HeadPart } from './heads';
 import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
 
 /* ---------- Outfits ---------- */
@@ -237,10 +237,12 @@ export function lookOutfit(l: Look): Outfit {
     pattern: l.pattern,
     face: l.face || undefined,
     skin: l.tone,
-    hair: l.face && l.cut !== 'bald' ? l.hair : undefined,
+    // (a character's head has hair of its own: SlimeWhale's buzz, in the look's hair colour)
+    hair: l.character || (l.face && l.cut !== 'bald') ? l.hair : undefined,
     cut: l.cut === 'bald' ? undefined : l.cut,
     shades: l.face && l.shades ? true : undefined,
     headShape: l.face && l.shape !== 'standard' ? l.shape : undefined,
+    character: l.character ?? undefined,
   };
 }
 
