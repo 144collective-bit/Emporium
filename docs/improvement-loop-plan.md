@@ -1,7 +1,7 @@
 # The improvement loop: nightly passes over the whole city
 
-A scheduled task runs a fresh cloud session every hour from **22:00 to 04:00
-GMT**. Each run picks the next item from this plan, makes the change, checks
+A scheduled task sends one dedicated runner session a message every hour
+from **22:07 to 03:07 GMT** (six passes a night). Each pass picks the next item from this plan, makes the change, checks
 it and merges it to `main`. Merging to `main` puts it live. When every item in
 a level is done, the run that finished it writes the next level and the loop
 carries on.
@@ -107,6 +107,12 @@ every cheap build and make it premium.** A hunt run:
 4. Fixes nothing in that run: the jobs join the schedule in order.
 
 A hunt runs whenever no job is ready, and once a week otherwise.
+
+**The first night (2026-11-21, the owner's call):** pass 1 takes J1, pass 2
+J2, pass 3 the hunt of Endswood, Aldwyn's Green and Lot 9. Passes 4 to 6 take
+the owner's next jobs (J3 on), added below after J2 in the owner's order, or
+R1's sweep if none have arrived. The Works Board (the owner's kanban) mirrors
+this list; this plan is what the loop reads.
 
 ### Model repairs
 
