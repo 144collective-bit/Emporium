@@ -155,17 +155,29 @@ Each with the owner's sign-off.
    phone's detail, the whole figure and running:
    `docs/characters-shots/slimewhale-phase1.png` (the owner's picture is
    left out of the repo). Tests for the geometry and the budget.
-2. **Wearing him** (built, 2026-11-21; waiting on the owner's sign-off).
+2. **Wearing him** (built and signed off by the owner, 2026-11-21).
    `Look.character`, `cleanLook()` and its migration, `lookOutfit()`, the
    Full look row and the Face tab's card, the Head / Eyewear / Gear notes,
    the character screen, every figure built once his head's chunk is in.
    The boot grew 0.3 KB more (0.9 KB in all since Phase 0: 768.7 of
    770 KB). Shots of the fitting room and the character screen at 1440
    and 375 wide: `docs/characters-shots/slimewhale-phase2.png`.
-3. **Checked and written up.** Every width, upright and on its side, both
-   tiers, by day and at night (the lime under bloom), `?fps` and `?bench`
-   before and after, `npm run smoke`; the guide files (`character.md`,
-   `fitting-room.md`) updated.
+3. **Checked and written up** (built, 2026-11-21). With SlimeWhale's
+   look saved, the city booted at 320, 375, 768, 1024 and 1440 wide and a
+   phone on its side (812 x 375): the walker, the fitting room's Face and
+   closed Gear tabs and the character screen, no sideways scroll, nothing
+   overlapping, no page errors. At night (the character screen's Night
+   light) the lime dims with him and nothing blooms. The figure: 27.5k
+   triangles on the desktop and 14.2k on phones (Degen in the same clothes
+   26.1k and 13.5k; in the art's suit, cap and shades 34.5k and 14.9k), and
+   no draw call of its own (two fewer than Degen: no lenses, no cap patch).
+   `?fps` in walk mode as Degen and as SlimeWhale, both tiers: the whole
+   scene's draws and triangles move about 10% either way from run to run
+   (the city streaming in), more than the figure could. `?bench` measures
+   the city's fixed views, where the default look is unchanged. `npm run
+   smoke` after: every scene passed (150 steps). Shots: `docs/characters-shots/slimewhale-phase3.png`. The
+   guide files (`character.md`, `fitting-room.md`, `tests.md`) are up to
+   date.
 
 ## Adding the next character (once SlimeWhale's done)
 
@@ -187,5 +199,7 @@ crowd unless the owner asks.
 ## Status
 
 Planned and signed off (2026-11-21). Phase 1 built and signed off
-(2026-11-21: the likeness as it is). Phase 2 built (2026-11-21), waiting
-on the owner's sign-off before Phase 3.
+(2026-11-21: the likeness as it is). Phase 2 built and signed off
+(2026-11-21). Phase 3 built (2026-11-21), waiting on the owner's sign-off:
+then SlimeWhale's done, and the next character follows "Adding the next
+character".
