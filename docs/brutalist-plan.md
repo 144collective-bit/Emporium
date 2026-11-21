@@ -100,6 +100,22 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 - The bridges between the towers follow them (worked out from where they stand); the lifts' doors with them. Nothing
   held in place moved (the snapshot unchanged).
 
+### Phase 2's polish (2026-11-21, the owner's picks)
+
+- **Caged stairs outside the towers**, walkable (southblocks.ts `CAGES`, `CAGE`, `CAGE_FACES`; southsky.ts
+  `cageShapes()`, `cageLevels()`): on the 12 towers with room, a steel cage on one face, a dog-leg flight up each
+  storey pair between ground and every landing, its mesh, bars and strip lights drawn (`drawCage()`, the bars and
+  treads near only). Their solids (`cageSolids()`) keep you out of the frame at street level.
+- **The bridges:** inside, a ceiling strip light, mullions every 1.2, puddles and tags (near only); a portal where each
+  link meets its gallery; piers under the spans of 10 or more (`PIERS`, six, clear of the paths, courts and blocks);
+  each block's name stencilled at its bridges' ends (`SIGN_TEX`, near only, not on phones).
+- **The grit** ("gritty, a ghetto", rough but never threatening): the gallery band's doors (`deckRow()`, the
+  `brutalDeck` kind: painted, steel or boarded doors, meter cupboards, grilled kitchen windows, tags, grime);
+  `RECESS_LIFE`'s boarded and burnt-out flats (dark at night); soot under the slabs and rain streaks; bin stores with
+  bags, a dumped mattress, sofa or trolley; chained bikes in the sheds; pigeon netting under the links; dish clusters
+  on the slab and tower roofs; a sodium lamp over each tower's door, a puddle and a tag at its foot; one link in four
+  tired (`STRIP_TIRED`), one in seven dark. All the small mess near only and off on phones.
+
 ## The owner's decisions (2026-11-21)
 
 - **The concrete:** a cool grey, each block's own accent kept bold as a stripe on its end; after the first look, darker
