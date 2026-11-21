@@ -159,7 +159,7 @@ import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
-import { FAR_PHONE, farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
+import { FAR_PHONE, farForm, freedNear, primeAverages, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
 import { createQuality, type QualityStep } from './quality';
