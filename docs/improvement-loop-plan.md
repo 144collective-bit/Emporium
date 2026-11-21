@@ -340,11 +340,29 @@ Each later level does the same.
 (Questions the loop couldn't answer itself. The owner answers here, or in a
 session.)
 
+- **Main's build is over the full-tier texture budget (2026-11-21, pass 2).** Brutalist plan
+  Phase 2 (#238) added about 70 KB of textures (the bridges' painted block names and the gallery
+  sides' wall row), putting `texFull` 23 KB over 4955 KB on GitHub. Which do you want?
+  (a) the brutalist plan's session trims its own new textures (a smaller name sheet, the gallery
+  row sharing an existing one); (b) revert #238 until it fits; (c) raise `texFull` to about
+  5040 KB on purpose (your call only, in `scripts/budget.mjs`). Until one is done, every loop
+  pass stops at rule 1.
+
 ## The log
 
 (One line for each run: the date, the item, the pull request, the numbers.)
 
 - 2026-11-21, pass 1 (22:07): main's "Build site" #361 failed at typecheck after #238
   (`farLods` imported but unused in `index.ts` since the readout moved to `readout.ts`).
-  Fixed by dropping the import (rule 1); typecheck, lint, test, test:wide, build and budget
-  pass. J1 moves to the next pass. PR: see "Loop: fix main's build".
+  Fixed by dropping the import (rule 1, #240); typecheck, lint, test, test:wide and build
+  pass. **Correction (pass 2):** the local texture bake had not run (it needs
+  `CHROMIUM_PATH=/opt/pw-browsers/chromium` in this container and exits 0 without it), so the
+  budget's texture rows were never checked here. J1 moves on.
+- 2026-11-21, pass 2 (23:07): "Build site" #362 (after #240) failed at the budget: `texFull`
+  4977.5 KB of 4955 on GitHub (5023.8 KB here; `texLow` 3349.7 of 3450 is fine). The growth is
+  #238's (brutalist plan Phase 2): a new painted sheet of the blocks' names for the bridges
+  (`SIGN_TEX` in southblocks3d.ts, 512x640, 36 KB baked) and a new row in the shared wall atlas
+  for the gallery sides (`brutalDeck` in infill.ts's `WALL_KINDS`). Trimming them is a change to
+  owner-signed new art, and raising a budget is the owner's only, so the question is under
+  **Waiting on the owner**. Nothing is live since #235 until main's build passes; rule 1 holds
+  every later pass on this until it's answered.
