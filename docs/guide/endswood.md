@@ -12,6 +12,10 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   night and sound (6). What's left over (the plan's last section): the city-wide far view on phones (its own plan),
   a grassed block's straight edge in the estate band, the platform benches' collisions, the ride bar naming a
   two-line trip's last stop.
+- **The estate made brutalist** (the owner's ask, 2026-11-21, `docs/brutalist-plan.md`, for the owner's sign-off):
+  the blocks re-dressed in raw grey concrete, separate service towers, the twins joined at the top under a hexagonal
+  lookout, pipes and kit on the walls, grit at street level; then lobbies, a flat of Degen's own, a launderette and a
+  corner shop under the deck, and the lookout as a rooftop hangout. Until it's built, the blocks below are as they are.
 - **The street web** is `south.ts` (DOM-free, the boot's, tested in `tests/south.test.ts`), built on `streetfaces.ts`
   (DOM-free: `smooth()` lines through control points, `node()` putting a shared point wherever lines meet or cross,
   `faces()` tracing the blocks between them, Sunridge's way made general). In it:
