@@ -38,6 +38,7 @@ import { TERRAIN_RECT } from '../src/scripts/city3d/hills';
 import { keptOff } from '../src/scripts/city3d/landuse';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { distTo } from '../src/scripts/city3d/streetfaces';
+import { DRIVE_CORNERS } from '../src/scripts/city3d/golflift';
 
 const dist = (a: Pt, b: Pt) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 /** Every point along a hole's line, every 2 */
@@ -241,8 +242,15 @@ test('the drive: off the country road, along the hills\' foot, over the club\'s 
     }
   }
   assert.equal(crossings, 1, 'onto the course once');
+  for (let i = 2; i < DRIVE_CORNERS.length; i++) {
+    const [p, q, r] = [DRIVE_CORNERS[i - 2], DRIVE_CORNERS[i - 1], DRIVE_CORNERS[i]];
+    assert.ok(Math.abs(Math.atan2(r[1] - q[1], r[0] - q[0]) - Math.atan2(q[1] - p[1], q[0] - p[0])) > 0.01, `the drive runs straight on at ${q}`);
+  }
+  // (and the drawn line's corners rounded: no turn sharper than a few degrees from one point to the next)
   for (let i = 2; i < DRIVE.length; i++) {
     const [p, q, r] = [DRIVE[i - 2], DRIVE[i - 1], DRIVE[i]];
-    assert.ok(Math.abs(Math.atan2(r[1] - q[1], r[0] - q[0]) - Math.atan2(q[1] - p[1], q[0] - p[0])) > 0.01, `the drive runs straight on at ${q}`);
+    let turn = Math.abs(Math.atan2(r[1] - q[1], r[0] - q[0]) - Math.atan2(q[1] - p[1], q[0] - p[0]));
+    if (turn > Math.PI) turn = 2 * Math.PI - turn;
+    assert.ok(turn < 0.25, `the drive kinks ${turn.toFixed(2)} at ${q}`);
   }
 });

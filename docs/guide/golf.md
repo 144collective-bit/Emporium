@@ -56,7 +56,7 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   import golf.ts or golfground.ts from the boot's code: they'd come into the boot.
   - `LAND` (off, native, rough well clear of the holes, play: golfbake.ts `landAt()`, `TREES_CLEAR`), `golfTrees()`
     (the course's woods: `WOODS_CHANCE` a grid point, seeded, none by the play or off the course, `keep` for phones;
-    placed with the outskirts' trees, world.ts `scatterOutskirts()`), `DRIVE` / `DRIVE_HALF` (Clubhouse Drive),
+    placed with the outskirts' trees, world.ts `scatterOutskirts()`), `DRIVE` / `DRIVE_HALF` (Clubhouse Drive: `DRIVE_CORNERS` rounded, `rounded()`),
     `FOOTPATH` / `PATH_HALF`, `CLUB_GAPS` (where they cross the country road's fence: ruralfence.ts `DRIVES`).
   - `golfMesh()`: the ground over a box as triangles, near the grid (each square split as `golfLift()` reads it), far a
     middle every `GOLF_FAR` with its edges still every `GOLF_STEP`, a band zipping the two (so a tile drawn far meets

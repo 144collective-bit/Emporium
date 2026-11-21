@@ -167,6 +167,7 @@ The owner's go: 2026-11-21 ("1": the drive, the paths and the woods). The map: `
 - The ground's paint: the drive's and footpath's verges worn (`INFLUENCES` `golf-drive`, `golf-footpath`).
 - Changed on the way: the 6th's tee 9 back (its par 5 227 long), so the 5th's path passes it; the bunkers a shallow
   bowl (Phase 2).
+- The shots: `docs/golf-shots/phase-3-*.webp` (the drive, its way onto the course, the woods; taken before the drive's corners were rounded, `DRIVE_CORNERS`). The drive's corners rounded (Chaikin's, two passes): it bends, it doesn't kink.
 - **Not done** (the owner's to choose, later): bridges over the water (the paths keep off it instead), the cart path a
   street for the carts (Phase 5's carts ride it).
 

@@ -31,9 +31,9 @@ type Rect = [number, number, number, number];
 export const LAND = { off: 0, native: 1, rough: 2, play: 3 } as const;
 export type Land = 0 | 1 | 2 | 3;
 
-/** Clubhouse Drive (docs/golf-plan.md Phase 3): off the country road east (ew0-e, its north edge) north along the
- * hills' east foot, over the club's edge into its land and up its bed to the clubhouse's grounds (golfground.ts) */
-export const DRIVE: [number, number][] = [
+/** Clubhouse Drive's corners (docs/golf-plan.md Phase 3): off the country road east (ew0-e, its north edge) north along
+ * the hills' east foot, over the club's edge into its land and up its bed to the clubhouse's grounds (golfground.ts) */
+export const DRIVE_CORNERS: [number, number][] = [
   [502, -6.2],
   [501, -26],
   [498, -64],
@@ -49,6 +49,24 @@ export const DRIVE: [number, number][] = [
   [520.5, -450],
   [521, -470],
 ];
+/** A line's corners rounded (Chaikin's: each corner cut to two points a quarter in either side, `passes` times), its
+ * ends kept */
+function rounded(pts: [number, number][], passes: number): [number, number][] {
+  let out = pts;
+  for (let k = 0; k < passes; k++) {
+    const next: [number, number][] = [out[0]];
+    for (let i = 1; i < out.length; i++) {
+      const [a, b] = [out[i - 1], out[i]];
+      if (i > 1) next.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25]);
+      if (i < out.length - 1) next.push([a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
+    }
+    next.push(out.at(-1)!);
+    out = next;
+  }
+  return out;
+}
+/** Clubhouse Drive: its corners rounded (a road bends, it doesn't kink: the owner's call, streets follow the land) */
+export const DRIVE: [number, number][] = rounded(DRIVE_CORNERS, 2);
 /** The drive's half width (a lane each way, as a country road's) */
 export const DRIVE_HALF = 1.7;
 /** The footpath from the course out to the country road east (its north edge), joining the cart path by hole 12 */
