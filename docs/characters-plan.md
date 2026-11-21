@@ -265,9 +265,18 @@ everyone else); the pendant clear of five tops and centred. Shots:
 - Not changed: his head's size.
 
 Smilex's phases are SlimeWhale's: 1, the head in the lab (built; the
-detail passes and the thinner slab, 2026-11-21), 2, wearing him (built,
-2026-11-21, the owner's go-ahead; waiting on the owner's sign-off), 3,
-checked.
+detail passes and the thinner slab, 2026-11-21), 2, wearing him (built and signed off by the owner,
+2026-11-21), 3, checked (built, 2026-11-21): with his look saved, the
+city at 320, 375, 768, 1024 and 1440 wide and a phone on its side: the
+walker, the fitting room's Face and closed Gear tabs and the character
+screen, no sideways scroll, nothing overlapping, no page errors; at night
+his yellow dims with him and nothing blooms (the pendant's colours flat).
+The figure 27.3k triangles on the desktop and 13.7k on phones (Degen in
+the same clothes 25.8k and 13.4k: most of it the chain's links), no draw
+call of its own. `?fps` in walk mode as Degen and as Smilex, both tiers:
+the whole scene's draws and triangles move about 10% either way from run
+to run, more than one figure could. `npm run smoke` after: walk mode is
+fine. Shots: `docs/characters-shots/smilex-phase3.png`.
 
 ## Adding the next character (once SlimeWhale's done)
 
@@ -291,5 +300,6 @@ crowd unless the owner asks.
 Planned and signed off (2026-11-21). Phase 1 built and signed off
 (2026-11-21: the likeness as it is). Phase 2 built and signed off
 (2026-11-21). Phase 3 built and signed off
-(2026-11-21): SlimeWhale is done. Smilex (the second): Phases 1 and 2 built
-(2026-11-21), waiting on the owner's sign-off before his Phase 3.
+(2026-11-21): SlimeWhale is done. Smilex (the second): Phases 1 and 2 built and
+signed off (2026-11-21); Phase 3 built (2026-11-21), waiting on the
+owner's sign-off.
