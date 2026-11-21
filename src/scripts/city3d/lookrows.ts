@@ -3,7 +3,7 @@
  * each row a label, what's worn and its colours. A character's head (docs/characters-plan.md) names him in the Face
  * row, with nothing over his head or eyes whatever's saved.
  */
-import { CHARACTERS, CUTS, EYE_STYLES, FACE_GEAR, HEAD_SHAPES, MARKS, coversEyes, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
+import { CHARACTERS, CHARACTER_LOOKS, CUTS, DEFAULT_LOOK, type CharacterId, EYE_STYLES, FACE_GEAR, HEAD_SHAPES, MARKS, coversEyes, MARK_SLOTS, PATTERNS, type Look, type MarkId } from '../net/profile-data';
 
 const FITS: Record<Look['kind'], string> = { suit: 'Classic Suit', hoodie: 'Drop Hoodie', track: 'Track Jacket', varsity: 'Varsity Jacket', puffer: 'Puffer Jacket', bomber: 'Bomber Jacket', coach: 'Coach Jacket', vest: 'Puffer Vest', tee: 'Heavy Tee', shell: 'Tech Shell', trucker: 'Trucker Jacket', hivis: 'Hi-Vis Vest', hivisjacket: 'Hi-Vis Jacket', chore: 'Chore Coat', coveralls: 'Coveralls', blazer: 'Blazer', shirt: 'Oxford Shirt', double: 'Double-Breasted', waistcoat: 'Waistcoat', overcoat: 'Overcoat' };
 const BOTTOMS: Record<Look['bottoms'], string> = { trousers: 'Suit Trousers', joggers: 'Joggers', trackpants: 'Track Pants', cargo: 'Cargo Pants', shorts: 'Shorts', denim: 'Relaxed Denim', work: 'Work Trousers', chinos: 'Chinos' };
@@ -43,3 +43,19 @@ export function describe(look: Look): [string, string, string[]][] {
   if (l.pattern !== 'plain') rows.push(['Print', PATTERNS.find((p) => p.id === l.pattern)!.name, []]);
   return rows;
 }
+
+/* ---------- The character picker (docs/characters-plan.md: the owner's call, 2026-11-21) ---------- */
+
+/** Who you can be: Degen himself (no character), then the characters */
+export const CHOICES: { id: CharacterId | null; name: string }[] = [{ id: null, name: 'Degen' }, ...CHARACTERS.map((c) => ({ id: c.id, name: c.name }))];
+/** Playing as this one now? */
+export const isPlaying = (l: Look, id: CharacterId | null) => (l.character ?? null) === id;
+/** Picking one: the head only, the clothes kept */
+export const pickCharacter = (l: Look, id: CharacterId | null): Look => ({ ...l, character: id });
+/** Their own outfit on top of what's worn: a character's look from the art, or Degen's classic look */
+export const theirOutfit = (l: Look, id: CharacterId | null): Look => (id ? { ...l, ...CHARACTER_LOOKS[id] } : { ...DEFAULT_LOOK });
+/** Wearing their outfit as it comes (the button pressed) */
+export const wearsTheirOutfit = (l: Look, id: CharacterId | null) => {
+  const o = theirOutfit(l, id);
+  return (Object.keys(o) as (keyof Look)[]).every((k) => l[k] === o[k]);
+};

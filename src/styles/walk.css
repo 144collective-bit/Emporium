@@ -846,7 +846,7 @@
   color: var(--muted);
   pointer-events: none;
 }
-/* Nine tabs in two rows (five and four), the same on phones: room for the longest label */
+/* The Characters tab a row of its own, then the ten slots in two rows of five, the same on phones: room for the longest label */
 .fit-tabs {
   display: grid;
   /* (ten slots, docs/wardrobe-plan.md Phases 2 and 4 and docs/faces-plan.md: two rows of five, so the longest names fit the panel at every width) */
@@ -865,6 +865,9 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   cursor: pointer;
+}
+.fit-tabs button.is-wide {
+  grid-column: 1 / -1;
 }
 .fit-tabs button[aria-selected="true"] {
   border-color: #0000;
