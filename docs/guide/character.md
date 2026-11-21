@@ -147,6 +147,10 @@ keep it up to date when what it describes changes.
     the shades' arms inside it and the lenses clear of it, the chain out of
     its cloth, at every level; `tests/clothing.test.ts` holds it out of the
     hoodie through every pose.
+- **New characters** (the owner's call, 2026-11-21) are planned in
+  `docs/characters-plan.md`: Degen's body with a head of its own sculpted
+  after the owner's art, worn as a ready-made look in the fitting room
+  (the first, SlimeWhale). Planned, not started.
 - **The suit's tailoring** (the owner's call, after the clothing plan) is
   planned in `docs/tailoring-plan.md`: the suit's tailoring detail
   (buttons, the breast welt, stitching, sleeve buttons, the vent, the
