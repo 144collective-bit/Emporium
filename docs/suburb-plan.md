@@ -295,6 +295,33 @@ These are my recommendations, made so the plan is complete; any can change.
      lunch (12:00, 12:45) and home time (three), by the visitor's clock in
      step with the school's live line; sound.ts rings it (`schoolBell()`, an
      electric bell's chopped tone), heard across Sunridge (`suburb`).
+   - **The edges** (the owner: "fix the edges. this is still rough",
+     after the shots; the yards', the streets' and Sunridge's outer edge):
+     - *The lawns:* each lawn's turf is an island in its gravel
+       (sunyards.ts `islandOf()`, `Yard.islands`): its piece moved in from
+       the sidewalk, the lot lines, the driveway and the house
+       (`ISLAND_IN`), its edges wandering a little further in (`WANDER`) and
+       its corners rounded, so neighbouring yards meet across gravel, not
+       lawn against gravel in a straight line; a sliver too narrow keeps its
+       gravel. Drawn over the piece's gravel (sunyards3d.ts). The
+       sprinklers stand on the turf.
+     - *The driveways:* an apron across the sidewalk to the kerb
+       (`Yard.apron`, `apronOf()`, the kerb found along the driveway's
+       line), drawn in the driveway's concrete.
+     - *The kerbs:* a rolled kerb in pale stone (`STONE.kerb`) along the
+       sidewalk's edge beside every street and round every turning circle
+       (sunridge3d.ts `kerbAlong()`), only where there's sidewalk
+       (`onSlab()`), so it breaks at junctions, crossings and a stem's
+       mouth.
+     - *The outer edge:* the fringe's dry wash meanders in bends a few
+       tiles long (fringes.ts, its range 9.7 to 14.8 in from the highway as
+       its test allows) and its path wanders between the wash and its old
+       line (never further in, where the highway's bend brings Sunridge's
+       sidewalk close), so the bands outside the wall no longer run ruler
+       straight. The wall itself stays where it is (nothing moves).
+     - *Left:* the sidewalk's square corners at the junctions (the street
+       plan's blocks), the wide bare lawn by the school, and the strip up
+       Palm Court's back (too narrow to bend).
    - **Left for later** (the audit's other items, each the owner's call):
      driveway cars leaving in the morning and back in the evening with
      their garage doors, kids on bikes and scooters and hoops over the

@@ -71,8 +71,11 @@ function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
     add(new THREE.PlaneGeometry(u1 - u0, v1 - v0).rotateX(-Math.PI / 2).translate((u0 + u1) / 2, yy, -(v0 + v1) / 2), m);
   const at = (g: THREE.BufferGeometry, u: number, v: number, yy = 0) => g.translate(u, yy, -v);
 
-  // The front ground
-  for (const g of y.ground) flat(g, 0.008, y.front === 'desert' ? DG[y.groundTone] : LAWN);
+  // The front ground: a desert front its gravel; a lawn its turf islands laid in the gravel, their edges soft (Phase 7)
+  for (const g of y.ground) flat(g, 0.008, DG[y.groundTone]);
+  for (const g of y.islands) flat(g, 0.0135, LAWN);
+  // The driveway's apron across the sidewalk to the kerb (the sidewalk's top is the lot's, the frame's 0)
+  if (y.apron) rect(y.apron.u0, y.apron.u1, -y.apron.depth, 0.002, 0.012, CONCRETE);
 
   // The plants: the trees at every distance, the rest near only (phones fewer)
   const big = (p: Plant) => p.kind === 'paloverde' || p.kind === 'saguaro' || p.kind === 'palm' || p.kind === 'shade';

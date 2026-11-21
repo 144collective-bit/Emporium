@@ -140,10 +140,13 @@ function along(off: (s: number) => number, keep: (p: Pt) => boolean): Pt[] {
   return out;
 }
 
-/** The wash's bed (tiles across) and its centre line: winding 10 to 14.4 in from the highway, from by Palm Court to above the north ring avenue */
+/** The wash's bed (tiles across) and its centre line: meandering 9.7 to 14.8 in from the highway in bends a few
+ * tiles long (no long straight runs: the owner's call, no ruler-straight edges), from by Palm Court to above the north
+ * ring avenue */
 export const WASH_W = 2.6;
+const washOff = (s: number) => 12.25 + 1.7 * Math.sin(s / 14) + 0.85 * Math.sin(s / 5.3 + 1);
 export const WASH: Pt[] = along(
-  (s) => 12.3 + 1.4 * Math.sin(s / 31) + 0.7 * Math.sin(s / 11 + 1),
+  washOff,
   ([x, z]) => x >= 112 && z <= -30
 );
 /** A culvert's headwall at each end of the wash: where it stands and the way it faces (into the wash) */
@@ -188,7 +191,7 @@ export function pathWidth(x: number, z: number) {
   return d < 1.2 ? SQUEEZE_W : d > 3 ? PATH_W : SQUEEZE_W + ((PATH_W - SQUEEZE_W) * (d - 1.2)) / 1.8;
 }
 /** How far in from the highway the path keeps (its wall is at about 20) */
-const PATH_IN = 17.4;
+const PATH_IN = 17.75;
 const AVENUE_KERB = -8.2;
 export const FRINGE_PATH: Pt[] = [
   [STRIP_X, FOOT_Z],
@@ -201,7 +204,9 @@ export const FRINGE_PATH: Pt[] = [
   [106.2, -153.3],
   [108.5, -153.2],
   ...along(
-    (s) => PATH_IN + 0.35 * Math.sin(s / 13),
+    // (wandering as a worn path does, never further in than `PATH_IN` (Sunridge's sidewalk is past it where the
+    // highway bends), always a little clear of the wash's bends)
+    (s) => Math.min(PATH_IN, Math.max(washOff(s) + 2.7, PATH_IN - 0.9 + 0.55 * Math.sin(s / 9) + 0.2 * Math.sin(s / 3.7 + 2))),
     ([x, z]) => x >= 110 && z <= AVENUE_KERB - 1.4
   ),
 ];
