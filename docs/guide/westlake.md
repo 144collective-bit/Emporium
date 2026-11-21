@@ -19,7 +19,10 @@ keep it up to date when what it describes changes.
     sidewalk alongside the Parkway's, `Z0` the highway's north side round
     its north-west bend, `ZS` the west ring avenue), `WESTLAKE_BLOCKS` in
     the street plan as a park, `WESTLAKE_RECT` (the outskirts' trees keep off it);
-    the lake (`LAKE_C`, `lakeR()`, `lakeAt()`, `lakeLine()`, `inLake()`:
+    the lake (`LAKE_C`; redesigned in `docs/westlake-plan.md` Phase 1: an
+    outline, `LAKE_POLY`, baked, its coves, point, arm and inlet
+    `LAKE_COVES`, `LAKE_POINT`, `LAKE_ARM`, `LAKE_INLET`, the open water
+    `lakeCoreLine()` for the boats; `lakeAt()`, `lakeLine()`, `lakeDist()`, `inLake()`:
     walk.ts stops you on the lawn at its rim (`RIM`), cars stop at
     `LAKE_WALLS`, which drive-sim.ts adds near it); the paths (`PATHS`:
     `ring` round the big block, `loop` round the lake (`LOOP_OUT`), the
@@ -29,6 +32,8 @@ keep it up to date when what it describes changes.
     (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
     avenue, clumps from a seeded noise; `clump` ones,
     every other, left out on phones), `PARK_LAMPS` and `BENCHES`;
+    the rock outcrops (`ROCKS`, `ROCK_SOLIDS`, `nearRock()`; drawn by
+    westlake3d.ts `registerRocks()`);
     `GARDEN_SITE` (the stadium's old site, kept for the formal garden); step 3's
     land: the boathouse (`BOATHOUSE`, solid) and its jetty (`JETTY`,
     `onJetty()`: walk.ts lets you out along it, at its deck's height). Its

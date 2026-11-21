@@ -11,7 +11,8 @@
  *   one mesh with the river's shader, not a site);
  * - the gates: two stone piers with caps and lanterns, and over the Mall's
  *   north gate, iron posts and a beam carrying the park's name both ways;
- * - benches round the lake and along the Mall (near only).
+ * - benches round the lake and along the Mall (near only);
+ * - the rock outcrops (docs/westlake-plan.md Phase 1): layered grey stone, a site a tile, lichen near only.
  */
 import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
@@ -22,10 +23,11 @@ import { site } from './tilework';
 import { PATH_Y, PAVE_Y, bench, registerGardens } from './gardens3d';
 import { isMain } from './gardens';
 import { offsetLine } from './streetplan';
-import { BENCHES, GATES, GATE_PIERS, LAKE_C, PATHS, PIER, RIM, lakeLine, type ParkPath, type Pt } from './westlake';
+import { BENCHES, GATES, GATE_PIERS, PATHS, PIER, RIM, ROCKS, lakeLine, type ParkPath, type Pt, type Rock } from './westlake';
+import { TILE, tileOf } from './tiles';
 import { registerFringes } from './fringes3d';
 import { registerCivic } from './civic3d';
-import { STONE as PAL_STONE } from './palette';
+import { OUTCROP, STONE as PAL_STONE } from './palette';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -36,6 +38,59 @@ const CAP = toon(PAL_STONE.cap);
 const IRON = toon('#1b1830');
 /** The main walks' paving (the gravel paths' is GRAVEL) */
 const PAVING = toon(PAL_STONE.paving);
+const ROCK_FACE = toon(OUTCROP.face);
+const ROCK_DARK = toon(OUTCROP.dark);
+const ROCK_TOP = toon(OUTCROP.top);
+const LICHEN = toon(OUTCROP.lichen);
+
+/**
+ * A rock outcrop: two or three slabs of stone stacked and staggered, each a flattened many-faced stone turned its own
+ * way, the top one lighter (the layered grey of the park's knolls), and on the near side a few patches of lichen
+ */
+function rock(b: Batch, k: Rock, low: boolean) {
+  let s = k.seed;
+  const r = () => ((s = (s * 16807) % 2147483647) / 2147483647);
+  const layers = k.h > 0.9 ? 3 : 2;
+  let y = 0;
+  let [ox, oz] = [0, 0];
+  for (let i = 0; i < layers; i++) {
+    const t = 1 - (i / layers) * 0.45;
+    const th = (k.h / layers) * (1.1 + r() * 0.3);
+    const g = new THREE.DodecahedronGeometry(1, 0)
+      .scale(k.r * t * (0.95 + r() * 0.2), th * 0.75, k.r * t * (0.7 + r() * 0.2))
+      .rotateY(k.ry + (r() - 0.5) * 0.6)
+      .translate(k.x + ox, SLAB + y + th * 0.45, k.z + oz);
+    b.add(g, i === layers - 1 ? ROCK_TOP : i % 2 ? ROCK_DARK : ROCK_FACE);
+    y += th * 0.72;
+    ox += (r() - 0.5) * k.r * 0.35;
+    oz += (r() - 0.5) * k.r * 0.35;
+  }
+  if (low) return;
+  b.detail(() => {
+    for (let i = 0; i < 3; i++) {
+      const a = r() * Math.PI * 2;
+      const d = k.r * (0.2 + r() * 0.4);
+      b.add(new THREE.SphereGeometry(0.14 + r() * 0.12, 6, 3).scale(1, 0.25, 1).translate(k.x + ox + Math.cos(a) * d, SLAB + y + 0.02, k.z + oz + Math.sin(a) * d), LICHEN);
+    }
+  });
+}
+/** The outcrops, a site a tile */
+function registerRocks(low: boolean) {
+  const byTile = new Map<string, Rock[]>();
+  for (const k of ROCKS) {
+    const key = tileOf(k.x, k.z).join(',');
+    if (!byTile.has(key)) byTile.set(key, []);
+    byTile.get(key)!.push(k);
+  }
+  for (const [key, list] of byTile) {
+    const [i, j] = key.split(',').map(Number);
+    site(`westlake rocks ${key}`, [i * TILE - 4, j * TILE - 4, (i + 1) * TILE + 4, (j + 1) * TILE + 4], (into) => {
+      const b = new Batch();
+      for (const k of list) rock(b, k, low);
+      b.build(into, { cast: true, receive: true });
+    });
+  }
+}
 
 /** A flat ribbon along a polyline (closed if `loop`), `half` either side, at y, facing up */
 function ribbon(pts: Pt[], half: number, y: number, loop = false) {
@@ -62,8 +117,12 @@ function ribbon(pts: Pt[], half: number, y: number, loop = false) {
   return g;
 }
 
-/** An upright band along an open polyline from y0 to y1, each quad facing towards `c` (`towards`) or away from it */
-function band(line: Pt[], y0: number, y1: number, c: Pt, towards: boolean) {
+/**
+ * An upright band along an open stretch of the lake's shore from y0 to y1, each quad facing the water (`towards`) or
+ * away from it: by the way the shore is wound (`sg`, its signed area's sign), not by its middle, since the arm bends
+ * round (docs/westlake-plan.md Phase 1)
+ */
+function band(line: Pt[], y0: number, y1: number, sg: number, towards: boolean) {
   const pos: number[] = [];
   for (let i = 1; i < line.length; i++) {
     const [p, q] = [line[i - 1], line[i]];
@@ -73,10 +132,10 @@ function band(line: Pt[], y0: number, y1: number, c: Pt, towards: boolean) {
       [q[0], y1, q[1]],
       [p[0], y1, p[1]],
     ];
-    // Wound 0-1-2, 0-2-3 it faces (-ez, ex); the other way round if that's not the way it should face
-    const [ex, ez] = [q[0] - p[0], q[1] - p[1]];
-    const dot = -ez * (c[0] - p[0]) + ex * (c[1] - p[1]);
-    const order = dot > 0 === towards ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2];
+    // Wound 0-1-2, 0-2-3 it faces (-ez, ex), which is away from the water when the shore is wound negatively; the
+    // other way round if that's not the way it should face
+    const faceOut = sg < 0;
+    const order = faceOut !== towards ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2];
     for (const k of order) pos.push(...quad[k]);
   }
   const g = new THREE.BufferGeometry();
@@ -130,6 +189,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   if (scene && tick) registerParkLife(scene, tick, low);
   // The walks' kerbs and edges, the park's wall, the formal garden, the planters and the terraces (stage 3)
   registerGardens(low);
+  // The rock outcrops on the knolls and at the point (docs/westlake-plan.md Phase 1)
+  registerRocks(low);
   // The civic square at its south end (civic3d.ts, docs/civic-plan.md)
   registerCivic(scene, tick);
   // The slivers by the highway beside it (fringes3d.ts, docs/blend-plan.md Phase 5c)
@@ -147,10 +208,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     );
 
   // The lake's rim, a quarter a site: a flat stone top, a wall down to the water inside and to the lawn outside
-  const inner = lakeLine(0, 120);
-  const outer = lakeLine(RIM.w, 120);
+  const inner = lakeLine(0, 360);
+  const outer = lakeLine(RIM.w, 360);
   const top = SLAB + RIM.h;
   const n = inner.length;
+  const sg = Math.sign(inner.reduce((s, p, i) => s + p[0] * inner[(i + 1) % n][1] - inner[(i + 1) % n][0] * p[1], 0));
   for (let k = 0; k < 4; k++) {
     const i0 = (k * n) / 4;
     const i1 = ((k + 1) * n) / 4;
@@ -170,8 +232,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       g.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
       b.add(g, CAP);
       // The walls: down to the water inside (facing it), down to the lawn outside (facing away)
-      b.add(band(ins, SLAB, top, LAKE_C, true), STONE);
-      b.add(band(outs, SLAB, top, LAKE_C, false), STONE);
+      b.add(band(ins, SLAB, top, sg, true), STONE);
+      b.add(band(outs, SLAB, top, sg, false), STONE);
       b.build(into, { cast: false, receive: true });
     });
   }
@@ -242,7 +304,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
 
   // The water: on the main thread only (the river's shader, one mesh, never in the tile meshes)
   if (scene) {
-    const water = new THREE.Mesh(flatPoly(lakeLine(0.02, 120), SLAB + 0.04), waterMat);
+    const water = new THREE.Mesh(flatPoly(lakeLine(0.02, 360), SLAB + 0.04), waterMat);
     water.name = 'westlake-water';
     water.receiveShadow = false;
     scene.add(water);

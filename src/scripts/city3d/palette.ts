@@ -124,6 +124,14 @@ export const BANK = {
   rock: '#77738a',
 } as const;
 
+/** Westlake Park's outcrops (docs/westlake-plan.md Phase 1): a grey stone laid in layers, its tops lighter, lichen in its cracks */
+export const OUTCROP = {
+  face: '#7a7590',
+  dark: '#5f5b76',
+  top: '#928ca8',
+  lichen: '#7f8f62',
+} as const;
+
 /** The street lamps' light: white in town, sodium orange in The Trenches, along the waterfront and in the Docks */
 export const LAMP = {
   white: { bulb: '#fff1c2', halo: '#ffe2a0', pool: '#ffd98a' },

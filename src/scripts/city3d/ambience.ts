@@ -47,7 +47,7 @@ import { DOORS } from './solids';
 import { TRENCH_RECT, inTrenches } from './trenches';
 import { BOOMBOXES } from './grit';
 import { CLUB } from './avenue';
-import { LAKE_C, WESTLAKE_RECT, inPark, lakeR } from './westlake';
+import { WESTLAKE_RECT, inPark, lakeDist } from './westlake';
 import { CIRCLE, UPTOWN_RECT, inUptown } from './uptown';
 import { NORTH_RECT } from './uptownnorth';
 import { CENTRE, POOL, WALL_RUNS, WATER_WALL } from './plaza';
@@ -283,7 +283,7 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   // Westlake Park: all of it on its land, fading out over 30 past it; the lake lapping close by
   const fromPark = inPark([x, z]) ? 0 : past(WESTLAKE_RECT, x, z) + 4;
   const park = 1 - smooth(0, 30, fromPark);
-  const fromLake = Math.max(0, Math.hypot(x - LAKE_C[0], z - LAKE_C[1]) - lakeR(Math.atan2(z - LAKE_C[1], x - LAKE_C[0])));
+  const fromLake = Math.max(0, lakeDist(x, z));
   const lake = 0.8 * (1 - smooth(2, 22, fromLake + lift * 0.4));
   // Uptown: a quieter hum on its land (fading in over 20 from its edge), the circle's traffic round it, the plaza's water
   const fromUptown = inUptown(x, z) ? 0 : past(UPTOWN_RECT, x, z);

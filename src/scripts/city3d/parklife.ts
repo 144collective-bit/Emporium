@@ -37,7 +37,9 @@ import {
   inLake,
   inPark,
   inset,
-  lakeLine,
+  lakeCoreLine,
+  nearRock,
+  loopLine,
   onPath,
   type Pt,
 } from './westlake';
@@ -119,10 +121,10 @@ export const LANES: Lane[] = (() => {
   const out: Lane[] = [];
   const lane = (id: string, pts: Pt[], dir: 1 | -1, pace: number, count: number, dogs: number[] = []) => out.push({ id, loop: loopOf(pts), dir, pace, count, dogs });
   // The lake loop (1.1 either side of its line): walkers 0.35 off its middle, joggers 0.8, either way
-  lane('loop-in', lakeLine(LOOP_OUT - 0.35, 240), 1, WALK_PACE, 4, [1]);
-  lane('loop-out', lakeLine(LOOP_OUT + 0.35, 240), -1, WALK_PACE, 4, [2]);
-  lane('loop-jog-in', lakeLine(LOOP_OUT - 0.8, 240), -1, JOG_PACE, 2);
-  lane('loop-jog-out', lakeLine(LOOP_OUT + 0.8, 240), 1, JOG_PACE, 2);
+  lane('loop-in', loopLine(-0.35), 1, WALK_PACE, 4, [1]);
+  lane('loop-out', loopLine(0.35), -1, WALK_PACE, 4, [2]);
+  lane('loop-jog-in', loopLine(-0.8), -1, JOG_PACE, 2);
+  lane('loop-jog-out', loopLine(0.8), 1, JOG_PACE, 2);
   // The ring walk round the big block (1.2 either side)
   lane('ring-in', inset(BIG, RING_IN + 0.35), 1, WALK_PACE, 4, [0]);
   lane('ring-out', inset(BIG, RING_IN - 0.35), -1, WALK_PACE, 4, [3]);
@@ -179,7 +181,7 @@ export const PICNICS: Picnic[] = (() => {
   const [z0, z1] = [Math.min(...BIG.map((p) => p[1])), Math.max(...BIG.map((p) => p[1]))];
   for (let tries = 0; tries < 4000 && out.length < 9; tries++) {
     const p: Pt = [x0 + r() * (x1 - x0), z0 + r() * (z1 - z0)];
-    if (!inPark(p, 4) || onPath(p, 3.2) || inCivic(p, 4) || inLake(p[0], p[1], LOOP_OUT + 3.5)) continue;
+    if (!inPark(p, 4) || onPath(p, 3.2) || inCivic(p, 4) || inLake(p[0], p[1], LOOP_OUT + 3.5) || nearRock(p, 2.5)) continue;
     if (p[0] > GARDEN_SITE[0] - 5 && p[0] < GARDEN_SITE[2] + 5 && p[1] > GARDEN_SITE[1] - 5 && p[1] < GARDEN_SITE[3] + 5) continue;
     if (PARK_TREES.some((t) => Math.hypot(t.x - p[0], t.z - p[1]) < 3.2)) continue;
     if (out.some((o) => Math.hypot(o.at[0] - p[0], o.at[1] - p[1]) < 16)) continue;
@@ -213,15 +215,13 @@ export interface Boat {
   at(t: number, out: { x: number; z: number; yaw: number }): { x: number; z: number; yaw: number };
 }
 const bp = { x: 0, z: 0, yaw: 0 };
-/** A ring this far in from the water's edge, along its normals (a radial offset would bunch the rings where the shore slants) */
+/**
+ * A ring this far in from the open water's edge, along its normals (a radial offset would bunch the rings where the
+ * shore slants): round the lake's body only, so the boats keep out of the arm and the inlet (docs/westlake-plan.md
+ * Phase 1)
+ */
 export function ringLine(d: number): Pt[] {
-  const edge = lakeLine(0, 240);
-  const wrap = [edge.at(-1)!, ...edge, edge[0]];
-  const a = offsetLine(wrap, d).slice(1, -1);
-  // (whichever side is the water's)
-  const b = offsetLine(wrap, -d).slice(1, -1);
-  const inside = (pts: Pt[]) => pts.filter((p) => inLake(p[0], p[1])).length;
-  return inside(a) >= inside(b) ? a : b;
+  return lakeCoreLine(-d, 240);
 }
 /** The rings the boats go round: this far in from the water's edge, the way round and the pace (a ring's boats spread evenly) */
 export const RINGS = [

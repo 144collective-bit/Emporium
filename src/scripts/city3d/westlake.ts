@@ -23,6 +23,7 @@
  *   the north gate (`gate-n`), under the raised highway (stadium.ts `WALK`).
  */
 import { EW_ROADS, WALK_W } from './layout';
+import { BUILT, baked } from './baked';
 import { HIGHWAY_BOX, HIGHWAY_HALF, HIGHWAY_R } from './highway';
 import { RAMP_CLEAR, quadrantEdge } from './viaduct';
 import { BEND_REACH, PARKWAY } from './outer';
@@ -91,23 +92,284 @@ export const GARDEN_SITE: Rect = [-172, -138, -108, -86];
 /* ---------- The lake ---------- */
 
 export const LAKE_C: Pt = [-92, -52];
-/** The lake's radius at angle a (from +x towards +z): a sum of a few slow waves, longest east to west */
-export const lakeR = (a: number) => 24 * (1 + 0.3 * Math.cos(2 * (a - 0.15)) + 0.1 * Math.cos(3 * a + 1.1) + 0.05 * Math.cos(5 * a + 2.3));
-/** A point on the lake's edge, `out` beyond it */
-export const lakeAt = (a: number, out = 0): Pt => {
-  const r = lakeR(a) + out;
-  return [LAKE_C[0] + Math.cos(a) * r, LAKE_C[1] + Math.sin(a) * r];
-};
-/** The lake's outline, `n` points round (counter-clockwise from above, as the blocks are) */
-export const lakeLine = (out = 0, n = 96): Pt[] => Array.from({ length: n }, (_, k) => lakeAt((-2 * Math.PI * k) / n, out));
-/** Is a point in the lake (`m` short of its edge: a walker's radius) */
-export function inLake(x: number, z: number, m = 0) {
-  const dx = x - LAKE_C[0];
-  const dz = z - LAKE_C[1];
-  const d = Math.hypot(dx, dz);
-  if (d > 36 + m) return false;
-  return d < lakeR(Math.atan2(dz, dx)) + m;
+/** The old lake's radius at angle a (from +x towards +z): a sum of a few slow waves, longest east to west */
+const baseR = (a: number) => 24 * (1 + 0.3 * Math.cos(2 * (a - 0.15)) + 0.1 * Math.cos(3 * a + 1.1) + 0.05 * Math.cos(5 * a + 2.3));
+
+/*
+ * The lake as redesigned (docs/westlake-plan.md Phase 1), its centre where it was: the old shore, its north side by
+ * the boathouse and the jetty as it was, given two coves and a rocky point pushing into the water (`LAKE_COVES`,
+ * `LAKE_POINT`: out along the shore's normal, by angle round the centre), and two arms spliced in (`LAKE_ARM` curving
+ * north from the north shore into the woods, `LAKE_INLET` running south-east: each a centre line and its widths,
+ * crossed by bridges in Phase 3), joined softly and traced (`LAKE_POLY`, baked). Not a radius by angle any more: the arm bends, so the lake is an outline,
+ * and what asks of it asks the outline (`inLake()`, `lakeDist()`, `lakeLine()`).
+ */
+export const LAKE_COVES = [
+  { a: (-150 * Math.PI) / 180, reach: 3.5, w: 0.2 },
+  { a: (70 * Math.PI) / 180, reach: 3, w: 0.18 },
+];
+export const LAKE_POINT = { a: (150 * Math.PI) / 180, reach: -4.2, w: 0.17 };
+export interface LakeArm {
+  /** Its centre line from the open water out, and its width at each point (its tip rounded) */
+  line: Pt[];
+  w: number[];
 }
+export const LAKE_ARM: LakeArm = {
+  line: [[-75.5, -62], [-74.5, -73], [-72, -82], [-68.5, -89], [-66.5, -96]],
+  w: [9, 7.4, 7, 6.6, 6],
+};
+export const LAKE_INLET: LakeArm = {
+  line: [[-75, -39], [-71.5, -31.5], [-68.5, -26.5]],
+  w: [7, 5, 4.4],
+};
+/** The open water: the old shore with its coves and point, no arms (the boats' rings keep inside it) */
+const CORE: Pt[] = (() => {
+  const n = 360;
+  const pts = Array.from({ length: n }, (_, k) => {
+    const a = (-2 * Math.PI * k) / n;
+    return [LAKE_C[0] + Math.cos(a) * baseR(a), LAKE_C[1] + Math.sin(a) * baseR(a)] as Pt;
+  });
+  const nrm = normals(pts);
+  return pts.map((p, k) => {
+    const a = (-2 * Math.PI * k) / n;
+    const d = [...LAKE_COVES, LAKE_POINT].reduce((s, c) => {
+      const da = Math.atan2(Math.sin(a - c.a), Math.cos(a - c.a));
+      return s + c.reach * Math.exp(-((da / c.w) ** 2));
+    }, 0);
+    return [p[0] + nrm[k][0] * d, p[1] + nrm[k][1] * d] as Pt;
+  });
+})();
+/** A closed outline's outward normals at its points (the outline wound as the old lake's: clockwise from above, +x right, +z down the page) */
+function normals(pts: Pt[]): Pt[] {
+  const n = pts.length;
+  const area = pts.reduce((s, p, i) => s + p[0] * pts[(i + 1) % n][1] - pts[(i + 1) % n][0] * p[1], 0);
+  const sg = area > 0 ? 1 : -1;
+  return pts.map((_, i) => {
+    const [a, b] = [pts[(i + n - 1) % n], pts[(i + 1) % n]];
+    const [dx, dz] = [b[0] - a[0], b[1] - a[1]];
+    const l = Math.hypot(dx, dz) || 1;
+    return [(sg * dz) / l, (-sg * dx) / l] as Pt;
+  });
+}
+/** Corners cut, so the splices and the tips round off (Chaikin's, a closed outline) */
+function chaikin(pts: Pt[], times: number): Pt[] {
+  let p = pts;
+  for (let t = 0; t < times; t++) {
+    const q: Pt[] = [];
+    for (let i = 0; i < p.length; i++) {
+      const [a, b] = [p[i], p[(i + 1) % p.length]];
+      q.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25], [a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
+    }
+    p = q;
+  }
+  return p;
+}
+/** A closed outline n points round, evenly along its length (from the point nearest a start, so it reads as before) */
+function resample(pts: Pt[], n: number): Pt[] {
+  const m = pts.length;
+  const cum = [0];
+  for (let i = 0; i < m; i++) cum.push(cum[i] + Math.hypot(pts[(i + 1) % m][0] - pts[i][0], pts[(i + 1) % m][1] - pts[i][1]));
+  const L = cum[m];
+  const out: Pt[] = [];
+  let j = 0;
+  for (let k = 0; k < n; k++) {
+    const d = (k / n) * L;
+    while (cum[j + 1] < d) j++;
+    const t = (d - cum[j]) / (cum[j + 1] - cum[j] || 1);
+    const [a, b] = [pts[j], pts[(j + 1) % m]];
+    out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]);
+  }
+  return out;
+}
+/** The open water's outline, rounded (no arms) */
+const CORE_POLY: Pt[] = resample(CORE, 360);
+/** How far a point is from an arm: out from its sides positive (its width eased along its line) */
+function armDist(arm: LakeArm, x: number, z: number) {
+  let best = Infinity;
+  for (let i = 1; i < arm.line.length; i++) {
+    const [a, b] = [arm.line[i - 1], arm.line[i]];
+    const [dx, dz] = [b[0] - a[0], b[1] - a[1]];
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz)));
+    const d = Math.hypot(a[0] + dx * t - x, a[1] + dz * t - z) - (arm.w[i - 1] + (arm.w[i] - arm.w[i - 1]) * t) / 2;
+    best = Math.min(best, d);
+  }
+  return best;
+}
+/** Two shapes' distances joined softly (a rounded fillet about `k` across where they meet) */
+const smin = (a: number, b: number, k: number) => -k * Math.log(Math.exp(-a / k) + Math.exp(-b / k));
+/**
+ * The whole lake: the open water and its arms as one field (each its distance, joined softly so the mouths round off),
+ * its edge traced on a fine grid (marching squares, the crossings eased along each cell's sides), the longest ring
+ * kept, wound and started as the old lake's outline was (so a line n points round reads from the same place). Baked:
+ * the build works it out once.
+ */
+function makeLake(): Pt[] {
+  const RES = 0.3;
+  const all = [...CORE, ...LAKE_ARM.line, ...LAKE_INLET.line];
+  const [x0, z0] = [Math.min(...all.map((p) => p[0])) - 6, Math.min(...all.map((p) => p[1])) - 6];
+  const [x1, z1] = [Math.max(...all.map((p) => p[0])) + 6, Math.max(...all.map((p) => p[1])) + 6];
+  const [nx, nz] = [Math.ceil((x1 - x0) / RES) + 1, Math.ceil((z1 - z0) / RES) + 1];
+  const f = new Float64Array(nx * nz);
+  for (let j = 0; j < nz; j++)
+    for (let i = 0; i < nx; i++) {
+      const [x, z] = [x0 + i * RES, z0 + j * RES];
+      const core = inPoly(CORE_POLY, [x, z]) ? -distToLine(CORE_POLY, [x, z], true) : distToLine(CORE_POLY, [x, z], true);
+      f[j * nx + i] = smin(smin(core, armDist(LAKE_ARM, x, z), 2.2), armDist(LAKE_INLET, x, z), 1.8);
+    }
+  // The edge: each cell's crossings, a segment a pair, keyed by the cell side they sit on (so they chain up)
+  const at = (i: number, j: number) => f[j * nx + i];
+  const cross = (i0: number, j0: number, i1: number, j1: number): Pt => {
+    const [a, b] = [at(i0, j0), at(i1, j1)];
+    const t = a / (a - b);
+    return [x0 + (i0 + (i1 - i0) * t) * RES, z0 + (j0 + (j1 - j0) * t) * RES];
+  };
+  const links = new Map<string, string[]>();
+  const pos = new Map<string, Pt>();
+  const link = (a: string, b: string) => {
+    links.set(a, [...(links.get(a) ?? []), b]);
+    links.set(b, [...(links.get(b) ?? []), a]);
+  };
+  for (let j = 0; j < nz - 1; j++)
+    for (let i = 0; i < nx - 1; i++) {
+      // (the corners: top left, top right, bottom right, bottom left, each in the water under nought; the sides: top,
+      // right, bottom, left, each keyed so its neighbour cell shares it)
+      const v = [at(i, j), at(i + 1, j), at(i + 1, j + 1), at(i, j + 1)];
+      const c = v.map((x) => (x < 0 ? 1 : 0));
+      const idx = c[0] | (c[1] << 1) | (c[2] << 2) | (c[3] << 3);
+      if (idx === 0 || idx === 15) continue;
+      const key = [`h${i},${j}`, `v${i + 1},${j}`, `h${i},${j + 1}`, `v${i},${j}`];
+      const ends = [
+        [i, j, i + 1, j],
+        [i + 1, j, i + 1, j + 1],
+        [i, j + 1, i + 1, j + 1],
+        [i, j, i, j + 1],
+      ] as const;
+      const cut = [0, 1, 2, 3].filter((k) => c[k] !== c[(k + 1) % 4]);
+      // (side k lies between corners k and k+1: top 0-1, right 1-2, bottom 2-3, left 3-0)
+      for (const k of cut) if (!pos.has(key[k])) pos.set(key[k], cross(...ends[k]));
+      if (cut.length === 2) link(key[cut[0]], key[cut[1]]);
+      else {
+        // A saddle: the middle's value says which corners join
+        // (the middle on the top left's side: the other two corners are cut off on their own; otherwise those two are)
+        const mid = (v[0] + v[1] + v[2] + v[3]) / 4 < 0;
+        if ((c[0] === 1) === mid) {
+          link(key[0], key[1]);
+          link(key[2], key[3]);
+        } else {
+          link(key[3], key[0]);
+          link(key[1], key[2]);
+        }
+      }
+    }
+  // Walk the links into rings; keep the longest
+  const seen = new Set<string>();
+  let best: Pt[] = [];
+  for (const start of links.keys()) {
+    if (seen.has(start)) continue;
+    const ring: Pt[] = [];
+    let [prev, k]: [string | undefined, string | undefined] = [undefined, start];
+    while (k && !seen.has(k)) {
+      seen.add(k);
+      ring.push(pos.get(k)!);
+      const nb: string[] = links.get(k) ?? [];
+      const nxt: string | undefined = nb.find((q) => q !== prev && !seen.has(q));
+      [prev, k] = [k, nxt];
+    }
+    if (ring.length > best.length) best = ring;
+  }
+  // Wound as the old outline (its signed area's sign), eased, evenly spaced, started due east of the middle
+  const area = (p: Pt[]) => p.reduce((s, q, i) => s + q[0] * p[(i + 1) % p.length][1] - p[(i + 1) % p.length][0] * q[1], 0);
+  if (Math.sign(area(best)) !== Math.sign(area(CORE))) best.reverse();
+  const out = resample(chaikin(resample(best, 600), 2), 480);
+  let k0 = 0;
+  const score = (p: Pt) => Math.abs(p[1] - LAKE_C[1]) + (p[0] < LAKE_C[0] ? 1e3 : 0);
+  for (let k = 1; k < out.length; k++) if (score(out[k]) < score(out[k0])) k0 = k;
+  return [...out.slice(k0), ...out.slice(0, k0)].map((p) => [Math.round(p[0] * 1000) / 1000, Math.round(p[1] * 1000) / 1000] as Pt);
+}
+export const LAKE_POLY: Pt[] = baked('lake', BUILT ? undefined : makeLake);
+/** The way the shore is wound (its signed area's sign: the outward normal of an edge (dx, dz) is this times (dz, -dx)) */
+const LAKE_SG = Math.sign(LAKE_POLY.reduce((s, p, i) => s + p[0] * LAKE_POLY[(i + 1) % LAKE_POLY.length][1] - LAKE_POLY[(i + 1) % LAKE_POLY.length][0] * p[1], 0));
+/** The lake's box (x0, z0, x1, z1) */
+const LAKE_BOX: Rect = [Math.min(...LAKE_POLY.map((p) => p[0])), Math.min(...LAKE_POLY.map((p) => p[1])), Math.max(...LAKE_POLY.map((p) => p[0])), Math.max(...LAKE_POLY.map((p) => p[1]))];
+/** How far out the lake reaches from its centre at most (its arm's tip) */
+export const LAKE_REACH = Math.max(...LAKE_POLY.map((p) => Math.hypot(p[0] - LAKE_C[0], p[1] - LAKE_C[1])));
+/** How far a point is from the water: out from the shore positive, in from it negative */
+export function lakeDist(x: number, z: number) {
+  const d = distToLine(LAKE_POLY, [x, z], true);
+  return inPoly(LAKE_POLY, [x, z]) ? -d : d;
+}
+/** Is a point in the lake (`m` short of its edge, out along the shore's normal: a walker's radius; negative, that far in from it) */
+export function inLake(x: number, z: number, m = 0) {
+  if (x < LAKE_BOX[0] - m || x > LAKE_BOX[2] + m || z < LAKE_BOX[1] - m || z > LAKE_BOX[3] + m) return false;
+  const inn = inPoly(LAKE_POLY, [x, z]);
+  if (m === 0) return inn;
+  if (m > 0) return inn || distToLine(LAKE_POLY, [x, z], true) < m;
+  return inn && distToLine(LAKE_POLY, [x, z], true) > -m;
+}
+/** A closed line `out` off an outline along its normals, its loops cut out (where an offset folds over itself at a bend) */
+function offset(poly: Pt[], out: number): Pt[] {
+  if (!out) return poly.slice();
+  const nrm = normals(poly);
+  let p = poly.map((q, i) => [q[0] + nrm[i][0] * out, q[1] + nrm[i][1] * out] as Pt);
+  // (a fold: two edges crossing; the stretch between them cut out, the crossing kept)
+  const cross = (a: Pt, b: Pt, c: Pt, d: Pt): Pt | null => {
+    const den = (b[0] - a[0]) * (d[1] - c[1]) - (b[1] - a[1]) * (d[0] - c[0]);
+    if (Math.abs(den) < 1e-12) return null;
+    const t = ((c[0] - a[0]) * (d[1] - c[1]) - (c[1] - a[1]) * (d[0] - c[0])) / den;
+    const u = ((c[0] - a[0]) * (b[1] - a[1]) - (c[1] - a[1]) * (b[0] - a[0])) / den;
+    return t > 0 && t < 1 && u > 0 && u < 1 ? [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t] : null;
+  };
+  for (let guard = 0; guard < 64; guard++) {
+    const n = p.length;
+    let cut = false;
+    for (let i = 0; i < n && !cut; i++)
+      // (a fold is short: look ahead a third of the way round)
+      for (let k = 2; k < n / 3 && !cut; k++) {
+        const j = (i + k) % n;
+        if ((j + 1) % n === i) continue;
+        const x = cross(p[i], p[(i + 1) % n], p[j], p[(j + 1) % n]);
+        if (!x) continue;
+        const keep: Pt[] = [];
+        for (let m = 0; m < n; m++) {
+          const idx = (j + 1 + m) % n;
+          if (idx === (i + 1) % n) break;
+          keep.push(p[idx]);
+        }
+        p = [x, ...keep];
+        // (rotated back so it starts near where it did)
+        cut = true;
+      }
+    if (!cut) break;
+  }
+  return p;
+}
+/** The lake's outline, `n` points round (wound as the old lake's), `out` off it along its normals (negative: over the water) */
+export const lakeLine = (out = 0, n = 96): Pt[] => resample(offset(LAKE_POLY, out), n);
+/** The open water's outline (no arm or inlet), `out` off it: the boats' rings are inside it */
+export const lakeCoreLine = (out = 0, n = 96): Pt[] => resample(offset(CORE_POLY, out), n);
+/** Where a ray from the lake's middle at angle a (from +x towards +z) last leaves the water, `out` off the shore there along its normal */
+export const lakeAt = (a: number, out = 0): Pt => {
+  const [dx, dz] = [Math.cos(a), Math.sin(a)];
+  let best = -1;
+  let at: Pt = LAKE_C;
+  let k = 0;
+  const P = LAKE_POLY;
+  for (let i = 0; i < P.length; i++) {
+    const [p, q] = [P[i], P[(i + 1) % P.length]];
+    const [ex, ez] = [q[0] - p[0], q[1] - p[1]];
+    const den = dx * ez - dz * ex;
+    if (Math.abs(den) < 1e-12) continue;
+    const t = ((p[0] - LAKE_C[0]) * ez - (p[1] - LAKE_C[1]) * ex) / den;
+    const u = ((p[0] - LAKE_C[0]) * dz - (p[1] - LAKE_C[1]) * dx) / den;
+    if (t > 0 && u >= 0 && u < 1 && t > best) [best, at, k] = [t, [LAKE_C[0] + dx * t, LAKE_C[1] + dz * t], i];
+  }
+  if (!out) return at;
+  // (out along the edge's normal, by the whole shore's winding)
+  const [p, q] = [P[k], P[(k + 1) % P.length]];
+  const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  return [at[0] + ((LAKE_SG * (q[1] - p[1])) / l) * out, at[1] + ((-LAKE_SG * (q[0] - p[0])) / l) * out];
+};
+/** How far the shore is from the lake's middle along angle a (where the ray last leaves the water) */
+export const lakeR = (a: number) => Math.hypot(lakeAt(a)[0] - LAKE_C[0], lakeAt(a)[1] - LAKE_C[1]);
 /** The stone rim round the water: how wide and how high above the lawn */
 export const RIM = { w: 0.35, h: 0.12 };
 
@@ -137,7 +399,7 @@ export const BOATHOUSE = (() => {
 export const JETTY = (() => {
   const x = LAKE_C[0];
   const half = 0.8;
-  return { x, half, z0: loopZ(x, 4.5 - 1.1) - 0.1, z1: loopZ(x, -3.4), y: 0.16 };
+  return { x, half, z0: loopZ(x, 4.5 - 0.7) - 0.1, z1: loopZ(x, -3.4), y: 0.16 };
 })();
 /** Is a point on the jetty's deck (`m` in from its edges) */
 export const onJetty = (x: number, z: number, m = 0) => Math.abs(x - JETTY.x) < JETTY.half - m && z > JETTY.z0 + m && z < JETTY.z1 - m;
@@ -277,7 +539,10 @@ function smooth(ctrl: Pt[], step = 1.5): Pt[] {
 /** The ring walk round the big block */
 export const RING_WALK: Pt[] = inset(BIG, RING_IN);
 /** Where the lake loop is nearest a point (for paths that join it) */
-const toLoop = (p: Pt): Pt => lakeAt(Math.atan2(p[1] - LAKE_C[1], p[0] - LAKE_C[0]), LOOP_OUT);
+const LOOP_LINE = lakeLine(LOOP_OUT, 360);
+/** A line alongside the lake loop's centre, `d` off it (out from the water positive): its people's lanes keep to the path where it folds round the point */
+export const loopLine = (d: number, n = 240): Pt[] => resample(offset(LOOP_LINE, d), n);
+const toLoop = (p: Pt): Pt => LOOP_LINE.reduce((b, q) => (Math.hypot(q[0] - p[0], q[1] - p[1]) < Math.hypot(b[0] - p[0], b[1] - p[1]) ? q : b));
 /** The lake loop's west side where it crosses a line (z): for a walk straight across to it */
 const loopWestAt = (z: number): Pt => {
   let best: Pt = toLoop([LAKE_C[0] - 40, z]);
@@ -311,7 +576,7 @@ const ringNorthZ = (x: number) => {
 
 export const PATHS: ParkPath[] = [
   { id: 'ring', pts: RING_WALK, half: 1.2, loop: true },
-  { id: 'loop', pts: lakeLine(LOOP_OUT, 120), half: 1.1, loop: true },
+  { id: 'loop', pts: LOOP_LINE, half: 1.1, loop: true },
   // The Mall, from City Hall's back door (the civic quarter, civic.ts) through the garden's site to the north gate
   { id: 'mall', pts: [[MALL.x, HALL.rear[1]], [MALL.x, Z0]], half: MALL.half },
   // The civic quarter's walks: from the square up City Hall's west side and round behind it to the Mall, and from
@@ -321,7 +586,7 @@ export const PATHS: ParkPath[] = [
   // From the Mall behind City Hall across to the lake, and the lake's south and east gates in to the loop
   { id: 'mall-lake', pts: [[MALL.x, BEHIND_Z], loopWestAt(BEHIND_Z)], half: 1.1 },
   { id: 'lake-s', pts: smooth([[-96, ZS], [-96, -16], [-92, -24], toLoop([-92, -26])]), half: 1.1 },
-  { id: 'lake-se', pts: smooth([[-58, ZS], [-62, -18], [-70, -26], toLoop([-72, -30])]), half: 1.1 },
+  { id: 'lake-se', pts: smooth([[-58, ZS], [-60, -15], toLoop([-62, -19])]), half: 1.1 },
   { id: 'lake-e', pts: smooth([[X1, -28], [-50, -30], [-56, -36], toLoop([-58, -40])]), half: 1.1 },
   { id: 'lake-ne', pts: smooth([[X1, -78], [-54, -76], [-62, -70], toLoop([-66, -66])]), half: 1.1 },
   // From the east gate up north-west across the lawns to the Mall, by the garden's site
@@ -406,7 +671,64 @@ export interface ParkTree {
 }
 
 /** Where a tree may stand: on the park, off the paths, the lake and its loop, the stadium's site, the gates and the civic quarter */
+/* ---------- Rock outcrops (docs/westlake-plan.md Phase 1) ---------- */
+
+export interface Rock {
+  x: number;
+  z: number;
+  /** Its footprint's half size and its height over the lawn, its turn (radians), its shape's seed */
+  r: number;
+  h: number;
+  ry: number;
+  seed: number;
+}
+/**
+ * Outcrops of the park's grey stone in low layered clusters: on the knolls in the woods north and east of the lake,
+ * either bank of the arm, round the meadow's edge and at the rocky point on the south-west shore (by the water, inside
+ * the loop). Each clear of the paths, the water's rim, the civic quarter, the garden's site, the boathouse and jetty,
+ * the terraces and the gates; solid (`ROCK_SOLIDS`), and the trees, picnics and planters keep off them (`nearRock()`).
+ */
+export const ROCKS: Rock[] = (() => {
+  const r = rng(4402);
+  const out: Rock[] = [];
+  // (the knolls' clusters, then the point's: smaller stones by the water, between it and the loop)
+  const clusters: [number, number, number, boolean][] = [
+    [-58, -112, 9, false],
+    [-66, -106, 7, false],
+    [-56, -96, 6, false],
+    [-74, -126, 7, false],
+    [-88, -96, 7, false],
+    [-98, -110, 6, false],
+    [-80, -138, 6, false],
+    [-54, -140, 6, false],
+    ...[146, 150, 154].map((deg) => [...lakeAt((deg * Math.PI) / 180, 1.5), 5, true] as [number, number, number, boolean]),
+  ];
+  for (const [cx, cz, n, shore] of clusters)
+    for (let k = 0; k < n; k++) {
+      const big = k === 0;
+      const rr = shore ? 0.45 + r() * 0.4 : big ? 1.4 + r() * 0.6 : 0.55 + r() * 0.75;
+      const a = r() * Math.PI * 2;
+      const d = big ? 0 : (shore ? 0.6 : 1.2) + r() * (shore ? 0.9 : 2.4);
+      const [x, z] = [cx + Math.cos(a) * d, cz + Math.sin(a) * d];
+      const p: Pt = [x, z];
+      // (by the water the stones come to its rim and to the loop's edge)
+      const [wet, walk] = shore ? [rr * 0.5 + RIM.w + 0.1, rr * 0.7 + 0.2] : [rr + 0.5, rr + 0.5];
+      if (!inPark(p, 2) || onPath(p, walk) || inLake(x, z, wet) || inCivic(p, 2) || inRect(GARDEN_SITE, p, 2) || nearTerrace(p, rr + 0.5)) continue;
+      if (inRect(BOATHOUSE.rect, p, rr + 1.5) || inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], p, rr + 1.2)) continue;
+      if (GATES.some((g) => Math.hypot(x - g.at[0], z - g.at[1]) < 5)) continue;
+      // (a rock may lean on its neighbour, not sit inside it)
+      if (out.some((o) => Math.hypot(o.x - x, o.z - z) < (o.r + rr) * 0.75)) continue;
+      out.push({ x, z, r: rr, h: (big ? 0.9 : 0.4) + r() * (big ? 0.6 : 0.5), ry: r() * Math.PI, seed: Math.floor(r() * 1e6) });
+    }
+  return out;
+})();
+/** Is a point within `m` of a rock's footprint */
+export const nearRock = (p: Pt, m = 0) => ROCKS.some((k) => Math.hypot(p[0] - k.x, p[1] - k.z) < k.r + m);
+/** The outcrops as solids: a box round each rock's middle, up to its top */
+export const ROCK_SOLIDS: [number, number, number, number, number][] = ROCKS.map((k) => [k.x - k.r * 0.75, k.z - k.r * 0.75, k.x + k.r * 0.75, k.z + k.r * 0.75, k.h]);
+
 export const treeFree = (p: Pt) =>
+  !nearRock(p, 1.2) &&
   inPark(p, 1.6) && !inCivic(p, 2.2) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !nearTerrace(p, 1.5) && !inRect(BOATHOUSE.rect, p, 2.2) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
 
 export const PARK_TREES: ParkTree[] = (() => {
@@ -463,25 +785,25 @@ export const PARK_LAMPS: [number, number, number][] = (() => {
   }
   // Not on another path where paths meet, nor two on top of each other, nor by the boathouse and its jetty
   // (and none in the formal garden, which has its own, nor on a terrace)
-  const clear = (l: [number, number, number]) => !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
+  const clear = (l: [number, number, number]) => !nearRock([l[0], l[1]], 0.8) && !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
   return out.filter((l, i) => clear(l) && !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
 })();
 
 /** Benches along the lake loop (facing the water) and the Mall (facing across it): where, and which way the sitter faces (ry, +z turned) */
 export const BENCHES: { at: Pt; ry: number }[] = (() => {
   const out: { at: Pt; ry: number }[] = [];
-  // Round the lake, on the loop's water side, facing the water
-  for (let k = 0; k < 18; k++) {
-    const a = (2 * Math.PI * (k + 0.5)) / 18;
-    const at = lakeAt(a, LOOP_OUT - 1.1 - 0.55);
-    const [dx, dz] = [LAKE_C[0] - at[0], LAKE_C[1] - at[1]];
+  // Round the lake, evenly along the loop on its water side, each facing the nearest water
+  const side = lakeLine(LOOP_OUT - 1.1 - 0.55, 22);
+  for (const at of side) {
+    const w = LAKE_POLY.reduce((b, p) => (Math.hypot(p[0] - at[0], p[1] - at[1]) < Math.hypot(b[0] - at[0], b[1] - at[1]) ? p : b));
+    const [dx, dz] = [w[0] - at[0], w[1] - at[1]];
     out.push({ at, ry: Math.atan2(dx, dz) });
   }
   // Along the Mall, either side, facing across it
   for (let z = ZS - 6; z > GARDEN_SITE[3] + 8; z -= 13.5)
     for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (MALL.half + 0.45), z], ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
   // (none where another path comes in, nor on a terrace)
-  return out.filter((b) => !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
+  return out.filter((b) => !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6) && !nearRock(b.at, 1)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
 })();
 
 /** Each gate's two stone piers (x0, z0, x1, z1, height): solid, the path between them */
@@ -499,16 +821,17 @@ export const BOATHOUSE_SOLID: [number, number, number, number, number] = [...BOA
  * What's solid in the park: the gates' piers, the boathouse (the lake keeps walkers out through `inLake()` but on the
  * jetty, cars through `LAKE_WALLS`)
  */
-export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID];
+export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID, ...ROCK_SOLIDS];
 
 /** The lake as walls for cars (drive-sim.ts): strips across it, a tile deep, each its width there */
 export const LAKE_WALLS: [number, number, number, number, number][] = (() => {
   const out: [number, number, number, number, number][] = [];
-  for (let z = LAKE_C[1] - 36; z < LAKE_C[1] + 36; z += 1) {
+  const R = Math.ceil(LAKE_REACH) + 1;
+  for (let z = LAKE_C[1] - R; z < LAKE_C[1] + R; z += 1) {
     let lo = Infinity;
     let hi = -Infinity;
     // (its widest across the strip: sampled at its edges and between)
-    for (let x = LAKE_C[0] - 37; x <= LAKE_C[0] + 37; x += 0.25)
+    for (let x = LAKE_C[0] - R; x <= LAKE_C[0] + R; x += 0.25)
       for (const dz of [0, 0.25, 0.5, 0.75, 1])
         if (inLake(x, z + dz)) {
           lo = Math.min(lo, x);

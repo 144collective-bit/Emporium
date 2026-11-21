@@ -18,10 +18,12 @@ time, each a PR for the owner's sign-off.
 - **The lake:** reshaped (its centre stays, `LAKE_C`): coves, a rocky
   point, and an arm crossed by an arched cast-iron bridge, with a
   stone-arch bridge where a walk crosses an inlet. The boathouse and the
-  jetty stay.
+  jetty stay. (The arm reaches north from the north shore into the woods:
+  west of the lake the Mall, City Hall and the formal garden leave no room.)
 - **The formal garden:** kept, made ornate (balustrades, a pergola,
   patterned beds, a carved central fountain).
-- **The café:** a place (a panel, coming soon for now, a pin, a door,
+- **The plan:** approved 2026-11-21, Phase 1 first.
+- **The café:** The Lakehouse Café (the owner's pick). A place (a panel, coming soon for now, a pin, a door,
   `PLACES` and `LIVE_PLACES`), by the lake, with people at its tables.
 - **The bandstand:** on a lawn of its own.
 
@@ -53,18 +55,34 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
 
 ## Phases
 
-1. **The lake and the land.** The lake reshaped round its centre: a
-   wandering shore of coves and a rocky point (`lakeR()` given more
-   harmonics and two bays), an arm reaching west toward the Mall (the
-   bridge's crossing) and an inlet on the east (the stone arch's); its
-   stone rim and walk mode's `RIM`, `inLake()`, `LAKE_WALLS`, the boats'
-   rings and the jetty's reach refitted to it. Rock outcrops in the park's
-   own grey stone (schist-like, low and layered, solid where they stand)
-   on the knolls north and east of the lake, and the ground's gentle
-   rolls (blend.md's rolls, no real hills under walk mode). The world map
-   redraws the lake. Tested: the lake round its centre, the boats on the
-   water clear of each other and the shore, the jetty over water, the rocks
-   off every path.
+1. **The lake and the land** (built, waiting on the owner's sign-off).
+   The lake is an outline now, not a radius by angle (an arm that bends
+   can't be one): westlake.ts `LAKE_POLY` (baked, key `lake`), the old
+   shore with two coves (`LAKE_COVES`, north-west and south) and a rocky
+   point (`LAKE_POINT`, south-west) pushed along its normal, joined softly
+   (a field of distances, its edge traced) with the arm curving north from
+   the north shore east of the boathouse into the woods (`LAKE_ARM`) and the
+   inlet running south-east (`LAKE_INLET`), for Phase 3's bridges. What
+   asks of it asks the outline: `inLake()` (its margin along the shore's
+   normal), `lakeDist()` (the ambience), `lakeLine()` (lines off the shore
+   along its normals, folds cut out: the rim, the loop, its lanes),
+   `lakeAt()` (where a ray from the middle last leaves the water), and the
+   boats keep to the open water (`lakeCoreLine()`, parklife.ts
+   `ringLine()`), out of the arm and the inlet. The rim's walls face by the
+   shore's winding (westlake3d.ts `band()`); the benches are spaced along
+   the loop, each facing the nearest water; the walks join the loop at its
+   nearest point. The boathouse and the jetty keep the north shore's line.
+   Rock outcrops (`ROCKS`, solid `ROCK_SOLIDS`, `nearRock()` for the trees,
+   picnics and planters; palette.ts `OUTCROP`): layered grey stone in
+   clusters on the knolls north and east of the lake, either bank of the
+   arm, the meadow's edge and small stones at the point, drawn a site a tile
+   (westlake3d.ts `registerRocks()`, lichen near only). The rolls under the
+   lawn are left for Phase 5 with the planting. Until Phase 2 re-lays the
+   paths, the loop goes round the arm and the inlet. Tested: a clean shore,
+   the arm and inlet in the water, the lines off the shore clean and dry,
+   the north shore where it was, the boats in the open water, the rocks off
+   the paths and the water, apart and solid, the trees off them. The boot:
+   774.9 of 775 KB (the lake's tracing reuses the park's own helpers).
 2. **The paths re-laid.** The Mall as a promenade (a wider paved walk, a
    double row of trees each side meeting overhead, benches all along, the
    literary walk's busts swapped for made-up urns). The ring walk's
@@ -109,7 +127,7 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
      base, iron columns, an ornate roof with a finial) on its own lawn, a
      ring of benches round it; a band some evenings (seated players, the
      crowd's acts) and its music in the park's ambience while they play.
-   - **The café:** a lakeside café (a made-up name for the owner to pick),
+   - **The café:** The Lakehouse Café,
      a pavilion of stone and glass with a terrace of tables over the
      water, people at the tables by day. A place: spot, pin, directory
      entry, a panel (coming soon), its door, `PLACES` and `LIVE_PLACES`

@@ -49,6 +49,7 @@ import {
   ZS,
   distToLine,
   inLake,
+  nearRock,
   inset,
   nearTerrace,
   onPath,
@@ -309,7 +310,7 @@ export const PLANTER = { h: 0.42, wall: 0.12 };
 /** Is a spot clear for a planter of radius r: on the park, off every path, the lake, the lamps, benches, trees and courts */
 function plantable(p: Pt, r: number, others: Pt[]) {
   if (onPath(p, r + 0.25) || inCivic(p, r + 0.6)) return false;
-  if (inLake(p[0], p[1], r + 0.5) || nearTerrace(p, r + 0.5)) return false;
+  if (inLake(p[0], p[1], r + 0.5) || nearTerrace(p, r + 0.5) || nearRock(p, r + 0.5)) return false;
   if (inRect(GARDEN_SITE, p, r + 0.5) || inRect(BOATHOUSE.rect, p, r + 1)) return false;
   if (PARK_LAMPS.some(([x, z]) => Math.hypot(x - p[0], z - p[1]) < r + 0.6)) return false;
   if (BENCHES.some((b) => hyp(b.at, p) < r + 1)) return false;
