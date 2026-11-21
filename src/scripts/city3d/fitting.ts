@@ -13,7 +13,7 @@
  * The preview is the podium stage (stage.ts): a small second renderer with
  * the city's own ink outlines, drawing only while the panel is open.
  */
-import { CUTS, DEFAULT_LOOK, HEAD_SHAPES, MARKS, coversEyes, MARK_SLOTS, PALETTE, PATTERNS, RANGES, safeColour, type Bag, type Bottoms, type Cut, type EyeStyle, type FaceGear, type Hat, type Look, type MarkId, type PatternId, type Range, type ShoeStyle } from '../net/profile-data';
+import { CHARACTERS, CHARACTER_LOOKS, CUTS, DEFAULT_LOOK, HEAD_SHAPES, MARKS, coversEyes, MARK_SLOTS, PALETTE, PATTERNS, RANGES, safeColour, type Bag, type Bottoms, type CharacterId, type Cut, type EyeStyle, type FaceGear, type Hat, type Look, type MarkId, type PatternId, type Range, type ShoeStyle } from '../net/profile-data';
 import { MARK_ART } from './marks';
 import type { Stage } from './stage';
 
@@ -155,13 +155,21 @@ const CUT_ICONS: Record<Cut, string> = {
 };
 const toneColors: Colors = { key: 'tone', label: 'Skin', list: PALETTE.tone };
 const hairColors: Colors = { key: 'hair', label: 'Hair', list: PALETTE.hair };
+/** The characters' cards' icons (docs/characters-plan.md): SlimeWhale's three eyes and his lips, Smilex's hexagon */
+const CHARACTER_ICONS: Record<CharacterId, string> = {
+  slimewhale: `${HEAD} M7.4 11.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0 M10.5 11.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0 M13.6 11.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0 M8.6 15.6h6.8a1 1 0 0 1 0 2H8.6a1 1 0 0 1 0-2z`,
+  // (his hexagon, two eyes and the smile)
+  smilex: 'M7 4.2h10l4.6 7.8-4.6 7.8H7L2.4 12z M9.6 9.5v2 M14.4 9.5v2 M8.2 14c1.3 2.2 6.3 2.2 7.6 0',
+};
+/** A character's name (SlimeWhale), or null for Degen */
+const characterName = (l: Look) => CHARACTERS.find((c) => c.id === l.character)?.name ?? null;
 const faceItems: Item[] = [
   {
     id: 'mask',
     name: 'Balaclava',
     icon: `${HEAD} M8.6 12h6.8v2.6H8.6z`,
-    on: (l) => !l.face,
-    wear: (l) => ({ ...l, face: false }),
+    on: (l) => !l.face && !l.character,
+    wear: (l) => ({ ...l, face: false, character: null }),
     colors: [toneColors],
   },
   ...CUTS.map(
@@ -169,13 +177,28 @@ const faceItems: Item[] = [
       id: `cut-${c.id}`,
       name: c.name,
       icon: CUT_ICONS[c.id],
-      on: (l) => l.face && l.cut === c.id,
+      on: (l) => l.face && l.cut === c.id && !l.character,
       // (unmasking keeps the shades on until they're taken off)
-      wear: (l) => ({ ...l, face: true, cut: c.id, shades: l.face ? l.shades : true }),
+      wear: (l) => ({ ...l, face: true, cut: c.id, shades: l.face ? l.shades : true, character: null }),
       colors: c.id === 'bald' ? [toneColors] : [toneColors, hairColors],
     })
   ),
+  // The characters' heads (docs/characters-plan.md): the head alone, the clothes kept (the Full look row dresses him whole)
+  ...CHARACTERS.map(
+    (c): Item => ({
+      id: `char-${c.id}`,
+      name: c.name,
+      icon: CHARACTER_ICONS[c.id],
+      on: (l) => l.character === c.id,
+      wear: (l) => ({ ...l, character: c.id }),
+      colors: c.hair ? [toneColors, hairColors] : [toneColors],
+    })
+  ),
 ];
+/** Whether he wears a character's whole look as it comes (its Full look chip pressed) */
+const wearsWhole = (l: Look, id: CharacterId) => Object.entries(CHARACTER_LOOKS[id]).every(([k, v]) => l[k as keyof Look] === v);
+/** The slots nothing goes in over a character's head (docs/characters-plan.md: the owner's call) */
+const OVER_HEAD = ['head', 'shades', 'gear'];
 
 /* ----- The merch: marks for the top, the hat and the sneakers, and prints for the top ----- */
 
@@ -232,6 +255,7 @@ function merchItems(of: MerchFor): Item[] {
 }
 /** Can what the Merch tab is dressing be seen? (Else a note says what shows it) */
 function merchNote(of: MerchFor, l: Look): string | null {
+  if (of === 'hat' && l.character) return `No hats on ${characterName(l)}`;
   if (of === 'hat' && !(l.hat && l.hat !== 'bucket' && l.hat !== 'hardhat' && !(l.kind === 'hoodie' && l.hood))) return 'Shows on a cap or beanie';
   if (of === 'kicks' && l.shoeStyle !== 'sneaker' && l.shoeStyle !== 'hightop') return 'Shows on sneakers';
   return null;
@@ -401,7 +425,7 @@ const TABS: Tab[] = [
         id: 'chain',
         name: 'Shades Chain',
         // (it hangs from the shades)
-        only: (l) => (!l.face || l.shades) && !coversEyes(l.faceGear),
+        only: (l) => (!l.face || l.shades) && !coversEyes(l.faceGear) && !l.character,
         icon: 'M3 7h7v4H3z M14 7h7v4h-7z M10 9h4 M4 11c0 6 4 9 8 9s8-3 8-9',
         on: (l) => l.chain,
         wear: (l) => ({ ...l, chain: !l.chain }),
@@ -420,6 +444,8 @@ const TABS: Tab[] = [
 ];
 /** A slot's cards in a range (and the hood only with the hoodie) */
 const cardsIn = (items: Item[], r: Range, l: Look) => items.filter((it) => (!it.in || it.in.includes(r)) && (!it.only || it.only(l)));
+/** A slot that's closed while a character's head is on (nothing goes over it) */
+const overHead = (t: Tab, l: Look) => !!l.character && OVER_HEAD.includes(t.id);
 /** Whether a range has anything of its own in a slot (not only "Nothing" or "No bag") */
 const ownIn = (items: Item[], r: Range) => items.some((it) => it.in?.includes(r));
 
@@ -461,19 +487,26 @@ export function createFitting(d: FittingDeps) {
       `<div class="fit-row"><span>${label}</span><div class="fit-chips" role="group" aria-label="${label}">` +
       opts.map((o) => `<button type="button" class="fit-chip" ${attr}="${o.id}" aria-pressed="${o.on}">${o.name}</button>`).join('') +
       '</div></div>';
-    // The Face tab's row, a face's only: the head's proportions (docs/faces-plan.md Phase 3)
-    const faceRows = tab.id === 'face' && l.face;
+    // The Face tab's rows: a character's whole look in one tap (docs/characters-plan.md), and a face's head
+    // proportions (docs/faces-plan.md Phase 3; not on a character's own head)
+    const faceRows = tab.id === 'face';
     box.hidden = tab.id !== 'merch' && !faceRows;
     if (box.hidden) return box.replaceChildren(), void (box.dataset.html = '');
+    let html = '';
     if (faceRows) {
-      const html = chips('Shape', 'data-face-shape', HEAD_SHAPES.map((h) => ({ ...h, on: h.id === l.shape })));
+      html = chips(
+        'Full look',
+        'data-char-look',
+        CHARACTERS.map((c) => ({ ...c, on: wearsWhole(l, c.id) }))
+      );
+      if (l.face && !l.character) html += chips('Shape', 'data-face-shape', HEAD_SHAPES.map((h) => ({ ...h, on: h.id === l.shape })));
       if (box.dataset.html !== html) {
         box.dataset.html = html;
         box.innerHTML = html;
       }
       return;
     }
-    let html = chips(
+    html = chips(
       'Dress',
       'data-merch-for',
       MERCH_FOR.map((m) => ({ ...m, on: m.id === merchFor }))
@@ -496,6 +529,7 @@ export function createFitting(d: FittingDeps) {
   function colourSets(l: Look): Colors[] {
     // (what he wears in this slot, whichever range it's from: a suit's colours while browsing Streetwear)
     const list = itemsOf(tab);
+    if (overHead(tab, l)) return [];
     const sets = [...(tab.colors ?? []), ...list.filter((it) => it.on(l) && (!it.only || it.only(l))).flatMap((it) => it.colors ?? [])];
     // (the marks' ink, shared by the top, the hat and the sneakers)
     if (tab.id === 'merch' && merchFor !== 'print') sets.push({ key: 'ink', label: 'Ink', list: PALETTE.ink });
@@ -570,15 +604,17 @@ export function createFitting(d: FittingDeps) {
     const items = el.querySelector<HTMLElement>('[data-fit-items]')!;
     items.replaceChildren();
     const all = itemsOf(tab);
-    const list = cardsIn(all, range, l);
+    // (nothing goes over a character's head: the slot says so instead of its cards)
+    const closed = overHead(tab, l);
+    const list = closed ? [] : cardsIn(all, range, l);
     // (a slot the range has nothing of its own in yet: say so over its "Nothing" card)
     const empty = el.querySelector<HTMLElement>('[data-fit-empty]');
     if (empty) {
       // (coveralls bring their own legs: the bottoms wait for another top)
       const legs = tab.id === 'bottoms' && l.kind === 'coveralls';
       const none = tab.items.length > 0 && !ownIn(tab.items, range);
-      empty.hidden = !none && !legs;
-      empty.textContent = legs ? 'Coveralls cover the legs.' : none ? `No ${tab.label.toLowerCase()} in ${RANGES.find((r) => r.id === range)!.name} yet.` : '';
+      empty.hidden = !none && !legs && !closed;
+      empty.textContent = closed ? `Nothing goes over ${characterName(l)}'s head.` : legs ? 'Coveralls cover the legs.' : none ? `No ${tab.label.toLowerCase()} in ${RANGES.find((r) => r.id === range)!.name} yet.` : '';
     }
     for (const it of list) {
       const on = it.on(l);
@@ -652,7 +688,14 @@ export function createFitting(d: FittingDeps) {
       el?.querySelector<HTMLButtonElement>(`[data-merch-for="${merchFor}"]`)?.focus({ preventScroll: true });
       return;
     }
-    const fs = t.closest<HTMLButtonElement>('[data-face-shape]');
+    const cl = t.closest<HTMLButtonElement>('[data-char-look]');
+    if (cl) {
+      const id = cl.dataset.charLook as CharacterId;
+      wear({ ...d.look(), ...CHARACTER_LOOKS[id] });
+      el?.querySelector<HTMLButtonElement>(`[data-char-look="${id}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+        const fs = t.closest<HTMLButtonElement>('[data-face-shape]');
     if (fs) {
       const shape = fs.dataset.faceShape as Look['shape'];
       wear({ ...d.look(), shape }, false);
