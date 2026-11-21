@@ -148,3 +148,22 @@ export function windowsOf(bays: Bays, style: FacadeStyle, floors: number, clip: 
     }
   return out;
 }
+
+/**
+ * Whether a building's side wall faces open ground (a street, a lane, an alley, a park) rather than a neighbour's wall
+ * (docs/buildings-plan.md Phase 2): the side's left end at `L` (the front's corner), the front running along `t`,
+ * `n` out of the front, `w` wide and `d` deep; `side` 0 its left (seen from the street), 1 its right. Open when most
+ * of five points a little outside it, from near the front to near the back, are clear of `solid`.
+ */
+export function sideOpen(L: [number, number], t: [number, number], n: [number, number], w: number, d: number, side: 0 | 1, solid: (x: number, z: number) => boolean): boolean {
+  const u = side === 0 ? -SIDE_LOOK : w + SIDE_LOOK;
+  let clear = 0;
+  for (const f of SIDE_SAMPLES) {
+    const v = -d * f;
+    if (!solid(L[0] + t[0] * u + n[0] * v, L[1] + t[1] * u + n[1] * v)) clear++;
+  }
+  return clear * 2 > SIDE_SAMPLES.length;
+}
+/** How far outside a side wall `sideOpen()` looks, and where along it (shares of the depth from the front) */
+export const SIDE_LOOK = 0.3;
+const SIDE_SAMPLES = [0.15, 0.35, 0.5, 0.65, 0.85];

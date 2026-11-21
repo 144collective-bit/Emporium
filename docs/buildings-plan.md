@@ -66,7 +66,7 @@ face a street, the offices' glass towers, the diners.
 
 ## Phases
 
-### Phase 1: the pilot, the Emporium's block (built, waiting on sign-off)
+### Phase 1: the pilot, the Emporium's block (built, signed off by the owner, 2026-11-21)
 
 The centre block's brownstones, shops, lofts and hotels (`PILOT` in
 `infill.ts`); every other building in the city is as it was, and so are
