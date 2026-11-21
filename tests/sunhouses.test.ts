@@ -3,7 +3,7 @@
 // driveway from the street to every garage; everything under the Emporium; their solids where their walls are.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BACK_MIN, HOUSES, HOUSE_SOLIDS, PLANS, SIDE_MIN, houseTop, toWorld } from '../src/scripts/city3d/sunhouses';
+import { BACK_MIN, HOUSES, HOUSE_SOLIDS, LAID_LAST, PLANS, SIDE_MIN, houseTop, toWorld } from '../src/scripts/city3d/sunhouses';
 import { LOTS, outline } from '../src/scripts/city3d/sunridgelots';
 import { SUN_STREETS, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
@@ -63,4 +63,17 @@ test('under the Emporium, and solid where the walls are', () => {
     const [x, z] = toWorld(h, (m.u0 + m.u1) / 2, (m.v0 + m.v1) / 2);
     assert.ok(HOUSE_SOLIDS.some((b) => x >= b[0] - 1e-6 && x <= b[2] + 1e-6 && z >= b[1] - 1e-6 && z <= b[3] + 1e-6), `${h.id}'s middle isn't solid`);
   }
+});
+
+test("every lot round a turning circle has its house, no lot's back crossed (Phase 6: Ocotillo Court's)", () => {
+  // (a lot's back runs the way its front does: never a bow tie)
+  for (const l of LOTS) {
+    const along = (l.back[1][0] - l.back[0][0]) * (l.front[1][0] - l.front[0][0]) + (l.back[1][1] - l.back[0][1]) * (l.front[1][1] - l.front[0][1]);
+    assert.ok(along > 0, `${l.id}'s back corners cross`);
+  }
+  const built = new Set(HOUSES.map((h) => h.lot));
+  for (const l of LOTS) if (l.street.startsWith('sun-court')) assert.ok(built.has(l.id), `${l.id} on ${l.street} has no house`);
+  // The two laid last, after every other house, so the houses before keep their ids (and their yards and residents)
+  assert.deepEqual(HOUSES.slice(-LAID_LAST.length).map((h) => h.lot), LAID_LAST);
+  assert.ok(HOUSES.slice(0, -LAID_LAST.length).every((h, i) => h.id === `sun-house-${i}` && !LAID_LAST.includes(h.lot)));
 });

@@ -35,6 +35,7 @@ import { SOUTH_PEOPLE } from './southpeople';
 import { SWING_LAMPS } from './swingbridge';
 import { ENDS_LAMPS, SLAB_Y as ENDS_SLAB } from './endswood';
 import { RURAL_LAMPS } from './ruraldress';
+import { AIRBASE_LAMPS, AVENUE_LAMPS, BASE_POOLS, VISITORS, VISITOR_CENTRE, VISITOR_CENTRE_H, VISITOR_SPAWN } from './airbase';
 import { FENCE as LOT9_FENCE, GROUND_Y as LOT9_Y, LOT9_IDLE, LOT9_LAMPS, LOT9_PIN, LOT9_SPAWN, LOT9_TREES, OFFICE as LOT9_OFFICE } from './lot9';
 import { PARK_LAMPS as SF_PARK_LAMPS, PARK_TREES as SF_PARK_TREES, SF_LAMPS, SF_PEOPLE, SF_POOLS, STRIP_TREES as SF_STRIP_TREES } from './southfield';
 import { GARDEN_LAMPS, GARDEN_PEOPLE } from './gardens';
@@ -81,6 +82,7 @@ import { loadCar } from './mycar';
 import { loadBike } from './mybike';
 import { createProfileUI } from './profile-ui';
 import { createSky, type TimeMode, type WeatherMode } from './sky';
+import { createStillTicks } from './stillticks';
 import { createSound } from './soundlazy';
 import type { Account } from './account';
 import type { AccountHooks, AccountUI } from './account-ui';
@@ -387,6 +389,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and Lot 9, the trailer park south of the highway (lot9.ts, docs/trailer-plan.md): its spot over the whole fenced
   // land (drawn in its chunk), the pin over the fire pit, the fly-in from the north (from over the highway)
   spots.push({ ...pickSpot(scene, 'lot9', LOT9_Y, [{ rect: LOT9_FENCE, h: 1.9 }, { rect: LOT9_OFFICE.rect, h: LOT9_OFFICE.h + 0.4 }], LOT9_FENCE, 5.2, LOT9_PIN), faces: 'n' });
+  // ...and Northgate Air Base's visitors' centre (airbase.ts, docs/military-plan.md Phase 1): its spot over the car park
+  // and the centre, the pin over the centre's roof, the fly-in from the north (over the base)
+  spots.push({ ...pickSpot(scene, 'northgate', 0, [{ rect: VISITOR_CENTRE, h: VISITOR_CENTRE_H + 1.1 }], VISITORS, VISITOR_CENTRE_H + 2.4, [(VISITOR_CENTRE[0] + VISITOR_CENTRE[2]) / 2, (VISITOR_CENTRE[1] + VISITOR_CENTRE[3]) / 2]), faces: 'n' });
   // ...and Endswood Estate's (endsplaces.ts, docs/estate-plan.md Phase 8): the estate on its tenants' hall, St Aldwyn's
   // and Bunker Sound (drawn in its chunk)
   for (const e of ENDS_SPOTS) {
@@ -471,6 +476,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   for (const [x, z, ry, y] of SWING_LAMPS) addLamp(x, z, ry, y);
   // ...and the odd lamp along the country roads past the highway (ruraldress.ts, Phase 7)
   for (const [x, z, ry, y] of RURAL_LAMPS) addLamp(x, z, ry, y);
+  // Northgate Air Base's (airbase.ts): along its south fence, at its gates, round the visitors' car park
+  for (const [x, z, ry, y] of [...AIRBASE_LAMPS, ...AVENUE_LAMPS]) addLamp(x, z, ry, y);
+  // (and its apron's floodlights' pools, at the boot as the airport's; the masts are its chunk's)
+  for (const [x, z, size] of BASE_POOLS) addPool(x, z, size, 0);
   for (const [x, z, s] of LOT9_TREES) addTree(x, z, s, false, LOT9_Y);
   LOT9_IDLE.forEach((p, i) => (tier !== 'low' || i % 2 === 0) && crowd.push(p));
   // ...and its floodlight masts' pools (docksport.ts; the masts are the chunk's)
@@ -954,6 +963,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-civic-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(id === 'police' ? POLICE_SPAWN : id === 'courthouse' ? COURTHOUSE_SPAWN : CITYHALL_SPAWN);
+      });
+    // Northgate Air Base's panel: Walk in in the visitors' car park, facing the centre (airbase.ts)
+    if (id === 'northgate')
+      panelBody.querySelector('[data-northgate-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(VISITOR_SPAWN);
       });
     // Lot 9's panel: Walk in on the lane outside its gate, facing in
     if (id === 'lot9')
@@ -1894,6 +1909,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const env: Env = { t: 0, dt: 0, night: 1, rain: 0, day: 0, hour: 12 };
   let running = true;
   let frames = 0;
+  /** When a still city's ticks run (stillticks.ts) */
+  const stillTicks = createStillTicks();
   // Phones run the city at a steady 30fps while nobody is touching it, and at
   // full rate during a drag, a pinch or a fly-in, so moving still feels smooth
   const idleFps = tier === 'low' ? 30 : 0;
@@ -2236,7 +2253,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     part('tiles');
     updateLods(CROWD_VIEW.eye.x, CROWD_VIEW.eye.y, CROWD_VIEW.eye.z, Q.far);
     part('lods');
-    if (!reduced || frames === 0) for (const f of ticks) f(env);
+    // (a still city's ticks run on the first frame, and again once the sky settles somewhere new: its time held at
+    // 0, nothing moves, but what follows the sky catches up, the murk and the night lights; stillticks.ts)
+    if (!reduced) for (const f of ticks) f(env);
+    else if (stillTicks.due(env) || frames === 0) {
+      for (const f of ticks) f(env);
+      dirty = true;
+    }
     part('ticks');
     updateLights(s.night, env.t);
     // The wind in the trees (desktop; phones carry no sway) and the thunder's rumble when one is due (city life plan, Phase 4)

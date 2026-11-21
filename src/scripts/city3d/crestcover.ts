@@ -18,6 +18,7 @@ import { MANSIONS, PAD_EASE, onMansion, outOf, toWorld, type Mansion } from './m
 import { onSite } from './crestsites';
 import { underSpur } from './metro';
 import { onLand } from './crestland';
+import { onWalk } from './crestwalk';
 import { hillPlanting } from './landscape';
 import { rng } from './recipes';
 import { BUILT, baked } from './baked';
@@ -119,9 +120,9 @@ function layCover() {
       }
       if (rocks.length >= 3) OUTCROPS.push(rocks);
     }
-  // (off the footpaths)
-  for (const d of DRIFTS) d.clumps = d.clumps.filter((c) => !onTrail(c.x, c.z, 0.4) && !onGardenPath(c.x, c.z, 0.4));
-  for (const [k, o] of OUTCROPS.entries()) OUTCROPS[k] = o.filter((c) => !onTrail(c.x, c.z, 0.6) && !onGardenPath(c.x, c.z, 0.6));
+  // (off the footpaths and the Ridgeline Walk)
+  for (const d of DRIFTS) d.clumps = d.clumps.filter((c) => !onTrail(c.x, c.z, 0.4) && !onGardenPath(c.x, c.z, 0.4) && !onWalk(c.x, c.z, 0.4));
+  for (const [k, o] of OUTCROPS.entries()) OUTCROPS[k] = o.filter((c) => !onTrail(c.x, c.z, 0.6) && !onGardenPath(c.x, c.z, 0.6) && !onWalk(c.x, c.z, 0.6 + c.s * 0.5));
   return { drifts: DRIFTS, outcrops: OUTCROPS };
 }
 

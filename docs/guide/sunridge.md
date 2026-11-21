@@ -27,7 +27,9 @@ keep it up to date when what it describes changes.
   (DOM-free, the chunk's, tested in `tests/sunhouses.test.ts`): `HOUSES`, a
   house a lot in its frame (`toWorld()`), four plans (`Plan`), three entries
   (`Elevation`), `SCHEMES` and `ROOFS` (neighbours never the same colour),
-  the garage, its driveway and the walk, solar and chimneys;
+  the garage, its driveway and the walk, solar and chimneys; a shallow
+  ranch (`lay(..., shallow)`) on Ocotillo Court's two short lots, laid last
+  (`LAID_LAST`) so every other house keeps its id, yard and residents;
   `HOUSE_SOLIDS` join the grids when the chunk loads (`addSolids()`). Drawn by
   `sunhouses3d.ts` (a site a house: tile roofs from a texture a colour, lit
   windows at night, details near only); the hipped roofs are `roofs3d.ts`
@@ -74,3 +76,10 @@ keep it up to date when what it describes changes.
   `sunlife3d.ts` (`registerLife()` from sunridge3d.ts's `register()`: the
   people into the crowd, the dogs and leads on the main thread, the cars
   through `parkedCars()`).
+- **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views
+  (`sunridge` over the loop, `sun-street`, `sun-court`, `sun-pools`). On
+  phones it's about 120-190 draws and 0.27-0.53M triangles, among the city's
+  lightest (downtown's street is about 320 and 0.6M), so it has no far forms;
+  the phone trims are the chunk's (`low` in sunhouses3d.ts, sunyards3d.ts,
+  sunamenities3d.ts and sunlife.ts's halved lists). Its share of the boot
+  is about 5.3 KB gzipped (sunridge.ts, sunplaces.ts).

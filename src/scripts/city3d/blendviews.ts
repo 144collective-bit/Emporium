@@ -49,4 +49,8 @@ export const BLEND_VIEWS: ReviewView[] = [
   { id: 'wall-foot', name: 'The wall, from its foot', pos: [WALL_INNER[0] + 34, 3, 30], target: [WALL_INNER[0], 16, 12] },
   { id: 'wall-culvert', name: 'The wall, a culvert', pos: [WALL_INNER[0] + 26, 3, RIVER[0] - 6], target: [WALL_INNER[0], 2, (RIVER[0] + RIVER[1]) / 2] },
   { id: 'wall-corner', name: 'The wall, a corner from over the land', pos: [WALL_INNER[2] - 90, 46, WALL_INNER[1] + 90], target: [WALL_INNER[2], 30, WALL_INNER[1]] },
+  // Northgate Air Base (docs/military-plan.md Phase 5; in BENCH_VIEWS since its Phase 0): its main gate, its runway, it from high
+  { id: 'airbase-gate', name: 'Northgate Air Base, the main gate', pos: [-10, 2.2, -285], target: [-4.5, 1.6, -340] },
+  { id: 'airbase-runway', name: 'Northgate Air Base, the runway', pos: [-60, 16, -560], target: [-300, 2, -540] },
+  { id: 'airbase-overview', name: 'Northgate Air Base, from high', pos: [-200, 110, -230], target: [-260, 0, -560] },
 ];

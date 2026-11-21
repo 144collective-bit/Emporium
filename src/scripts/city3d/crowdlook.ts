@@ -34,10 +34,12 @@ import { NORTH_RECT } from './uptownnorth';
 import { WESTLAKE_RECT } from './westlake';
 import { inDocks } from './docks';
 import { inYards } from './southfield';
-import { CREST_RECT } from './crestmont';
+import { CREST_RECT, FOOTHILL_Z } from './crestmont';
+import { TERRAIN_RECT } from './terrain';
 import { inStrip } from './strip';
 import { inSunridge } from './sunridge';
 import { inLot9 } from './lot9';
+import { inAirbase } from './airbase';
 import { zoneAt } from './south';
 import { SOUTH_GROUND_RECT } from './southground';
 import { MALL_AREA } from './mall';
@@ -45,7 +47,7 @@ import { SITE as AIRPORT_SITE } from './airfield';
 import { KART_AREA } from './kartfacility';
 import { RIVER, SOUTH_ROW } from './layout';
 
-export type District = 'town' | 'trenches' | 'ends' | 'uptown' | 'park' | 'docks' | 'yards' | 'crest' | 'strip' | 'beach' | 'suburb' | 'lot9' | 'mall' | 'airport' | 'karts';
+export type District = 'town' | 'trenches' | 'ends' | 'uptown' | 'park' | 'docks' | 'yards' | 'crest' | 'strip' | 'beach' | 'suburb' | 'lot9' | 'mall' | 'airport' | 'karts' | 'airbase';
 export type Role = 'walk' | 'idle' | 'jog' | 'kid' | 'worker' | 'guard' | 'shopper' | 'cyclist' | 'boater';
 
 /** The kinds the crowd's meshes carry: the desktop's, and the phones' (one more than the two they had: the owner's call) */
@@ -77,6 +79,8 @@ const inRect = (r: readonly number[], x: number, z: number) => x > r[0] && x < r
 /** The cove below the south row (river.ts's `beach` stretch, x -12 to 47): the blocks along it */
 const BEACH: readonly number[] = [-12, RIVER[0], 47, SOUTH_ROW + 22];
 
+/** Crestmont's hills east of its streets' rect, out to the hills' edge (the Ridgeline Walk and the glasshouse: the premium upgrade's Phases 5-6) */
+const CREST_EAST = [CREST_RECT[2], CREST_RECT[1], TERRAIN_RECT[2], FOOTHILL_Z] as const;
 export function districtAt(x: number, z: number): District {
   if (inTrenches(x, z)) return 'trenches';
   if (inEndswood(x, z)) return 'ends';
@@ -84,7 +88,7 @@ export function districtAt(x: number, z: number): District {
   if (inRect(WESTLAKE_RECT, x, z)) return 'park';
   if (inDocks(x, z)) return 'docks';
   if (inYards(x, z)) return 'yards';
-  if (inRect(CREST_RECT, x, z)) return 'crest';
+  if (inRect(CREST_RECT, x, z) || inRect(CREST_EAST, x, z)) return 'crest';
   if (inStrip(x, z)) return 'strip';
   if (inLot9(x, z)) return 'lot9';
   // The south (docs/south-plan.md Phase 6c): the estate and the tall band by the ring road dressed as The Trenches, the
@@ -96,6 +100,8 @@ export function districtAt(x: number, z: number): District {
   }
   if (inSunridge(x, z)) return 'suburb';
   if (inRect(MALL_AREA, x, z)) return 'mall';
+  // (Northgate Air Base: everyone inside its fence is its own, docs/military-plan.md Phase 4)
+  if (inAirbase(x, z)) return 'airbase';
   if (inRect(AIRPORT_SITE, x, z)) return 'airport';
   if (inRect(KART_AREA, x, z)) return 'karts';
   if (inRect(BEACH, x, z)) return 'beach';
@@ -448,6 +454,30 @@ export const STYLES: Record<District, Style> = {
     legs: { chinos: 0.35, joggers: 0.35, denim: 0.3 },
     feet: { sneaker: 0.5, runner: 0.3, loafer: 0.2 },
     suitFeet: { dress: 0.5, derby: 0.3, loafer: 0.2 },
+  },
+  // Northgate Air Base: its people in uniform, made up (no real force's): olive, khaki and navy in their PT kit (track),
+  // their service dress (suits) and their working tops (hoodies, hoods down), mostly in caps, little else
+  airbase: {
+    ...TOWN,
+    mix: { track: 0.45, suit: 0.3, hoodie: 0.25 },
+    suits: ['#4f5a3d', '#3d4a5f', '#6b6650', '#2e3a2b', '#5a5f4a'],
+    ties: ['#2e3a2b', '#1d2550', '#4f5a3d'],
+    openCollar: 0.4,
+    tops: ['#4f5a3d', '#5d6b52', '#6b6650', '#3d4a5f', '#7a7558', '#2e3a2b'],
+    bottoms: ['#4f5a3d', '#3a3f32', '#6b6650', '#2f3640'],
+    shoes: ['#1b1830', '#2a2420', '#3a2e24'],
+    cap: 0.7,
+    beanie: 0.06,
+    bucket: 0.06,
+    hood: 0,
+    hats: ['#4f5a3d', '#3d4a5f', '#2e3a2b', '#6b6650'],
+    backpack: 0.15,
+    crossbody: 0,
+    headphones: 0,
+    chain: 0,
+    legs: { chinos: 0.6, joggers: 0.4 },
+    feet: { runner: 0.5, sneaker: 0.5 },
+    suitFeet: { derby: 0.6, dress: 0.4 },
   },
   // The kart park: track suits in the teams' colours
   karts: {

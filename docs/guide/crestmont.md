@@ -279,4 +279,33 @@ keep it up to date when what it describes changes.
   Belvedere and the glasshouse are crestsites.ts's (`BELVEDERE` on the
   ground as it is, its ring at `top`, kept off by `onSite()`; `GLASSHOUSE`
   held level in `SITE_LEVELS`), places with their doors (`SITE_DOORS`) and
-  arrivals (`SITE_SPAWNS`), their solids in `SITE_SOLIDS`.
+  arrivals (`SITE_SPAWNS`), their solids in `SITE_SOLIDS`. The walk's
+  benches (`BENCHES`, `BENCH`: along it, a sitter facing across it), the
+  Belvedere's (`BELVEDERE_BENCHES`, off its way through) and the glasshouse's
+  fountain (`GLASS_FOUNTAIN`, south of its path) are crestwalk.ts's data,
+  which the drawing, Phase 6's sitters and the tests all read.
+  Phase 6, residents at leisure and Ridge Road's cyclists: `crestleisure.ts`
+  (DOM-free, the chunk's) holds `LEISURE_IDLE` (people on the balconies,
+  the roof terraces' loungers and tables, at THE ASTERLY's terrace tables
+  with a waiter, on the Belvedere's and the walk's benches, at the lookouts,
+  in the glasshouse and its garden) and `LEISURE_PEOPLE` (walkers up and down
+  the Ridgeline Walk, `strollAt()`; road cyclists on Ridge Road, `RIDERS` and
+  `rideAt()` round `RIDE_LOOP`, on the asphalt's edge right of the cars,
+  their pace from the grade), tested in `tests/crestleisure.test.ts`.
+  `crestleisure3d.ts` (`registerLeisure()`) puts them in the crowd's spare
+  slots (life.ts `addPeople()`, phones half) and draws the bikes instanced
+  on the main thread, pitched with the road; the bike's geometry is shared
+  with Uptown's in `bike3d.ts`. The crowd's look counts the hills east of
+  `CREST_RECT` as Crestmont's (crowdlook.ts `CREST_EAST`), so the walk's and
+  the glasshouse's people dress as its own; a rider's id holds `cyclist`
+  for their kit. Phase 8's people (`crestlife.ts`) stay the boot's.
+  The upgrade's polish pass: nothing grows or lies on the walk (crestwalk.ts
+  `onWalk(x, z, margin)`, a grid of the walk, its branch, the Belvedere's
+  round, the lookouts and the benches, which landscape.ts's oaks and scrub
+  and crestcover.ts's drifts and rocks keep off); the steps are solid
+  blocks, each from the higher end's tread down into the lower end's ground
+  (`stepAt(d)`, `walkGround()`: the walk's ground is the lower of the hills'
+  height and the grass as drawn), the walkers on their treads; the handrail
+  is drawn in runs, none across the Belvedere's paving. Phones: the steps
+  and the lookouts' rail posts near only, every other walk lamp, the Art Deco
+  houses' portholes plainer.

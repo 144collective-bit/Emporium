@@ -1302,7 +1302,8 @@ example:
   south bank west of The Trenches past the ring highway, scenery first,
   the metro running on through it and over the river on the red arch moved
   there from The Trenches. The plan and its phases are `docs/docks-plan.md`;
-  Phase 1 (the land, the streets and the quays) is built.
+  Phases 1 to 4 (the land, streets and quays; the metro and the red arch;
+  the port; its life and sound) are built.
 - **9b An industrial east:** factories, rail yards, depots and
   chimneys (steam, not smoke, on the phone tier). It's a home for the
   economy's bigger lots: more `BIG_LOTS`, at prices the owner sets.

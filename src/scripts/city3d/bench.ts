@@ -49,6 +49,11 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'mall', name: 'Starlight Mall and Palm Court', pos: [30, 26, -40], target: [60, 2, -120] },
   { id: 'harbour', name: 'Harbour Bridge, from the south bank', pos: [40, 12, 160], target: [64.5, 4, 100] },
   { id: 'sunridge', name: 'Sunridge, over the loop', pos: [120, 28, 10], target: [180, 0, -80] },
+  // Sunridge's (docs/suburb-plan.md Phase 6): down Sunridge Parkway's west side at street level, over a cul-de-sac's
+  // turning circle (Palo Verde Court's: houses all round it), and over the back yards' pools along the west wall
+  { id: 'sun-street', name: 'Sunridge Parkway, street level', pos: [122.8, 2.2, -60], target: [122.2, 1.6, -105] },
+  { id: 'sun-court', name: 'Sunridge, Palo Verde Court', pos: [213, 14, -80], target: [214.5, 0, -107] },
+  { id: 'sun-pools', name: "Sunridge, the back yards' pools", pos: [96, 16, -116], target: [110, 0, -86] },
   { id: 'southfield', name: 'Southfield, the yards and the park', pos: [60, 30, 300], target: [150, 0, 210] },
   { id: 'lot9', name: 'Lot 9, from the south avenue', pos: [-20, 24, 440], target: [-70, 0, 370] },
   // Crestmont's (docs/crestmont-plan.md Phase 11): the Drive at street level, the Flats from over them, the hills
@@ -91,6 +96,12 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'wall-foot', name: 'The wall, from its foot', pos: [WALL_INNER[0] + 34, 3, 30], target: [WALL_INNER[0], 16, 12] },
   { id: 'wall-culvert', name: 'The wall, a culvert', pos: [WALL_INNER[0] + 26, 3, RIVER[0] - 6], target: [WALL_INNER[0], 2, (RIVER[0] + RIVER[1]) / 2] },
   { id: 'wall-corner', name: 'The wall, a corner from over the land', pos: [WALL_INNER[2] - 90, 46, WALL_INNER[1] + 90], target: [WALL_INNER[2], 30, WALL_INNER[1]] },
+  // Northgate Air Base (docs/military-plan.md Phase 0): the north land from over the stadium, the base from high, its
+  // main gate at eye level and its runway (open land until the base is built: each phase is measured against these)
+  { id: 'north-stadium', name: 'The north, from over the stadium', pos: [-95, 30, -250], target: [-95, 0, -420] },
+  { id: 'airbase-overview', name: 'Northgate Air Base, from high', pos: [-200, 110, -230], target: [-260, 0, -560] },
+  { id: 'airbase-gate', name: 'Northgate Air Base, the main gate', pos: [-10, 2.2, -285], target: [-4.5, 1.6, -340] },
+  { id: 'airbase-runway', name: 'Northgate Air Base, the runway', pos: [-60, 16, -560], target: [-300, 2, -540] },
 ];
 /** The route, through these views in order and back home */
 const ROUTE = ['home', 'street', 'square', 'airport', 'karts', 'highway', 'outskirts', 'edge', 'home'];

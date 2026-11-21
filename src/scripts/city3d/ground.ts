@@ -39,6 +39,7 @@ import { inTrenches } from './trenches';
 import { inSunridge } from './sunridge';
 import { inTown } from './outer';
 import { BUILT_UP } from './bounds';
+import { AIRBASE_RECT, VISITORS, fromFence, inAirbase } from './airbase';
 
 /** A mix of covers: each cover's share, the shares summing to 1 */
 export type Mix = Partial<Record<Cover, number>>;
@@ -141,6 +142,9 @@ export const INFLUENCES: Influence[] = [
   around('lot9-dirt', LOT9_PARK, 'bare', 2, 0.55),
   around('lot9-strip', [LOT9_CAMP_X1, LOT9_PARK[3], LOT9_PARK[2], LOT9_FIELD[3]], 'bare', 4, 0.55),
   around('lot9-field', LOT9_FIELD, 'bare', 1, 0.28),
+  // Northgate Air Base (airbase.ts): mown grass inside its fence, a little past it, and worn round the visitors' car park
+  { id: 'airbase', cover: 'lawn', reach: 6, strength: 0.5, box: [AIRBASE_RECT[0] - 6, AIRBASE_RECT[1] - 6, AIRBASE_RECT[2] + 6, AIRBASE_RECT[3] + 6], dist: (x, z) => (inAirbase(x, z) ? 0 : fromFence(x, z)) },
+  around('airbase-visitors', VISITORS, 'worn', 3, 0.5),
   // Lusher by the river (its banks are the river's own, river.ts; this is the grass running down to them)
   { id: 'river', cover: 'bank', reach: 10, strength: 0.6, box: [SKY[0], RIVER[0] - 10, SKY[2], RIVER[1] + 10], dist: (_x, z) => Math.max(0, RIVER[0] - z, z - RIVER[1]) },
 ];

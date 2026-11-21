@@ -422,9 +422,11 @@ keep it up to date when what it describes changes.
     `cityOutfit(r, { district, role, kinds })` from `STYLES` a district
     (`districtAt(x, z)`: Uptown's suits and coats, The Trenches' hoodies
     and track, the park's bright casual, hi-vis on the Docks' and Yards'
-    workers, Crestmont's pale suits, the Neon Mile's party colours, the
-    cove, Sunridge, Lot 9, the mall, the airport, the kart park, the town
-    everywhere else) with the role's rules first (`roleOf()`: joggers and
+    workers, Crestmont's pale suits (its streets' rect and the hills east of
+    it, `CREST_EAST`), the Neon Mile's party colours, the
+    cove, Sunridge, Lot 9, the mall, the airport, the kart park, Northgate Air Base's uniforms (olive,
+    khaki and navy on the crowd's own kinds, inside its fence: `inAirbase()`),
+    the town everywhere else) with the role's rules first (`roleOf()`: joggers and
     cyclists in track, kids bright with the cap back, bouncers in black),
     seeded from each person's number (`seeded()`), so no two neighbours
     match; life.ts dresses everyone by where they'll be, and a spare slot

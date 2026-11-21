@@ -25,6 +25,7 @@ import { GATES, GARDEN_SITE, LAKE_C, WESTLAKE_BLOCKS } from '../src/scripts/city
 import { AXIS_X, PLAZA_BLOCK, UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
 import { HIGHRISES } from '../src/scripts/city3d/highrise';
 import { BLOCK as STADIUM_BLOCK, CENTRE as STADIUM_CENTRE, LOOP as STADIUM_LOOP, ROAD as STADIUM_ROAD } from '../src/scripts/city3d/stadium';
+import { RURAL_RUNS } from '../src/scripts/city3d/rural';
 
 const FILE = join(process.cwd(), 'tests', 'fixtures', 'layout.json');
 
@@ -105,11 +106,13 @@ const layout = () =>
 
 // The streets, with the world's edge left open
 // (a country road runs from where it leaves town to its turning loop near the edge: its far end, its loop and a bank
-// avenue's stub to it are written as 'edge', rural.ts)
+// avenue's stub to it are written as 'edge', rural.ts; the two that end at Northgate Air Base's gates are written whole,
+// their loops too: they stand where the owner put them, airbase.ts)
+const gated = (id: string) => RURAL_RUNS.some((r) => r.gated && (id === r.id || id === `${r.id}-turn`));
 const streets = () =>
   plain(
     PLAN.streets.map((s) =>
-      s.kind !== 'rural'
+      s.kind !== 'rural' || gated(s.id)
         ? { id: s.id, kind: s.kind, half: s.half, lanes: s.lanes, pts: s.pts }
         : { id: s.id, kind: s.kind, half: s.half, lanes: s.lanes, pts: /-(turn|stub)$/.test(s.id) ? 'edge' : [s.pts[0], 'edge'] }
     ),

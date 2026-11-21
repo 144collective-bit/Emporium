@@ -83,7 +83,8 @@ keep it up to date when what it describes changes.
   `PARKED_JETS`), the freighter (step 3 gave it stand 5's slot), a prop plane, a helicopter and the executive helicopter
   (Uptown's Phase 6: `exec()`, `heli-x`, from `EXEC_PAD` to Uptown's
   rooftop helipad `ROOF_PAD` and back, gold) on one timetable (`PERIOD`,
-  four minutes; `timetable()`, `FLIGHTS`). A flight is a loop of acts (fly
+  four minutes; `timetable()`, `FLIGHTS`; `flight()`, `fly()`, `w()` and `yawOf()` exported for Northgate Air
+  Base's own timetable, airbaseflights.ts `BASE_FLIGHTS`, never in `FLIGHTS`). A flight is a loop of acts (fly
   along waypoints with rounded corners, eased altitude and speed; hold;
   turn on the spot; lift); `poseAt()` turns the time into a pose, the same
   for everyone (the clock is `Date.now()`). Airliners push back, taxi out

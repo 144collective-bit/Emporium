@@ -85,7 +85,7 @@ The server was parked while the city grew. Getting it fit for today's city:
 | Chat | Emote wheel and fixed phrases only. Nothing typed ever appears in public. Players can mute others. |
 | What others see | Outfit and colours, the gun they carry and its finish, name tag, rank badge. |
 | Saved | Server-side player profiles (name, outfit, finish, lifetime score, rank); daily and weekly leaderboards (no prizes). |
-| Builder | Real plot sales (20,000,000 PLS a plot, PulseChain Testnet first) through the visitor's wallet and the game server's `Land`; the demo with play money stays for offline visits and local builds. |
+| Builder | Real plot sales (20,000,000 PLS a plot, PulseChain Testnet first) through the visitor's wallet and the game server's `Land`; the demo with play money stays for offline visits and local builds. *Since retired with Build mode (the owner's call, docs/guide/retired.md).* |
 | Online / Offline | One switch in the mode header for the whole city: Online joins the shared city while walking and sells real plots; Offline is solo with the demo builder. Remembered per browser, online by default. |
 | Fairness | The server decides hits (it runs `combat-sim.ts`), checks movement and fire rate, and rewinds drones to what the shooter saw. |
 | Server | Cloudflare Workers + Durable Objects (one per room, one per profile). The same Worker serves the static site at emporium.144collective.workers.dev. |
@@ -141,7 +141,7 @@ Visitor's browser                         Cloudflare (server/)
      profile remembers the last one taken. Once geared up, players swap
      between unlocked guns anywhere (`swap` message, `sim.swap()`); each gun
      keeps its own ammo and the counter refills them all.
-   - Plot sales (the `Land` Durable Object): each district is one large plot
+   - Plot sales (since retired with Build mode: docs/guide/retired.md; the `Land` Durable Object): each district is one large plot
      for 20,000,000 PLS. A buyer's wallet pays the owner's wallet directly;
      the server checks the payment on PulseChain (testnet first, mainnet when
      the owner switches) and records the owner and their building for

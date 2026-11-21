@@ -146,6 +146,26 @@ test("what's lifted keeps an index (the site worker hands back only indexed mesh
   for (let i = 0; i < geo.index.count; i++) assert.ok(geo.index.getX(i) < geo.getAttribute('position').count);
 });
 
+test("what's split on the south's ground shares its corners: every face kept, each corner once (the military plan's Phase 0 trim)", async () => {
+  const THREE = await import('three');
+  const { Batch, setGroundLift } = await import('../src/scripts/city3d/kit');
+  const { southLift } = await import('../src/scripts/city3d/southground');
+  setGroundLift(southLift, SOUTH_GROUND_RECT);
+  const b = new Batch();
+  // (a 30 m patch of the ground's 5 m grid on the village's hill: each square's diagonal over LIFT_EDGE, so split in four)
+  b.add(new THREE.PlaneGeometry(30, 30, 6, 6).rotateX(-Math.PI / 2).translate(-205, 0.2, 462), new THREE.MeshBasicMaterial());
+  const g = new THREE.Group();
+  b.build(g);
+  const geo = (g.children[0] as InstanceType<typeof THREE.Mesh>).geometry;
+  assert.equal(geo.index!.count / 3, 6 * 6 * 2 * 4, 'every split face kept');
+  // The grid's 7 x 7 corners, the middles of its 84 sides and 36 diagonals: 169 (unshared, it was three a face: 864)
+  const pos = geo.getAttribute('position');
+  assert.equal(pos.count, 49 + 84 + 36);
+  const keys = new Set<string>();
+  for (let i = 0; i < pos.count; i++) keys.add(Object.values(geo.attributes).map((a) => Array.from({ length: a.itemSize }, (_, c) => a.getComponent(i, c)).join()).join('|'));
+  assert.equal(keys.size, pos.count, 'two corners the same in every attribute');
+});
+
 test("a batch mostly off the south's ground: only its faces on it split and lifted, the rest kept whole and shared", async () => {
   const THREE = await import('three');
   const { Batch, setGroundLift } = await import('../src/scripts/city3d/kit');

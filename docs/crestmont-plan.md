@@ -727,5 +727,38 @@ Their answers, in three rounds:
    the glasshouse (`GLASSHOUSE`), a white-framed palm house of a domed middle and two wings with palms inside, its
    garden of beds and gravel round a fountain, on ground held level east of the reservoir. Both are places with their
    panels (kickers 54 and 55), live lines, Walk in, doors and pins. No land, house or landmark moved.
-6. **Residents at leisure and cyclists on the hills.**
+6. **Residents at leisure and cyclists on the hills** (built; the owner's answers, 2026-11-20: the residents where
+   the plan put them, "Ridge Road, a few", "Skip tennis"): `crestleisure.ts` (the rules) and `crestleisure3d.ts`. At
+   home, someone out on a balcony at every third estate and every other hill house, looking out; on the other hill
+   houses' roof terraces someone on a lounger, a pair at every fourth one's table. Out, a pair at three of THE
+   ASTERLY's four terrace tables with a waiter between them, two on the Belvedere's benches and one at its front,
+   visitors in the glasshouse (two under its dome by the palm, a pair at its garden's east end, one by the fountain),
+   someone on every other bench along the walk and at each lookout. On the move, four walkers up and down the
+   Ridgeline Walk at a stroll, each on their own right; five road cyclists on Ridge Road, up its right-hand edge and
+   down the other, slow on the climbs and quick on the way down, on the asphalt's edge right of the cars and clear of
+   the joggers, their bikes pitched with the road. All come with the chunk, into the crowd's spare slots (none in the
+   boot), and dress as Crestmont's (the crowd's look counts the hills east of its streets too), the riders in
+   cycling kit. No tennis, no swimmers. Phones: every other one standing or sitting, two walkers, three cyclists.
+   With it, three Phase 5 slips fixed: the walk's benches turned along it (they stood across it), the Belvedere's
+   benches moved off the walk's way out, the glasshouse's fountain moved off its path.
 
+
+### The upgrade's polish pass (built, the owner's call, 2026-11-20: "a polish pass on Crestmont, check it at phone size and measure it with `?fps`")
+
+**Fixed from the close-up shots:** oaks, scrub, the slopes' drifts and rocks no longer grow or lie on the Ridgeline
+Walk, its branch, the Belvedere's round, the lookouts or the benches (crestwalk.ts `onWalk()`); no handrail across the
+Belvedere's paving (the rail in runs); the steps are solid blocks, each from the higher end's tread down into the lower
+end's ground (`stepAt()`), so a flight reads as a stair, and the walkers stand on the treads.
+
+**Measured** (the `?fps` readout, headless: counts only, swinging by about a fifth from run to run). Phones:
+`crest-drive` 173-181 draws and 0.60M triangles, `crest-flats` 167-171 and 0.61M, `crest-hills` 115 and 0.47M; the
+desktop `crest-drive` 286 and 1.75M. Against Phase 11's 110-130 draws and 0.3M on phones, the draws are up a little
+and still under downtown's 259; the triangles have about doubled. Where they come from (each site's geometry on
+phones, counted from the tiles): of Crestmont's drawn at every distance, the upgrade's new sites (the walk, the cable
+car, the Belvedere, THE ASTERLY, the glasshouse, the overlook, the gateway, the lookouts) are about 670 KB of about
+11 MB; the gardens, groves, banks and mansions of the grounds passes the rest, as the owner benched on real hardware
+(2026-11-19: good). The phones' trims in the upgrade's own drawing were mostly in already (the decks' furniture, the
+balusters, the gates' leaves near only; every other leisure person), and now also the walk's steps and the lookouts'
+rail posts near only, every other walk lamp, and the Art Deco houses' portholes plainer: too small to show in the
+counts. A before-and-after against the build before Phase 1 wasn't possible headless (that build's review mode loses
+its camera). The boot 763.3 of 770 KB, the chunk 55.6 of 60 KB.
