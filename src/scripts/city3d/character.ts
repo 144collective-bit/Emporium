@@ -29,8 +29,10 @@ import { lit, liveTex, moving, neon, toon } from './kit';
 import { crowdFrame, type CrowdClip } from './crowdclips';
 import { SHAPE_TEXEL, WARDROBE_W, addWardrobe, crowdDepth, crowdTexture, crowdVersion, setCrowdHead, setWardrobeRow } from './crowdskin';
 import { makeSkeleton, newPose, poseSkeleton, BONE_INDEX, type BoneName, type Joint, type Pose, type Skeleton } from './skeleton';
-import { BLACK, COLOR_KEYS, HEAD_SCALE, PLAYER, SKIN, items as wardrobe, shapeHead, paintMerge, restSkin, shadeRGB, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
+import { BLACK, COLOR_KEYS, HEAD_SCALE, PLAYER, SKIN, items as wardrobe, shapeHead, paintMerge, restSkin, shadeRGB, useHeads, type ColorKey, type Detail, type Item, type LogoOf, type Mat, type Outfit, type Piece } from './wardrobe';
 import { onLens } from './lens';
+import { lazy } from './lazy';
+import { headModel } from './body';
 
 export { PLAYER, SOLDIER, lookOutfit, type Detail, type Outfit, type OutfitKind } from './wardrobe';
 export { ARM_REACH, HIP_HEIGHT, newPose, reachArm, shoulderTo, torsoFrame, type Limb, type Pose, type Wrist } from './skeleton';
@@ -83,6 +85,29 @@ function items(q: Detail, hero = false): Item[] {
     pieces: [{ joint: s === 'left' ? 'handL' : 'handR', geo: rifle, color: '#2b2a33' }],
   });
   return (withRifle[key] = [...wardrobe(q, hero), carried('left'), carried('right')]);
+}
+
+/**
+ * The characters' heads (docs/characters-plan.md): their own chunk, loaded the first time a character is worn; once
+ * it's in, the wardrobe draws them (a figure built before then is Degen as he is: build it again after)
+ */
+export const loadHeads = lazy(async () => {
+  const m = await import('./heads');
+  m.setHeadModel(headModel);
+  useHeads({ ids: m.CHARACTER_IDS, parts: m.characterParts, pendant: m.characterPendant, chain: m.characterChain, gloves: m.characterGloves });
+  delete withRifle['2h'];
+  delete withRifle['3h'];
+  headsIn = true;
+}, 'the characters');
+let headsIn = false;
+/**
+ * Whether a figure in this outfit can be built as it should look now (Degen's own head, or a character's once its
+ * chunk is in). If not, the chunk is asked for: build again when `loadHeads()` settles (if it fails, Degen it is).
+ */
+export function headsReady(o: Outfit) {
+  if (!o.character || headsIn) return true;
+  void loadHeads().catch(() => {});
+  return false;
 }
 
 /* ---------- Materials ---------- */

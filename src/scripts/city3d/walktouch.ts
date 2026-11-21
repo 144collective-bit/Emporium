@@ -3,7 +3,8 @@
  * followed wherever it goes; floating under the thumb at the wheel), the pedals' fingers (touchdrive.ts has their
  * rules), the buttons held or toggled by the comfort settings (`holdButton()`), and the wiring of every touch
  * button: jump, run, crouch, the horn, the views, a kart's drift and item, the ring's, fire (dragged to aim), reload,
- * swap and aim; with them the look settings' inputs and the prompt's tap, which sat among them.
+ * swap and aim; with them the prompt's tap, which sat among them (the look settings' inputs, once here too, are the hub's
+ * Settings now: settings-ui.ts).
  *
  * It was three stretches of walk.ts's `createWalk()`, moved here word for word into `wireTouch()`, which walk.ts
  * calls once: the page's own objects come in `TouchEls` (the window, the document and `Element` too, under their
@@ -30,9 +31,6 @@ export interface TouchEls {
   pedalBtns: HTMLElement[];
   rideViewBtns: HTMLElement[];
   blockBtnEl: HTMLElement | null;
-  fpBtn: HTMLElement;
-  sensInput: HTMLInputElement;
-  invertInput: HTMLInputElement;
   prompt: HTMLElement;
 }
 
@@ -43,7 +41,6 @@ export interface TouchState {
   kartBtns: { drift: boolean; item: boolean };
   /** Punch, Kick and Dodge tapped; Block held in the ring; Guard (the same button on the street) held or toggled */
   fightBtns: { punch: boolean; kick: boolean; dodge: boolean; block: boolean; guard: boolean };
-  settings: { sens: number; invert: boolean };
 }
 
 /** Walk mode as the touch controls see it: what's so now (read each touch), and what the buttons do */
@@ -75,8 +72,6 @@ export interface TouchHost {
   setBlock(on: boolean): void;
   setGuard(on: boolean): void;
   quitFight(): void;
-  setFirstPerson(on: boolean): void;
-  saveSettings(): void;
   act(): void;
   look(dx: number, dy: number, k: number): void;
   stepSlot(dir: 1 | -1): void;
@@ -84,9 +79,9 @@ export interface TouchHost {
 
 /** Wire the touch controls up, once */
 export function wireTouch(el: TouchEls, s: TouchState, h: TouchHost) {
-  const { window, document, Element, root, $, stick, knob, runBtn, crouchBtn, pedalBtns, rideViewBtns, blockBtnEl, fpBtn, sensInput, invertInput, prompt } = el;
-  const { joy, pedals, kartBtns, fightBtns, settings } = s;
-  const { d, drive, combat, hm, tryJump, setSprintLock, crouchInput, crouchPress, nextCam, setBlock, setGuard, quitFight, setFirstPerson, saveSettings, act, look, stepSlot } = h;
+  const { window, document, Element, root, $, stick, knob, runBtn, crouchBtn, pedalBtns, rideViewBtns, blockBtnEl, prompt } = el;
+  const { joy, pedals, kartBtns, fightBtns } = s;
+  const { d, drive, combat, hm, tryJump, setSprintLock, crouchInput, crouchPress, nextCam, setBlock, setGuard, quitFight, act, look, stepSlot } = h;
   /** The fingers on the pedals (touchdrive.ts): each pointer and the pedal it presses */
   const pedalFingers = new Map<number, Pedal>();
   const rectOf = (el: Element): Rect | null => {
@@ -302,15 +297,6 @@ export function wireTouch(el: TouchEls, s: TouchState, h: TouchHost) {
     () => (h.ring ? fightBtns.block : fightBtns.guard),
   );
   root.querySelector('[data-fight-quit]')?.addEventListener('click', () => quitFight());
-  fpBtn.addEventListener('click', () => setFirstPerson(!h.firstPerson));
-  sensInput.addEventListener('input', () => {
-    settings.sens = Number(sensInput.value);
-    saveSettings();
-  });
-  invertInput.addEventListener('change', () => {
-    settings.invert = invertInput.checked;
-    saveSettings();
-  });
   onTap(prompt, act);
   // Touch: hold Fire (and drag it to aim, so one thumb shoots and steers), tap Reload, tap Swap
   const fireBtn = $('[data-walk-fire]');

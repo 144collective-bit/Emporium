@@ -147,6 +147,29 @@ keep it up to date when what it describes changes.
     the shades' arms inside it and the lenses clear of it, the chain out of
     its cloth, at every level; `tests/clothing.test.ts` holds it out of the
     hoodie through every pose.
+- **New characters** (the owner's call, 2026-11-21) are planned in
+  `docs/characters-plan.md`: Degen's body with a head of its own sculpted
+  after the owner's art, worn as a ready-made look in the fitting room
+  (the first, SlimeWhale, done and signed off; the second, Smilex, done and signed off:
+  his hexagon head, white gloves, `characterGloves()` and the `gloves-<id>`
+  items, and the PulseChain pendant, `characterPendant()` and the
+  `necklace-<id>-<top>` items, the owner's exceptions noted in the plan). Phases 1-3 built (the head,
+  wearing him, the checks): `heads.ts` (DOM-free: the
+  characters, `CHARACTER_IDS`, and their heads, `SLIME_HEAD` and
+  `slimeWhale(q)`; its own chunk, `loadHeads()` in character.ts, which
+  hands it `headModel()` and the wardrobe its parts, `useHeads()`: keep it
+  importing nothing of the boot's but three.js, or the bundler splits the
+  boot's chunks), drawn from a `HeadDef` by `headModel()` in body.ts
+  (Degen's `DEGEN_HEAD`); worn by `Outfit.character` as one item
+  (`character-slimewhale`, single figures only), every other item asked
+  about the outfit as `headless()` makes it (nothing over the head; Degen's
+  own head items off). Tested in `tests/heads.test.ts`; the lab shows him
+  with `?anim&outfit=hoodie&wear=character:slimewhale`. Worn from the
+  look (Phase 2): `Look.character` (`CHARACTERS`, `CHARACTER_LOOKS` in
+  profile-data.ts), the fitting room's Face tab; every figure built from a
+  look asks `headsReady()` first and builds again once the chunk is in.
+  The crowd's skin tones are its own twelve (`SKIN_TONES`), apart from
+  the players' swatches.
 - **The suit's tailoring** (the owner's call, after the clothing plan) is
   planned in `docs/tailoring-plan.md`: the suit's tailoring detail
   (buttons, the breast welt, stitching, sleeve buttons, the vent, the

@@ -26,7 +26,11 @@ keep it up to date when what it describes changes.
   name for them) take medium; and for 14 days after the 3D graphics stopped
   (`webglcontextlost`, kept in `degen-city-gpu-v1`, not in the backup) a
   start is a tier below the one that stopped. `?fps` says which and why.
-  It runs phones
+  The hub's Settings > Graphics (`docs/settings-plan.md`) can set the tier
+  by hand (`pickTier(device, want)`: still a step under one that stopped
+  lately; it takes a reload), hold shadows or bloom off (off by hand, the
+  step-down never brings them back), scale the pixels (Resolution, 50-100%
+  of the tier's) and cap the frames (60 or 30). It runs phones
   at 30fps while nobody is touching the city, and steps quality down
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
   slow. When frames stay fast again, bloom, shadows and then pixels come

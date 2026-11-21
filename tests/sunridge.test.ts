@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ENTRIES, LAND, LOT_D, MESA, PARKWAY_LOOP, PATH, SUN_BLOCKS, SUN_CROSSINGS, SUN_LAMPS, SUN_SOLIDS, SUN_STREETS, SUNRIDGE_RECT, WALL_RUNS, ZONES, distTo, inSunridge, inside, type Pt } from '../src/scripts/city3d/sunridge';
-import { LOTS, MIN_D, MIN_W, outline } from '../src/scripts/city3d/sunridgelots';
+import { LOTS, MIN_D, MIN_W, outline, SHALLOW_D } from '../src/scripts/city3d/sunridgelots';
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { COURT } from '../src/scripts/city3d/mall';
 import { fromHighway, HIGHWAY_HALF } from '../src/scripts/city3d/highway';
@@ -92,7 +92,8 @@ test('the lots: about a hundred and ten, on their blocks, none over another, a s
     const mid: Pt = [(o[0][0] + o[1][0] + o[2][0] + o[3][0]) / 4, (o[0][1] + o[1][1] + o[2][1] + o[3][1]) / 4];
     assert.ok(inside(b.poly, mid), `${l.id} off its block`);
     for (const p of o) assert.ok(!onStreet(p, WALK_W - 0.05), `${l.id} on a street at ${p}`);
-    assert.ok(l.depth >= MIN_D - 1e-9);
+    // (the second pass round the turning circles lays shallower lots in the gaps: Phase 6)
+    assert.ok(l.depth >= (l.late ? Math.min(...SHALLOW_D) : MIN_D) - 1e-9, `${l.id} only ${l.depth} deep`);
     const w = Math.hypot(l.front[1][0] - l.front[0][0], l.front[1][1] - l.front[0][1]);
     assert.ok(w >= MIN_W - 0.05, `${l.id} only ${w.toFixed(2)} wide`);
     for (const z of [...ZONES.map((q) => q.rect), PATH]) assert.ok(!(mid[0] > z[0] && mid[0] < z[2] && mid[1] > z[1] && mid[1] < z[3]), `${l.id} on kept land`);

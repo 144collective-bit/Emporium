@@ -98,3 +98,11 @@ test('a restored GPU reloads the city, once a minute at most', () => {
   // a minute on: again
   assert.equal(reloadOnRestore(String(NOW - RELOAD_GAP), NOW), true);
 });
+
+test('a tier set in Settings starts on it, and still steps under one whose graphics stopped lately', () => {
+  assert.deepEqual(pickTier(desk({ small: true }), 'high'), { tier: 'high', why: '' });
+  assert.deepEqual(pickTier(desk(), 'low'), { tier: 'low', why: 'set in Settings' });
+  assert.equal(pickTier(desk({ lost: { tier: 'high', at: NOW - DAY } }), 'high').tier, 'medium');
+  // (stopped on a lower tier than the one asked for: under that one)
+  assert.equal(pickTier(desk({ lost: { tier: 'medium', at: NOW - DAY } }), 'high').tier, 'low');
+});
