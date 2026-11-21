@@ -71,7 +71,8 @@ keep it up to date when what it describes changes.
   `tests/crestsites.test.ts`): the grand hotel (`HOTEL`, THE CORALLINE,
   on crest-2-0, `HOTEL_PALMS`), the civic hall at the boulevard's head
   (`CIVIC`), the country club's clubhouse and six holes on the lower slopes
-  (`CLUB`, `HOLES`), the overlook on Vista Lane (`OVERLOOK`) and the
+  (`CLUB`, `HOLES`; to be retired for the new course in the north-east corner, the owner's call 2026-11-21:
+  `docs/golf-plan.md` Phase 4), the overlook on Vista Lane (`OVERLOOK`) and the
   reservoir with its dams and fence (`RESERVOIR`, `FENCE`); their ground
   `SITE_LEVELS` (in terrain.ts's `LEVELS`), `SITE_SOLIDS` (in `SOLIDS`),
   `onSite()`; drawn by `crestsites3d.ts`. Step 2 (each a place) is built:

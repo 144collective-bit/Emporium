@@ -62,6 +62,7 @@ it and has been retired completely. Build only on what's here.
 | Westlake Park, the stadium, the north side's gardens, the civic quarter (City Hall, the police headquarters, the courthouse) | `docs/guide/westlake.md` |
 | Uptown, its towers, plaza, boulevard, Sector 7 Tower, the Sky Wheel, Uptown North | `docs/guide/uptown.md` |
 | Crestmont and its hills | `docs/guide/crestmont.md` |
+| The golf course in the north-east corner (its layout, ground, holes, lakes, what's underfoot; its plan `docs/golf-plan.md`) | `docs/guide/golf.md` |
 | Southbank Docks | `docs/guide/docks.md` |
 | The Neon Mile, its resorts, shows and monorail | `docs/guide/neon-mile.md` |
 | Sunridge | `docs/guide/sunridge.md` |

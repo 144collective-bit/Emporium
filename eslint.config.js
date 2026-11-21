@@ -26,6 +26,8 @@ const DOM_FREE = [
   'src/scripts/city3d/drawn.ts',
   'src/scripts/city3d/idle.ts',
   'src/scripts/city3d/southground.ts',
+  'src/scripts/city3d/golf.ts',
+  'src/scripts/city3d/golfground.ts',
   'src/scripts/city3d/southblocks.ts',
   'src/scripts/city3d/southsky.ts',
   'src/scripts/city3d/southyard.ts',
