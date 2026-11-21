@@ -1,7 +1,7 @@
 # Exits plan: the motorway's interchanges, realistic and roomy
 
-**For the owner's sign-off.** Phase 0, the survey, is done: this file and its drawings (`docs/exits-shots/`, redrawn by
-`npm run exits-fit`). Once the owner signs it off, the improvement loop builds it a phase a night
+**Signed off by the owner (2026-11-21).** Phase 0, the survey, is done: this file and its drawings (`docs/exits-shots/`,
+redrawn by `npm run exits-fit`). The improvement loop builds it a phase a night, after Track A's open jobs
 (`docs/improvement-loop-plan.md`), each phase small enough to merge on its own, or split into sub-steps when it isn't.
 Keep this plan up to date.
 
@@ -175,7 +175,7 @@ Each phase merges on its own and leaves the city working; the new interchanges a
 in the address, read in one place) and turned on for everyone in Phase 7. A phase too big for one night is split into
 lettered steps, each merged.
 
-0. **The survey** (done, 2026-11-21): this plan, the drawings, `scripts/exits-fit.mjs`. For the owner's sign-off.
+0. **The survey** (done, 2026-11-21; signed off the same day): this plan, the drawings, `scripts/exits-fit.mjs`.
 1. **The standard as rules and tests.** `exitstd.ts` (DOM-free, on `DOM_FREE`): the standard's numbers (the table
    above) and `checkRamp()` / `checkInterchange()`, which report every breach (width, grade, lengths, radius,
    clearance to solids, streets and pillars, the gaps between interchanges). Tested on hand-made ramps. Nothing in the
@@ -237,11 +237,11 @@ lettered steps, each merged.
 - The number of exits: **what's realistic** (four interchanges with lettered exits; 6A retired).
 - Built by the loop after one sign-off of this plan.
 
-## To confirm at sign-off
-
-1. Four interchanges with lettered exits (1A to 4B) in place of nine numbered ones, 6A retired.
-2. The U-turn lanes under the deck, and ramp meters on every on-ramp.
-3. The Crestmont line beside the ring: portal frames over the new ramps (recommended), or the line moved out.
+- **Signed off as written** (2026-11-21, confirmed by the owner): four interchanges with lettered exits (1A to 4B) in
+  place of nine numbered ones, 6A retired; the U-turn lanes under the deck and ramp meters on every on-ramp; the
+  Crestmont line beside the ring on **portal frames** over the new ramps. tests/snapshot.test.ts is rewritten on purpose
+  in Phase 7 for the ramps and exits only (every place, door and lot stays where it stands). The loop starts Phase 1
+  once Track A's open jobs (J1, J2) are merged.
 
 ## Sources
 

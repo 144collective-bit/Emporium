@@ -249,6 +249,27 @@ A hunt runs whenever no job is ready, and once a week otherwise.
       **every other driveway in the city checked to line up and not cover
       the sidewalk** (R2's sweep).
 
+## Track C: the motorway exits (signed off by the owner, 2026-11-21)
+
+`docs/exits-plan.md`, signed off as written: nine exits become four
+interchanges with two-lane slip ramps, frontage roads, a three-lane deck and
+the high-tech kit. Order: after Track A's open jobs (J1, J2), one phase or
+lettered step a pass, in the plan's order (1, 2a, 2b, 3a...). The new
+interchanges stay behind `?exits=new` until Phase 7. Each pass follows the
+exits plan's own rules on top of this plan's; Phase 7's snapshot rewrite is
+the owner's, on purpose, for the ramps and exits only. Track A's sweeps and
+the hunt carry on between exit phases (alternate passes).
+
+- [ ] Phase 1: the standard as rules and tests
+- [ ] Phase 2: the interchanges as data (2a, 2b)
+- [ ] Phase 3: the deck widened to three lanes (3a, 3b, 3c)
+- [ ] Phase 4: the interchanges drawn (4a north, 4b east, 4c south, 4d west)
+- [ ] Phase 5: clearing the way (metro portal frames, fence, hedge, props)
+- [ ] Phase 6: traffic, taxis, walking, driving (6a, 6b, 6c)
+- [ ] Phase 7: the switch (signs, high-tech kit, snapshot, old ramps and 6A
+      retired)
+- [ ] Phase 8: polish and phones
+
 ## Level 1: the safety net (bugs and tests)
 
 Most of these are from the polish plan's §8 and §11 (2026-11-05). Check each
