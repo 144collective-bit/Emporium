@@ -18,7 +18,7 @@
  * Heights are in the city's units: a storey 1 (as the old estate's), the ground floor taller; the towers' plant rooms
  * reach about 20 (the owner's figure, St Aldwyn's spire 22.5).
  */
-import { HALF, PATH_HALF, MARSH_LANE, ENDSWOOD_ROAD, type Pt } from './south';
+import { HALF, PATH_HALF, MARSH_LANE, ENDSWOOD_ROAD, FOOTPATHS as FOOTPATHS_ALL, SOUTH_BLOCKS as SOUTH_LAND, type Pt } from './south';
 import { cross, inside, shift, smooth } from './streetfaces';
 import { southLift } from './southground';
 import type { Box } from './underground';
@@ -524,6 +524,8 @@ export const BRIDGES: Bridge[] = [
   bridge('kite-teasel', { block: 'kite' }, { core: 'teasel-a' }, 3),
 ];
 
+
+
 export interface Court {
   id: string;
   poly: Pt[];
@@ -605,10 +607,62 @@ export function cover(poly: Pt[], top: number, step = 0.6, skip?: [number, numbe
 }
 /** The archway's span along x (the Rampart runs east-west there) */
 export const ARCH_X: [number, number] = [pointAt(RAMPART_SPINE, RAMPART.arch!.from).p[0], pointAt(RAMPART_SPINE, RAMPART.arch!.to).p[0]];
+/* ---------- The bridges' piers (docs/brutalist-plan.md polish: heavy concrete spans) ---------- */
+
+export interface Pier {
+  id: string;
+  at: Pt;
+  /** Its turn: square to its span */
+  rot: number;
+  /** Its top: the underside of the lowest bridge on its span there */
+  top: number;
+  base: number;
+}
+/** A pier's half width, the spans long enough to have them, and how far apart along a span */
+export const PIER_HALF = 0.35;
+const PIER_SPAN = 10;
+const PIER_EVERY = 7;
+/** How far a point is in from the nearest edge of the estate's land it stands on (negative: on no land, a street) */
+const onLand = (p: Pt) => {
+  const f = SOUTH_LAND.find((b) => inside(b.poly, p));
+  if (!f) return -1;
+  return Math.min(...f.poly.map((q, i) => segDist(p, q, f.poly[(i + 1) % f.poly.length])));
+};
+/** Every long bridge's piers: about every `PIER_EVERY` along it, where the ground under it is the estate's (clear of the
+ * streets and their sidewalks, the footpaths, the blocks, the towers, their cages and the courts) */
+export const PIERS: Pier[] = (() => {
+  const spans = new Map<string, Bridge[]>();
+  for (const br of BRIDGES) {
+    const key = br.pts.flat().map((v) => v.toFixed(1)).join(',');
+    spans.set(key, [...(spans.get(key) ?? []), br]);
+  }
+  const out: Pier[] = [];
+  for (const set of spans.values()) {
+    const low = set.reduce((a, b) => (Math.min(...a.ys) < Math.min(...b.ys) ? a : b));
+    const [a, c] = low.pts;
+    const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    if (l < PIER_SPAN) continue;
+    const n = Math.max(1, Math.round(l / PIER_EVERY) - 1);
+    for (let k = 1; k <= n; k++) {
+      const f = k / (n + 1);
+      const at: Pt = [a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f];
+      const clear = [-1, 1].every((dx) => [-1, 1].every((dz) => onLand([at[0] + dx * 0.6, at[1] + dz * 0.6]) > 1.7));
+      if (!clear) continue;
+      if (FOOTPATHS_ALL.some((fp) => fp.pts.some((q, i) => i > 0 && segDist(at, fp.pts[i - 1], q) < PATH_HALF + 1))) continue;
+      if ([...BLOCKS.map((b) => b.foot), ...CORES.map((q) => q.foot)].some((ft) => inside(ft, at) || ft.some((q, i) => segDist(at, q, ft[(i + 1) % ft.length]) < 1.2)) || CAGES.some((g) => inside([g.at(-0.3, -1.6), g.at(CAGE.len + 0.3, -1.6), g.at(CAGE.len + 0.3, 1.6), g.at(-0.3, 1.6)], at))) continue;
+      if (COURTS.some((ct) => inside(ct.poly, at))) continue;
+      const y = low.ys[0] + (low.ys[1] - low.ys[0]) * f;
+      out.push({ id: `${low.id}-pier-${k}`, at, rot: Math.atan2(c[1] - a[1], c[0] - a[0]), top: y - 0.22, base: southLift(at[0], at[1]) + 0.15 });
+    }
+  }
+  return out;
+})();
+
 export const BLOCK_SOLIDS: Box[] = [
   ...BLOCKS.flatMap((b) => cover(b.foot, topOf(b), 0.6, b.arch ? ARCH_X : undefined)),
   ...CORES.map((c) => cover(c.foot, c.top, 0.6)).flat(),
   ...CAGES.flatMap(cageSolids),
+  ...PIERS.map((p): Box => [p.at[0] - PIER_HALF, p.at[1] - PIER_HALF, p.at[0] + PIER_HALF, p.at[1] + PIER_HALF, p.top]),
 ];
 
 /** Where the blocks stand, all of them, their bridges and their deck (districts.ts loads their drawing within reach of it) */

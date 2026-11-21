@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARCH_X, BLOCKS, BLOCK_SOLIDS, BRIDGES, BRIDGE_CLEAR, BUNKER, CORES, COURTS, DECKS, DESIRE_LINES, GALLERIES, GRASS, PLAY,
-  BLOCKS_RECT, RAMPART, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
+  BLOCKS_RECT, PIERS, RAMPART, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
 } from '../src/scripts/city3d/southblocks';
 import { EDGE_Z, FOOTPATHS, LOT9_EDGE, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, UNDERHILL } from '../src/scripts/city3d/south';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
@@ -268,4 +268,23 @@ test('the service towers (docs/brutalist-plan.md Phase 2): most stand a bridge o
   for (const c of off) assert.ok(c.gap <= 3 && c.link, c.id);
   // (each link clear of the streets as its galleries are)
   for (const c of off) for (const p of along(c.link!, false)) assert.ok(offStreet(p) > 0.3, `${c.id}'s link over a street`);
+});
+
+test('the bridges\' piers (docs/brutalist-plan.md polish): under their spans, on the estate\'s land, clear of the streets', () => {
+  assert.ok(PIERS.length >= 4, `${PIERS.length} piers`);
+  for (const p of PIERS) {
+    const br = BRIDGES.find((q) => p.id.startsWith(`${q.id}-pier`))!;
+    assert.ok(br, `${p.id}'s bridge`);
+    // (on its span's line, under its deck, standing on the ground)
+    const [a, c] = br.pts;
+    const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    const off = Math.abs(((p.at[0] - a[0]) * (c[1] - a[1]) - (p.at[1] - a[1]) * (c[0] - a[0])) / l);
+    assert.ok(off < 0.05, `${p.id} ${off.toFixed(2)} off its span`);
+    assert.ok(p.top < Math.min(...br.ys) && p.top > Math.min(...br.ys) - 0.4, `${p.id}'s top`);
+    assert.ok(p.top - p.base > 2, `${p.id} too short`);
+    for (const q of [p.at, ...[[-0.4, -0.4], [0.4, -0.4], [0.4, 0.4], [-0.4, 0.4]].map(([dx, dz]): Pt => [p.at[0] + dx, p.at[1] + dz])]) {
+      assert.ok(offStreet(q) >= 0.95, `${p.id} by a street`);
+      for (const f of FOOTPATHS) assert.ok(distTo(f.pts, q) > PATH_HALF + 0.5, `${p.id} on ${f.id}`);
+    }
+  }
 });

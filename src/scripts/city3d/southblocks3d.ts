@@ -28,7 +28,7 @@ import { site } from './tilework';
 import { PLANT } from './palette';
 import { shift } from './streetfaces';
 import {
-  ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
+  ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
   SKY_FLOORS, TOWER_HALF, blockById, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
@@ -587,9 +587,12 @@ const centre = (ring: Pt[]): Pt => [ring.reduce((s, p) => s + p[0], 0) / ring.le
 
 /* ---------- The bridges, the podium deck, Bunker Sound's door ---------- */
 
+const PUDDLE = toon('#1b2230');
+const TAG_PAINT = ['#d94fb0', '#38c6d9', '#e6c13a', '#e0e0e0'].map((c) => toon(c));
 function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material = STRIP) {
   const k = kit(b, WORLD);
   const w = BRIDGE_HALF * 2;
+  const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
   k.all(() => {
     along(b, a, c, w, y - 0.2, y, CONC_DARK);
     for (const side of [-1, 1]) {
@@ -599,6 +602,48 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material = S
     along(b, a, c, w + 0.12, y + 1.5, y + 1.68, CONC);
   });
   along(b, a, c, 0.1, y - 0.24, y - 0.2, strip);
+  // Inside (the brutalist plan's polish): a strip light down its ceiling
+  along(b, a, c, 0.1, y + 1.44, y + 1.48, strip);
+  if (l < 1.5) return;
+  // ...near only: the glass's concrete mullions (wired glass, a pane each 1.2), a puddle or two, the odd tag
+  b.detail(() => {
+    const t: Pt = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+    const r: Pt = [-t[1], t[0]];
+    const at = (s: number, o: number): Pt => [a[0] + t[0] * s + r[0] * o, a[1] + t[1] * s + r[1] * o];
+    for (let s = 1.2; s < l - 0.3; s += 1.2)
+      for (const side of [-1, 1]) along(b, at(s - 0.04, side * (BRIDGE_HALF - 0.1)), at(s + 0.04, side * (BRIDGE_HALF - 0.1)), 0.07, y + 0.6, y + 1.5, CONC_DARK);
+    // (where, from a hash of the bridge's place: the same every time)
+    const h = Math.abs(Math.round(a[0] * 7 + a[1] * 13 + y * 31));
+    const puddle = (s: number, o: number, rx: number) => {
+      const ring: Pt[] = Array.from({ length: 10 }, (_, i) => {
+        const q = (i / 10) * Math.PI * 2;
+        return at(s + Math.cos(q) * rx, o + Math.sin(q) * rx * 0.45);
+      });
+      flat(b, ring, y + 0.006, PUDDLE);
+    };
+    if (h % 3 !== 0) puddle(l * (0.3 + (h % 5) * 0.08), ((h % 7) - 3) * 0.12, 0.35 + (h % 4) * 0.08);
+    if (l > 8 && h % 2 === 0) puddle(l * 0.75, -0.2, 0.3);
+    // A tag on the inside of a parapet: a few strokes of one paint, low
+    if (h % 4 !== 1) {
+      const side = h % 2 ? 1 : -1;
+      const s0 = l * (0.2 + (h % 6) * 0.1);
+      const paint = TAG_PAINT[h % TAG_PAINT.length];
+      const o = side * (BRIDGE_HALF - 0.125);
+      for (let i = 0; i < 5; i++) {
+        const [u0, u1] = [s0 + i * 0.16, s0 + i * 0.16 + 0.14];
+        const [v0, v1] = [0.15 + ((h + i * 3) % 4) * 0.08, 0.2 + ((h + i * 5) % 4) * 0.08];
+        along(b, at(u0, o), at(u1, o), 0.012, y + Math.min(v0, v1), y + Math.max(v0, v1) + 0.05, paint);
+      }
+    }
+  });
+}
+/** A bridge's pier: a concrete column under its span, a cap on it under the deck */
+function drawPier(b: Batch, p: (typeof PIERS)[number]) {
+  const k = kit(b, WORLD);
+  k.all(() => {
+    b.add(plain(new THREE.BoxGeometry(PIER_HALF * 2, p.top - p.base, PIER_HALF * 2).rotateY(-p.rot).translate(p.at[0], (p.base + p.top) / 2, p.at[1])), CONC);
+    b.add(plain(new THREE.BoxGeometry(PIER_HALF * 2 + 0.3, 0.25, BRIDGE_HALF * 2).rotateY(-p.rot).translate(p.at[0], p.top - 0.125, p.at[1])), CONC);
+  });
 }
 
 /**
@@ -949,6 +994,7 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
     site(`south-blocks bridge ${i}`, rectOf(set[0].pts, 2), (into) => {
       const b = new Batch();
       for (const br of set) drawBridge(b, br.pts[0], br.pts[1], (br.ys[0] + br.ys[1]) / 2);
+      for (const p of PIERS.filter((q) => set.some((br) => q.id.startsWith(`${br.id}-pier`)))) drawPier(b, p);
       b.build(into, opts);
     })
   );
