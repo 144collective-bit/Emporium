@@ -4,7 +4,7 @@
  * lamps and keep): what's parked on the airfield, the apron's kit, the aircraft's grey, the searchlights' sweep and the
  * range's lanes.
  */
-import { FENCE_RUNS, HANGARS, OPEN_HANGAR, inAirbase, toRun } from './airbase';
+import { FENCE_RUNS, GATES, HANGARS, OPEN_HANGAR, PIER, WALL_PANEL, inAirbase, piersOf, toRun } from './airbase';
 import type { Pt } from './streetplan';
 
 /** How many lanes the range has (scenery) */
@@ -52,3 +52,29 @@ export function searchRest([x, z]: Pt): number {
   if (!inAirbase(x + nx * 8, z + nz * 8)) [nx, nz] = [-nx, -nz];
   return Math.atan2(-nz, nx);
 }
+
+/** The wall's lights (Phase 6, the owner's call: on its top, facing out, lighting its outer face and the grass at
+ * night): every `WALL_LIGHT_GAP` along each run, each at a point on the line and facing out (nx, nz: away from the base) */
+export const WALL_LIGHT_GAP = 15;
+export const WALL_LIGHTS: { x: number; z: number; nx: number; nz: number }[] = FENCE_RUNS.flatMap(([a, c]) => {
+  const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  const n = Math.floor(len / WALL_LIGHT_GAP);
+  if (n < 1) return [];
+  const [ux, uz] = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
+  // (out: the side of the line the base isn't on)
+  const mid: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
+  const s = inAirbase(mid[0] - uz, mid[1] + ux) ? 1 : -1;
+  const [nx, nz] = [uz * s, -ux * s];
+  // (spread evenly along the run, half a gap in from each end, each moved to the middle of its panel: clear of the
+  // panels' joints, which stand every `WALL_PANEL` as the drawing spreads them)
+  const panels = Math.max(1, Math.round(len / WALL_PANEL));
+  return Array.from({ length: n }, (_, k) => {
+    const t = (Math.min(panels - 1, Math.floor(((k + 0.5) / n) * panels)) + 0.5) / panels;
+    return { x: a[0] + (c[0] - a[0]) * t, z: a[1] + (c[1] - a[1]) * t, nx, nz };
+  });
+});
+/** A lamp on the outer face of each gate's piers (Phase 6's polish), facing out of the base as the wall's lights do */
+export const PIER_LIGHTS: { x: number; z: number; nx: number; nz: number }[] = GATES.flatMap((g) => {
+  const nz = inAirbase(g.x, g.z + 3) ? -1 : 1;
+  return piersOf(g).map(([x, z]) => ({ x, z: z + (nz * PIER) / 2, nx: 0, nz }));
+});
