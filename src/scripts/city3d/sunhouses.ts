@@ -247,11 +247,12 @@ function lay(plan: Plan, elevation: Elevation, mirror: boolean, f: ReturnType<ty
 
 /**
  * Ocotillo Court's two lots round its turning circle that had no house till Phase 6 (docs/suburb-plan.md): one was too
- * short for any plan, the other a bow tie (sunridgelots.ts). Laid after every other house, from their own numbers, so
+ * short for any plan, the other a bow tie (sunridgelots.ts); and the lots the second pass round the circles laid in the
+ * gaps (`late`). Laid after every other house, from their own numbers, so
  * the houses before keep their ids, and their yards and residents (sunyards.ts, sunlife.ts, drawn in house order) don't
  * change
  */
-export const LAID_LAST = ['sun-lot-87', 'sun-lot-88'];
+export const LAID_LAST = ['sun-lot-87', 'sun-lot-88', ...LOTS.filter((l) => l.late).map((l) => l.id)];
 
 function build(): House[] {
   const out: House[] = [];

@@ -72,6 +72,8 @@ test("every lot round a turning circle has its house, no lot's back crossed (Pha
     assert.ok(along > 0, `${l.id}'s back corners cross`);
   }
   const built = new Set(HOUSES.map((h) => h.lot));
+  // (the second pass's lot at Ocotillo Court's north end, where its circle stood in open ground)
+  assert.ok(LOTS.some((l) => l.late && l.street === 'sun-court-1'), "no lot laid at Ocotillo Court's north end");
   for (const l of LOTS) if (l.street.startsWith('sun-court')) assert.ok(built.has(l.id), `${l.id} on ${l.street} has no house`);
   // The two laid last, after every other house, so the houses before keep their ids (and their yards and residents)
   assert.deepEqual(HOUSES.slice(-LAID_LAST.length).map((h) => h.lot), LAID_LAST);
