@@ -1,0 +1,37 @@
+# Degen Emporium on Hostinger (Apache / LiteSpeed)
+
+# Show the site's own not-found page
+ErrorDocument 404 /404.html
+
+# File types the site uses that older servers may not know
+<IfModule mod_mime.c>
+  AddType image/avif .avif
+  AddType image/webp .webp
+  AddType application/manifest+json .webmanifest
+  AddType text/javascript .js .mjs
+  AddType image/ktx2 .ktx2
+  AddType application/wasm .wasm
+  AddType application/octet-stream .bin
+</IfModule>
+
+# Compress text files
+<IfModule mod_deflate.c>
+  # (application/octet-stream: the motion capture's clips, src/data/mocap, which compress by a fifth)
+  AddOutputFilterByType DEFLATE text/html text/css text/javascript application/javascript application/json application/manifest+json image/svg+xml text/xml application/xml application/wasm application/octet-stream
+</IfModule>
+
+# Files in /_astro/ have a fingerprint in their name (the textures their hash, the transcoder three's
+# version in its folder's, the city's baked data its hash), so they can be cached for a year.
+# Pages are re-checked on every visit, so a new upload shows up straight away.
+<IfModule mod_headers.c>
+  <FilesMatch "\.(js|css|json|avif|webp|png|jpg|ico|woff2|ktx2|wasm|bin)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "\.(html|xml|webmanifest)$">
+    Header set Cache-Control "public, max-age=0, must-revalidate"
+  </FilesMatch>
+  # The service worker (its name has no fingerprint): always re-checked, so an update reaches everyone
+  <Files "sw.js">
+    Header set Cache-Control "no-cache"
+  </Files>
+</IfModule>

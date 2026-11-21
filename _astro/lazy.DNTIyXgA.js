@@ -1,0 +1,1 @@
+var e=null;function t(t){e=t}function n(t,n){let r=null,i=!1;return()=>r??=t().catch(t=>{if(r=null,!i){i=!0;let r=`Couldn't load ${n} · reload`;e?e(r,5e3):console.warn(r,t)}throw t})}export{t as n,n as t};

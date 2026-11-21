@@ -1,0 +1,1 @@
+import{n as e,r as t,t as n}from"./riverlife3d.DfQss-PC.js";export{n as SELF,e as hireBoat,t as register};
