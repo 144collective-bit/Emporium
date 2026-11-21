@@ -31,7 +31,7 @@ function assertPlain(v: unknown, path: string) {
 }
 
 test('everything baked is plain data: it comes into the page as it was made', () => {
-  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'cable-supports', 'council', 'crest-land', 'crest-paths', 'highroad', 'hill-fine', 'jog-cycle', 'lake', 'mansion-ground', 'march-cycle', 'metro-pillars', 'metro-plateaus', 'rolls', 'routes', 'south-grown', 'southline', 'sun-lots', 'terraces', 'under-deck', 'verges', 'walk-cycle']);
+  assert.deepEqual(Object.keys(made).sort(), ['amenities', 'cable-supports', 'council', 'crest-land', 'crest-paths', 'garden-benches', 'garden-people', 'garden-urns', 'highroad', 'hill-fine', 'jog-cycle', 'lake', 'lake-core', 'mall-beds', 'mansion-ground', 'march-cycle', 'metro-pillars', 'metro-plateaus', 'park-benches', 'park-lamps', 'park-planters', 'park-rocks', 'rolls', 'routes', 'south-grown', 'southline', 'sun-lots', 'terraces', 'under-deck', 'verges', 'walk-cycle']);
   for (const [key, v] of Object.entries(made)) assertPlain(v, key);
 });
 

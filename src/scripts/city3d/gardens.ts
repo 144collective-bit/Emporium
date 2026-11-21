@@ -30,6 +30,7 @@
  * `GARDEN_SOLIDS` (in solids.ts `SOLIDS`): the walls, the hedges, the
  * fountains, the urns and the planters. The kerbs and edges aren't solid.
  */
+import { BUILT, baked } from './baked';
 import { offsetLine } from './streetplan';
 import {
   BENCHES,
@@ -259,7 +260,7 @@ export const PARTERRES: Parterre[] = (() => {
 })();
 
 /** Benches round each fountain (on the diagonals, facing it) and along the Mall in the garden (facing the beds) */
-export const GARDEN_BENCHES: { at: Pt; ry: number }[] = (() => {
+export const GARDEN_BENCHES: { at: Pt; ry: number }[] = baked('garden-benches', BUILT ? undefined : () => {
   const out: { at: Pt; ry: number }[] = [];
   for (const { c } of ROUNDS)
     for (let k = 0; k < 4; k++) {
@@ -269,9 +270,9 @@ export const GARDEN_BENCHES: { at: Pt; ry: number }[] = (() => {
     }
   for (const z of [GARDEN_IN[1] + 6, GARDEN_Z - 6, GARDEN_Z + 6, GARDEN_IN[3] - 6]) for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (MALL.half + 0.45), z], ry: side > 0 ? Math.PI / 2 : -Math.PI / 2 });
   return out;
-})();
+});
 /** Urns on plinths in the garden's corners, inside its wall */
-export const URNS: Pt[] = (() => {
+export const URNS: Pt[] = baked('garden-urns', BUILT ? undefined : () => {
   const [x0, z0, x1, z1] = GARDEN_IN;
   return [
     [x0 + 1, z0 + 1],
@@ -279,7 +280,7 @@ export const URNS: Pt[] = (() => {
     [x0 + 1, z1 - 1],
     [x1 - 1, z1 - 1],
   ];
-})();
+});
 export const URN = { plinth: 0.6, h: 0.6 };
 /** Lanterns round the fountains, behind the benches (x, z, ry: the arm over the round place) */
 export const GARDEN_LAMPS: [number, number, number][] = ROUNDS.flatMap(({ c }) =>
@@ -291,7 +292,7 @@ export const GARDEN_LAMPS: [number, number, number][] = ROUNDS.flatMap(({ c }) =
   })
 );
 /** People in the garden: some on the benches round the fountains, some looking at the beds (act, facing; y over the slab) */
-export const GARDEN_PEOPLE: { x: number; z: number; y: number; ry: number; act: 'sit' | 'look' | 'chat' }[] = (() => {
+export const GARDEN_PEOPLE: { x: number; z: number; y: number; ry: number; act: 'sit' | 'look' | 'chat' }[] = baked('garden-people', BUILT ? undefined : () => {
   const out: { x: number; z: number; y: number; ry: number; act: 'sit' | 'look' | 'chat' }[] = [];
   GARDEN_BENCHES.slice(0, 8).forEach((b, i) => {
     if (i % 3 === 1) return;
@@ -301,7 +302,7 @@ export const GARDEN_PEOPLE: { x: number; z: number; y: number; ry: number; act: 
   // At every other parterre's gap, on the garden's walk, looking in at the bed
   for (const p of PARTERRES.filter((_, i) => i % 2 === 0)) out.push({ x: p.gap[0] - p.inX * 0.9, z: p.gap[1] + 0.5, y: 0, ry: p.inX > 0 ? Math.PI / 2 : -Math.PI / 2, act: 'look' });
   return out;
-})();
+});
 
 /* ---------- Flower beds along the walks ---------- */
 
@@ -320,7 +321,7 @@ function plantable(p: Pt, r: number, others: Pt[]) {
   return others.every((o) => hyp(o, p) > 2 * r + 0.6);
 }
 /** Oblong beds along the Mall between its trees, either side (x0, z0, x1, z1) */
-export const MALL_BEDS: Rect[] = (() => {
+export const MALL_BEDS: Rect[] = baked('mall-beds', BUILT ? undefined : () => {
   const out: Rect[] = [];
   for (let z = ZS - 3 - 2.25; z > GARDEN_SITE[3] + 3; z -= 4.5)
     for (const side of [-1, 1]) {
@@ -335,9 +336,9 @@ export const MALL_BEDS: Rect[] = (() => {
       if (clear) out.push(r);
     }
   return out;
-})();
+});
 /** Round planters: in pairs where a path comes into a main walk, at the corners where main walks cross, and along the ring walk and the lake loop */
-export const PLANTERS: { at: Pt; r: number }[] = (() => {
+export const PLANTERS: { at: Pt; r: number }[] = baked('park-planters', BUILT ? undefined : () => {
   const out: { at: Pt; r: number }[] = [];
   const put = (p: Pt, r: number) => {
     if (plantable(p, r, out.map((o) => o.at))) out.push({ at: p, r });
@@ -369,7 +370,7 @@ export const PLANTERS: { at: Pt; r: number }[] = (() => {
     for (let i = 0; i < pick.length; i += every * 2) put(pick[i], 0.7);
   }
   return out;
-})();
+});
 
 /* ---------- Solids ---------- */
 

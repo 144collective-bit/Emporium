@@ -122,7 +122,7 @@ export const LAKE_INLET: LakeArm = {
   w: [7, 5, 4.4],
 };
 /** The open water: the old shore with its coves and point, no arms (the boats' rings keep inside it) */
-const CORE: Pt[] = (() => {
+function makeCore(): Pt[] {
   const n = 360;
   const pts = Array.from({ length: n }, (_, k) => {
     const a = (-2 * Math.PI * k) / n;
@@ -137,7 +137,7 @@ const CORE: Pt[] = (() => {
     }, 0);
     return [p[0] + nrm[k][0] * d, p[1] + nrm[k][1] * d] as Pt;
   });
-})();
+}
 /** A closed outline's outward normals at its points (the outline wound as the old lake's: clockwise from above, +x right, +z down the page) */
 function normals(pts: Pt[]): Pt[] {
   const n = pts.length;
@@ -181,7 +181,7 @@ function resample(pts: Pt[], n: number): Pt[] {
   return out;
 }
 /** The open water's outline, rounded (no arms) */
-const CORE_POLY: Pt[] = resample(CORE, 360);
+const CORE_POLY: Pt[] = baked('lake-core', BUILT ? undefined : () => resample(makeCore(), 360).map((p) => [Math.round(p[0] * 1000) / 1000, Math.round(p[1] * 1000) / 1000] as Pt));
 /** How far a point is from an arm: out from its sides positive (its width eased along its line) */
 function armDist(arm: LakeArm, x: number, z: number) {
   let best = Infinity;
@@ -204,7 +204,7 @@ const smin = (a: number, b: number, k: number) => -k * Math.log(Math.exp(-a / k)
  */
 function makeLake(): Pt[] {
   const RES = 0.3;
-  const all = [...CORE, ...LAKE_ARM.line, ...LAKE_INLET.line];
+  const all = [...CORE_POLY, ...LAKE_ARM.line, ...LAKE_INLET.line];
   const [x0, z0] = [Math.min(...all.map((p) => p[0])) - 6, Math.min(...all.map((p) => p[1])) - 6];
   const [x1, z1] = [Math.max(...all.map((p) => p[0])) + 6, Math.max(...all.map((p) => p[1])) + 6];
   const [nx, nz] = [Math.ceil((x1 - x0) / RES) + 1, Math.ceil((z1 - z0) / RES) + 1];
@@ -278,7 +278,7 @@ function makeLake(): Pt[] {
   }
   // Wound as the old outline (its signed area's sign), eased, evenly spaced, started due east of the middle
   const area = (p: Pt[]) => p.reduce((s, q, i) => s + q[0] * p[(i + 1) % p.length][1] - p[(i + 1) % p.length][0] * q[1], 0);
-  if (Math.sign(area(best)) !== Math.sign(area(CORE))) best.reverse();
+  if (Math.sign(area(best)) !== Math.sign(area(CORE_POLY))) best.reverse();
   const out = resample(chaikin(resample(best, 600), 2), 480);
   let k0 = 0;
   const score = (p: Pt) => Math.abs(p[1] - LAKE_C[1]) + (p[0] < LAKE_C[0] ? 1e3 : 0);
@@ -688,7 +688,7 @@ export interface Rock {
  * the loop). Each clear of the paths, the water's rim, the civic quarter, the garden's site, the boathouse and jetty,
  * the terraces and the gates; solid (`ROCK_SOLIDS`), and the trees, picnics and planters keep off them (`nearRock()`).
  */
-export const ROCKS: Rock[] = (() => {
+export const ROCKS: Rock[] = baked('park-rocks', BUILT ? undefined : () => {
   const r = rng(4402);
   const out: Rock[] = [];
   // (the knolls' clusters, then the point's: smaller stones by the water, between it and the loop)
@@ -721,7 +721,7 @@ export const ROCKS: Rock[] = (() => {
       out.push({ x, z, r: rr, h: (big ? 0.9 : 0.4) + r() * (big ? 0.6 : 0.5), ry: r() * Math.PI, seed: Math.floor(r() * 1e6) });
     }
   return out;
-})();
+});
 /** Is a point within `m` of a rock's footprint */
 export const nearRock = (p: Pt, m = 0) => ROCKS.some((k) => Math.hypot(p[0] - k.x, p[1] - k.z) < k.r + m);
 /** The outcrops as solids: a box round each rock's middle, up to its top */
@@ -753,7 +753,7 @@ export const PARK_TREES: ParkTree[] = (() => {
 })();
 
 /** Lamps along the paths: [x, z, ry] (the arm reaching over the path: ry turns +x towards it) */
-export const PARK_LAMPS: [number, number, number][] = (() => {
+export const PARK_LAMPS: [number, number, number][] = baked('park-lamps', BUILT ? undefined : () => {
   const out: [number, number, number][] = [];
   /** Along a path every `every`, `off` to one side (alternating if `zig`), the arm back over it */
   const along = (q: ParkPath, every: number, zig: boolean) => {
@@ -787,10 +787,10 @@ export const PARK_LAMPS: [number, number, number][] = (() => {
   // (and none in the formal garden, which has its own, nor on a terrace)
   const clear = (l: [number, number, number]) => !nearRock([l[0], l[1]], 0.8) && !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
   return out.filter((l, i) => clear(l) && !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
-})();
+});
 
 /** Benches along the lake loop (facing the water) and the Mall (facing across it): where, and which way the sitter faces (ry, +z turned) */
-export const BENCHES: { at: Pt; ry: number }[] = (() => {
+export const BENCHES: { at: Pt; ry: number }[] = baked('park-benches', BUILT ? undefined : () => {
   const out: { at: Pt; ry: number }[] = [];
   // Round the lake, evenly along the loop on its water side, each facing the nearest water
   const side = lakeLine(LOOP_OUT - 1.1 - 0.55, 22);
@@ -804,7 +804,7 @@ export const BENCHES: { at: Pt; ry: number }[] = (() => {
     for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (MALL.half + 0.45), z], ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
   // (none where another path comes in, nor on a terrace)
   return out.filter((b) => !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6) && !nearRock(b.at, 1)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
-})();
+});
 
 /** Each gate's two stone piers (x0, z0, x1, z1, height): solid, the path between them */
 export const PIER = { w: 0.7, h: 1.5 };

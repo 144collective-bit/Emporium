@@ -55,7 +55,7 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
 
 ## Phases
 
-1. **The lake and the land** (built, waiting on the owner's sign-off).
+1. **The lake and the land** (built, signed off 2026-11-21).
    The lake is an outline now, not a radius by angle (an arm that bends
    can't be one): westlake.ts `LAKE_POLY` (baked, key `lake`), the old
    shore with two coves (`LAKE_COVES`, north-west and south) and a rocky
@@ -82,7 +82,16 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    the arm and inlet in the water, the lines off the shore clean and dry,
    the north shore where it was, the boats in the open water, the rocks off
    the paths and the water, apart and solid, the trees off them. The boot:
-   774.9 of 775 KB (the lake's tracing reuses the park's own helpers).
+   775.0 of 775 KB at sign-off; then trimmed (the owner's call: make room
+   before Phase 2) by baking what's worked out once and is small to keep:
+   the open water (`lake-core`), the rocks (`park-rocks`), the lamps
+   (`park-lamps`) and the benches (`park-benches`), and the formal garden's
+   benches, urns and people, the Mall's beds and the planters (gardens.ts:
+   `garden-benches`, `garden-urns`, `garden-people`, `mall-beds`,
+   `park-planters`): their making drops out of the boot. 773.3 KB after,
+   the baked file 147 KB (3.6 KB more). The trees, kerbs, edges, walls and
+   parterres stay worked out in the browser: baked, they'd add far more to
+   the baked file than they take from the boot.
 2. **The paths re-laid.** The Mall as a promenade (a wider paved walk, a
    double row of trees each side meeting overhead, benches all along, the
    literary walk's busts swapped for made-up urns). The ring walk's
