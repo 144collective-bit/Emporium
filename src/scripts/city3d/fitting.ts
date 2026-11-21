@@ -155,9 +155,11 @@ const CUT_ICONS: Record<Cut, string> = {
 };
 const toneColors: Colors = { key: 'tone', label: 'Skin', list: PALETTE.tone };
 const hairColors: Colors = { key: 'hair', label: 'Hair', list: PALETTE.hair };
-/** The characters' cards' icons (docs/characters-plan.md): SlimeWhale's three eyes and his lips */
+/** The characters' cards' icons (docs/characters-plan.md): SlimeWhale's three eyes and his lips, Smilex's hexagon */
 const CHARACTER_ICONS: Record<CharacterId, string> = {
   slimewhale: `${HEAD} M7.4 11.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0 M10.5 11.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0 M13.6 11.5a1.5 1.5 0 1 0 3 0 1.5 1.5 0 1 0-3 0 M8.6 15.6h6.8a1 1 0 0 1 0 2H8.6a1 1 0 0 1 0-2z`,
+  // (his hexagon, two eyes and the smile)
+  smilex: 'M7 4.2h10l4.6 7.8-4.6 7.8H7L2.4 12z M9.6 9.5v2 M14.4 9.5v2 M8.2 14c1.3 2.2 6.3 2.2 7.6 0',
 };
 /** A character's name (SlimeWhale), or null for Degen */
 const characterName = (l: Look) => CHARACTERS.find((c) => c.id === l.character)?.name ?? null;

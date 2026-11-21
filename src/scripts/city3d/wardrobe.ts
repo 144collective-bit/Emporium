@@ -1194,6 +1194,23 @@ export function items(q: Detail, hero = false): Item[] {
   const fingers = (color: string): Piece[] =>
     far ? both('wrist', one(hand), color) : ([-1, 1] as const).flatMap((s) => handParts(s, R(9)).map(({ geo, skin }) => P(s < 0 ? 'handL' : 'handR', geo, color, { skin })));
 
+  /** A character's own pendant on the necklace in the diamond's place (single figures, once the heads' chunk is in) */
+  const pendantOf = (o: Outfit) => q >= 2 && !!(o.character && heads?.pendant(o.character, q as 2 | 3));
+  /** Gloves on (a character's: docs/characters-plan.md) */
+  const glovesOf = (o: Outfit) => !!(o.character && heads?.gloves(o.character));
+  /** A glove's rolled cuff round each wrist, weighted as the wrist is (the hand, and the forearm towards the sleeve) */
+  const cuffs = (color: string): Piece[] =>
+    ([-1, 1] as const).map((s) => {
+      const S = s < 0 ? 'L' : 'R';
+      const geo = new THREE.TorusGeometry(0.0275, 0.0062, R(6), R(14)).rotateX(Math.PI / 2).translate(0, 0.046, -0.002).toNonIndexed();
+      const p = geo.attributes.position as THREE.BufferAttribute;
+      const skin: Influence[] = [];
+      for (let i = 0; i < p.count; i++) {
+        const f = 0.5 * THREE.MathUtils.smoothstep(p.getY(i), 0.035, 0.065);
+        skin.push(f > 1e-4 ? [[`hand${S}` as BoneName, 1 - f], [`fore${S}` as BoneName, f]] : [[`hand${S}` as BoneName, 1]]);
+      }
+      return P(s < 0 ? 'handL' : 'handR', geo, color, { skin });
+    });
   const suit = (o: Outfit) => o.kind === 'suit';
   const hoodie = (o: Outfit) => o.kind === 'hoodie';
   const track = (o: Outfit) => o.kind === 'track';
@@ -4315,7 +4332,26 @@ export function items(q: Detail, hero = false): Item[] {
             },
           ]
         : []),
-      ...(k === 'puffer' || k === 'vest' || k === 'shell' ? [] : [{ id: `necklace-${k}`, when: (o: Outfit) => !!o.necklace && is(o), pieces: [P('torso', one(necklace), GOLD), P('torso', pendant, '#9ff8ff')] }]),
+      ...(k === 'puffer' || k === 'vest' || k === 'shell'
+        ? []
+        : [
+            { id: `necklace-${k}`, when: (o: Outfit) => !!o.necklace && is(o) && !pendantOf(o), pieces: [P('torso', one(necklace), GOLD), P('torso', pendant, '#9ff8ff')] },
+            // A character's own pendant on the chain in the diamond's place (docs/characters-plan.md: Smilex's PulseChain symbol)
+            ...(heads && q >= 2
+              ? heads.ids.flatMap((id): Item[] => {
+                  const parts = heads!.pendant(id, q as 2 | 3);
+                  if (!parts) return [];
+                  const at = new THREE.Matrix4().makeTranslation(0, 0.258, o.front(0, 0.258) + t.over + 0.012);
+                  return [
+                    {
+                      id: `necklace-${id}-${k}`,
+                      when: (o: Outfit) => !!o.necklace && is(o) && o.character === id,
+                      pieces: [P('torso', one(necklace), GOLD), ...parts.map((h) => P('torso', one(h.geos.map((g) => g.clone().applyMatrix4(at))), h.color))],
+                    },
+                  ];
+                })
+              : []),
+          ]),
       {
         id: `backpack-${k}`,
         when: (o) => !!o.backpack && is(o),
@@ -4764,7 +4800,15 @@ export function items(q: Detail, hero = false): Item[] {
     ...(hero
       ? [
           // The skinned body's hands have fingers: a fist is the same hand, closed (`grip`)
-          { id: 'fingers', when: (o: Outfit) => !soldier(o), pieces: fingers('skin') },
+          { id: 'fingers', when: (o: Outfit) => !soldier(o) && !glovesOf(o), pieces: fingers('skin') },
+          // A character's gloves (docs/characters-plan.md: Smilex's white cartoon gloves): the hands in the glove's
+          // colour, a rolled cuff round each wrist
+          ...(heads
+            ? heads.ids.flatMap((id): Item[] => {
+                const c = heads!.gloves(id);
+                return c ? [{ id: `gloves-${id}`, when: (o: Outfit) => !soldier(o) && o.character === id, pieces: [...fingers(c), ...cuffs(c)] }] : [];
+              })
+            : []),
         ]
       : [
           {
@@ -5153,7 +5197,14 @@ export function items(q: Detail, hero = false): Item[] {
 }
 
 /** The characters' heads, once their chunk is in (heads.ts; `loadHeads()` in character.ts) */
-let heads: { ids: readonly CharacterId[]; parts: (id: CharacterId, q: 2 | 3) => HeadPart[] } | null = null;
+let heads: {
+  ids: readonly CharacterId[];
+  parts: (id: CharacterId, q: 2 | 3) => HeadPart[];
+  /** What hangs on a character's chain in place of the diamond (null: the diamond) */
+  pendant: (id: CharacterId, q: 2 | 3) => HeadPart[] | null;
+  /** A character's gloves' colour (null: bare hands) */
+  gloves: (id: CharacterId) => string | null;
+} | null = null;
 /** Hand the wardrobe the characters' heads (their chunk is in): the single figures' items are made again with them */
 export function useHeads(h: NonNullable<typeof heads>) {
   heads = h;

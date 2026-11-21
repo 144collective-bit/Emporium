@@ -7,11 +7,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import { headless, items, lookOutfit, PLAYER, useHeads, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
-import { CHARACTERS, CHARACTER_LOOKS, DEFAULT_LOOK, PALETTE, cleanLook, type Look } from '../src/scripts/net/profile-data';
+import { CHARACTERS, CHARACTER_LOOKS, DEFAULT_LOOK, PALETTE, cleanLook, type CharacterId, type Look } from '../src/scripts/net/profile-data';
 import { SKIN_TONES } from '../src/scripts/city3d/crowdlook';
 import { describe as describeLook } from '../src/scripts/city3d/lookrows';
-import { DEGEN_HEAD, HEAD_ROWS, headGeometry, headModel } from '../src/scripts/city3d/body';
-import { CHARACTER_IDS, characterParts, setHeadModel, SLIME, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
+import { DEGEN_HEAD, HEAD_ROWS, headGeometry, headModel, type HeadDef } from '../src/scripts/city3d/body';
+import { CHARACTER_IDS, characterGloves, characterParts, characterPendant, setHeadModel, SMILEX, SMILEX_HEAD, smilex, SLIME, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
 import { newPose, poseSkeleton, weigh, type Influence } from '../src/scripts/city3d/skeleton';
 import { dress, inside, posed, shells, type Worn } from './dress';
 
@@ -48,7 +48,7 @@ const each = (gs: THREE.BufferGeometry | THREE.BufferGeometry[], f: (v: THREE.Ve
 test('heads: before their chunk is in, a character is Degen as he is (never a figure with no head)', () => {
   const worn = ids(3, SLIMEWHALE);
   assert.ok(worn.includes('head') && !worn.some((id) => id.startsWith('character-')));
-  useHeads({ ids: CHARACTER_IDS, parts: characterParts });
+  useHeads({ ids: CHARACTER_IDS, parts: characterParts, pendant: characterPendant, gloves: characterGloves });
 });
 
 test('heads: every character has its item; only Degen wears his own head', () => {
@@ -175,11 +175,24 @@ function through(o: Outfit, head: (w: Worn) => boolean, of: (w: Worn) => boolean
     return { name, n: hit.length, high: Math.max(0, ...hit.map((i) => y.get(i)!)) };
   });
 }
-const slimeSkull = (w: Worn) => w.item === 'character-slimewhale' && w.piece.color === 'skin' && !w.piece.shade;
+/** Every character: its outfit for the checks, its head as functions, and its head's own piece (the first of its item) */
+const CHARS: { id: CharacterId; name: string; outfit: Outfit; model: () => ReturnType<typeof headModel>; def: HeadDef }[] = [
+  { id: 'slimewhale', name: 'SlimeWhale', outfit: SLIMEWHALE, model: () => SLIME, def: SLIME_HEAD },
+  { id: 'smilex', name: 'Smilex', outfit: { ...PLAYER, kind: 'bomber', top: '#6b4428', bottoms: 'denim', bottom: '#3f5f8f', shoeStyle: 'sneaker', shoes: '#c9c7cf', necklace: true, character: 'smilex', cap: undefined }, model: () => SMILEX, def: SMILEX_HEAD },
+];
+const skullOf = (id: CharacterId) => {
+  const first = items(2, true).find((i) => i.id === `character-${id}`)!.pieces[0];
+  return (w: Worn) => w.piece === first;
+};
 
-test("heads: SlimeWhale's jaw clear of every top's collar as he turns and nods", () => {
-  for (const kind of ['hoodie', 'tee', 'track', 'puffer', 'suit', 'shell'] as const)
-    for (const { name, n } of through({ ...SLIMEWHALE, kind }, slimeSkull, (w) => w.piece.shell === 'top')) assert.equal(n, 0, `${kind}, ${name}: ${n} points of his jaw inside the collar`);
+test("heads: every character's head clear of every top's collar as he turns and nods", () => {
+  assert.deepEqual(
+    CHARS.map((c) => c.id),
+    CHARACTER_IDS
+  );
+  for (const c of CHARS)
+    for (const kind of ['hoodie', 'tee', 'track', 'puffer', 'suit', 'shell', 'bomber'] as const)
+      for (const { name, n } of through({ ...c.outfit, kind }, skullOf(c.id), (w) => w.piece.shell === 'top')) assert.equal(n, 0, `${c.name}, ${kind}, ${name}: ${n} points of his head inside the collar`);
 });
 
 /**
@@ -221,31 +234,96 @@ function hoodReach(o: Outfit, m: ReturnType<typeof headModel>, features: (x: num
   });
 }
 
-test("heads: SlimeWhale's jaw in the hood down no deeper than Degen's chin goes", () => {
-  // (a deep nod tucks Degen's own chin into the rolled hood: SlimeWhale's square jaw may do as much, no more)
+test("heads: every character's head in the hood down no deeper than Degen's chin goes", () => {
+  // (a deep nod tucks Degen's own chin into the rolled hood: a character's head may do as much, no more)
   const degen = hoodReach({ ...PLAYER, kind: 'hoodie', cap: undefined, face: true }, headModel(DEGEN_HEAD), DEGEN_HEAD.features);
-  const slime = hoodReach({ ...SLIMEWHALE, kind: 'hoodie' }, SLIME, SLIME_HEAD.features);
-  if (process.env.HEADS_REPORT) console.log(slime.map((s, i) => `${s.name} ${s.high.toFixed(3)} / ${degen[i].high.toFixed(3)}`).join("; "));
-  slime.forEach(({ name, high }, i) => assert.ok(high <= degen[i].high + 0.002, `${name}: his jaw in the hood ${(high * 1000).toFixed(0)} mm up his head, Degen's chin ${(degen[i].high * 1000).toFixed(0)} mm`));
+  for (const c of CHARS) {
+    const his = hoodReach({ ...c.outfit, kind: 'hoodie' }, c.model(), c.def.features);
+    if (process.env.HEADS_REPORT) console.log(c.name, his.map((s, i) => `${s.name} ${s.high.toFixed(3)} / ${degen[i].high.toFixed(3)}`).join('; '));
+    his.forEach(({ name, high }, i) => assert.ok(high <= degen[i].high + 0.002, `${c.name}, ${name}: in the hood ${(high * 1000).toFixed(0)} mm up his head, Degen's chin ${(degen[i].high * 1000).toFixed(0)} mm`));
+  }
 });
 
-test('heads: SlimeWhale inside the figure’s budget', () => {
+test('heads: every character inside the figure’s budget', () => {
   const BUDGET = { 3: 40_000, 2: 18_000 } as const;
-  for (const q of [3, 2] as const)
-    for (const kind of ['hoodie', 'puffer', 'suit'] as const) {
-      const d = dress({ ...SLIMEWHALE, kind, backpack: '#3a7', watch: true, necklace: true, headphones: '#222' }, q);
-      const tris = d.worn.reduce((n, w) => n + w.rest.length / 9, 0);
-      assert.ok(tris <= BUDGET[q], `detail ${q}, ${kind}: ${tris} triangles`);
-    }
+  for (const c of CHARS)
+    for (const q of [3, 2] as const)
+      for (const kind of ['hoodie', 'puffer', 'suit', 'bomber'] as const) {
+        const d = dress({ ...c.outfit, kind, backpack: '#3a7', watch: true, necklace: true, headphones: '#222' }, q);
+        const tris = d.worn.reduce((n, w) => n + w.rest.length / 9, 0);
+        assert.ok(tris <= BUDGET[q], `${c.name}, detail ${q}, ${kind}: ${tris} triangles`);
+      }
+});
+
+/* ----- Smilex (Phase 1 for him: in the lab) ----- */
+
+const SMILEX_OUTFIT = CHARS[1].outfit;
+
+test("heads: Smilex's hexagon: flat top and bottom, pointed sides, his neck Degen's", () => {
+  const M = SMILEX;
+  for (let k = 0; k < 3; k++) assert.deepEqual(M.rowAt(HEAD_ROWS[k][0]), HEAD_ROWS[k], `row ${k}`);
+  const hw = (y: number) => M.rowAt(y)[1];
+  // (widest at the middle, the sides straight: half as wide at the flats, linear between)
+  const mid = SMILEX_HEAD.rows.reduce((a, r) => (r[1] > a[1] ? r : a))[0];
+  assert.ok(hw(mid) > 0.12 && hw(mid) < 0.15, `${hw(mid)}`);
+  const q1 = mid - 0.05;
+  const q2 = mid - 0.1;
+  assert.ok(Math.abs(hw(mid) - hw(q1) - (hw(q1) - hw(q2))) < 0.002, 'straight sides');
+  // (his head above the collar like Degen's: nothing below the neck tube wider than the neck)
+  assert.ok(hw(-0.008) < 0.05);
+});
+
+test("heads: Smilex's smile and eyes on the flat of his face, never inside his head", () => {
+  for (const q of [3, 2] as const) {
+    const s = smilex(q);
+    let n = 0;
+    each(s.ink, (v) => {
+      n++;
+      assert.ok(!SMILEX.inside(v.x, v.y, v.z - 0.0004), `detail ${q}: ink inside the head at ${v.toArray().map((x) => x.toFixed(3))}`);
+      assert.ok(v.z - SMILEX.front(v.x, v.y) < 0.004, `detail ${q}: ink off his face`);
+      assert.ok(Math.abs(v.x) < SMILEX.rowAt(v.y)[1] * 0.75, `detail ${q}: ink round the edge at x ${v.x.toFixed(3)}`);
+    });
+    assert.ok(n > 0);
+  }
+});
+
+test('heads: Smilex wears white gloves and the PulseChain pendant; everyone else as before', () => {
+  for (const q of [3, 2] as Detail[]) {
+    const on = ids(q, SMILEX_OUTFIT);
+    assert.ok(on.includes('character-smilex') && on.includes('gloves-smilex') && !on.includes('fingers'), `detail ${q}: ${on.join(' ')}`);
+    assert.ok(on.includes('necklace-smilex-bomber') && !on.includes('necklace-bomber'), `detail ${q}: ${on.join(' ')}`);
+    const degen = ids(q, { ...SMILEX_OUTFIT, character: undefined });
+    assert.ok(degen.includes('fingers') && !degen.some((id) => id.startsWith('gloves-')) && degen.includes('necklace-bomber'), `detail ${q}: ${degen.join(' ')}`);
+    // (SlimeWhale's own hands and the diamond)
+    const slime = ids(q, { ...SLIMEWHALE, necklace: true });
+    assert.ok(slime.includes('fingers') && slime.includes('necklace-hoodie'), `detail ${q}: ${slime.join(' ')}`);
+  }
+  // (no chain under the high collars, as Degen's: the puffer, the vest, the shell)
+  assert.ok(!ids(3, { ...SMILEX_OUTFIT, kind: 'puffer' }).some((id) => id.startsWith('necklace-')));
+});
+
+test("heads: Smilex's pendant lies on his top, clear of it, centred on his chest", () => {
+  for (const kind of ['bomber', 'hoodie', 'tee', 'suit', 'track'] as const) {
+    const d = dress({ ...SMILEX_OUTFIT, kind }, 2);
+    const top = shells(d.worn.filter((w) => w.piece.shell === 'top').map((w) => w.rest));
+    const pend = d.worn.filter((w) => w.item === `necklace-smilex-${kind}` && w.piece.color !== '#e2b04a');
+    assert.ok(pend.length >= 5, kind);
+    let xs = 0;
+    let n = 0;
+    for (const w of pend)
+      for (let i = 0; i < w.rest.length; i += 3) {
+        assert.ok(!inside(top, w.rest[i], w.rest[i + 1], w.rest[i + 2]), `${kind}: the pendant inside the top`);
+        xs += w.rest[i];
+        n++;
+      }
+    assert.ok(Math.abs(xs / n) < 0.005, `${kind}: off centre`);
+  }
 });
 
 /* ----- Phase 2: worn from the look ----- */
 
-test('heads: the look names the characters the heads chunk draws', () => {
-  assert.deepEqual(
-    CHARACTERS.map((c) => c.id),
-    CHARACTER_IDS
-  );
+test('heads: every character the look offers has a head (the heads chunk may have one in the lab ahead of it)', () => {
+  for (const c of CHARACTERS) assert.ok(CHARACTER_IDS.includes(c.id), c.id);
   // (made-up names, short enough for a card)
   for (const c of CHARACTERS) assert.ok(c.name.length <= 14, c.name);
 });

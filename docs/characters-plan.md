@@ -179,6 +179,60 @@ Each with the owner's sign-off.
    guide files (`character.md`, `fitting-room.md`, `tests.md`) are up to
    date.
 
+## The second character: Smilex
+
+From the owner's art (2026-11-21; the picture kept out of the repo, as
+SlimeWhale's). The owner's answers:
+
+- **The name:** Smilex. A real name the owner approved for this character
+  (the owner's call, 2026-11-21: an exception to "made-up names only").
+- **The head:** a thick hexagon, flat on top and bottom, pointed at the
+  sides, bright yellow (`SMILEX_YELLOW`, under the bloom threshold), a bit
+  bigger than Degen's head as in the art (27 cm point to point); two tall
+  oval eyes and a wide smile with a tick across each end, flat ink on its
+  flat front. No nose, ears or hair. Nothing worn over it, as SlimeWhale.
+- **The gloves:** always white cartoon gloves (the owner's call): his hands
+  in `SMILEX_GLOVES`, a rolled cuff round each wrist.
+- **The pendant:** the PulseChain symbol on his gold chain, in the
+  Diamond Chain's diamond's place (the owner's call, 2026-11-21: "the
+  PulseChain symbol is public domain ... it can be used", an exception to
+  "never another company's logo"). Drawn after the logo in
+  `src/assets/pulsechain.png`, never the picture's version: a flat-topped
+  hexagon in a gold rim, its gradient in four bands (cyan, violet, magenta,
+  red), the white pulse line across. PulseChain's symbol only, never the
+  token's; nothing about it says PulseChain endorses the game.
+- **The clothes:** a plain brown leather bomber (the art's monogram print
+  is like a real brand's: left off; the owner skipped the question, so the
+  suggestion stands), the art's green chest patch as the city's own made-up
+  Sector 7 mark in green, the necklace, relaxed denim, grey-white
+  sneakers (`CHARACTER_LOOKS.smilex`). The art's jacket is worn open over
+  a white tee; ours zips up (an open bomber is a new piece: later, if the
+  owner wants it).
+
+How he's built (Phase 1 for him, in the lab): his `HeadDef` in heads.ts
+(`SMILEX_HEAD`: Degen's neck rows, then the hexagon as rows whose
+half-width runs straight from the flats to the points, every row a ring
+so the points stay sharp, its edges rounded a few millimetres), his ink
+(`smilex()`, `inkOn()`), the pendant (`pulsePendant()`, handed to the
+wardrobe as `characterPendant()`: the `necklace-smilex-<top>` items in
+place of `necklace-<top>`) and the gloves (`characterGloves()`: the
+`gloves-smilex` item in place of `fingers`). All in the heads' chunk (now
+3.7 KB); the boot grew 0.3 KB (769.0 of 770 KB). He's in `CHARACTER_IDS`
+(heads.ts) but not yet in `CHARACTERS` (profile-data.ts), so the fitting
+room doesn't offer him and a saved `smilex` cleans to Degen until Phase 2.
+Lab:
+`?anim&prog=idle&cam=free&orbit=0.6,0.08,0.7&at=0,0.78,0&outfit=bomber&wear=character:smilex,necklace,top:%236b4428,bottoms:denim,bottom:%233f5f8f,shoeStyle:sneaker,shoes:%23c9c7cf,mark:seven,ink:%231f9d6a,cap:`.
+Tests: the collar, hood-down and budget checks run for every character;
+his hexagon's flats, points and straight sides; his ink on the flat of his
+face; the gloves and pendant on him only (the diamond and bare hands on
+everyone else); the pendant clear of five tops and centred. Shots:
+`docs/characters-shots/smilex-phase1.png`.
+
+Smilex's phases are SlimeWhale's: 1, the head in the lab (built,
+2026-11-21, waiting on the owner's sign-off), 2, wearing him (his line in
+`CHARACTERS`, his Face tab card and Full look chip, the first-person
+hands gloved), 3, checked.
+
 ## Adding the next character (once SlimeWhale's done)
 
 The owner posts the art; we go through it (head, face, hair, clothes,
@@ -201,5 +255,5 @@ crowd unless the owner asks.
 Planned and signed off (2026-11-21). Phase 1 built and signed off
 (2026-11-21: the likeness as it is). Phase 2 built and signed off
 (2026-11-21). Phase 3 built and signed off
-(2026-11-21): SlimeWhale is done. The next character follows "Adding the
-next character" (the owner's call, 2026-11-21: on to the next picture).
+(2026-11-21): SlimeWhale is done. Smilex (the second): Phase 1 built
+(2026-11-21), waiting on the owner's sign-off of the likeness.

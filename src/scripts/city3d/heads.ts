@@ -5,6 +5,12 @@
  * is (body.ts): the same neck tube down into the collar, so every top's
  * collar, the hood down and the headphones fit it as they fit his.
  *
+ * - Smilex (the second, the owner's art, 2026-11-21; a real name the owner
+ *   approved): a thick hexagon of a head, flat on top and bottom and pointed
+ *   at the sides, bright yellow, with a smile and two oval eyes in ink; white
+ *   cartoon gloves (the wardrobe's `gloves`) and the PulseChain symbol on his
+ *   gold chain (`pulsePendant()`: the owner's call, an exception to "no other
+ *   company's logo").
  * - SlimeWhale (the first, the owner's art, 2026-11-21): a tall boxy head,
  *   flat on top and at the back, a square jaw and big ears; three lime eyes
  *   bulging in a row across the brow, black pupils; wide lime lips standing
@@ -24,7 +30,7 @@ import type { CharacterId } from '../net/profile-data';
 type HeadModel = ReturnType<typeof headModel>;
 
 /** The characters whose heads are here (profile-data.ts `CHARACTERS` names them: the tests hold the two lists alike) */
-export const CHARACTER_IDS: CharacterId[] = ['slimewhale'];
+export const CHARACTER_IDS: CharacterId[] = ['slimewhale', 'smilex'];
 
 /** The lime of his eyes and lips: under the palette's white, so it never blooms (visual-rules.md) */
 export const SLIME_LIME = '#b4e03a';
@@ -72,6 +78,7 @@ export let SLIME: HeadModel;
 /** The heads' shapes made with body.ts's builder (handed in: the chunk imports nothing of the boot's) */
 export function setHeadModel(make: typeof headModel) {
   SLIME = make(SLIME_HEAD);
+  SMILEX = make(SMILEX_HEAD);
 }
 
 /** Where things sit on his face */
@@ -274,6 +281,148 @@ export function slimeWhale(q: 2 | 3) {
   };
 }
 
+/* ---------- Smilex ---------- */
+
+/** His yellow: under the palette's white, so it never blooms (visual-rules.md) */
+export const SMILEX_YELLOW = '#f4c61f';
+/** His gloves: a shade under white, as the shirts are */
+export const SMILEX_GLOVES = '#e9e7ef';
+/** The hexagon: half its width point to point, its height flat to flat, where it sits, how deep */
+const HEX_R = 0.135;
+const HEX_H = Math.sqrt(3) * HEX_R;
+const HEX_Y0 = 0.008;
+const HEX_MID = HEX_Y0 + HEX_H / 2;
+const HEX_Y1 = HEX_Y0 + HEX_H;
+const HEX_D = 0.062;
+const HEX_ZC = 0.004;
+/** The hexagon's half-width at height y: its flat top and bottom, its points at the sides */
+const hexHW = (y: number) => HEX_R / 2 + (HEX_R / 2) * (1 - Math.min(1, Math.abs(y - HEX_MID) / (HEX_H / 2)));
+/** Smilex's head: the neck as Degen's, then the hexagon, its edges rounded a few millimetres */
+const SMILEX_ROWS: Row[] = [
+  [-0.085, 0.05, 0.051, 0.05, -0.01, 2],
+  [-0.045, 0.047, 0.048, 0.049, -0.009, 2],
+  [-0.008, 0.046, 0.05, 0.048, -0.008, 2],
+  [HEX_Y0 - 0.004, 0.056, HEX_D - 0.012, HEX_D - 0.012, HEX_ZC, 5],
+  [HEX_Y0, hexHW(HEX_Y0) - 0.002, HEX_D - 0.004, HEX_D - 0.004, HEX_ZC, 7],
+  [HEX_Y0 + 0.006, hexHW(HEX_Y0 + 0.006), HEX_D, HEX_D, HEX_ZC, 8],
+  [HEX_MID, HEX_R, HEX_D, HEX_D, HEX_ZC, 8],
+  [HEX_Y1 - 0.006, hexHW(HEX_Y1 - 0.006), HEX_D, HEX_D, HEX_ZC, 8],
+  [HEX_Y1, hexHW(HEX_Y1) - 0.002, HEX_D - 0.004, HEX_D - 0.004, HEX_ZC, 7],
+  [HEX_Y1 + 0.003, 0.05, HEX_D - 0.014, HEX_D - 0.014, HEX_ZC, 5],
+  [HEX_Y1 + 0.004, 0.003, 0.003, 0.003, HEX_ZC, 2],
+];
+/** Every row a ring (the hexagon's points and edges stay sharp where they should), and a few up the neck and lower face */
+const smilexRings = () => [...new Set([...SMILEX_ROWS.map((r) => r[0]), -0.06, -0.035, -0.015, 0.03, 0.05, 0.075, 0.18])].sort((a, b) => a - b);
+export const SMILEX_HEAD: HeadDef = { rows: SMILEX_ROWS, features: () => 0, rings: smilexRings };
+/** Smilex's head as functions (handed in with SlimeWhale's, `setHeadModel()`) */
+export let SMILEX: HeadModel;
+export const SMILEX_EYE_Y = 0.15;
+export const SMILEX_MOUTH_Y = 0.085;
+
+/** A flat outline in ink laid on a head's front, `lift` off it */
+function inkOn(m: HeadModel, outline: [number, number][], lift: number, depth = 0.0012) {
+  const g = new THREE.ExtrudeGeometry(new THREE.Shape(outline.map(([x, y]) => new THREE.Vector2(x, y))), { depth, bevelEnabled: false, curveSegments: 6 });
+  const p = g.attributes.position as THREE.BufferAttribute;
+  for (let i = 0; i < p.count; i++) p.setZ(i, m.front(p.getX(i), p.getY(i)) + lift + p.getZ(i));
+  g.computeVertexNormals();
+  return g;
+}
+/** A thick line from a to b as an outline (`w` wide) */
+const bar = ([ax, ay]: [number, number], [bx, by]: [number, number], w: number): [number, number][] => {
+  const l = Math.hypot(bx - ax, by - ay) || 1;
+  const nx = (-(by - ay) / l) * (w / 2);
+  const ny = ((bx - ax) / l) * (w / 2);
+  return [
+    [ax + nx, ay + ny],
+    [bx + nx, by + ny],
+    [bx - nx, by - ny],
+    [ax - nx, ay - ny],
+  ];
+};
+
+/** Smilex's head at a detail level: the hexagon, and the smile and eyes in ink */
+export function smilex(q: 2 | 3) {
+  const S = q === 3 ? 1 : 0.7;
+  const R = (n: number) => Math.max(6, Math.round(n * S));
+  const head = SMILEX.geometry(R(40), q);
+  // Two tall oval eyes
+  const eyes = [-1, 1].map((s) =>
+    inkOn(
+      SMILEX,
+      Array.from({ length: R(20) }, (_, k): [number, number] => {
+        const a = (k / R(20)) * Math.PI * 2;
+        return [s * 0.038 + Math.cos(a) * 0.0095, SMILEX_EYE_Y + Math.sin(a) * 0.018];
+      }),
+      0.0006
+    )
+  );
+  // The smile: a wide arc, and a tick across each end
+  const CX = 0;
+  const CY = 0.137;
+  const RAD = 0.075;
+  const A0 = (200 * Math.PI) / 180;
+  const A1 = (340 * Math.PI) / 180;
+  const W = 0.0075;
+  const n = R(24);
+  const arc: [number, number][] = [];
+  for (let k = 0; k <= n; k++) {
+    const a = A0 + ((A1 - A0) * k) / n;
+    arc.push([CX + Math.cos(a) * (RAD + W / 2), CY + Math.sin(a) * (RAD + W / 2)]);
+  }
+  for (let k = n; k >= 0; k--) {
+    const a = A0 + ((A1 - A0) * k) / n;
+    arc.push([CX + Math.cos(a) * (RAD - W / 2), CY + Math.sin(a) * (RAD - W / 2)]);
+  }
+  const smile = inkOn(SMILEX, arc, 0.0006);
+  // (the ticks a hair further off than the smile, so the two never share a plane)
+  const ticks = [A0, A1].map((a) => {
+    const end: [number, number] = [CX + Math.cos(a) * RAD, CY + Math.sin(a) * RAD];
+    const d = 0.012;
+    return inkOn(SMILEX, bar([end[0] - Math.cos(a) * d, end[1] - Math.sin(a) * d], [end[0] + Math.cos(a) * d, end[1] + Math.sin(a) * d], 0.006), 0.0011);
+  });
+  return { head: [head], ink: [...eyes, smile, ...ticks] };
+}
+
+/**
+ * The PulseChain symbol as a pendant (the owner's call, 2026-11-21): a flat-topped hexagon in a gold rim, its face in
+ * four bands for the logo's gradient (cyan, violet, magenta, red), the white pulse line across it, and a bail at the
+ * top for the chain. Centred on the origin, its face towards +z, about 6 cm across.
+ */
+export function pulsePendant(q: 2 | 3) {
+  const r = 0.03;
+  const T = 0.007;
+  const rim = new THREE.CylinderGeometry(r, r, T, 6, 1).rotateX(Math.PI / 2).rotateZ(Math.PI / 6);
+  const hex = (rr: number, k: number): [number, number] => [Math.cos((k * Math.PI) / 3) * rr, Math.sin((k * Math.PI) / 3) * rr];
+  const f = r * 0.84;
+  const h = (f * Math.sqrt(3)) / 2;
+  const g = 0.0022;
+  const flat = (outline: [number, number][], z: number, d = 0.0008) =>
+    new THREE.ExtrudeGeometry(new THREE.Shape(outline.map(([x, y]) => new THREE.Vector2(x, y))), { depth: d, bevelEnabled: false }).translate(0, 0, z);
+  const face = T / 2 + 0.0005;
+  // (the face's four quarters, either side of the middle and above and below the pulse line)
+  const xAt = (y: number) => f - Math.abs(y) / Math.sqrt(3);
+  const bands = {
+    cyan: flat([[0, g], [xAt(g), g], hex(f, 1), [0, h]], face),
+    violet: flat([[0, g], [0, h], hex(f, 2), [-xAt(g), g]], face),
+    magenta: flat([[0, -g], [0, -h], hex(f, 5), [xAt(g), -g]], face),
+    red: flat([[0, -g], [-xAt(g), -g], hex(f, 4), [0, -h]], face),
+  };
+  // The pulse line: flat from the left, up, down past the middle, up again, flat to the right
+  const P: [number, number][] = [
+    [-1, 0],
+    [-0.4, 0],
+    [-0.24, 0.6],
+    [-0.06, -0.72],
+    [0.1, 0.45],
+    [0.22, 0],
+    [1, 0],
+  ].map(([x, y]) => [x * f, y * f]);
+  const pulse = P.slice(1).map((b, i) => flat(bar(P[i], b, 0.0045), face + 0.0009, 0.0008));
+  const bail = new THREE.TorusGeometry(0.0055, 0.0016, R2(q, 6), R2(q, 12)).rotateY(Math.PI / 2).translate(0, (r * Math.sqrt(3)) / 2 + 0.005, 0);
+  return { gold: [rim, bail], bands, white: pulse };
+}
+const R2 = (q: 2 | 3, n: number) => Math.max(4, Math.round(n * (q === 3 ? 1 : 0.7)));
+
 /** A part of a character's head: its geometries in the head bone's space (one piece), its colour (or the outfit's `skin` or `hair`) */
 export interface HeadPart {
   geos: THREE.BufferGeometry[];
@@ -298,5 +447,29 @@ export function characterParts(id: CharacterId, q: 2 | 3): HeadPart[] {
         { geos: s.hair, color: 'hair' },
       ];
     }
+    case 'smilex': {
+      const s = smilex(q);
+      return [
+        { geos: s.head, color: SMILEX_YELLOW },
+        { geos: s.ink, color: SLIME_INK },
+      ];
+    }
   }
 }
+
+/** What hangs on a character's chain in place of the diamond (null: the diamond), centred, facing +z */
+export function characterPendant(id: CharacterId, q: 2 | 3): HeadPart[] | null {
+  if (id !== 'smilex') return null;
+  const p = pulsePendant(q);
+  return [
+    { geos: p.gold, color: '#e2b04a' },
+    { geos: [p.bands.cyan], color: '#22c4ee' },
+    { geos: [p.bands.violet], color: '#6a3cf0' },
+    { geos: [p.bands.magenta], color: '#c42ade' },
+    { geos: [p.bands.red], color: '#ee3070' },
+    { geos: p.white, color: '#e9e7ef' },
+  ];
+}
+
+/** The colour of a character's gloves (null: bare hands in the skin tone) */
+export const characterGloves = (id: CharacterId): string | null => (id === 'smilex' ? SMILEX_GLOVES : null);
