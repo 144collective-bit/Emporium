@@ -516,7 +516,7 @@ function roundCorners(poly: Pt[]): Pt[] {
     const bl = Math.hypot(bis[0], bis[1]) || 1;
     const k = R / Math.sin(inside / 2);
     const c: Pt = [p[0] + (bis[0] / bl) * k, p[1] + (bis[1] / bl) * k];
-    let a0 = Math.atan2(t0[1] - c[1], t0[0] - c[0]);
+    const a0 = Math.atan2(t0[1] - c[1], t0[0] - c[0]);
     let a1 = Math.atan2(t1[1] - c[1], t1[0] - c[0]);
     let sweep = a1 - a0;
     while (sweep > Math.PI) sweep -= Math.PI * 2;
