@@ -13,7 +13,7 @@ import { SLAB } from './world';
 import { Batch, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { registerHouses } from './sunhouses3d';
-import { registerYards } from './sunyards3d';
+import { registerSprinklers, registerYards } from './sunyards3d';
 import { registerAmenities } from './sunamenities3d';
 import { registerLife } from './sunlife3d';
 import { registerFringes } from './fringes3d';
@@ -87,6 +87,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerHouses(low, scene);
   // The yards and their walls (Phase 3: sunyards3d.ts)
   registerYards(low, scene);
+  registerSprinklers(scene, tick);
   // The slivers by the highway beside it (fringes3d.ts, docs/blend-plan.md Phase 5c)
   registerFringes(['sunridge'], low);
   // The club, the park and the school (Phase 4: sunamenities3d.ts)

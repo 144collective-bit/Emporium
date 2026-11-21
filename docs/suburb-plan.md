@@ -275,7 +275,32 @@ These are my recommendations, made so the plan is complete; any can change.
      residents exactly. 101 houses on 101 lots; one more driveway car.
      The circle's north end and the stem's east side still have no lots
      (the lots round them were laid first).
-7. *(Optional)* **A home of your own** for Dorras, with the owner's say.
+7. **The loose ends** (built, waiting on the owner's sign-off; the owner's
+   picks, 2026-11-21, from the audit after Phase 6):
+   - **The panels:** the club's and the school's describe the place
+     instead of "coming soon" (draft copy, the owner's to change).
+   - **Sprinklers you can see:** `SPRINKLERS` in sunyards.ts (DOM-free,
+     tested in `tests/sunyards.test.ts`): a pop-up rotor on every front
+     lawn (one a lawn, on its biggest piece, the spot furthest from its
+     edges and plants, `HEAD_CLEAR`; its spray's reach `r`, `REACH`), each
+     on for three minutes in every nine on the clock (`SPRINKLE`,
+     `sprinklerOn()`, about a third at once), its spray round once in six
+     seconds (`sprayAt()`). Drawn by sunyards3d.ts's `registerSprinklers()`:
+     one instanced mesh of thin arching sprays in the FX layer, by day and
+     not in the rain (as the sprinklers are heard), set each frame only
+     near Sunridge; under reduced motion the ticks run once, so they stand.
+     One draw call.
+   - **The school bell:** `sunbell.ts` (DOM-free, tested in
+     `tests/sunbell.test.ts`): weekdays at eight, the break (10:30, 10:45),
+     lunch (12:00, 12:45) and home time (three), by the visitor's clock in
+     step with the school's live line; sound.ts rings it (`schoolBell()`, an
+     electric bell's chopped tone), heard across Sunridge (`suburb`).
+   - **Left for later** (the audit's other items, each the owner's call):
+     driveway cars leaving in the morning and back in the evening with
+     their garage doors, kids on bikes and scooters and hoops over the
+     garages, the ice-cream van at the park, swimmers, seasonal porch
+     decorations, the rest of Ocotillo Court's lots.
+8. *(Optional)* **A home of your own** for Dorras, with the owner's say.
 
 ## Constraints
 

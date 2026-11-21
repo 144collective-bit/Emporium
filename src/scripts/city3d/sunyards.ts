@@ -278,3 +278,76 @@ export const YARD_SOLIDS: Box[] = (() => {
   }
   return out;
 })();
+
+/* ---------- The lawns' sprinklers (docs/suburb-plan.md Phase 7) ---------- */
+
+/**
+ * A front lawn's sprinkler: a pop-up rotor on the lawn's biggest piece, the spot on it furthest from its edges and
+ * its plants (world x, z), and how far its spray reaches (inside the lawn, about). `phase` sets it apart from its
+ * neighbours. sunyards3d.ts draws the spray turning while it's on: by day, not in the rain, as the sprinklers are
+ * heard (sound.ts), each on for `SPRINKLE.on` of every `SPRINKLE.period`, on the clock, the same for everyone.
+ */
+export interface Sprinkler {
+  house: string;
+  x: number;
+  z: number;
+  r: number;
+  phase: number;
+}
+/** Each on for three minutes in every nine (about a third of them at once), its spray round once in six seconds */
+export const SPRINKLE = { period: 540, on: 180, turn: 6 } as const;
+
+/** Whether p is inside a polygon (u, v) */
+function inside(poly: Pt[], p: Pt) {
+  let c = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [a, b] = [poly[i], poly[j]];
+    if (a[1] > p[1] !== b[1] > p[1] && p[0] < ((b[0] - a[0]) * (p[1] - a[1])) / (b[1] - a[1]) + a[0]) c = !c;
+  }
+  return c;
+}
+/** How far p is from a polygon's edges */
+function edgeDist(poly: Pt[], p: Pt) {
+  let best = Infinity;
+  for (let i = 0; i < poly.length; i++) {
+    const [a, b] = [poly[i], poly[(i + 1) % poly.length]];
+    const [dx, dz] = [b[0] - a[0], b[1] - a[1]];
+    const k = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+    best = Math.min(best, Math.hypot(p[0] - a[0] - dx * k, p[1] - a[1] - dz * k));
+  }
+  return best;
+}
+const area = (poly: Pt[]) => Math.abs(poly.reduce((s, p, i) => s + p[0] * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * p[1], 0)) / 2;
+/** How far a sprinkler's head keeps from a plant's middle, and the spray's reach either way */
+export const HEAD_CLEAR = 0.6;
+export const REACH = [0.6, 1.8] as const;
+
+export const SPRINKLERS: Sprinkler[] = (() => {
+  const out: Sprinkler[] = [];
+  YARDS.forEach((y, i) => {
+    if (y.front !== 'lawn' || !y.ground.length) return;
+    const h = HOUSES.find((q) => q.id === y.house)!;
+    const piece = [...y.ground].sort((a, b) => area(b) - area(a))[0];
+    const us = piece.map((p) => p[0]);
+    const vs = piece.map((p) => p[1]);
+    // (the spot furthest from the edges and the plants, on a grid over the piece)
+    let best: { p: Pt; score: number } | null = null;
+    for (let u = Math.min(...us); u <= Math.max(...us); u += 0.2)
+      for (let v = Math.min(...vs); v <= Math.max(...vs); v += 0.2) {
+        const p: Pt = [u, v];
+        if (!inside(piece, p)) continue;
+        const plant = Math.min(Infinity, ...y.plants.map((q) => Math.hypot(q.u - u, q.v - v)));
+        if (plant < HEAD_CLEAR) continue;
+        const score = Math.min(edgeDist(piece, p), plant);
+        if (!best || score > best.score) best = { p, score };
+      }
+    if (!best) return;
+    const [x, z] = toWorld(h, best.p[0], best.p[1]);
+    out.push({ house: y.house, x, z, r: Math.min(REACH[1], Math.max(REACH[0], edgeDist(piece, best.p) - 0.1)), phase: (i * 97) % SPRINKLE.period });
+  });
+  return out;
+})();
+/** Whether a sprinkler's on at t (seconds, the clock's) */
+export const sprinklerOn = (s: Sprinkler, t: number) => (((t + s.phase) % SPRINKLE.period) + SPRINKLE.period) % SPRINKLE.period < SPRINKLE.on;
+/** Which way its spray points at t (radians about y) */
+export const sprayAt = (s: Sprinkler, t: number) => (((t + s.phase) / SPRINKLE.turn) % 1) * Math.PI * 2;

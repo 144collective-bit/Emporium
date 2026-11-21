@@ -3,7 +3,7 @@
 // never doubled; the returns' gates; the pools and back-yard things inside the back yard; their solids.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { WALLS, YARDS, YARD_SOLIDS } from '../src/scripts/city3d/sunyards';
+import { HEAD_CLEAR, REACH, SPRINKLE, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, sprayAt, sprinklerOn } from '../src/scripts/city3d/sunyards';
 import { HOUSES, toWorld } from '../src/scripts/city3d/sunhouses';
 import { LOTS, outline } from '../src/scripts/city3d/sunridgelots';
 import { SUN_LAMPS, SUN_STREETS, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
@@ -72,4 +72,34 @@ test('the back yards: their pools, patios and things inside them; about one in t
     for (const e of y.extras) assert.ok(inside(lot, toWorld(h, e.u, e.v)) && e.v > v0, `${y.house}'s ${e.kind} outside its back yard`);
   }
   assert.ok(YARD_SOLIDS.length >= WALLS.length);
+});
+
+test('the lawns\' sprinklers: one on every front lawn, on the lawn, clear of its plants, about a third on at a time', () => {
+  const lawns = YARDS.filter((y) => y.front === 'lawn');
+  assert.ok(lawns.length > 30);
+  assert.equal(SPRINKLERS.length, lawns.length, 'every lawn has its sprinkler');
+  for (const sp of SPRINKLERS) {
+    const y = YARDS.find((q) => q.house === sp.house)!;
+    const h = HOUSES.find((q) => q.id === sp.house)!;
+    assert.equal(y.front, 'lawn');
+    // (on one of the lawn's pieces, in the house's frame)
+    const onLawn = y.ground.some((g) => inside(g.map(([u, v]) => toWorld(h, u, v)), [sp.x, sp.z]));
+    assert.ok(onLawn, `${sp.house}'s sprinkler on its lawn`);
+    for (const pl of y.plants) {
+      const [px, pz] = toWorld(h, pl.u, pl.v);
+      assert.ok(Math.hypot(px - sp.x, pz - sp.z) >= HEAD_CLEAR - 1e-9, `${sp.house}'s sprinkler clear of its ${pl.kind}`);
+    }
+    assert.ok(sp.r >= REACH[0] && sp.r <= REACH[1]);
+    // (its spray lands on its lawn, not the sidewalk: every way round, its reach's end on one of the lawn's pieces, but the smallest lawns)
+    const lands = Array.from({ length: 12 }, (_, k) => (k / 12) * Math.PI * 2).filter((a) => y.ground.some((g) => inside(g.map(([u, v]) => toWorld(h, u, v)), [sp.x + Math.cos(a) * sp.r, sp.z - Math.sin(a) * sp.r]))).length;
+    assert.ok(sp.r === REACH[0] || lands === 12, `${sp.house}'s spray lands off its lawn (${lands} of 12)`);
+    for (const b of YARD_SOLIDS) assert.ok(!(sp.x > b[0] && sp.x < b[2] && sp.z > b[1] && sp.z < b[3]), `${sp.house}'s sprinkler in a wall`);
+  }
+  // On a third of the time each, staggered: never none and never all on at once over a period
+  for (let t = 0; t < SPRINKLE.period; t += 15) {
+    const on = SPRINKLERS.filter((sp) => sprinklerOn(sp, t)).length / SPRINKLERS.length;
+    assert.ok(on > 0.15 && on < 0.55, `${(on * 100).toFixed(0)}% on at ${t}`);
+  }
+  const sp = SPRINKLERS[0];
+  assert.ok(Math.abs(sprayAt(sp, 1) - sprayAt(sp, 1 + SPRINKLE.turn)) < 1e-9, 'round once a turn');
 });
