@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import { FLARE, HEAD_CLEAR, REACH, SPRINKLE, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, sprayAt, sprinklerOn } from '../src/scripts/city3d/sunyards';
 import { HOUSES, toWorld } from '../src/scripts/city3d/sunhouses';
 import { GARDENS, LOTS, outline } from '../src/scripts/city3d/sunridgelots';
-import { SUN_BLOCKS, SUN_LAMPS, SUN_STREETS, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
+import { PATH, SUNRIDGE_RECT, SUN_BLOCKS, SUN_LAMPS, SUN_STREETS, ZONES, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
 import { WALK_W } from '../src/scripts/city3d/layout';
 
 const houses = new Map(HOUSES.map((h) => [h.id, h]));
@@ -27,16 +27,17 @@ test('a yard a house, desert and lawn about half each, the plants on their lot c
   assert.ok(desert > 0.35 && desert < 0.7, `${(desert * 100).toFixed(0)}% desert`);
   for (const y of YARDS) {
     const h = houses.get(y.house)!;
-    const lot = outline(gardens.get(h.lot)!);
+    const lot = gardens.get(h.lot)!.outline;
     for (const p of y.plants) {
       const w = toWorld(h, p.u, p.v);
-      assert.ok(inside(lot, w), `${y.house}'s ${p.kind} off its lot`);
+      // (the front yard is the lot's own; the garden its share of the block behind)
+      assert.ok(inside(lot, w) || inside(outline(lots.get(h.lot)!), w), `${y.house}'s ${p.kind} off its lot`);
       assert.ok(!(p.u > h.drive[0] && p.u < h.drive[1] && p.v < h.garageDoor.v), `${y.house}'s ${p.kind} on the driveway`);
       assert.ok(!inPart(h, w, -0.1), `${y.house}'s ${p.kind} in the house`);
     }
     // (on its lot, or out in front of it to the sidewalk's edge: Phase 7, the front carried to the sidewalk)
     const block = SUN_BLOCKS.find((b) => b.id === lots.get(h.lot)!.block)!.poly;
-    for (const g of y.ground) for (const [u, v] of g) assert.ok(inside(lot, toWorld(h, u, v)) || distTo(lot, toWorld(h, u, v), true) < 0.05 || (v <= 0 && (inside(block, toWorld(h, u, v)) || distTo(block, toWorld(h, u, v), true) < 0.03)), `${y.house}'s ground off its lot`);
+    for (const g of y.ground) for (const [u, v] of g) assert.ok(inside(lot, toWorld(h, u, v)) || distTo(lot, toWorld(h, u, v), true) < 0.35 || (v <= 0 && (inside(block, toWorld(h, u, v)) || distTo(block, toWorld(h, u, v), true) < 0.03)), `${y.house}'s ground off its lot`);
   }
 });
 
@@ -66,7 +67,7 @@ test('the back yards: their pools, patios and things inside them; about one in t
   assert.ok(pools > 0.12 && pools < 0.45, `${(pools * 100).toFixed(0)}% with pools`);
   for (const y of YARDS) {
     const h = houses.get(y.house)!;
-    const lot = outline(gardens.get(h.lot)!);
+    const lot = gardens.get(h.lot)!.outline;
     const [u0, v0, u1, v1] = y.back;
     if (y.pool) {
       assert.ok(y.pool.u0 >= u0 - 1e-9 && y.pool.u1 <= u1 + 1e-9 && y.pool.v0 >= v0 && y.pool.v1 <= v1 + 1e-9, `${y.house}'s pool outside its back yard`);
@@ -153,8 +154,8 @@ test('the driveways: from the garage to the sidewalk\'s edge, flared and rounded
     // Flared both sides (where the lot has room), and never past the lot's sides
     const us = y.drive.map(([u]) => u);
     assert.ok(Math.min(...us) <= d0 && Math.max(...us) >= d1 && Math.min(...us) >= d0 - FLARE - 1e-9 && Math.max(...us) <= d1 + FLARE + 1e-9);
-    const out = outline(gardens.get(h.lot)!);
-    for (const [u, v] of y.drive) if (v > 0.05) assert.ok(inside(out, toWorld(h, u, v)) || distTo(out, toWorld(h, u, v), true) < 0.05, `${y.house}'s driveway out of its lot`);
+    const out = gardens.get(h.lot)!.outline;
+    for (const [u, v] of y.drive) if (v > 0.05) assert.ok(inside(out, toWorld(h, u, v)) || distTo(out, toWorld(h, u, v), true) < 0.35, `${y.house}'s driveway out of its lot`);
   }
 });
 
@@ -171,22 +172,38 @@ test('the front yards reach the sidewalk\'s edge too: no sliver of bare ground b
   }
 });
 
-test('the gardens grown into the land behind (Phase 8): each round its whole lot, in its block, out of every other, off the amenities and the footpath, the land behind far less wasted', () => {
+test('the gardens (Phase 8): each block divided among its lots, each garden round its whole lot, in its block, out of every other, the land all but used', () => {
   const area = (o: Pt[]) => Math.abs(o.reduce((t, p, i) => t + p[0] * o[(i + 1) % o.length][1] - o[(i + 1) % o.length][0] * p[1], 0)) / 2;
   const blocks = new Map(SUN_BLOCKS.map((b) => [b.id, b.poly]));
   assert.equal(GARDENS.length, LOTS.length);
+  // (traced on a quarter-tile grid and smoothed: a garden's edge is within about that of where the land divides)
+  const TOL = 0.35;
   GARDENS.forEach((g, k) => {
     const l = LOTS[k];
     assert.equal(g.id, l.id);
-    const o = outline(g);
-    for (const p of outline(l)) assert.ok(inside(o, p) || distTo(o, p, true) < 0.03, `${g.id} doesn't hold its lot`);
-    for (const p of o) assert.ok(inside(blocks.get(g.block)!, p) || distTo(blocks.get(g.block)!, p, true) < 0.03, `${g.id} out of its block`);
+    const o = g.outline;
+    assert.ok(o.length >= 4);
+    for (const p of outline(l)) assert.ok(inside(o, p) || distTo(o, p, true) < TOL, `${g.id} doesn't hold its lot`);
+    for (const p of o) assert.ok(inside(blocks.get(g.block)!, p) || distTo(blocks.get(g.block)!, p, true) < TOL, `${g.id} out of its block`);
   });
-  // (no two overlapping more than a hair: corners of one well inside another)
+  // (no two overlapping more than that: no corner of one well inside another)
   for (const [i, a] of GARDENS.entries())
-    for (const [j, b] of GARDENS.entries()) if (i !== j) for (const p of outline(a)) assert.ok(!inside(outline(b), p) || distTo(outline(b), p, true) < 0.1, `${a.id} into ${b.id}`);
-  // (a lot gains a quarter on the whole, the land the lots left behind them taken up)
+    for (const [j, b] of GARDENS.entries()) if (i !== j) for (const p of a.outline) assert.ok(!inside(b.outline, p) || distTo(b.outline, p, true) < TOL + 0.1, `${a.id} into ${b.id}`);
+  // The land all but used: of every spot on the blocks off the streets' edges, the amenities and the footpath (and
+  // their margins), nearly all in a garden
   const lots = LOTS.reduce((t, l) => t + area(outline(l)), 0);
-  const grown = GARDENS.reduce((t, g) => t + area(outline(g)), 0);
-  assert.ok(grown > lots * 1.2, `gardens ${grown.toFixed(0)} against lots ${lots.toFixed(0)}`);
+  const grown = GARDENS.reduce((t, g) => t + area(g.outline), 0);
+  assert.ok(grown > lots * 1.3, `gardens ${grown.toFixed(0)} against lots ${lots.toFixed(0)}`);
+  let free = 0;
+  let used = 0;
+  for (let x = SUNRIDGE_RECT[0]; x < SUNRIDGE_RECT[2]; x += 1)
+    for (let z = SUNRIDGE_RECT[1]; z < SUNRIDGE_RECT[3]; z += 1) {
+      const p: Pt = [x + 0.5, z + 0.5];
+      const b = SUN_BLOCKS.find((q) => inside(q.poly, p));
+      if (!b || distTo(b.poly, p, true) < 1.2) continue;
+      if ([...ZONES.map((q) => q.rect), PATH].some((r) => p[0] > r[0] - 1.2 && p[0] < r[2] + 1.2 && p[1] > r[1] - 1.2 && p[1] < r[3] + 1.2)) continue;
+      free++;
+      if (GARDENS.some((g) => inside(g.outline, p))) used++;
+    }
+  assert.ok(used / free > 0.9, `${((used / free) * 100).toFixed(1)}% of the free land in gardens`);
 });

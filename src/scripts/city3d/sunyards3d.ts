@@ -277,8 +277,8 @@ export function registerYards(low: boolean, scene: THREE.Scene | null) {
     const h = houses.get(y.house)!;
     const l = lots.get(h.lot)!;
     // (round the garden: grown into the land behind, Phase 8)
-    const g = GARDENS.find((q) => q.id === l.id) ?? l;
-    const pts = [...l.front, ...l.back, ...g.front, ...g.back];
+    const g = GARDENS.find((q) => q.id === l.id);
+    const pts = [...l.front, ...l.back, ...(g ? g.outline : [])];
     const rect: [number, number, number, number] = [Math.min(...pts.map((p) => p[0])) - 2, Math.min(...pts.map((p) => p[1])) - 2, Math.max(...pts.map((p) => p[0])) + 2, Math.max(...pts.map((p) => p[1])) + 2];
     site(`sunridge yard ${h.id}`, rect, (into) => {
       const b = new Batch();

@@ -15,7 +15,7 @@
  *
  * `YARD_SOLIDS`: the walls (cells along them) and the sheds, joined to the grids when the chunk loads.
  */
-import { HOUSES, across, depthAt, frameOf, toWorld, type House } from './sunhouses';
+import { HOUSES, frameOf, toWorld, type House } from './sunhouses';
 import { GARDENS, LOTS, type Lot } from './sunridgelots';
 import { SUN_BLOCKS, WALL_RUNS, distTo, inside as inBlock, type Pt } from './sunridge';
 import { rng } from './recipes';
@@ -74,20 +74,62 @@ function frontOver(h: House, u0: number, u1: number, side: number) {
   return ps.length ? Math.min(...ps.map((p) => p.v0)) : side;
 }
 
+/** Each lot's garden (sunridgelots.ts `GARDENS`, Phase 8: its share of its block), by the lot's id */
+const gardenOf = new Map(GARDENS.map((g) => [g.id, g]));
+/** A lot's frame (the house's: its front's middle, along it and in) and its garden's outline in it */
+export interface GFrame {
+  o: Pt;
+  u: Pt;
+  v: Pt;
+  poly: Pt[];
+}
+export function gardenFrame(l: Lot): GFrame {
+  const f = frameOf(l);
+  const g = gardenOf.get(l.id);
+  const local = (p: Pt): Pt => [(p[0] - f.o[0]) * f.u[0] + (p[1] - f.o[1]) * f.u[1], (p[0] - f.o[0]) * f.v[0] + (p[1] - f.o[1]) * f.v[1]];
+  const ring = g ? g.outline : [l.front[0], l.back[0], l.back[1], l.front[1]];
+  return { o: f.o, u: f.u, v: f.v, poly: ring.map(local) };
+}
+/** Where a line across the frame (a depth v, or a place u along) meets the garden's outline: its two ends */
+function crossings(poly: Pt[], axis: 0 | 1, at: number): number[] {
+  const out: number[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const [a, b] = [poly[i], poly[(i + 1) % poly.length]];
+    if ((a[axis] - at) * (b[axis] - at) > 0 || a[axis] === b[axis]) continue;
+    const t = (at - a[axis]) / (b[axis] - a[axis]);
+    out.push(a[1 - axis] + (b[1 - axis] - a[1 - axis]) * t);
+  }
+  return out;
+}
+/** The garden's width at a depth v in the frame: its left and right edges there (the nearest depth it reaches, past its ends) */
+export function acrossG(f: GFrame, v: number): [number, number] {
+  const vs = f.poly.map((p) => p[1]);
+  const vv = Math.min(Math.max(v, Math.min(...vs) + 1e-6), Math.max(...vs) - 1e-6);
+  const c = crossings(f.poly, 1, vv);
+  return c.length ? [Math.min(...c), Math.max(...c)] : [0, 0];
+}
+/** How deep the garden reaches at a place u along the frame */
+export function depthG(f: GFrame, u: number): number {
+  const c = crossings(f.poly, 0, u);
+  return c.length ? Math.max(...c) : 0;
+}
+/** The garden's outline in the frame from a depth back (everything behind a line across it) */
+export function behind(f: GFrame, v: number): Pt[] {
+  const out: Pt[] = [];
+  const P = f.poly;
+  for (let i = 0; i < P.length; i++) {
+    const [a, b] = [P[i], P[(i + 1) % P.length]];
+    const [ia, ib] = [a[1] >= v, b[1] >= v];
+    if (ia) out.push(a);
+    if (ia !== ib) {
+      const t = (v - a[1]) / (b[1] - a[1]);
+      out.push([a[0] + (b[0] - a[0]) * t, v]);
+    }
+  }
+  return out;
+}
 const houseOf = new Map(HOUSES.map((h) => [h.lot, h]));
 const lotOf = new Map(LOTS.map((l) => [l.id, l]));
-/** Each lot's garden (sunridgelots.ts `GARDENS`, Phase 8: grown into the land behind), by the lot's id */
-const gardenOf = new Map(GARDENS.map((g) => [g.id, g]));
-/**
- * A lot's frame (the house's: its front's middle, along it and in) with its garden's corners in it: the yard's sides
- * and back are the garden's, everything the house set in the frame stays where it was
- */
-export function gardenFrame(l: Lot) {
-  const f = frameOf(l);
-  const g = gardenOf.get(l.id) ?? l;
-  const local = (p: Pt): Pt => [(p[0] - f.o[0]) * f.u[0] + (p[1] - f.o[1]) * f.u[1], (p[0] - f.o[0]) * f.v[0] + (p[1] - f.o[1]) * f.v[1]];
-  return { ...f, fl: local(g.front[0]), fr: local(g.front[1]), bl: local(g.back[0]), br: local(g.back[1]) };
-}
 /** Where a house's side walls start: a little behind its main front */
 const sideStart = (h: House) => h.parts.find((p) => p.kind === 'main')!.v0 + RETURN_BACK;
 
@@ -227,8 +269,15 @@ function lay(): Yard[] {
       [ub(v1), v1],
       [ua(v1), v1],
     ];
-    const L = (v: number) => across(f, v)[0] + 0.02;
-    const R = (v: number) => across(f, v)[1] - 0.02;
+    // (the front yard's sides are the lot's own: the garden (Phase 8) takes the land behind the house's front, inside
+    // its walls)
+    const lot = lotOf.get(h.lot)!;
+    const lf = frameOf(lot);
+    const loc = (p: Pt): Pt => [(p[0] - lf.o[0]) * lf.u[0] + (p[1] - lf.o[1]) * lf.u[1], (p[0] - lf.o[0]) * lf.v[0] + (p[1] - lf.o[1]) * lf.v[1]];
+    const [lfl, lbl, lbr, lfr] = [loc(lot.front[0]), loc(lot.back[0]), loc(lot.back[1]), loc(lot.front[1])];
+    const lotSide = (a: Pt, b: Pt, v: number) => a[0] + (b[0] - a[0]) * Math.max(0, Math.min(1, (v - a[1]) / (b[1] - a[1] || 1e-9)));
+    const L = (v: number) => lotSide(lfl, lbl, v) + 0.02;
+    const R = (v: number) => lotSide(lfr, lbr, v) - 0.02;
     const ground: Pt[][] = [];
     const leftFront = frontOver(h, L(0), d0, ss);
     const rightFront = frontOver(h, d1, R(0), ss);
@@ -289,8 +338,8 @@ function lay(): Yard[] {
     const bins = { u: gs < 0 ? garage.u0 + 0.35 : garage.u1 - 0.35, v: garage.v0 - 0.35 };
     // The back yard: across between the side walls, from the house's back to the lot's back
     const vb = Math.max(...h.parts.map((p) => p.v1));
-    const backV = Math.min(depthAt(f, across(f, vb)[0] + 0.3), depthAt(f, across(f, vb)[1] - 0.3)) - 0.15;
-    const [bu0, bu1] = [across(f, vb)[0] + 0.15, across(f, vb)[1] - 0.15];
+    const backV = Math.min(depthG(f, acrossG(f, vb)[0] + 0.3), depthG(f, acrossG(f, vb)[1] - 0.3)) - 0.15;
+    const [bu0, bu1] = [acrossG(f, vb)[0] + 0.15, acrossG(f, vb)[1] - 0.15];
     const back: Yard['back'] = [bu0, vb, bu1, backV];
     const depth = backV - vb;
     const patio: Yard['patio'] = [main.u0 + 0.2, main.v1, Math.min(main.u1 - 0.2, main.u0 + 3.4), main.v1 + Math.min(1.3, depth * 0.45)];
@@ -346,7 +395,7 @@ function lay(): Yard[] {
             .filter((isl, k) => fits(isl, inFrom(ground[k])))
         : [];
     const drive = driveOf(h, d0, d1, Math.max(0, Math.min(FLARE, d0 - L(0) - 0.05)), Math.max(0, Math.min(FLARE, R(0) - d1 - 0.05)), edge);
-    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground: ground.map(toEdge), drive, islands, inner: [[across(f, ss)[0], ss], [across(f, ss)[1], ss], f.br, f.bl], plants, bins, back, patio, ramada, grill, pool, extras, gates });
+    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground: ground.map(toEdge), drive, islands, inner: behind(f, ss), plants, bins, back, patio, ramada, grill, pool, extras, gates });
   }
   return out;
 }
@@ -360,21 +409,11 @@ export interface WallSeg {
   /** A gate across part of it (from and to, along it, 0-1) */
   gate?: [number, number];
 }
-const near = (p: Pt, q: Pt, m: number) => Math.hypot(p[0] - q[0], p[1] - q[1]) < m;
 const lerp = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-/** Where along a lot's side (front to back) a house's side walls start */
-const sideT = (l: Lot, h: House | undefined, side: 0 | 1) => {
-  if (!h) return 0.35;
-  const f = gardenFrame(l);
-  const back = side === 0 ? f.bl : f.br;
-  return Math.min(0.9, sideStart(h) / Math.max(1, back[1]));
-};
-
 function walls(): WallSeg[] {
   const out: WallSeg[] = [];
   const onPerimeter = (a: Pt, b: Pt) => [a, b, lerp(a, b, 0.5)].every((p) => WALL_RUNS.some((r) => distTo(r, p) < 0.8));
-  // (a wall on a line another garden has walled already is left out: grown gardens meet along each other's sides and
-  // backs, a wall's thickness apart at most)
+  // (a wall on a line another garden has walled already is left out: neighbouring gardens share their fences)
   const covered = (p: Pt) => out.some((w) => distTo([w.a, w.b], p) < 0.3);
   const push = (a: Pt, b: Pt) => {
     const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
@@ -394,25 +433,32 @@ function walls(): WallSeg[] {
   };
   for (const lot of LOTS) {
     const h = houseOf.get(lot.id);
-    // The garden's sides (from where the walls start, behind the house's front, to its back) and its back
-    const l = gardenOf.get(lot.id) ?? lot;
-    const right = LOTS.find((q) => q !== lot && near((gardenOf.get(q.id) ?? q).front[0], l.front[1], 0.2));
-    const tR = Math.min(sideT(lot, h, 1), right ? sideT(right, houseOf.get(right.id), 0) : 1);
-    push(lerp(l.front[1], l.back[1], tR), l.back[1]);
-    push(lerp(l.front[0], l.back[0], sideT(lot, h, 0)), l.back[0]);
-    push(l.back[0], l.back[1]);
+    // The garden's outline but its frontage on the street, each edge from where the walls start (the return walls'
+    // line, behind the house's front: the front yard stays open) back
+    const f = gardenFrame(lot);
+    const ss = h ? sideStart(h) : 4;
+    const world = (p: Pt): Pt => [f.o[0] + f.u[0] * p[0] + f.v[0] * p[1], f.o[1] + f.u[1] * p[0] + f.v[1] * p[1]];
+    const ring = behind(f, ss);
+    for (let i = 0; i < ring.length; i++) {
+      const [a, b] = [ring[i], ring[(i + 1) % ring.length]];
+      // (the line across at the return walls' depth is theirs, with its gates: not walled again here)
+      if (Math.abs(a[1] - ss) < 1e-6 && Math.abs(b[1] - ss) < 1e-6) continue;
+      push(world(a), world(b));
+    }
     // The returns from the house's sides to the lot's side lines, each with its gate
     if (h) {
       const y = YARDS.find((q) => q.house === h.id)!;
       for (const g of y.gates) {
-        const f = gardenFrame(lot);
-        const [a0, a1] = across(f, g.v);
+        const [a0, a1] = acrossG(f, g.v);
         // (which side: the gate nearer the lot's left or right line)
         const leftSide = Math.abs(g.u0 - (a0 + 0.02)) < Math.abs(g.u1 - (a1 - 0.02));
         const [ua, ub] = leftSide ? [a0, h.parts.reduce((m, p) => (g.v >= p.v0 && g.v <= p.v1 ? Math.min(m, p.u0) : m), Infinity)] : [h.parts.reduce((m, p) => (g.v >= p.v0 && g.v <= p.v1 ? Math.max(m, p.u1) : m), -Infinity), a1];
         if (!Number.isFinite(ua) || !Number.isFinite(ub) || ub - ua < 0.2) continue;
         const span = ub - ua;
-        out.push({ a: toWorld(h, ua, g.v), b: toWorld(h, ub, g.v), gate: [(g.u0 - ua) / span, (g.u1 - ua) / span] });
+        const [ra, rb] = [toWorld(h, ua, g.v), toWorld(h, ub, g.v)];
+        // (one return a side: a garden narrow there can give both gates the same one)
+        if (out.some((w) => distTo([w.a, w.b], lerp(ra, rb, 0.5)) < 0.15)) continue;
+        out.push({ a: ra, b: rb, gate: [(g.u0 - ua) / span, (g.u1 - ua) / span] });
       }
     }
   }

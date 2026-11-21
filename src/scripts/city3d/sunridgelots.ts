@@ -166,173 +166,297 @@ export const LOTS: Lot[] = baked('sun-lots', BUILT ? undefined : () => {
 });
 
 
-/* ---------- The gardens grown into the land behind (docs/suburb-plan.md Phase 8) ---------- */
+/* ---------- The gardens: each block's land divided among its lots (docs/suburb-plan.md Phase 8) ---------- */
 
 /**
- * Each lot's garden grown into the land the lots left behind them (the owner: "move the fences to suit the wasted
- * space"): the same front (so the house, its frame and its yard's front don't move), its back corners pushed deeper
- * along its sides and spread out along its back, a little at a time and every lot in turn, as long as the garden stays
- * convex, inside its block, back from every street's sidewalk, off the club's, park's and school's land and the
- * footpath, out of every other garden, and no nearer the land's edge than the perimeter wall's line (a garden that
- * reaches it backs onto that wall). Back-to-back gardens meet on one line, pie-shaped ones fill the wedges between
- * them. The houses read `LOTS`; the yards and their walls these (sunyards.ts).
+ * The land behind the lots divided among them as a subdivision's is (the owner: "move the fences to suit the wasted
+ * space ... take full creative control and do what is needed to make it a realistic design and layout"): every bit of
+ * a block goes to the row of the street it's nearest (so back-to-back rows meet on one rear fence along the block's
+ * middle, and at a corner the two streets' rows meet on its diagonal), and in that row to the lot it lies behind,
+ * square to the street (each lot's side fences straight back from the street, fanned round a curve as a pie-shaped
+ * lot's are; a gap between two lots' fronts split down its middle). Kept off: the amenities' land in the lot's own
+ * block (with a margin where the lot wasn't laid within it), the footpath, every other street's sidewalk, and the land's
+ * edge nearer than the perimeter wall's line (a garden reaching it backs onto that wall); no deeper than `DEEP`. Each
+ * lot's own ground is always its own. A garden's outline is traced by walking straight back from points along its
+ * frontage until the land is another's (a few corners, its rear fence following the block's middle).
  */
-export const GROW = { deep: 26, spread: 16, front: 10 } as const;
-/** How far a garden keeps back from a street's sidewalk (its own street's but at its front) */
+export interface Garden {
+  id: string;
+  block: string;
+  street: string;
+  /** Its outline (world x, z): along its frontage, then round the back */
+  outline: Pt[];
+}
+/** How deep a garden reaches from its street at most, how far it keeps from other streets' sidewalks and from the amenities' land */
+export const DEEP = 30;
 const STREET_CLEAR = 0.6;
+const KEEP_CLEAR = 0.6;
+/** How far past its first and last lot a row reaches along its street */
+const ROW_REACH = 3;
 
-const segCross = (a: Pt, b: Pt, c: Pt, d: Pt) => {
-  const o = (p: Pt, q: Pt, r: Pt) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
-  return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
-};
-/** Twice the signed area of an outline */
-const signed = (o: Pt[]) => o.reduce((t, p, i) => t + p[0] * o[(i + 1) % o.length][1] - o[(i + 1) % o.length][0] * p[1], 0);
-/** Is an outline convex, wound the given way */
-function convex(o: Pt[], sign: number) {
-  for (let i = 0; i < o.length; i++) {
-    const [a, b, c] = [o[i], o[(i + 1) % o.length], o[(i + 2) % o.length]];
-    if (((b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0])) * sign < -1e-9) return false;
+/** A run's length along and the point and inward normal at a distance along it */
+interface RunInfo {
+  pts: Pt[];
+  cum: number[];
+  len: number;
+  street: string;
+  /** Its lots' fronts as distances along it, in order, and their index in `LOTS` */
+  lots: { s0: number; s1: number; k: number }[];
+}
+function project(r: RunInfo, p: Pt) {
+  let best = { d: Infinity, s: 0 };
+  for (let i = 1; i < r.pts.length; i++) {
+    const [a, c] = [r.pts[i - 1], r.pts[i]];
+    const [dx, dz] = [c[0] - a[0], c[1] - a[1]];
+    const ll = dx * dx + dz * dz || 1;
+    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / ll));
+    const d = Math.hypot(a[0] + dx * t - p[0], a[1] + dz * t - p[1]);
+    if (d < best.d) best = { d, s: r.cum[i - 1] + t * Math.sqrt(ll) };
   }
-  return true;
+  return best;
 }
 
-/** How far a garden keeps off the club's, park's and school's land and the footpath (their lamps and fences stand at their edges) */
-const KEEP_CLEAR = 0.6;
-function grow(): Lot[] {
-  const lots: Lot[] = LOTS.map((l) => ({ ...l, back: [[...l.back[0]], [...l.back[1]]] as [Pt, Pt] }));
+function divide(): Garden[] {
   const blockOf = new Map(SUN_BLOCKS.map((b) => [b.id, b]));
   const pad = (r: Rect): Rect => [r[0] - KEEP_CLEAR, r[1] - KEEP_CLEAR, r[2] + KEEP_CLEAR, r[3] + KEEP_CLEAR];
-  // (each lot's: the land kept off with its margin, or without it where the lot was laid within the margin already)
-  // (only the amenity land whose middle is in the lot's own block: the school's and the club's rectangles reach across
-  // the loop into the blocks outside it, where the late lots are)
-  const ownZones = (l: Lot) => {
-    const b = blockOf.get(l.block)!;
-    return ZONES.filter((z) => inside(b.poly, [(z.rect[0] + z.rect[2]) / 2, (z.rect[1] + z.rect[3]) / 2])).map((z) => z.rect);
-  };
-  const keepOf = LOTS.map((l) => [...ownZones(l), PATH].map((r) => (overlap(outline(l), rectPoly(pad(r))) ? rectPoly(r) : rectPoly(pad(r)))));
-  const landOf = new Map(SUN_BLOCKS.map((b) => [b.id, b.runs.filter((r) => !r.street).map((r) => r.pts)]));
-  const streetsOf = new Map(SUN_BLOCKS.map((b) => [b.id, b.runs.filter((r) => r.street).map((r) => r.pts)]));
-  const boxes = lots.map((l) => box(outline(l)));
-  const sideDir = LOTS.map((l) => [0, 1].map((i) => {
-    const [f, b] = [l.front[i], l.back[i]];
-    const d = Math.hypot(b[0] - f[0], b[1] - f[1]) || 1;
-    return [(b[0] - f[0]) / d, (b[1] - f[1]) / d] as Pt;
-  }));
-  const used = lots.map(() => ({ deep: [0, 0], spread: [0, 0], front: [0, 0] }));
-  // (each front corner's place along its street's run: it slides along the sidewalk's edge, keeping off the run's ends)
-  const runOf = LOTS.map((l) => {
-    const b = blockOf.get(l.block)!;
-    const r = b.runs.find((q) => q.street === l.street && distTo(q.pts, l.front[0]) < 0.05 && distTo(q.pts, l.front[1]) < 0.05)!;
-    const cum = [0];
-    for (let i = 1; i < r.pts.length; i++) cum.push(cum[i - 1] + Math.hypot(r.pts[i][0] - r.pts[i - 1][0], r.pts[i][1] - r.pts[i - 1][1]));
-    const sOf = (p: Pt) => {
-      let best = { d: Infinity, s: 0 };
-      for (let i = 1; i < r.pts.length; i++) {
-        const [a, c] = [r.pts[i - 1], r.pts[i]];
-        const [dx, dz] = [c[0] - a[0], c[1] - a[1]];
-        const ll = dx * dx + dz * dz || 1;
-        const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / ll));
-        const d = Math.hypot(a[0] + dx * t - p[0], a[1] + dz * t - p[1]);
-        if (d < best.d) best = { d, s: cum[i - 1] + t * Math.sqrt(ll) };
-      }
-      return best.s;
-    };
-    return { pts: r.pts, cum, s: [sOf(l.front[0]), sOf(l.front[1])], len: cum[cum.length - 1] };
-  });
-  const sign = LOTS.map((l) => Math.sign(signed(outline(l))));
-  const ok = (k: number, cand: Lot) => {
-    const o = outline(cand);
-    if (!convex(o, sign[k])) return false;
-    const b = blockOf.get(cand.block)!;
-    const [f0, b0, b1, f1] = o;
-    // (its sides and back inside the block: their corners and middles in it, no edge of the block across them)
-    // (a front moved along its street: its middle on the block, the whole of its lot still in it, so the house, the
-    // driveway and the yard's front stay inside the garden)
-    const frontMoved = cand.front.some((p, i) => Math.hypot(p[0] - LOTS[k].front[i][0], p[1] - LOTS[k].front[i][1]) > 1e-9);
-    const pts: Pt[] = [b0, b1, mid(b0, b1), mid(f0, b0), mid(f1, b1), ...(frontMoved ? [mid(f0, f1)] : [])];
-    if (!pts.every((p) => inside(b.poly, p))) return false;
-    if (frontMoved && !outline(LOTS[k]).every((p) => inside(o, p) || distTo(o, p, true) < 0.02)) return false;
-    // (the sides from a little in from the front: the front's corners are on the block's edge)
-    const inFrom = (a: Pt, c: Pt): Pt => {
-      const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
-      return [a[0] + ((c[0] - a[0]) / l) * 0.3, a[1] + ((c[1] - a[1]) / l) * 0.3];
-    };
-    for (const [p, q] of [[inFrom(f0, b0), b0], [b0, b1], [b1, inFrom(f1, b1)], ...(frontMoved ? [[inFrom(f0, f1), inFrom(f1, f0)]] : [])] as [Pt, Pt][])
-      for (let i = 0; i < b.poly.length; i++) if (segCross(p, q, b.poly[i], b.poly[(i + 1) % b.poly.length])) return false;
-    // (no nearer the land's edge than the wall's line; back from the streets' sidewalks: or, where a lot was laid
-    // nearer than that, no nearer than it was)
-    const was = outline(lots[k]);
-    const back: [Pt, Pt][] = [
-      [b0, was[1]],
-      [b1, was[2]],
-      [mid(b0, b1), mid(was[1], was[2])],
-    ];
-    const keeps = (runs: Pt[][], clear: number) => runs.every((r) => back.every(([p, q]) => distTo(r, p) >= clear - 1e-6 || distTo(r, p) >= distTo(r, q) - 1e-6));
-    if (!keeps(landOf.get(cand.block)!, WALL.in) || !keeps(streetsOf.get(cand.block)!, STREET_CLEAR)) return false;
-    // (off the amenities' land and the footpath, out of every other garden)
-    if (keepOf[k].some((z) => overlap(o, z))) return false;
-    const bx = box(o);
-    for (let j = 0; j < lots.length; j++) {
-      if (j === k) continue;
-      const q = boxes[j];
-      if (q[0] > bx[2] || q[2] < bx[0] || q[1] > bx[3] || q[3] < bx[1]) continue;
-      if (overlap(o, outline(lots[j]))) return false;
+  const inRect = (r: Rect, p: Pt) => p[0] > r[0] && p[0] < r[2] && p[1] > r[1] && p[1] < r[3];
+  const lotPolys = LOTS.map((l) => outline(l));
+  const lotBoxes = lotPolys.map((o) => box(o));
+  // Each block's rows: its street runs that have lots, their lots in order along them
+  const rows = new Map<string, RunInfo[]>();
+  for (const b of SUN_BLOCKS) {
+    const list: RunInfo[] = [];
+    for (const r of b.runs) {
+      if (!r.street) continue;
+      const cum = [0];
+      for (let i = 1; i < r.pts.length; i++) cum.push(cum[i - 1] + Math.hypot(r.pts[i][0] - r.pts[i - 1][0], r.pts[i][1] - r.pts[i - 1][1]));
+      const info: RunInfo = { pts: r.pts, cum, len: cum[cum.length - 1], street: r.street, lots: [] };
+      LOTS.forEach((l, k) => {
+        if (l.block !== b.id || l.street !== r.street) return;
+        if (distTo(r.pts, l.front[0]) > 0.05 || distTo(r.pts, l.front[1]) > 0.05) return;
+        const [a, c] = [project(info, l.front[0]).s, project(info, l.front[1]).s];
+        info.lots.push({ s0: Math.min(a, c), s1: Math.max(a, c), k });
+      });
+      info.lots.sort((p, q) => p.s0 - q.s0);
+      if (info.lots.length) list.push(info);
     }
-    return true;
+    rows.set(b.id, list);
+  }
+  // What's kept off, a block at a time and a lot at a time
+  const streetRuns = new Map(SUN_BLOCKS.map((b) => [b.id, b.runs.filter((r) => r.street).map((r) => r.pts)]));
+  const landRuns = new Map(SUN_BLOCKS.map((b) => [b.id, b.runs.filter((r) => !r.street).map((r) => r.pts)]));
+  const keepOf = LOTS.map((l) => {
+    const b = blockOf.get(l.block)!;
+    const own = ZONES.filter((z) => inside(b.poly, [(z.rect[0] + z.rect[2]) / 2, (z.rect[1] + z.rect[3]) / 2])).map((z) => z.rect);
+    return [...own, PATH].map((r) => (overlap(outline(l), rectPoly(pad(r))) ? r : pad(r)));
+  });
+  /** Whose land a point is (an index in `LOTS`), or -1 */
+  const owner = (bid: string, p: Pt): number => {
+    const b = blockOf.get(bid)!;
+    if (!inside(b.poly, p)) return -1;
+    // (a lot's own ground is its own)
+    for (let k = 0; k < LOTS.length; k++) {
+      const q = lotBoxes[k];
+      if (p[0] < q[0] || p[0] > q[2] || p[1] < q[1] || p[1] > q[3]) continue;
+      if (inside(lotPolys[k], p)) return k;
+    }
+    if (landRuns.get(bid)!.some((r) => distTo(r, p) < WALL.in)) return -1;
+    // The row of the nearest street with houses there (a row reaches only a little past its first and last lot: the
+    // land beside a stretch of street with none goes to the rows behind it), and in it the lot it lies behind (a gap
+    // between fronts split down its middle)
+    let row: RunInfo | null = null;
+    let at = { d: Infinity, s: 0 };
+    for (const r of rows.get(bid)!) {
+      const pr = project(r, p);
+      if (pr.s < r.lots[0].s0 - ROW_REACH || pr.s > r.lots[r.lots.length - 1].s1 + ROW_REACH) continue;
+      if (pr.d < at.d) [row, at] = [r, pr];
+    }
+    if (!row || at.d > DEEP) return -1;
+    // (past the row's first and last lot, back from its own street's sidewalk too: no garden runs along a sidewalk)
+    if ((at.s < row.lots[0].s0 || at.s > row.lots[row.lots.length - 1].s1) && at.d < STREET_CLEAR) return -1;
+    // (other streets' sidewalks kept clear, the ones with no lots too)
+    if (streetRuns.get(bid)!.some((r) => r !== row!.pts && distTo(r, p) < STREET_CLEAR)) return -1;
+    const L = row.lots;
+    let k = L[L.length - 1].k;
+    for (let i = 0; i < L.length; i++) {
+      const next = L[i + 1];
+      if (!next || at.s < (L[i].s1 + next.s0) / 2) {
+        k = L[i].k;
+        break;
+      }
+    }
+    // (within the row, the nearest of the lots around where it projects: land behind the inside of a bend is shared
+    // out among the lots there, not all given to the one at the bend)
+    let best = { k, d: Infinity };
+    const j = L.findIndex((q) => q.k === k);
+    for (let m = Math.max(0, j - 3); m <= Math.min(L.length - 1, j + 3); m++) {
+      const q = L[m].k;
+      const d = inside(lotPolys[q], p) ? 0 : distTo(lotPolys[q], p, true);
+      if (d < best.d - 1e-9) best = { k: q, d };
+    }
+    k = best.k;
+    if (keepOf[k].some((r) => inRect(r, p))) return -1;
+    return k;
   };
-  for (const step of [0.4, 0.1, 0.03])
-    for (let moved = true; moved; ) {
-      moved = false;
-      for (let k = 0; k < lots.length; k++) {
-        const l = lots[k];
-        const tries: { i: 0 | 1; kind: 'deep' | 'spread' | 'front' }[] = [
-          { i: 0, kind: 'deep' },
-          { i: 1, kind: 'deep' },
-          { i: 0, kind: 'spread' },
-          { i: 1, kind: 'spread' },
-          { i: 0, kind: 'front' },
-          { i: 1, kind: 'front' },
-        ];
-        for (const { i, kind } of tries) {
-          if (used[k][kind][i] + step > GROW[kind] + 1e-9) continue;
-          if (kind === 'front') {
-            // (the front corner along the run, away from the other: the first back, the second on)
-            const R = runOf[k];
-            const sNew = R.s[i] + (i === 0 ? -1 : 1) * (used[k].front[i] + step);
-            if (sNew < END || sNew > R.len - END) continue;
-            const front = [...l.front] as [Pt, Pt];
-            front[i] = along(R.pts, R.cum, sNew).p;
-            const cand = { ...l, front };
-            if (!ok(k, cand)) continue;
-            lots[k] = cand;
-            boxes[k] = box(outline(cand));
-            used[k].front[i] += step;
-            moved = true;
-            continue;
+  // Each block on a grid, every cell's owner; each lot's garden the outline round its cells (the piece holding its
+  // own ground), smoothed into straight fence lines
+  const out: Garden[] = LOTS.map((l) => ({ id: l.id, block: l.block, street: l.street, outline: outline(l) }));
+  for (const b of SUN_BLOCKS) {
+    const ks = LOTS.map((l, k) => (l.block === b.id ? k : -1)).filter((k) => k >= 0);
+    if (!ks.length) continue;
+    const [x0, z0, x1, z1] = box(b.poly);
+    const W = Math.ceil((x1 - x0) / RES) + 3;
+    const H = Math.ceil((z1 - z0) / RES) + 3;
+    const ox = x0 - RES;
+    const oz = z0 - RES;
+    const cell = new Int32Array(W * H).fill(-1);
+    for (let jz = 0; jz < H; jz++) for (let ix = 0; ix < W; ix++) cell[jz * W + ix] = owner(b.id, [ox + ix * RES, oz + jz * RES]);
+    for (const k of ks) {
+      // (the cells joined to its own ground: flood from its middle)
+      const c = outline(LOTS[k]).reduce((a, p) => [a[0] + p[0] / 4, a[1] + p[1] / 4], [0, 0]);
+      const start = Math.round((c[1] - oz) / RES) * W + Math.round((c[0] - ox) / RES);
+      if (cell[start] !== k) continue;
+      const mine = new Uint8Array(W * H);
+      const stack = [start];
+      mine[start] = 1;
+      while (stack.length) {
+        const q = stack.pop()!;
+        const ix = q % W;
+        const jz = (q - ix) / W;
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const [a, e] = [ix + dx, jz + dz];
+          if (a < 0 || e < 0 || a >= W || e >= H) continue;
+          const t = e * W + a;
+          if (!mine[t] && cell[t] === k) {
+            mine[t] = 1;
+            stack.push(t);
           }
-          const p = l.back[i];
-          const other = l.back[1 - i];
-          let d: Pt;
-          if (kind === 'deep') d = sideDir[k][i];
-          else {
-            const len = Math.hypot(p[0] - other[0], p[1] - other[1]) || 1;
-            d = [(p[0] - other[0]) / len, (p[1] - other[1]) / len];
-          }
-          const back = [...l.back] as [Pt, Pt];
-          back[i] = [p[0] + d[0] * step, p[1] + d[1] * step];
-          const cand = { ...l, back };
-          if (!ok(k, cand)) continue;
-          lots[k] = cand;
-          boxes[k] = box(outline(cand));
-          used[k][kind][i] += step;
-          moved = true;
         }
       }
+      const ring = contour(mine, W, H).map(([a, e]): Pt => [ox + a * RES, oz + e * RES]);
+      if (ring.length < 4) continue;
+      // (smoothed into fence lines; a corner the tracing left outside the block brought back onto its edge, a hair in)
+      const smooth = holding(simplify(dp(ring, 0.3), 0.1), outline(LOTS[k])).map((q): Pt => (inside(b.poly, q) ? q : pullIn(b.poly, q)));
+      out[k] = { id: LOTS[k].id, block: LOTS[k].block, street: LOTS[k].street, outline: smooth.map((q) => [+q[0].toFixed(3), +q[1].toFixed(3)] as Pt) };
     }
-  const r4 = (p: Pt): Pt => [+p[0].toFixed(4), +p[1].toFixed(4)];
-  return lots.map((l) => ({ ...l, front: l.front.map(r4) as [Pt, Pt], back: l.back.map(r4) as [Pt, Pt] }));
+  }
+  return out;
 }
-const mid = (a: Pt, b: Pt): Pt => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+/** An outline with any of the given points the smoothing left outside it put back on it (at its nearest edge): a garden holds its whole lot */
+function holding(ring: Pt[], pts: Pt[]): Pt[] {
+  let out = ring;
+  for (const p of pts) {
+    if (inside(out, p) || distTo(out, p, true) < 0.05) continue;
+    let [best, at] = [Infinity, 0];
+    for (let i = 0; i < out.length; i++) {
+      const d = distTo([out[i], out[(i + 1) % out.length]], p);
+      if (d < best) [best, at] = [d, i];
+    }
+    out = [...out.slice(0, at + 1), p, ...out.slice(at + 1)];
+  }
+  return out;
+}
+/** A point outside an outline brought onto its nearest edge, a hair inside it */
+function pullIn(poly: Pt[], p: Pt): Pt {
+  let best = { d: Infinity, q: p, n: [0, 0] as Pt };
+  for (let i = 0; i < poly.length; i++) {
+    const [a, c] = [poly[i], poly[(i + 1) % poly.length]];
+    const [dx, dz] = [c[0] - a[0], c[1] - a[1]];
+    const ll = dx * dx + dz * dz || 1;
+    const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / ll));
+    const q: Pt = [a[0] + dx * t, a[1] + dz * t];
+    const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    if (d < best.d) best = { d, q, n: [q[0] - p[0], q[1] - p[1]] };
+  }
+  const l = Math.hypot(best.n[0], best.n[1]) || 1;
+  return [best.q[0] + (best.n[0] / l) * 0.04, best.q[1] + (best.n[1] / l) * 0.04];
+}
+/** The grid the blocks are divided on (a quarter of a tile) */
+const RES = 0.25;
+/**
+ * The outline round the set cells of a grid (marching squares, through the cells' edges' middles), the longest ring:
+ * grid coordinates
+ */
+function contour(m: Uint8Array, W: number, H: number): Pt[] {
+  const at = (x: number, z: number) => (x >= 0 && z >= 0 && x < W && z < H ? m[z * W + x] : 0);
+  // Segments between the middles of a square's sides, keyed by their ends
+  const next = new Map<string, Pt>();
+  const key = (p: Pt) => `${p[0]},${p[1]}`;
+  for (let z = -1; z < H; z++)
+    for (let x = -1; x < W; x++) {
+      const [a, b, c, d] = [at(x, z), at(x + 1, z), at(x + 1, z + 1), at(x, z + 1)];
+      const code = a * 8 + b * 4 + c * 2 + d;
+      if (code === 0 || code === 15) continue;
+      const T: Pt = [x + 0.5, z];
+      const R: Pt = [x + 1, z + 0.5];
+      const B: Pt = [x + 0.5, z + 1];
+      const L: Pt = [x, z + 0.5];
+      // (each edge with the set side on its left, so the rings run one way round)
+      const table: Record<number, [Pt, Pt][]> = {
+        1: [[B, L]], 2: [[R, B]], 3: [[R, L]], 4: [[T, R]], 5: [[T, L], [B, R]], 6: [[T, B]], 7: [[T, L]],
+        8: [[L, T]], 9: [[B, T]], 10: [[L, B], [R, T]], 11: [[R, T]], 12: [[L, R]], 13: [[B, R]], 14: [[L, B]],
+      };
+      const segs = table[code];
+      for (const [p, q] of segs) next.set(key(p), q);
+    }
+  let best: Pt[] = [];
+  const used = new Set<string>();
+  for (const [k0, q0] of next) {
+    if (used.has(k0)) continue;
+    const ring: Pt[] = [];
+    let k = k0;
+    let q: Pt | undefined = q0;
+    while (q && !used.has(k)) {
+      used.add(k);
+      ring.push(q);
+      k = key(q);
+      q = next.get(k);
+    }
+    if (ring.length > best.length) best = ring;
+  }
+  return best;
+}
+/** A closed outline simplified (Douglas-Peucker, split at its two furthest points) */
+function dp(o: Pt[], tol: number): Pt[] {
+  const run = (pts: Pt[]): Pt[] => {
+    if (pts.length < 3) return pts;
+    let [far, at] = [0, 0];
+    for (let i = 1; i < pts.length - 1; i++) {
+      const d = distTo([pts[0], pts[pts.length - 1]], pts[i]);
+      if (d > far) [far, at] = [d, i];
+    }
+    if (far <= tol) return [pts[0], pts[pts.length - 1]];
+    return [...run(pts.slice(0, at + 1)).slice(0, -1), ...run(pts.slice(at))];
+  };
+  const i0 = 0;
+  let i1 = 0;
+  let far = 0;
+  for (let i = 0; i < o.length; i++) {
+    const d = Math.hypot(o[i][0] - o[0][0], o[i][1] - o[0][1]);
+    if (d > far) [far, i1] = [d, i];
+  }
+  const a = run(o.slice(i0, i1 + 1));
+  const b = run([...o.slice(i1), o[i0]]);
+  return [...a.slice(0, -1), ...b.slice(0, -1)];
+}
+/** A closed outline with the points that hardly bend it left out (within `tol` of the line past them) */
+function simplify(o: Pt[], tol: number): Pt[] {
+  let pts = o;
+  for (let changed = true; changed && pts.length > 4; ) {
+    changed = false;
+    for (let i = 0; i < pts.length && pts.length > 4; i++) {
+      const [a, p, c] = [pts[(i + pts.length - 1) % pts.length], pts[i], pts[(i + 1) % pts.length]];
+      // (and a spike: the outline turning back on itself at a point)
+      const [ux, uz, vx, vz] = [a[0] - p[0], a[1] - p[1], c[0] - p[0], c[1] - p[1]];
+      const spike = (ux * vx + uz * vz) / ((Math.hypot(ux, uz) * Math.hypot(vx, vz)) || 1) > Math.cos((25 * Math.PI) / 180);
+      if (distTo([a, c], p) < tol || spike) {
+        pts = pts.filter((_, j) => j !== i);
+        changed = true;
+      }
+    }
+  }
+  return pts;
+}
 const box = (o: Pt[]): Rect => [Math.min(...o.map((p) => p[0])), Math.min(...o.map((p) => p[1])), Math.max(...o.map((p) => p[0])), Math.max(...o.map((p) => p[1]))];
-/** The gardens: each lot's front and its back grown (baked with the lots) */
-export const GARDENS: Lot[] = baked('sun-gardens', BUILT ? undefined : grow);
+/** The gardens: each lot's share of its block (baked with the lots) */
+export const GARDENS: Garden[] = baked('sun-gardens', BUILT ? undefined : divide);
