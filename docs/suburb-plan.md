@@ -319,6 +319,13 @@ These are my recommendations, made so the plan is complete; any can change.
        line (never further in, where the highway's bend brings Sunridge's
        sidewalk close), so the bands outside the wall no longer run ruler
        straight. The wall itself stays where it is (nothing moves).
+     - *The ground between the yards:* Sunridge's blocks lie in dry desert
+       grass (world.ts's `dryGrass` lot, `COVER.dryGrass`) instead of the
+       city's lawn green, so the wedges between the turning circles' lots,
+       the strips behind the yards and the bare corners read as ground, and
+       the watered turf stands out from it (the park's lawn and the
+       school's field draw their own grass over it).
+     - *The back yards' lawns* soft-edged as the front's (`islandOf()`).
      - *Left:* the sidewalk's square corners at the junctions (the street
        plan's blocks), the wide bare lawn by the school, and the strip up
        Palm Court's back (too narrow to bend).
