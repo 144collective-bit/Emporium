@@ -207,3 +207,30 @@ test('the gardens (Phase 8): each block divided among its lots, each garden roun
     }
   assert.ok(used / free > 0.9, `${((used / free) * 100).toFixed(1)}% of the free land in gardens`);
 });
+
+test('the back lawns (Phase 8): inside their garden, clear of its walls, under no pool, most growing past the old back yard', () => {
+  let bigger = 0;
+  let n = 0;
+  for (const y of YARDS) {
+    if (!y.lawn) continue;
+    assert.ok(!y.pool, `${y.house}: a lawn and a pool`);
+    const h = houses.get(y.house)!;
+    const g = gardens.get(h.lot)!;
+    const world = (p: Pt): Pt => [h.o[0] + h.u[0] * p[0] + h.v[0] * p[1], h.o[1] + h.u[1] * p[0] + h.v[1] * p[1]];
+    for (let i = 0; i < 4; i++)
+      for (let k = 0; k <= 4; k++) {
+        const [a, b] = [y.lawn[i], y.lawn[(i + 1) % 4]];
+        const p = world([a[0] + ((b[0] - a[0]) * k) / 4, a[1] + ((b[1] - a[1]) * k) / 4]);
+        assert.ok(inside(g.outline, p), `${y.house}: its lawn out of its garden at ${p.map((x) => x.toFixed(1))}`);
+      }
+    const [u0, , u1, v1] = y.back;
+    const area = (q: Pt[]) => Math.abs(q.reduce((s, p, i) => s + p[0] * q[(i + 1) % 4][1] - q[(i + 1) % 4][0] * p[1], 0)) / 2;
+    // (never smaller than the back yard's own patch of lawn was, from the patio to the back wall)
+    const before = (u1 - u0 - 0.6) * (v1 - 0.3 - (y.patio[3] + 0.2));
+    assert.ok(area(y.lawn) > before * 0.95, `${y.house}: its lawn smaller than the back yard's`);
+    n++;
+    if (area(y.lawn) > before * 1.15) bigger++;
+  }
+  assert.ok(n > YARDS.length * 0.4, `only ${n} back lawns`);
+  assert.ok(bigger > n * 0.3, `only ${bigger} of ${n} lawns grown into their gardens`);
+});

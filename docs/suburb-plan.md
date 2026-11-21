@@ -387,13 +387,19 @@ These are my recommendations, made so the plan is complete; any can change.
      (`holding()`), brought back inside its block (`pullIn()`): a `Garden`,
      its `outline`. The houses keep their lots (`LOTS`); the yards read the
      gardens in the house's frame (sunyards.ts `gardenFrame()`, `acrossG()`,
-     `depthG()`, `behind()`): the walls on every garden edge behind the
-     return walls (the front yard stays open, and the lot's own), shared
+     `depthG()`): the walls on every garden edge but the open front yard
+     (the lot's own ground in front of the return walls) and the first
+     tile back from the street, so a garden reaching along a side street
+     beside its house is walled along it, as a corner lot's is; shared
      fences once (trimmed where another wall stands), one return a side;
-     the whole garden behind the returns in gravel (`Yard.inner`); a pool
-     no further from the house than in a lot's own yard. Tested: each
-     garden holds its lot and stays in its block, none overlaps another,
-     and over 90% of the free land is in a garden.
+     the whole garden in gravel under the front's ground (`Yard.inner`), so
+     no land beside a house is left bare; the back lawn grown out to the
+     garden's walls where it spreads behind the house (`Yard.lawn`, the
+     biggest quad that keeps a path's width in, never smaller than the old
+     back yard's patch); a pool no further from the house than in a lot's
+     own yard. Tested: each garden holds its lot and stays in its block,
+     none overlaps another, over 90% of the free land is in a garden, and
+     every back lawn is inside its garden.
    - **More houses** (the owner's call for the field east of the school):
      the amenities' land is drawn as rough rectangles, and the school's
      and the club's reached across the loop into the blocks outside it, so

@@ -49,8 +49,10 @@ export interface Yard {
   islands: Pt[][];
   plants: Plant[];
   bins: { u: number; v: number };
-  /** Everything inside the walls behind the returns (the garden from the return walls back), in the frame (Phase 8) */
+  /** The whole garden, in the frame (Phase 8): in gravel under the front yard's ground, its side yards and its back */
   inner: Pt[];
+  /** The back lawn's quad where there's no pool (Phase 8: out to the garden's walls, a path's width in, as wide as the garden grows behind the house; its edges softened when drawn), in the frame */
+  lawn?: Pt[];
   /** The back yard: across (u0..u1) and from the house (v0) to the back wall (v1) */
   back: [number, number, number, number];
   patio: [number, number, number, number];
@@ -356,6 +358,36 @@ function lay(): Yard[] {
         pool = { u0: pu - pw / 2, u1: pu + pw / 2, v0: pb - 0.5 - pd, v1: pb - 0.5 };
       }
     }
+    // The back lawn: filling the garden behind the patio, its back edge following the back wall's line, a path's width in
+    let lawn: Pt[] | undefined;
+    if (!pool && depth > 2) {
+      const b0 = patio[3] + 0.2;
+      const IN = 0.45;
+      const ok = (q: Pt[]) => {
+        for (let i = 0; i < 4; i++)
+          for (let k = 0; k < 8; k++) {
+            const p = lerp(q[i], q[(i + 1) % 4], k / 8);
+            if (!inside(f.poly, p) || edgeDist(f.poly, p) < IN - 0.05) return false;
+          }
+        return q[1][0] - q[0][0] > 1.5 && q[2][1] - q[1][1] > 1.2 && q[3][1] - q[0][1] > 1.2;
+      };
+      const reach = Math.min(b0 + 10, Math.max(...f.poly.map((q) => q[1])));
+      const tries: Pt[][] = [];
+      // (its sides out to the side walls where the garden spreads behind, or a little further in)
+      for (const s of [1, 1.6, 2.4])
+        for (const at of [0.6, 0.4, 0.2]) {
+          const [f0, f1] = acrossG(f, b0 + 0.05);
+          const [m0, m1] = acrossG(f, b0 + (reach - b0) * at);
+          const [l0, r0] = [f0 + IN * s, f1 - IN * s];
+          const [l1, r1] = [Math.max(f0, m0) + IN * s, Math.min(f1, m1) - IN * s];
+          const back = (u: number) => Math.min(b0 + 10, depthG(f, u) - IN * s * 1.5);
+          tries.push([[l0, b0], [r0, b0], [r1, back(r1)], [l1, back(l1)]]);
+        }
+      tries.push([[bu0 + 0.3, b0], [bu1 - 0.3, b0], [bu1 - 0.3, backV - 0.3], [bu0 + 0.3, backV - 0.3]]);
+      // (the biggest that fits, or the back yard's own patch if that's bigger)
+      const fits = [...tries.slice(0, -1).filter(ok), tries[tries.length - 1]];
+      lawn = fits.reduce((a, b) => (area(b) > area(a) ? b : a));
+    }
     const extras: Yard['extras'] = [];
     const room = (u: number, v: number, r: number) => u > bu0 + r && u < bu1 - r && v > patio[3] + r && v < backV - r && !(pool && u > pool.u0 - r - 0.3 && u < pool.u1 + r + 0.3 && v > pool.v0 - r - 0.3);
     for (const kind of ['shed', 'trampoline', 'swing'] as const) {
@@ -395,7 +427,7 @@ function lay(): Yard[] {
             .filter((isl, k) => fits(isl, inFrom(ground[k])))
         : [];
     const drive = driveOf(h, d0, d1, Math.max(0, Math.min(FLARE, d0 - L(0) - 0.05)), Math.max(0, Math.min(FLARE, R(0) - d1 - 0.05)), edge);
-    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground: ground.map(toEdge), drive, islands, inner: behind(f, ss), plants, bins, back, patio, ramada, grill, pool, extras, gates });
+    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground: ground.map(toEdge), drive, islands, inner: f.poly, lawn, plants, bins, back, patio, ramada, grill, pool, extras, gates });
   }
   return out;
 }
@@ -409,7 +441,9 @@ export interface WallSeg {
   /** A gate across part of it (from and to, along it, 0-1) */
   gate?: [number, number];
 }
-const lerp = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+function lerp(a: Pt, b: Pt, t: number): Pt {
+  return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+}
 function walls(): WallSeg[] {
   const out: WallSeg[] = [];
   const onPerimeter = (a: Pt, b: Pt) => [a, b, lerp(a, b, 0.5)].every((p) => WALL_RUNS.some((r) => distTo(r, p) < 0.8));
@@ -433,17 +467,30 @@ function walls(): WallSeg[] {
   };
   for (const lot of LOTS) {
     const h = houseOf.get(lot.id);
-    // The garden's outline but its frontage on the street, each edge from where the walls start (the return walls'
-    // line, behind the house's front: the front yard stays open) back
+    // The garden's outline walled all round but the open front yard (the lot's own ground in front of the return
+    // walls' line, behind the house's front) and the first tile back from the street: a garden reaching along a side
+    // street beside its house is walled along it, as a corner lot's side wall is
     const f = gardenFrame(lot);
     const ss = h ? sideStart(h) : 4;
     const world = (p: Pt): Pt => [f.o[0] + f.u[0] * p[0] + f.v[0] * p[1], f.o[1] + f.u[1] * p[0] + f.v[1] * p[1]];
-    const ring = behind(f, ss);
-    for (let i = 0; i < ring.length; i++) {
-      const [a, b] = [ring[i], ring[(i + 1) % ring.length]];
-      // (the line across at the return walls' depth is theirs, with its gates: not walled again here)
-      if (Math.abs(a[1] - ss) < 1e-6 && Math.abs(b[1] - ss) < 1e-6) continue;
-      push(world(a), world(b));
+    const lf = frameOf(lot);
+    const loc = (p: Pt): Pt => [(p[0] - lf.o[0]) * lf.u[0] + (p[1] - lf.o[1]) * lf.u[1], (p[0] - lf.o[0]) * lf.v[0] + (p[1] - lf.o[1]) * lf.v[1]];
+    const [lfl, lbl, lbr, lfr] = [loc(lot.front[0]), loc(lot.back[0]), loc(lot.back[1]), loc(lot.front[1])];
+    const side = (a: Pt, b: Pt, v: number) => a[0] + (b[0] - a[0]) * Math.max(0, Math.min(1, (v - a[1]) / (b[1] - a[1] || 1e-9)));
+    const open = (p: Pt) => p[1] < 1 || (p[1] < ss && p[0] > side(lfl, lbl, p[1]) - 0.1 && p[0] < side(lfr, lbr, p[1]) + 0.1);
+    const P = f.poly;
+    for (let i = 0; i < P.length; i++) {
+      const [a, b] = [P[i], P[(i + 1) % P.length]];
+      const n = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.1));
+      let start = -1;
+      for (let k = 0; k <= n; k++) {
+        const walled = k < n && !open(lerp(a, b, (k + 0.5) / n));
+        if (walled && start < 0) start = k;
+        if (!walled && start >= 0) {
+          push(world(lerp(a, b, start / n)), world(lerp(a, b, k / n)));
+          start = -1;
+        }
+      }
     }
     // The returns from the house's sides to the lot's side lines, each with its gate
     if (h) {
@@ -529,7 +576,9 @@ function edgeDist(poly: Pt[], p: Pt) {
   }
   return best;
 }
-const area = (poly: Pt[]) => Math.abs(poly.reduce((s, p, i) => s + p[0] * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * p[1], 0)) / 2;
+function area(poly: Pt[]) {
+  return Math.abs(poly.reduce((s, p, i) => s + p[0] * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * p[1], 0)) / 2;
+}
 /** How far a sprinkler's head keeps from a plant's middle, and the spray's reach either way */
 export const HEAD_CLEAR = 0.6;
 export const REACH = [0.6, 1.8] as const;

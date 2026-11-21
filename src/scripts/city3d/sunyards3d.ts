@@ -181,14 +181,10 @@ function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
 
   // The back yard's ground: decomposed granite to the walls, a patch of lawn in it where there's no pool
   {
-    const [u0, v0, u1, v1] = y.back;
     // (the whole garden inside the walls, its side yards too: Phase 8's gardens are wider and deeper than the yard)
     flat(y.inner, 0.006, DG[(y.groundTone + 1) % DG.length]);
     // (its edges soft, as the front's turf: sunyards.ts `islandOf()`, Phase 7)
-    if (!y.pool && v1 - v0 > 2) {
-      const [a0, a1, b0, b1] = [u0 + 0.3, u1 - 0.3, y.patio[3] + 0.2, v1 - 0.3];
-      flat(islandOf([[a0, b0], [a1, b0], [a1, b1], [a0, b1]], y.house.length * 13 + Math.round(a0 * 7)), 0.011, LAWN);
-    }
+    if (y.lawn) flat(islandOf(y.lawn, y.house.length * 13 + Math.round(y.lawn[0][0] * 7)), 0.011, LAWN);
   }
   // The back yard: its patio, the ramada over it, the grill
   const [pu0, pv0, pu1, pv1] = y.patio;
