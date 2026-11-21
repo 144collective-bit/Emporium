@@ -351,8 +351,22 @@ keep it up to date when what it describes changes.
     lights' glow following the night), each aircraft swapped by its own
     distance from the camera (`aircraftNear()`, by `LOD_EYE`, which
     `updateLods()` keeps), and a fleet's near parts drawn only while one's
-    near (`FAR_FLEETS`, set in `index.ts`; `docs/phone-far-plan.md` Phase
-    2). Desktops draw them as before.
+    near (`docs/phone-far-plan.md` Phase 2). Desktops draw them as before.
+  - Phones' far city (`FAR_PHONE` in `lod.ts`, set in `index.ts` on the low
+    tier; `docs/phone-far-plan.md`): the aircraft above; each place's far
+    form in one piece, its facades flattened to their texture's average
+    colour too (desktops keep them textured); cut-out signs (`occlude()`
+    lists them, `OCCLUDED`) smaller than `SIGN_FAR` (1.5 tiles², as small
+    as the far forms leave out) and whatever's given to `hideFar()` not
+    drawn past `far`, taken off every layer (`layers.mask` 0, the old mask
+    kept in `userData.farMask`) so code showing or hiding them still can,
+    their places worked out every couple of seconds; the places' kept
+    see-through glows not drawn while they're clear (`material.visible`
+    follows `opacity`: a floodlight's glow by day); and the swing bridge,
+    a district of its own, makes its far form as it's built (its span
+    kept). A district loaded later that wants a far form on phones calls
+    `farForm()` itself: the boot's queue (`farQueue`) only takes what's
+    there at the boot.
   - Cars far away (parked and traffic) are their model's far form
     (`farCarGeometry()` in `cars.ts`: the body and cabin outlines
     extruded, block wheels, about a hundred triangles), all in one

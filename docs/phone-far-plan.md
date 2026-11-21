@@ -40,14 +40,12 @@ the ground. Desktops unchanged. Measured before and after each phase with the sa
 2. **The aircraft far off, one piece each.** Done (below). On phones, past the tier's `far`, each aircraft (the
    airport's fleets, your own, the hangar's showroom, others' in multiplayer) drawn as its model in one piece
    (`farGeometry()` in aircraft.ts), a fleet's far ones one draw. Up close, as before; desktops as before.
-3. **The landmarks far off, on phones.** Two parts (Phase 1 found the second is the bigger):
-   - their far forms in one piece each, coloured per vertex (`farFormMaterial()`), the textures' average colour baked
-     in: about 55 draws to about 20;
-   - the parts they keep at every distance (glows, beams, washes, bulbs and what moves: the stadium's, the Emporium's,
-     the kart park's, Liberty Bridge's, the pier's, The Trenches', the Signal tower's, the club's, and the
-     Emporium block's own in landmarks.ts and armoury.ts): past `far` on phones, the still ones folded into their far
-     form (its per-vertex glow follows the night as theirs do) and the moving ones' small far detail dropped: about
-     145 draws to about 60.
+3. **The landmarks far off, on phones.** Done (below). Phase 1's survey of what they keep (each landmark's kept
+   meshes and why) found most of it must stay as it is (the Emporium's hologram, Liberty's flames, the club's
+   screens, the pier's rides, the Signal tower's beams, the kart park's big signs): what changed on phones is each
+   place's far form in one piece (facades flattened too), small cut-out signs not drawn past `far`, the kept glows
+   not drawn while they're clear, and a far form for the swing bridge (a district of its own, so it was never in the
+   boot's queue of far forms).
 4. **The small far parts**, in order of their draws until the aim's reached: the target range (about 17: a far form
    of its own), the traffic (about 26: each model's paint and detail in one mesh on phones), the river's boats (about
    14: lamps and wakes merged per boat), the Docks' moving parts (about 11), the lamps' far glows (about 11),
@@ -118,6 +116,37 @@ The same views and headings as Phase 1, on the phone tier:
 own draws are the measure.) The look: the maintenance hangar's parked airliner from about 45 m, the same camera, with
 Degen 104 m off (drawn far) and 72 m off (drawn near), by day and at night: the far piece's livery, window band and
 stripes as the near model's, its nav lights glowing at night.
+
+## What Phase 3 measured (2026-11-21)
+
+What each landmark keeps at every distance (a survey of its meshes in the page, on the phone tier): cut-out signs kept by their stand-in
+(the kart park's 12, mostly big ones, the Units' 4, the big lots' 3, a few each elsewhere); see-through glows, the
+stadium's six floodlight glows and the club's two at opacity 0 by day but drawn every frame; the hologram, Liberty's
+flames, the club's screens, the pier's rides, the kart park's fans (moving), sparkles; and places with no far form,
+the Units and big lots (rebuilt from the save, so not a snapshot), the swing bridge (46 meshes), the Sky Wheel.
+
+The same views and headings, on the phone tier (the Docks again after the swing bridge's far form):
+
+| View (worst heading) | Phase 1 | After Phase 2 | After Phase 3 |
+| --- | --- | --- | --- |
+| St Aldwyn's churchyard (N) | 599 | 564 | 515 |
+| The Docks' quay (E) | 587 | 546 | 466 |
+| Crestmont Boulevard (W) | 615 | 585 | 537 |
+| The Trenches (N) | 554 | 555 | 552 |
+| Exit 6A, Corner Road (N) | 347 | 334 | 310 |
+
+The swing bridge from the Docks: 40 draws to 7 (its far form and its turning span). The Trenches doesn't move: its
+cost is the outline pass and the town round it, not the landmarks.
+
+The look: the same camera on a build of Phase 2 and of Phase 3, by day and at night. From high over the Docks looking
+across the river to Uptown (616 draws to 484), the towers, the swing bridge's truss, the Sky Wheel, the waterfront, the
+lit windows and the searchlights the same; only what moves (the helicopter, the blimp, the boats) elsewhere. At the
+village and the Docks' quay the near buildings fill the view: the same, and most of the far draws there are of things
+behind them (nothing culls what's hidden).
+
+Where the aim stands: Phase 4's kinds (about 60 to 70 draws a view) would leave the open views about 430 to 470, not
+350. The biggest share left is what's hidden behind near buildings, and the outline pass (about 80 to 200 within
+145 m).
 
 ## The owner's decisions (2026-11-20)
 
