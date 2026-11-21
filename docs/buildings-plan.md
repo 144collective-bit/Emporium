@@ -76,7 +76,7 @@ picture is unchanged (the textures made at build time are the same).
 Measured before and after (`docs/blend-shots/buildings-before/`,
 `buildings-after/`): see "Numbers" below.
 
-### Phase 2: the rest of downtown (built, waiting on the owner's sign-off)
+### Phase 2: the rest of downtown (built, signed off by the owner, 2026-11-21)
 
 Every infill building in `INFILL`; the fronts' side walls where they face
 a street or a lane.
