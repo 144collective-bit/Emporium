@@ -27,6 +27,7 @@ import { onMansion } from './mansions';
 import { HOTEL_PALMS, inHotelDrive, onSite } from './crestsites';
 import { underSpur } from './metro';
 import { onLand } from './crestland';
+import { onWalk } from './crestwalk';
 
 type Pt = [number, number];
 
@@ -205,7 +206,9 @@ function planting(): { oaks: Plant[]; scrub: Plant[] } {
         }
       }
     }
-  return { oaks, scrub };
+  // (off the Ridgeline Walk, its benches, lookouts and the Belvedere: the premium upgrade's Phase 5; taken out once
+  // laid, so nothing else moves: an oak's trunk well clear of the gravel, scrub a little)
+  return { oaks: oaks.filter((o) => !onWalk(o.x, o.z, 1.2)), scrub: scrub.filter((b) => !onWalk(b.x, b.z, 0.5)) };
 }
 /**
  * The hills' own planting, laid the first time it's asked for: by the landscape's sites that draw it (landscape3d.ts, in

@@ -7,7 +7,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { LEISURE_IDLE, LEISURE_PEOPLE, RIDE, RIDERS, RIDE_LOOP, STROLL, rideAt, roadTop, strollAt, ASTERLY_TABLES, type RidePose } from '../src/scripts/city3d/crestleisure';
-import { BELVEDERE_BENCH, BELVEDERE_BENCHES, BENCH, BENCHES, GLASS_FOUNTAIN, GLASS_PATH, LOOKOUTS, WALK, WALK_POINTS } from '../src/scripts/city3d/crestwalk';
+import { BELVEDERE_BENCH, BELVEDERE_BENCHES, BENCH, BENCHES, GLASS_FOUNTAIN, GLASS_PATH, LOOKOUTS, WALK, WALK_L, WALK_POINTS, stepAt } from '../src/scripts/city3d/crestwalk';
 import { ASTERLY, BELVEDERE, GLASSHOUSE } from '../src/scripts/city3d/crestsites';
 import { ESTATES, toWorld as estateAt } from '../src/scripts/city3d/estates';
 import { MANSIONS, toWorld as mansionAt } from '../src/scripts/city3d/mansions';
@@ -172,7 +172,11 @@ test('the walkers: on the walk, on its gravel, up on one side and down the other
   for (let t = 0; t < 1200; t += 0.25) {
     strollAt(t * STROLL.pace, m0);
     strollAt((t + 0.25) * STROLL.pace, m1);
-    assert.ok(Math.hypot(m1.x - m0.x, m1.z - m0.z) < 0.3 && Math.abs(m1.y - m0.y) < 0.15, `a walker jumps at ${t}`);
+    // (a step's rise up or down on a flight, else smooth)
+    assert.ok(Math.hypot(m1.x - m0.x, m1.z - m0.z) < 0.3 && Math.abs(m1.y - m0.y) < 0.3, `a walker jumps at ${t}`);
+    const d = (t * STROLL.pace) % (2 * WALK_L);
+    const st = stepAt(d < WALK_L ? d : 2 * WALK_L - d);
+    if (st) assert.ok(Math.abs(m0.y - st.top) < 1e-9, 'a walker on a flight off its tread');
   }
 });
 

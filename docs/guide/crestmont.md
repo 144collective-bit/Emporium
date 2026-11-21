@@ -299,3 +299,13 @@ keep it up to date when what it describes changes.
   `CREST_RECT` as Crestmont's (crowdlook.ts `CREST_EAST`), so the walk's and
   the glasshouse's people dress as its own; a rider's id holds `cyclist`
   for their kit. Phase 8's people (`crestlife.ts`) stay the boot's.
+  The upgrade's polish pass: nothing grows or lies on the walk (crestwalk.ts
+  `onWalk(x, z, margin)`, a grid of the walk, its branch, the Belvedere's
+  round, the lookouts and the benches, which landscape.ts's oaks and scrub
+  and crestcover.ts's drifts and rocks keep off); the steps are solid
+  blocks, each from the higher end's tread down into the lower end's ground
+  (`stepAt(d)`, `walkGround()`: the walk's ground is the lower of the hills'
+  height and the grass as drawn), the walkers on their treads; the handrail
+  is drawn in runs, none across the Belvedere's paving. Phones: the steps
+  and the lookouts' rail posts near only, every other walk lamp, the Art Deco
+  houses' portholes plainer.
