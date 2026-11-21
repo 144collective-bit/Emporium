@@ -162,7 +162,7 @@ Each with the owner's sign-off.
    The boot grew 0.3 KB more (0.9 KB in all since Phase 0: 768.7 of
    770 KB). Shots of the fitting room and the character screen at 1440
    and 375 wide: `docs/characters-shots/slimewhale-phase2.png`.
-3. **Checked and written up** (built, 2026-11-21). With SlimeWhale's
+3. **Checked and written up** (built and signed off by the owner, 2026-11-21). With SlimeWhale's
    look saved, the city booted at 320, 375, 768, 1024 and 1440 wide and a
    phone on its side (812 x 375): the walker, the fitting room's Face and
    closed Gear tabs and the character screen, no sideways scroll, nothing
@@ -200,6 +200,6 @@ crowd unless the owner asks.
 
 Planned and signed off (2026-11-21). Phase 1 built and signed off
 (2026-11-21: the likeness as it is). Phase 2 built and signed off
-(2026-11-21). Phase 3 built (2026-11-21), waiting on the owner's sign-off:
-then SlimeWhale's done, and the next character follows "Adding the next
-character".
+(2026-11-21). Phase 3 built and signed off
+(2026-11-21): SlimeWhale is done. The next character follows "Adding the
+next character" (the owner's call, 2026-11-21: on to the next picture).

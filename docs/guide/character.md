@@ -150,8 +150,8 @@ keep it up to date when what it describes changes.
 - **New characters** (the owner's call, 2026-11-21) are planned in
   `docs/characters-plan.md`: Degen's body with a head of its own sculpted
   after the owner's art, worn as a ready-made look in the fitting room
-  (the first, SlimeWhale). Phases 1-3 built (the head, wearing him, the
-  checks): `heads.ts` (DOM-free: the
+  (the first, SlimeWhale, done and signed off). Phases 1-3 built (the head,
+  wearing him, the checks): `heads.ts` (DOM-free: the
   characters, `CHARACTER_IDS`, and their heads, `SLIME_HEAD` and
   `slimeWhale(q)`; its own chunk, `loadHeads()` in character.ts, which
   hands it `headModel()` and the wardrobe its parts, `useHeads()`: keep it
