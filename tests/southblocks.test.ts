@@ -5,12 +5,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARCH_X, BLOCKS, BLOCK_SOLIDS, BRIDGES, BRIDGE_CLEAR, BUNKER, CORES, COURTS, DECKS, DESIRE_LINES, GALLERIES, GRASS, PLAY,
-  BLOCKS_RECT, PIERS, RAMPART, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
+  BLOCKS_RECT, CAGE, CAGES, PIERS, RAMPART, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
 } from '../src/scripts/city3d/southblocks';
 import { EDGE_Z, FOOTPATHS, LOT9_EDGE, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, UNDERHILL } from '../src/scripts/city3d/south';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { cross, distTo, inside, selfCrossings } from '../src/scripts/city3d/streetfaces';
 import { southLift } from '../src/scripts/city3d/southground';
+import { MOUTH_PATHS } from '../src/scripts/city3d/circus';
 
 const STREETS = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp');
 /** How far a point is from the nearest street's sidewalk's outer edge (negative: on the street or its sidewalk) */
@@ -287,4 +288,18 @@ test('the bridges\' piers (docs/brutalist-plan.md polish): under their spans, on
       for (const f of FOOTPATHS) assert.ok(distTo(f.pts, q) > PATH_HALF + 0.5, `${p.id} on ${f.id}`);
     }
   }
+});
+
+test("the towers' stair cages (docs/brutalist-plan.md): off the streets, the footpaths, the Circus's paths and the blocks", () => {
+  assert.ok(CAGES.length >= 10);
+  for (const g of CAGES)
+    for (let a = 0.4; a <= CAGE.len; a += 0.25)
+      for (let b = -CAGE.half; b <= CAGE.half + 1e-6; b += CAGE.half / 4) {
+        const p = g.at(a, b);
+        const at = `${g.id} at ${p[0].toFixed(1)}, ${p[1].toFixed(1)}`;
+        assert.ok(offStreet(p) > 0.3, `${at}: on a sidewalk`);
+        for (const f of FOOTPATHS) assert.ok(distTo(f.pts, p) > PATH_HALF, `${at}: on ${f.id}`);
+        for (const m of MOUTH_PATHS) assert.ok(distTo(m, p) > PATH_HALF, `${at}: on a subway's path`);
+        assert.ok(!inBlock(p), `${at}: in a block`);
+      }
 });

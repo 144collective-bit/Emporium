@@ -405,7 +405,7 @@ export const CAGE = { len: 5, half: 1.1, land: 0.9, gap: 0.05 };
  * room for one and keep their lifts alone) */
 const CAGE_FACES: Record<string, '+d' | '-d' | '+r' | '-r'> = {
   'rampart-0': '+d', 'rampart-1': '+d', 'rampart-2': '+d', 'rampart-3': '+d', 'linnet-b': '-r', 'marten-b': '+r',
-  'wren-a': '-r', 'wren-b': '+r', 'sorrel-a': '-r', 'sorrel-b': '-r', 'fennel-b': '+r', 'teasel-b': '+r',
+  'wren-a': '-r', 'wren-b': '+r', 'sorrel-a': '-r', 'sorrel-b': '-r', 'fennel-b': '-r', 'teasel-b': '+r',
 };
 export const CAGES: Cage[] = CORES.filter((c) => CAGE_FACES[c.id]).map((c) => {
   const d: Pt = [Math.cos(c.rot), Math.sin(c.rot)];
