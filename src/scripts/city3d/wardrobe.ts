@@ -11,6 +11,7 @@ import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.j
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { bottomsFor, coversEyes, shoesFor, type Bottoms, type EyeStyle, type FaceGear, type HeadShape, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
 import { EYE_Y as HERO_EYE_Y, HEAD_TOP as HERO_HEAD_TOP, handParts, headFront, headGeometry, headRow, inHead } from './body';
+import type { CharacterId, HeadPart } from './heads';
 import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
 
 /* ---------- Outfits ---------- */
@@ -89,6 +90,11 @@ export interface Outfit {
   shades?: boolean;
   /** The head's proportions, unmasked (the standard if not said) */
   headShape?: HeadShape;
+  /**
+   * A character's head instead of Degen's (docs/characters-plan.md; single figures only): nothing is worn over it, so
+   * his head, face, hair, hats, eyewear, face gear, the shades' chain and the hood up are left off while it's on
+   */
+  character?: CharacterId;
   /** Hoodie with the hood up (no cap) */
   hood?: boolean;
   backpack?: string;
@@ -5123,9 +5129,43 @@ export function items(q: Detail, hero = false): Item[] {
       pieces: [P('handR', bagBody, '#f0e9dc'), P('handR', bagCord, '#1b1830'), P('handR', bagBand, GOLD, { detail: true })],
     },
     ...(hero ? merch : []),
+    // The characters' heads (docs/characters-plan.md): single figures only, once their chunk is in
+    ...(hero && q >= 2 && heads
+      ? heads.ids.map(
+          (id): Item => ({
+            id: `character-${id}`,
+            when: (o) => o.character === id,
+            pieces: heads!.parts(id, q as 2 | 3).map((h) => P('head', one(h.geos), h.color, { ...(h.shade ? { shade: h.shade } : {}), ...(h.detail ? { detail: true } : {}) })),
+          })
+        )
+      : []),
   ];
-  itemsCache[key] = all;
-  return all;
+  // With a character's head on, Degen's own head and everything worn over a head is off, whatever the outfit says
+  const out = all.map((it): Item => {
+    const own = DEGEN_HEAD_ITEMS(it.id);
+    // (until the heads' chunk is in, he's Degen as he is: never a figure with no head)
+    return { ...it, when: (o) => (o.character && heads ? !own && it.when(headless(o)) : it.when(o)) };
+  });
+  itemsCache[key] = out;
+  return out;
+}
+
+/** The characters' heads, once their chunk is in (heads.ts; `loadHeads()` in character.ts) */
+let heads: { ids: readonly CharacterId[]; parts: (id: CharacterId, q: 2 | 3) => HeadPart[] } | null = null;
+/** Hand the wardrobe the characters' heads (their chunk is in): the single figures' items are made again with them */
+export function useHeads(h: NonNullable<typeof heads>) {
+  heads = h;
+  delete itemsCache['2h'];
+  delete itemsCache['3h'];
+}
+/** Degen's own head: the head and its balaclava, the face's ink, the hair (docs/characters-plan.md) */
+const DEGEN_HEAD_ITEMS = (id: string) => id === 'head' || id === 'mask' || id === 'features' || id.startsWith('hair-');
+/**
+ * An outfit as a character's head wears it: no hat, helmet, face gear, shades or chain, the hood down (nothing is
+ * worn over it: the owner's call), and unmasked, so the balaclava's pieces are off too. The outfit itself is untouched.
+ */
+export function headless(o: Outfit): Outfit {
+  return { ...o, cap: undefined, beanie: undefined, bucket: undefined, hardhat: undefined, helmet: undefined, faceGear: undefined, hood: undefined, chain: undefined, face: true, shades: undefined, headShape: undefined };
 }
 
 /**

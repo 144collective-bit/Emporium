@@ -150,7 +150,18 @@ keep it up to date when what it describes changes.
 - **New characters** (the owner's call, 2026-11-21) are planned in
   `docs/characters-plan.md`: Degen's body with a head of its own sculpted
   after the owner's art, worn as a ready-made look in the fitting room
-  (the first, SlimeWhale). Planned, not started.
+  (the first, SlimeWhale). Phase 1 built: `heads.ts` (DOM-free: the
+  characters, `CHARACTER_IDS`, and their heads, `SLIME_HEAD` and
+  `slimeWhale(q)`; its own chunk, `loadHeads()` in character.ts, which
+  hands it `headModel()` and the wardrobe its parts, `useHeads()`: keep it
+  importing nothing of the boot's but three.js, or the bundler splits the
+  boot's chunks), drawn from a `HeadDef` by `headModel()` in body.ts
+  (Degen's `DEGEN_HEAD`); worn by `Outfit.character` as one item
+  (`character-slimewhale`, single figures only), every other item asked
+  about the outfit as `headless()` makes it (nothing over the head; Degen's
+  own head items off). Tested in `tests/heads.test.ts`; the lab shows him
+  with `?anim&outfit=hoodie&wear=character:slimewhale`. Not in the fitting
+  room yet (Phase 2).
 - **The suit's tailoring** (the owner's call, after the clothing plan) is
   planned in `docs/tailoring-plan.md`: the suit's tailoring detail
   (buttons, the breast welt, stitching, sleeve buttons, the vent, the

@@ -47,36 +47,48 @@ it):
 
 ## How it's built
 
-- **A head is data.** A new DOM-free file, `heads.ts`, holds `HEADS`: each
-  character's head as rows (height, half-width, front, back, centre,
-  superellipse power: the same `Row` as `HEAD_ROWS` in body.ts) plus its
-  parts (eyes, mouth, ears, ink, hair shell). `headGeometry()` in body.ts
-  takes the rows to use (Degen's by default), so the lofting, the rings
-  and the detail levels are the ones Degen's head already has. SlimeWhale's
-  rows: a high power for the boxy section, a flat top, a back cut flat, a
-  jaw row as wide as the cheeks.
-- **The parts** are pieces in `items()` in wardrobe.ts on the `head` joint,
-  weighted as Degen's head is (`weigh()`), so they move with the head bone:
-  - `head-<id>`: the skull and neck tube in the `head` colour key (the skin);
-    the neck tube runs down into the hoodie's collar as Degen's does, so
-    `hoodDown`, the collars (`NECKS`) and the headphones keep fitting.
-  - `eyes-<id>`: three domes (a squashed sphere each, seated in the face),
-    a fixed lime colour; their pupils and glints laid a millimetre off
-    (`features`-style ink).
-  - `lips-<id>`: a rounded rim (a stadium swept round the mouth's outline)
-    in the lime, the slit a dark strip just inside it.
-  - `ears-<id>`, `hair-<id>` (the buzz shell from the new head's own
-    outline, as `hairShell()` builds Degen's), `ink-<id>` (the smirk).
-  - Degen's `head`, `mask`, `features`, every `hair-<cut>` and every hat,
-    shades, face gear and chain item are off while a character's head is on.
+- **A head is data** (built, Phase 1). `body.ts`'s head builder takes any
+  head (`headModel(def)`: a `HeadDef` is its rows (height, half-width,
+  front, back, centre, superellipse power: the `Row` of `HEAD_ROWS`), the
+  features pushed out of its front and the heights of its rings by detail
+  level); Degen's is `DEGEN_HEAD`, and `headFront()`, `headRow()`,
+  `inHead()` and `headGeometry()` are his as before. A new DOM-free file,
+  `heads.ts` (on `DOM_FREE`), holds the characters (`CHARACTER_IDS`) and
+  their heads, in a chunk of its own loaded the first time a character is
+  worn (`loadHeads()` in character.ts: it hands the chunk body.ts's
+  `headModel()`, `setHeadModel()`, and the wardrobe its parts, `useHeads()`;
+  the chunk imports nothing of the boot's but three.js, so the bundler
+  leaves the boot's chunks alone: the boot grew 0.6 KB, the chunk is
+  2.5 KB; until it's in, a figure asked for a character is Degen as he is): SlimeWhale's `SLIME_HEAD` (`SLIME` its model), the neck
+  rows Degen's, so every collar fits it as it fits his; then a square jaw
+  whose underside is as slim as Degen's under the chin (a nod clears the
+  hood rolled down), straight sides (power 4), a flat face with a muzzle a
+  touch forward round the mouth, a flat top.
+- **The parts** (`slimeWhale(q)` in heads.ts, by what colours them) are one
+  item, `character-slimewhale`, in `items()` in wardrobe.ts (single figures
+  only), on the `head` joint and weighted as Degen's head is (`weigh()`):
+  the skull and the big ears in the `skin` key (the ears' folds a shade
+  darker); the three eyes (squashed spheres sunk into the brow, the outer
+  two turned to follow the face round, `slimeEyes()`) and the lips (a
+  capsule across the muzzle, bent round the face at every height,
+  `alongFace()`) in `SLIME_LIME`; the pupils (small dots a little up and in,
+  as in the art), the slit along the lips' front and the smirk in
+  `SLIME_INK`; glints in white (`detail`); the buzz (a shell over the crown
+  and back from its own hairline, from the head's own outline) in the
+  `hair` key.
+- **Nothing over the head:** with `Outfit.character` set, every item is
+  asked about the outfit as `headless()` makes it (no hat, helmet, face
+  gear, shades or chain, the hood down, unmasked) and Degen's own head
+  items (`head`, `mask`, `features`, `hair-<cut>`) are off. The outfit
+  itself (what's saved) is untouched.
 - **No new draw calls.** Every part is on the plain material, coloured per
   vertex, on the figure's one `SkinnedMesh` (`createDegen()`).
 - **Detail:** level 3 (desktop single figures) and 2 (phones) only; the
   crowd never wears a character's head (levels 0 and 1 aren't built). The
   domes and the lip rim take fewer segments on phones. The figure stays
   under `BUDGET` in `tests/wardrobe.test.ts` (40k / 18k triangles).
-- **The look:** a new field `Look.head` (`'degen'` or a character's id,
-  `HEAD_IDS` in profile-data.ts). `cleanLook()` keeps looks saved before it
+- **The look:** a new field `Look.character` (`null` for Degen, or a
+  character's id from `CHARACTER_IDS`; the outfit's is `Outfit.character`). `cleanLook()` keeps looks saved before it
   as Degen and anything unknown as Degen (the game server checks the same).
   With a character's head on, `lookOutfit()` leaves the hat, hood up,
   eyewear, face gear, shades and chain off **without changing what's
@@ -97,27 +109,32 @@ it):
   Face zoom aims at his head) and the hologram. The first-person hands take
   the tone as they do now. Other players would see him through their
   profile's look (multiplayer is off on degenemporium.com).
-- **Tests** (`tests/heads.test.ts`): the head closed and its neck inside
-  every top's collar (and the hood down's roll); the eyes and lips seated
-  on the face, not sunk in it or floating; the ink a millimetre off; the
-  hair clear of the head; nothing on the head bone pokes through the
-  hoodie through the keyed poses, emotes and the animator's run; the
-  triangle budget at both levels; `cleanLook()`'s migration (no `head`,
-  unknown `head`, a character's head with a hat saved); `lookOutfit()`
-  dropping the hat, hood, shades and face gear. `npm run smoke` before and
-  after.
+- **Tests** (`tests/heads.test.ts`, Phase 1): his item on single figures
+  only, nothing of Degen's head or over a head while it's on (the outfit
+  untouched); Degen's head built as it was; the neck rows Degen's; the eyes
+  seated and bulging, wider together than the face; the lips touching the
+  face, no deeper than their thickness; the ink never inside the head; the
+  buzz clear of the head, close over the crown; his jaw clear of six tops'
+  collars at rest, nodding, looking up and turning; in the hood rolled
+  down, no higher up his head than Degen's own chin goes there (Degen's chin
+  tucks into it on a deep nod too: both heads sampled on one grid); the
+  triangle budget at both levels. Phase 2 adds `cleanLook()`'s migration
+  (no `character`, an unknown one, a character with a hat saved) and
+  `lookOutfit()`. `npm run smoke` before and after.
 
 ## The phases
 
 Each with the owner's sign-off.
 
-1. **The head, in the lab.** `heads.ts`, `headGeometry()` taking rows, the
-   SlimeWhale parts as items, seen only in the lab
-   (`?anim&wear=head:slimewhale`). Shots front, side, three-quarter and
-   running, desktop and phone detail, beside the owner's picture, for the
-   owner to sign off the likeness before anything reaches the fitting room.
-   Tests for the geometry and the budget.
-2. **Wearing him.** `Look.head`, `cleanLook()` and its migration,
+1. **The head, in the lab** (built, 2026-11-21; waiting on the owner's
+   sign-off). `heads.ts`, `headModel()`, the SlimeWhale item, seen only in
+   the lab:
+   `?anim&prog=idle&cam=free&orbit=0.6,0.08,0.55&at=0,0.8,0&outfit=hoodie&wear=character:slimewhale,skin:%23efc4ae,hair:%238c7b6b,top:%231f2436`
+   (`detail=2` the phone's). Shots front, three-quarter, side, back, the
+   phone's detail, the whole figure and running:
+   `docs/characters-shots/slimewhale-phase1.png` (the owner's picture is
+   left out of the repo). Tests for the geometry and the budget.
+2. **Wearing him.** `Look.character`, `cleanLook()` and its migration,
    `lookOutfit()`, the Looks row and the Face tab's card, the Head /
    Eyewear / Gear notes, the hood held down, the character screen.
    Shots of the fitting room and the character screen at the widths.
@@ -130,18 +147,20 @@ Each with the owner's sign-off.
 
 The owner posts the art; we go through it (head, face, hair, clothes,
 real brands to swap for made-up marks, phones); a made-up name; then a
-`HEADS` entry and its parts, a Looks entry and a Face tab card, its line in
+`heads.ts` entry (its `HeadDef` and parts, an id in `CHARACTER_IDS`, its item), a Looks entry and a Face tab card, its line in
 the tests, shots for sign-off. No new draw calls and no change to the
 crowd unless the owner asks.
 
-## Still open
+## Settled (the owner's answers, 2026-11-21)
 
-- **The eyes' and lips' colour:** fixed lime, or a colour row of its own
-  (any colour, made safe by `safeColour()`)? Fixed to start.
-- **On the neck and body:** the headphones and the necklace sit on the
-  collar, not the head; kept on to start unless the owner says otherwise.
-  Bags, the watch and the merch marks are unaffected.
+- **The eyes' and lips' colour:** fixed lime, no colour row.
+- **On the neck and body:** the headphones and the necklace (on the
+  collar, not the head) stay available with a character's head. Bags, the
+  watch and the merch marks are unaffected.
+- **The reference picture** stays out of the repo (it's a photo); it's used
+  only for the side-by-side sign-off shots.
 
 ## Status
 
-Planned (2026-11-21), waiting on the owner's sign-off to start Phase 1.
+Planned and signed off (2026-11-21). Phase 1 built (2026-11-21), waiting
+on the owner's sign-off of the likeness before Phase 2.
