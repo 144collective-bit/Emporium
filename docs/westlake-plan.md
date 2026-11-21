@@ -92,7 +92,33 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    the baked file 147 KB (3.6 KB more). The trees, kerbs, edges, walls and
    parterres stay worked out in the browser: baked, they'd add far more to
    the baked file than they take from the boot.
-2. **The paths re-laid.** The Mall as a promenade (a wider paved walk, a
+2. **The paths re-laid** (built, waiting on the owner's sign-off).
+   westlake.ts: the ring walk's corners rounded, each a curve about 10
+   round but those by the civic quarter, and its line wandering a little
+   either side where it has room, straight past the civic quarter and the
+   gates (`RING_WALK`, its lanes `ringLine()`); the Mall's promenade
+   (`promenade`, `PROMENADE_HALF` 3.6, laid over the Mall from City Hall's
+   back to the formal garden, its rounded ends short of both; the Mall
+   itself and the north gate's width unchanged, the snapshot holding the
+   gate): a double avenue either side, benches along its edges, the Mall's
+   beds between the avenue's rows (gardens.ts `MALL_BEDS`), paved and
+   kerbed (`MAIN_WALKS`); the Great Lawn north of the lake (`LAWN`,
+   `onLawn()`: kept open, no trees or rocks on it) with its walk round it
+   (`lawn`) and walks to it (`mall-lawn` from the promenade, `lawn-n` up to
+   the ring, `lawn-lake` down to the loop west of the boathouse), the
+   diagonal meadow walk gone; the ramble through the north-east woods
+   (`ramble-e` from the east gate, `ramble-n` from the ring's north side to
+   the arm's tip, `ramble-w` from the tip to the lawn: narrow gravel, among
+   the rocks); the garden's cross walk to the lawn's walk, its west walk on
+   out of the garden's south wall to the civic quarter's west walk and its
+   east walk on to the walk to the lawn (no dead ends). The lake loop and
+   its walks are as Phase 1 left them, for Phase 3's bridges. Tested: no
+   walk a dead end (but where the civic quarter's walks open onto the
+   square), the lawn open, the promenade's two rows each side and its
+   benches; the lots, the lake and the garden off every walk. The trees are
+   fewer (the lawn cleared): Phase 5 plants them anew. The boot: 774.0 of
+   775 KB.
+   (As planned:) The Mall as a promenade (a wider paved walk, a
    double row of trees each side meeting overhead, benches all along, the
    literary walk's busts swapped for made-up urns). The ring walk's
    corners rounded and its line wandering a little inside the wall. The

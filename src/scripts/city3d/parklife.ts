@@ -31,15 +31,14 @@ import {
   LOOP_OUT,
   MALL,
   PARK_TREES,
-  RING_IN,
   GARDEN_SITE,
   Z0,
   inLake,
   inPark,
-  inset,
   lakeCoreLine,
   nearRock,
   loopLine,
+  ringLine as ringWalkLine,
   onPath,
   type Pt,
 } from './westlake';
@@ -126,10 +125,10 @@ export const LANES: Lane[] = (() => {
   lane('loop-jog-in', loopLine(-0.8), -1, JOG_PACE, 2);
   lane('loop-jog-out', loopLine(0.8), 1, JOG_PACE, 2);
   // The ring walk round the big block (1.2 either side)
-  lane('ring-in', inset(BIG, RING_IN + 0.35), 1, WALK_PACE, 4, [0]);
-  lane('ring-out', inset(BIG, RING_IN - 0.35), -1, WALK_PACE, 4, [3]);
-  lane('ring-jog-in', inset(BIG, RING_IN + 0.85), -1, JOG_PACE, 3);
-  lane('ring-jog-out', inset(BIG, RING_IN - 0.85), 1, JOG_PACE, 2);
+  lane('ring-in', ringWalkLine(-0.35), 1, WALK_PACE, 4, [0]);
+  lane('ring-out', ringWalkLine(0.35), -1, WALK_PACE, 4, [3]);
+  lane('ring-jog-in', ringWalkLine(-0.85), -1, JOG_PACE, 3);
+  lane('ring-jog-out', ringWalkLine(0.85), 1, JOG_PACE, 2);
   // The Mall, up one side and down the other
   lane('mall', thin([[MALL.x, HALL.rear[1] - 1.2], [MALL.x, Z0 + 1.2]], 1.0), 1, WALK_PACE, 6, [3]);
   return out;

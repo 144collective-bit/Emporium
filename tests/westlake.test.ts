@@ -34,11 +34,14 @@ import {
   RIM,
   lakeAt,
   onPath,
+  onLawn,
+  PROMENADE_HALF,
 } from '../src/scripts/city3d/westlake';
 import { PLAN, distToStreet, inPoly, polyArea } from '../src/scripts/city3d/streetplan';
 import { fromHighway, insideHighway } from '../src/scripts/city3d/highway';
 import { RIVER, WALK_W } from '../src/scripts/city3d/layout';
 import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SQUARE } from '../src/scripts/city3d/civic';
 import { STADIUM_SOLIDS } from '../src/scripts/city3d/stadium';
 import { GARDEN_SOLIDS } from '../src/scripts/city3d/gardens';
 import { CITYHALL_SOLIDS, FLAG_SOLIDS, FLANK_SOLIDS, FOUNTAIN_SOLIDS } from '../src/scripts/city3d/civic';
@@ -126,9 +129,10 @@ test('the paths: on the park, off the lake and the garden\'s site (but the Mall 
 
 test('trees, lamps and benches: on the park, off the paths, the water and the garden\'s site', () => {
   // (fewer since the civic quarter took the park's south end, civic.ts, the owner's call: it has trees of its own)
-  // (fewer since the lake's arm reached into the north-east woods: the redesign's Phase 5 plants them anew)
-  assert.ok(PARK_TREES.length > 180, `${PARK_TREES.length} trees`);
-  assert.ok(PARK_TREES.filter((t) => t.clump).length > 150);
+  // (fewer since the lake's arm reached into the north-east woods and the Great Lawn was cleared, the redesign's
+  // Phases 1 and 2: Phase 5 plants the park anew)
+  assert.ok(PARK_TREES.length > 120, `${PARK_TREES.length} trees`);
+  assert.ok(PARK_TREES.filter((t) => t.clump).length > 100);
   const [x0, z0, x1, z1] = GARDEN_SITE;
   const onSite = (p: Pt, m: number) => p[0] > x0 - m && p[0] < x1 + m && p[1] > z0 - m && p[1] < z1 + m;
   for (const t of PARK_TREES) {
@@ -152,7 +156,7 @@ test('trees, lamps and benches: on the park, off the paths, the water and the ga
   for (const b of BENCHES) {
     assert.ok(inPark(b.at, 0.5), `a bench off the park at ${b.at}`);
     assert.ok(!inLake(b.at[0], b.at[1], 0.6), `a bench in the lake at ${b.at}`);
-    for (const q of PATHS) if (q.id !== 'loop' && q.id !== 'mall') assert.ok(distToLine(q.pts, b.at, q.loop) > q.half + 0.6, `a bench on ${q.id} at ${b.at}`);
+    for (const q of PATHS) if (q.id !== 'loop' && q.id !== 'mall' && q.id !== 'promenade') assert.ok(distToLine(q.pts, b.at, q.loop) > q.half + 0.6, `a bench on ${q.id} at ${b.at}`);
   }
 });
 
@@ -204,4 +208,24 @@ test('the rock outcrops: on the park, off the paths and the water, apart, solid,
   }
   for (let i = 0; i < ROCKS.length; i++)
     for (let j = i + 1; j < ROCKS.length; j++) assert.ok(Math.hypot(ROCKS[i].x - ROCKS[j].x, ROCKS[i].z - ROCKS[j].z) > (ROCKS[i].r + ROCKS[j].r) * 0.74, 'two rocks in one');
+});
+
+test('the paths re-laid (docs/westlake-plan.md Phase 2): none a dead end, the Great Lawn open, the promenade\'s double avenue', () => {
+  // Every walk's ends meet another walk or a gate
+  for (const q of PATHS.filter((r) => !r.loop))
+    for (const end of [q.pts[0], q.pts.at(-1)!]) {
+      // (or the civic square, paved edge to edge, which the civic quarter's walks open into)
+      const onSquare = end[0] > SQUARE[0] - 1 && end[0] < SQUARE[2] + 1 && end[1] > SQUARE[1] - 1 && end[1] < SQUARE[3] + 1;
+      const met = onSquare || PATHS.some((r) => r !== q && distToLine(r.pts, end, r.loop) < r.half + q.half + 0.6) || GATES.some((g) => Math.hypot(g.at[0] - end[0], g.at[1] - end[1]) < g.half + 1);
+      assert.ok(met, `${q.id} ends nowhere at ${end.map((v) => v.toFixed(1))}`);
+    }
+  for (const id of ['lawn', 'promenade', 'ramble-e', 'ramble-n', 'ramble-w', 'lawn-lake', 'mall-lawn', 'lawn-n']) assert.ok(PATHS.some((q) => q.id === id), `no ${id}`);
+  // The lawn: no trees, no rocks
+  for (const t of PARK_TREES) assert.ok(!onLawn([t.x, t.z], -1), `a tree on the Great Lawn at ${t.x}, ${t.z}`);
+  for (const k of ROCKS) assert.ok(!onLawn([k.x, k.z], -1), `a rock on the Great Lawn at ${k.x}, ${k.z}`);
+  // The promenade: trees either side in two rows, benches along its edges
+  const prom = PATHS.find((q) => q.id === 'promenade')!;
+  const avenue = PARK_TREES.filter((t) => Math.abs(t.x - prom.pts[0][0]) < PROMENADE_HALF + 6 && t.z < prom.pts[0][1] && t.z > prom.pts[1][1]);
+  for (const side of [-1, 1]) for (const row of [1.75, 4.7]) assert.ok(avenue.filter((t) => Math.abs(t.x - (prom.pts[0][0] + side * (PROMENADE_HALF + row))) < 0.01).length >= 2, `the avenue's row ${side * row}`);
+  assert.ok(BENCHES.filter((b) => Math.abs(Math.abs(b.at[0] - prom.pts[0][0]) - (PROMENADE_HALF + 0.45)) < 0.01).length >= 4, 'benches along the promenade');
 });

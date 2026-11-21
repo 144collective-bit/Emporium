@@ -32,6 +32,11 @@ keep it up to date when what it describes changes.
     (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
     avenue, clumps from a seeded noise; `clump` ones,
     every other, left out on phones), `PARK_LAMPS` and `BENCHES`;
+    the paths as re-laid in `docs/westlake-plan.md` Phase 2 (the rounded,
+    wandering `RING_WALK` and `ringLine()`, the Mall's `promenade` and
+    `PROMENADE_HALF`, the Great Lawn `LAWN`, `onLawn()` and its walks, the
+    ramble's `ramble-e`, `ramble-n`, `ramble-w`; `loopLine()` for the loop's
+    lanes);
     the rock outcrops (`ROCKS`, `ROCK_SOLIDS`, `nearRock()`; drawn by
     westlake3d.ts `registerRocks()`);
     `GARDEN_SITE` (the stadium's old site, kept for the formal garden); step 3's

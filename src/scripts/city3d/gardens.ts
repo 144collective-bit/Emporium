@@ -43,6 +43,7 @@ import {
   JETTY,
   LAKE_C,
   MALL,
+  PROMENADE_HALF,
   PARK_LAMPS,
   PARK_TREES,
   PATHS,
@@ -112,7 +113,7 @@ const ROUND_AT: Pt[] = GARDEN_XS.map((x) => [x, GARDEN_Z]);
 const ROUND_R = 4.6;
 
 /** The main walks, paved, kerbed both sides */
-export const MAIN_WALKS = ['ring', 'loop', 'mall', 'civic-w', 'civic-e'];
+export const MAIN_WALKS = ['ring', 'loop', 'mall', 'promenade', 'civic-w', 'civic-e'];
 export const isMain = (q: ParkPath) => MAIN_WALKS.includes(q.id);
 /** The kerbs: their width (inside the walk's edge) and height over the paving */
 export const KERB = { w: 0.14, h: 0.07 };
@@ -320,16 +321,16 @@ function plantable(p: Pt, r: number, others: Pt[]) {
   if (WALLS.some((w) => w.some((q) => hyp(q, p) < r + WALL.w / 2 + 0.4))) return false;
   return others.every((o) => hyp(o, p) > 2 * r + 0.6);
 }
-/** Oblong beds along the Mall between its trees, either side (x0, z0, x1, z1) */
+/** Oblong beds along the Mall's promenade, between its avenue's two rows and its trees, either side (x0, z0, x1, z1) */
 export const MALL_BEDS: Rect[] = baked('mall-beds', BUILT ? undefined : () => {
   const out: Rect[] = [];
   for (let z = ZS - 3 - 2.25; z > GARDEN_SITE[3] + 3; z -= 4.5)
     for (const side of [-1, 1]) {
-      const x = MALL.x + side * (MALL.half + 1.45);
+      const x = MALL.x + side * (PROMENADE_HALF + 3.2);
       const r: Rect = [x - 0.45, z - 1, x + 0.45, z + 1];
       const clear =
         !inCivic([x, z], 1.5) &&
-        PATHS.every((q) => q.id === 'mall' || distToLine(q.pts, [x, z], q.loop) > q.half + 1.6) &&
+        PATHS.every((q) => q.id === 'mall' || q.id === 'promenade' || distToLine(q.pts, [x, z], q.loop) > q.half + 1.6) &&
         PARK_LAMPS.every(([lx, lz]) => !inRect(r, [lx, lz], 0.4)) &&
         BENCHES.every((b) => !inRect(r, b.at, 0.6)) &&
         PARK_TREES.every((t) => !inRect(r, [t.x, t.z], 0.5));

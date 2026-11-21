@@ -27,7 +27,7 @@ import { BUILT, baked } from './baked';
 import { HIGHWAY_BOX, HIGHWAY_HALF, HIGHWAY_R } from './highway';
 import { RAMP_CLEAR, quadrantEdge } from './viaduct';
 import { BEND_REACH, PARKWAY } from './outer';
-import { BEHIND_Z, EAST_WALK_FROM, HALL, WALK_HALF, WEST_WALK, inCivic } from './civic';
+import { BEHIND_Z, EAST_WALK_FROM, HALL, WALK_HALF, WEST_WALK, WEST_WALK_X, inCivic } from './civic';
 
 export type Pt = [number, number];
 export type Rect = [number, number, number, number];
@@ -536,12 +536,72 @@ function smooth(ctrl: Pt[], step = 1.5): Pt[] {
   return out;
 }
 
-/** The ring walk round the big block */
-export const RING_WALK: Pt[] = inset(BIG, RING_IN);
+/**
+ * The ring walk round the big block (docs/westlake-plan.md Phase 2): its line pulled in from the edge, its corners
+ * rounded (but those by the civic quarter, which it passes close), wandering a little either
+ * side where it has room, straight past the civic quarter and the gates (so their walks meet it as before)
+ */
+const RING_BASE: Pt[] = (() => {
+  // (each corner a curve, about 10 round, but those by the civic quarter, which the ring passes close)
+  const poly = inset(BIG, RING_IN);
+  const n = poly.length;
+  const out: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const [p, v, q] = [poly[(i + n - 1) % n], poly[i], poly[(i + 1) % n]];
+    const [l1, l2] = [Math.hypot(v[0] - p[0], v[1] - p[1]), Math.hypot(q[0] - v[0], q[1] - v[1])];
+    const [d1, d2] = [[(v[0] - p[0]) / l1, (v[1] - p[1]) / l1], [(q[0] - v[0]) / l2, (q[1] - v[1]) / l2]];
+    const turn = Math.acos(Math.max(-1, Math.min(1, d1[0] * d2[0] + d1[1] * d2[1])));
+    if (turn < 0.15 || inCivic(v, 12)) {
+      out.push(v);
+      continue;
+    }
+    const t = Math.min(10 * Math.tan(turn / 2), l1 * 0.45, l2 * 0.45);
+    const [a, b]: Pt[] = [[v[0] - d1[0] * t, v[1] - d1[1] * t], [v[0] + d2[0] * t, v[1] + d2[1] * t]];
+    for (let k = 0; k <= 8; k++) {
+      const u = k / 8;
+      out.push([(1 - u) * (1 - u) * a[0] + 2 * u * (1 - u) * v[0] + u * u * b[0], (1 - u) * (1 - u) * a[1] + 2 * u * (1 - u) * v[1] + u * u * b[1]]);
+    }
+  }
+  return resample(out, 480);
+})();
+export const RING_WALK: Pt[] = (() => {
+  const n = RING_BASE.length;
+  const nrm = normals(RING_BASE);
+  let s0 = 0;
+  const along = RING_BASE.map((p, i) => (i ? (s0 += Math.hypot(p[0] - RING_BASE[i - 1][0], p[1] - RING_BASE[i - 1][1])) : 0));
+  const quiet = (p: Pt) => inCivic(p, 9) || GATES.some((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) < 16);
+  const raw = RING_BASE.map((p) => (quiet(p) ? 0 : 1));
+  // (eased in and out along the walk, so it never jinks)
+  const amp = raw.map((_, i) => {
+    let t = 0;
+    for (let k = -14; k <= 14; k++) t += raw[(i + k + n) % n];
+    return t / 29;
+  });
+  return RING_BASE.map((p, i) => {
+    const w = 1.2 * amp[i] * Math.sin((along[i] / 52) * Math.PI * 2 + 0.7);
+    return [p[0] + nrm[i][0] * w, p[1] + nrm[i][1] * w] as Pt;
+  });
+})();
+/** The Mall's promenade: from City Hall's back door to the formal garden, wide and paved, a double avenue either side */
+export const PROMENADE_HALF = 3.6;
+/** The Great Lawn north of the lake: the open meadow, a walk round it (its middle, its half widths across and along) */
+export const LAWN = { c: [-93, -121] as Pt, rx: 12.5, rz: 25 };
+const LAWN_LINE: Pt[] = Array.from({ length: 120 }, (_, k) => {
+  const a = (-2 * Math.PI * k) / 120;
+  return [LAWN.c[0] + Math.cos(a) * LAWN.rx, LAWN.c[1] + Math.sin(a) * LAWN.rz] as Pt;
+});
+/** Is a point on the Great Lawn (inside its walk, `m` in from it; negative, out past it): kept open, no trees or rocks on it */
+export function onLawn(p: Pt, m = 0) {
+  return ((p[0] - LAWN.c[0]) / (LAWN.rx - m)) ** 2 + ((p[1] - LAWN.c[1]) / (LAWN.rz - m)) ** 2 < 1;
+}
+/** Where the lawn's walk is, at a depth z, on its west (-1) or east (1) side */
+const lawnAt = (side: number, z: number): Pt => [LAWN.c[0] + side * LAWN.rx * Math.sqrt(Math.max(0, 1 - ((z - LAWN.c[1]) / LAWN.rz) ** 2)), z];
 /** Where the lake loop is nearest a point (for paths that join it) */
 const LOOP_LINE = lakeLine(LOOP_OUT, 360);
 /** A line alongside the lake loop's centre, `d` off it (out from the water positive): its people's lanes keep to the path where it folds round the point */
 export const loopLine = (d: number, n = 240): Pt[] => resample(offset(LOOP_LINE, d), n);
+/** A line alongside the ring walk's centre, `d` off it (out towards the park's edge positive): its people's lanes */
+export const ringLine = (d: number, n = 360): Pt[] => resample(offset(RING_WALK, d), n);
 const toLoop = (p: Pt): Pt => LOOP_LINE.reduce((b, q) => (Math.hypot(q[0] - p[0], q[1] - p[1]) < Math.hypot(b[0] - p[0], b[1] - p[1]) ? q : b));
 /** The lake loop's west side where it crosses a line (z): for a walk straight across to it */
 const loopWestAt = (z: number): Pt => {
@@ -549,18 +609,8 @@ const loopWestAt = (z: number): Pt => {
   for (const p of lakeLine(LOOP_OUT, 720)) if (p[0] < LAKE_C[0] && Math.abs(p[1] - z) < Math.abs(best[1] - z)) best = p;
   return [best[0], z];
 };
-/** The meadow walk: from the east gate up north-west across the lawns to the Mall, by the garden */
-const MEADOW = smooth([[X1, -128], [-62, -124], [-84, -106], [-102, -84], [-122, -80], [MALL.x + MALL.half - 0.3, -80]]);
-/** The formal garden's cross walk (the north side's stage 3): its line (z), from the ring walk's west side through the garden to the meadow walk */
+/** The formal garden's cross walk (the north side's stage 3): its line (z), from the ring walk's west side through the garden to the Great Lawn's walk */
 export const GARDEN_Z = (GARDEN_SITE[1] + GARDEN_SITE[3]) / 2;
-const MEADOW_X = (() => {
-  // (where the meadow walk crosses the cross walk's line)
-  for (let i = 1; i < MEADOW.length; i++) {
-    const [a, b] = [MEADOW[i - 1], MEADOW[i]];
-    if ((a[1] - GARDEN_Z) * (b[1] - GARDEN_Z) <= 0 && a[1] !== b[1]) return a[0] + ((b[0] - a[0]) * (GARDEN_Z - a[1])) / (b[1] - a[1]);
-  }
-  return GARDEN_SITE[2];
-})();
 
 /** The formal garden's two walks, either side of the Mall: from the ring walk's north side down to the garden's south wall */
 export const GARDEN_XS = [MALL.x - 17, MALL.x + 17];
@@ -573,12 +623,24 @@ const ringNorthZ = (x: number) => {
   }
   return z;
 };
+/** Where the ring walk crosses an east-west line on its west side (x) */
+const ringWestX = (z: number) => {
+  let x = Infinity;
+  for (let i = 0; i < RING_WALK.length; i++) {
+    const [a, b] = [RING_WALK[i], RING_WALK[(i + 1) % RING_WALK.length]];
+    if ((a[1] - z) * (b[1] - z) <= 0 && a[1] !== b[1]) x = Math.min(x, a[0] + ((b[0] - a[0]) * (z - a[1])) / (b[1] - a[1]));
+  }
+  return x;
+};
 
 export const PATHS: ParkPath[] = [
   { id: 'ring', pts: RING_WALK, half: 1.2, loop: true },
   { id: 'loop', pts: LOOP_LINE, half: 1.1, loop: true },
-  // The Mall, from City Hall's back door (the civic quarter, civic.ts) through the garden's site to the north gate
+  // The Mall: its promenade from City Hall's back door (the civic quarter, civic.ts) to the formal garden, then on
+  // through the garden's site to the north gate
+  // (the promenade laid over the Mall, its rounded ends short of City Hall's lot and the garden's hedges)
   { id: 'mall', pts: [[MALL.x, HALL.rear[1]], [MALL.x, Z0]], half: MALL.half },
+  { id: 'promenade', pts: [[MALL.x, HALL.rear[1] - PROMENADE_HALF - 1.1], [MALL.x, GARDEN_SITE[3] + PROMENADE_HALF + 0.5]], half: PROMENADE_HALF },
   // The civic quarter's walks: from the square up City Hall's west side and round behind it to the Mall, and from
   // the square's north-east corner to the lake loop
   { id: 'civic-w', pts: WEST_WALK, half: WALK_HALF },
@@ -589,11 +651,23 @@ export const PATHS: ParkPath[] = [
   { id: 'lake-se', pts: smooth([[-58, ZS], [-60, -15], toLoop([-62, -19])]), half: 1.1 },
   { id: 'lake-e', pts: smooth([[X1, -28], [-50, -30], [-56, -36], toLoop([-58, -40])]), half: 1.1 },
   { id: 'lake-ne', pts: smooth([[X1, -78], [-54, -76], [-62, -70], toLoop([-66, -66])]), half: 1.1 },
-  // From the east gate up north-west across the lawns to the Mall, by the garden's site
-  { id: 'meadow', pts: MEADOW, half: 1.1 },
-  // The garden's cross walk, from the ring walk through the garden (across the Mall) to the meadow walk
-  { id: 'garden-cross', pts: [[X0 + RING_IN, GARDEN_Z], [MEADOW_X, GARDEN_Z]], half: 1.2 },
-  ...GARDEN_XS.map((x, i): ParkPath => ({ id: i ? 'garden-e' : 'garden-w', pts: [[x, ringNorthZ(x)], [x, GARDEN_SITE[3] - 0.5]], half: 1.1 })),
+  // The Great Lawn's walk round it (docs/westlake-plan.md Phase 2), and the walks to it: from the promenade by the
+  // garden's south-east corner, up from the ring walk's north side, down to the lake by the boathouse
+  { id: 'lawn', pts: LAWN_LINE, half: 1.1, loop: true },
+  { id: 'mall-lawn', pts: smooth([[MALL.x + PROMENADE_HALF - 0.3, -79.5], [-122, -80.5], [-112, -83], [-104.5, -90.5], lawnAt(-1, -104)]), half: 1.1 },
+  { id: 'lawn-n', pts: [lawnAt(0, LAWN.c[1] - LAWN.rz), [LAWN.c[0], ringNorthZ(LAWN.c[0])]], half: 1.1 },
+  { id: 'lawn-lake', pts: smooth([lawnAt(0, LAWN.c[1] + LAWN.rz), [-97, -89], [-100.5, -83], toLoop([-101, -78])]), half: 1.1 },
+  // The ramble: narrow paths winding through the woods and among the rocks north-east of the lake, from the east
+  // gate, the ring walk's north side and the arm's tip to the lawn and the lake
+  { id: 'ramble-e', pts: smooth([[X1, -128], [-52, -127.5], [-60, -131], [-67, -126], [-73, -120], lawnAt(1, -117)]), half: 0.9 },
+  { id: 'ramble-n', pts: smooth([[-66, ringNorthZ(-66)], [-68, -146], [-63.5, -139], [-58.5, -132], [-62, -123], [-58.5, -115], toLoop([-60, -104])]), half: 0.9 },
+  { id: 'ramble-w', pts: smooth([toLoop([-68, -108]), [-72.5, -111.5], lawnAt(1, -108)]), half: 0.9 },
+  // The garden's cross walk, from the ring walk through the garden (across the Mall) to the Great Lawn's walk
+  { id: 'garden-cross', pts: [[ringWestX(GARDEN_Z), GARDEN_Z], lawnAt(-1, GARDEN_Z)], half: 1.2 },
+  // (the west one on out of the garden's south wall down to the civic quarter's west walk, the east one to the walk
+  // from the promenade to the Great Lawn: neither a dead end, docs/westlake-plan.md Phase 2)
+  { id: 'garden-w', pts: [[GARDEN_XS[0], ringNorthZ(GARDEN_XS[0])], [GARDEN_XS[0], GARDEN_SITE[3] - 0.5], ...smooth([[GARDEN_XS[0], GARDEN_SITE[3] + 2], [GARDEN_XS[0] + 0.5, -76], [WEST_WALK_X, BEHIND_Z]])], half: 1.1 },
+  { id: 'garden-e', pts: [[GARDEN_XS[1], ringNorthZ(GARDEN_XS[1])], [GARDEN_XS[1], -80.5]], half: 1.1 },
   // The south-west gate up to the ring walk
   { id: 'sw', pts: [[SW_GATE_X, ZS], [SW_GATE_X, ZS - RING_IN]], half: 1.1 },
 ];
@@ -698,7 +772,7 @@ export const ROCKS: Rock[] = baked('park-rocks', BUILT ? undefined : () => {
     [-56, -96, 6, false],
     [-74, -126, 7, false],
     [-88, -96, 7, false],
-    [-98, -110, 6, false],
+    [-110, -94, 5, false],
     [-80, -138, 6, false],
     [-54, -140, 6, false],
     ...[146, 150, 154].map((deg) => [...lakeAt((deg * Math.PI) / 180, 1.5), 5, true] as [number, number, number, boolean]),
@@ -713,7 +787,7 @@ export const ROCKS: Rock[] = baked('park-rocks', BUILT ? undefined : () => {
       const p: Pt = [x, z];
       // (by the water the stones come to its rim and to the loop's edge)
       const [wet, walk] = shore ? [rr * 0.5 + RIM.w + 0.1, rr * 0.7 + 0.2] : [rr + 0.5, rr + 0.5];
-      if (!inPark(p, 2) || onPath(p, walk) || inLake(x, z, wet) || inCivic(p, 2) || inRect(GARDEN_SITE, p, 2) || nearTerrace(p, rr + 0.5)) continue;
+      if (!inPark(p, 2) || onLawn(p, -1) || onPath(p, walk) || inLake(x, z, wet) || inCivic(p, 2) || inRect(GARDEN_SITE, p, 2) || nearTerrace(p, rr + 0.5)) continue;
       if (inRect(BOATHOUSE.rect, p, rr + 1.5) || inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], p, rr + 1.2)) continue;
       if (GATES.some((g) => Math.hypot(x - g.at[0], z - g.at[1]) < 5)) continue;
       // (a rock may lean on its neighbour, not sit inside it)
@@ -729,6 +803,7 @@ export const ROCK_SOLIDS: [number, number, number, number, number][] = ROCKS.map
 
 export const treeFree = (p: Pt) =>
   !nearRock(p, 1.2) &&
+  !onLawn(p, -1.5) &&
   inPark(p, 1.6) && !inCivic(p, 2.2) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !nearTerrace(p, 1.5) && !inRect(BOATHOUSE.rect, p, 2.2) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
 
 export const PARK_TREES: ParkTree[] = (() => {
@@ -737,8 +812,9 @@ export const PARK_TREES: ParkTree[] = (() => {
   const put = (x: number, z: number, s: number, pine: boolean, clump: boolean) => {
     if (treeFree([x, z]) && out.every((t) => Math.hypot(t.x - x, t.z - z) > 2.2)) out.push({ x, z, s, pine, clump });
   };
-  // The Mall: an avenue of trees either side, evenly spaced
-  for (let z = ZS - 3; z > GARDEN_SITE[3] + 6; z -= 4.5) for (const side of [-1, 1]) put(MALL.x + side * (MALL.half + 1.7), z, 1.05, false, false);
+  // The promenade: a double avenue either side, evenly spaced (docs/westlake-plan.md Phase 2)
+  for (let z = HALL.rear[1] - 2.25; z > GARDEN_SITE[3] + 1; z -= 4.5)
+    for (const side of [-1, 1]) for (const out of [1.75, 4.7]) put(MALL.x + side * (PROMENADE_HALF + out), z, 1.1, false, false);
   // The lawns: clumps where the noise is high, glades where it's low; pines towards the highway
   for (let x = X0; x < X1; x += 3.2)
     for (let z = Z0; z < ZS; z += 3.2) {
@@ -778,7 +854,7 @@ export const PARK_LAMPS: [number, number, number][] = baked('park-lamps', BUILT 
     }
   };
   for (const q of PATHS) {
-    if (q.id === 'mall') along(q, 9, true);
+    if (q.id === 'mall' || q.id === 'promenade') along(q, 9, true);
     else if (q.id === 'loop') along(q, 13, false);
     else if (q.id === 'ring') along(q, 18, false);
     else along(q, 15, false);
@@ -800,10 +876,11 @@ export const BENCHES: { at: Pt; ry: number }[] = baked('park-benches', BUILT ? u
     out.push({ at, ry: Math.atan2(dx, dz) });
   }
   // Along the Mall, either side, facing across it
-  for (let z = ZS - 6; z > GARDEN_SITE[3] + 8; z -= 13.5)
-    for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (MALL.half + 0.45), z], ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
+  // (the promenade's: along its edges between the avenue's trees, a pair every few trees, facing across it)
+  for (let z = HALL.rear[1] - 6.5; z > GARDEN_SITE[3] + 3; z -= 5)
+    for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (PROMENADE_HALF + 0.45), z], ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
   // (none where another path comes in, nor on a terrace)
-  return out.filter((b) => !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6) && !nearRock(b.at, 1)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
+  return out.filter((b) => !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6) && !nearRock(b.at, 1)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || q.id === 'promenade' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
 });
 
 /** Each gate's two stone piers (x0, z0, x1, z1, height): solid, the path between them */
