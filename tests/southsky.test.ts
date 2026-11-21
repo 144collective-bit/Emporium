@@ -157,6 +157,8 @@ test('walked end to end (docs/brutalist-plan.md Phase 2): every link and bridge 
   /** Floor underfoot at each step from `a` to `b` (`y0` to `y1`), someone standing on it; the worst miss */
   const walk = (a: Pt, b: Pt, y0: number, y1: number, what: string) => {
     const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    // (nothing to walk: a bridge ending at a tower's door has no way on past it)
+    if (l < 0.01) return;
     for (let d = 0; d <= l; d += step) {
       const k = d / l;
       const [x, z] = [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
