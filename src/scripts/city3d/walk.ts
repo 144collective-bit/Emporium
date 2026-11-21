@@ -98,6 +98,7 @@ import { MALL_CAMERA, mallWall } from './mallinside';
 import { LINK_CAMERA, linkUp, linkWall } from './malllink';
 import { COURT_CAMERA, courtWall } from './courtinside';
 import { skyUp, skyWall } from './southsky';
+import { visitorsUp, visitorsWall } from './airbase';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
@@ -786,6 +787,8 @@ export function createWalk(d: WalkDeps) {
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
     // Up in Endswood's sky network (southsky.ts): only its railings stop you (off its galleries, bridges and decks)
     if (skyUp(x, z, y)) return skyWall(x, z, y, RADIUS);
+    // On the air base's visitors' centre's stair or up on its terrace (airbase.ts): only their rails stop you
+    if (visitorsUp(x, z, y)) return visitorsWall(x, z, y, RADIUS);
     // Up in Starlight Mall's Skywalk (malllink.ts): only its edges and what stands on your floor stop you
     if (linkUp(x, z, y)) return linkWall(x, z, y, RADIUS);
     // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor; in the Skywalk's

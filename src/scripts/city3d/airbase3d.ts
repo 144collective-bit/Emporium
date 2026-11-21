@@ -2,12 +2,16 @@
  * Northgate Air Base drawn, Phase 1 (docs/military-plan.md; the numbers are airbase.ts): a district loaded as you
  * approach (districts.ts `LAZY_DISTRICTS` id `airbase-camp`), as sites:
  *
- * - the fence, a stretch of each run a site: galvanised posts and a top rail, the chain-link's mesh in the FX layer
- *   (see-through: the owner's pick), and near only the arms leaning out from each post's top with the wire along them;
- * - each gate: its posts, its sliding gate shut, the barrier down outside it (red and white), the guardhouse inside on
- *   its east, the apron from the turning loop to the barrier; the base's name on a low wall by the main gate;
+ * - the wall on the fence's line (Phase 6, the owner's call: the chain-link became a large concrete wall), a stretch of
+ *   each run a site: the precast slab, its footing and its capping; near only the panels' posts, the coiled razor wire
+ *   along the top (not on phones) and the lights on its top facing out (their washes down its outer face at night: one
+ *   mesh, `wallWash()`);
+ * - each gate: the wall's piers either side, its steel sliding gate shut, the barrier down outside it (red and white),
+ *   the guardhouse inside on its east, the apron from the turning loop to the barrier; the base's name on a low wall by
+ *   the main gate;
  * - the parade avenue's asphalt north from the main gate (no traffic till the plan's Phase 4);
- * - the visitors' car park and its drive, and the visitors' centre (a place, coming soon) with its roof's terrace.
+ * - the visitors' car park and its drive, and the visitors' centre (a place, coming soon) with its roof's terrace, over
+ *   the wall's top (Phase 6).
  *
  * The lamps along the fence, at the gates and round the car park are the city's own (airbase.ts `AIRBASE_LAMPS`).
  */
@@ -21,27 +25,35 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import type { Tick } from './world';
 import { site } from './tilework';
 import { COVER, ROAD, STONE } from './palette';
-import { cyl, light } from './airportkit';
-import { buildFx, chainMesh } from './grime';
-import { AVENUE, AVENUE_HALF, BARRIER_Y, FENCE_H, FENCE_RUNS, GATES, GUARDHOUSE_H, LOOP_SHORT, SIGN_WALL, SIGN_WALL_H, VISITORS, VISITORS_DRIVE, VISITOR_CENTRE, VISITOR_CENTRE_H, barrierOf, guardhouseOf, inAirbase, type Gate, BARRACKS, BARRACKS_H, BERM, BERM_H, FLAGPOLES, FLAG_H, GATEHOUSE_H, HELI_HUT, HELI_PADS, HQ, HQ_H, MONUMENT, MOTOR_POOL, MOTOR_SHED, MOTOR_SHED_H, PARADE, RADAR, RANGE, RANGE_HOUSE, SERVICES, SERVICE_ROAD, WALL_GATE, WATCHTOWERS, WATCHTOWER_H, WATER_TOWER, AIRBASE_RECT } from './airbase';
-import { RANGE_LANES, BEAM_L, SWEEP, searchRest } from './airbasedress';
+import { cyl, light, soft } from './airportkit';
+import { AVENUE, AVENUE_HALF, BARRIER_Y, FENCE_H, FENCE_RUNS, FENCE_T, PIER, PIER_H, WALL_CAP, WALL_PANEL, piersOf, GATES, GUARDHOUSE_H, LOOP_SHORT, SIGN_WALL, SIGN_WALL_H, VISITORS, VISITORS_DRIVE, VISITOR_CENTRE, VISITOR_CENTRE_H, VISITOR_LANDING, VISITOR_STAIR, stairY, barrierOf, guardhouseOf, type Gate, BARRACKS, BARRACKS_H, BERM, BERM_H, FLAGPOLES, FLAG_H, GATEHOUSE_H, HELI_HUT, HELI_PADS, HQ, HQ_H, MONUMENT, MOTOR_POOL, MOTOR_SHED, MOTOR_SHED_H, PARADE, RADAR, RANGE, RANGE_HOUSE, SERVICES, SERVICE_ROAD, WALL_GATE, WATCHTOWERS, WATCHTOWER_H, WATER_TOWER, AIRBASE_RECT } from './airbase';
+import { RANGE_LANES, BEAM_L, SWEEP, WALL_LIGHTS, searchRest } from './airbasedress';
 import type { Pt } from './streetplan';
 import type { Rect } from './tiles';
 
 /** This module's address, for the site worker (districts.ts) */
 export const SELF = import.meta.url;
 
-/** A site's stretch of fence, and the posts' spacing */
+/** A site's stretch of wall */
 const PIECE = 30;
-const POST_GAP = 3.5;
-/** The mesh's foot, and where the arms start (the chain-link up to there, the wire above) */
-const MESH_Y = 0.04;
-const ARM_Y = FENCE_H - 0.4;
+/** The wall's capping's depth, and its footing's height */
+const CAP_H = 0.16;
+const FOOT_H = 0.32;
+/** The razor wire's coils: how far apart, how big round, and their middle's height over the capping */
+const COIL_GAP = 0.42;
+const COIL_R = 0.24;
+/** Where the lights hang on the wall's outer face, and how far their wash reaches down it */
+const LIGHT_Y = FENCE_H - 0.42;
 const Y = { apron: 0.024, avenue: 0.026, line: 0.032, park: 0.025, bay: 0.031 };
 
 const STEEL = toon('#8d93a6');
 const STEEL_DARK = toon('#5f6478');
 const WIRE = toon('#4d5163');
+/** The wall's precast concrete, its footing and its panels' posts (a cooler grey than the city's wall, a touch lighter) */
+const PANEL = toon('#aeacbb');
+const FOOT = toon('#858294');
+const PANEL_POST = toon('#9896a8');
+const WALL_LAMP = soft('#fff1d0');
 const ASPHALT = toon(ROAD.asphalt);
 const LINE = toon(ROAD.line);
 const KERB = toon(STONE.kerb);
@@ -106,35 +118,51 @@ function strip(b: Batch, a: Pt, c: Pt, half: number, y: number, m: THREE.Materia
 }
 const rectOf = (pts: Pt[], pad: number): Rect => [Math.min(...pts.map((p) => p[0])) - pad, Math.min(...pts.map((p) => p[1])) - pad, Math.max(...pts.map((p) => p[0])) + pad, Math.max(...pts.map((p) => p[1])) + pad];
 
-/** A stretch of fence from a to c: its posts and top rail, the mesh (into `fx`), near only the arms and the wire */
-function fence(b: Batch, fxb: Batch, a: Pt, c: Pt, low: boolean) {
+/**
+ * A stretch of wall from a to c: the slab, its footing and its capping (every tier; a post at each end closes the
+ * corners where runs meet); near only the panels' posts every `WALL_PANEL`, the lights on its top facing out and (not
+ * on phones) the coiled razor wire along the capping
+ */
+function wall(b: Batch, a: Pt, c: Pt, low: boolean) {
   const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
   const [ux, uz] = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
-  // (which side is out: the arms lean out over it)
-  const mid: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
-  const out = inAirbase(mid[0] - uz, mid[1] + ux) ? -1 : 1;
-  const [nx, nz] = [-uz * out, ux * out];
-  const n = Math.max(1, Math.round(len / POST_GAP));
-  const posts: Pt[] = Array.from({ length: n + 1 }, (_, k) => [a[0] + ((c[0] - a[0]) * k) / n, a[1] + ((c[1] - a[1]) * k) / n]);
-  for (const [x, z] of posts) b.add(new THREE.BoxGeometry(0.08, ARM_Y, 0.08).translate(x, ARM_Y / 2, z), STEEL);
-  bar(b, a, c, ARM_Y - 0.04, 0.05, STEEL);
-  chainMesh(fxb, a, c, MESH_Y, ARM_Y - MESH_Y - 0.06);
+  bar(b, a, c, (FENCE_H - CAP_H) / 2, FENCE_T, PANEL, FENCE_H - CAP_H);
+  bar(b, a, c, FENCE_H - CAP_H / 2, FENCE_T + 2 * WALL_CAP, CONCRETE_DARK, CAP_H);
+  // (the footing: a darker band at the foot, standing a little proud of both faces)
+  bar(b, a, c, FOOT_H / 2, FENCE_T + 0.1, FOOT, FOOT_H);
+  const post = (x: number, z: number, w: number, d: number, h: number) => b.add(new THREE.BoxGeometry(w, h, d).rotateY(-Math.atan2(uz, ux)).translate(x, h / 2, z), PANEL_POST);
+  for (const [x, z] of [a, c]) post(x, z, 0.34, FENCE_T + 0.08, FENCE_H - CAP_H + 0.01);
   if (low) return;
   b.detail(() => {
-    // The arms leaning out at the top, and three strands of wire along them
-    const lean = 0.32;
-    // (each tipped out about the line along the fence: up crossed with out)
-    const tip = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(nz, 0, -nx), Math.atan2(lean, 0.4));
-    for (const [x, z] of posts) b.add(new THREE.BoxGeometry(0.04, 0.5, 0.04).translate(0, 0.25, 0).applyMatrix4(tip).translate(x, ARM_Y, z), STEEL_DARK);
-    for (const k of [0.33, 0.66, 1]) {
-      const [ox, oz, y] = [nx * lean * k, nz * lean * k, ARM_Y + 0.4 * k];
-      bar(b, [a[0] + ox, a[1] + oz], [c[0] + ox, c[1] + oz], y, 0.015, WIRE);
+    // The panels' posts between the ends
+    const n = Math.max(1, Math.round(len / WALL_PANEL));
+    for (let k = 1; k < n; k++) post(a[0] + (c[0] - a[0]) * (k / n), a[1] + (c[1] - a[1]) * (k / n), 0.26, FENCE_T + 0.06, FENCE_H - CAP_H + 0.01);
+    // The lights on its top facing out, a bracket each (their washes are wallWash()'s)
+    for (const l of WALL_LIGHTS) {
+      if (toSeg([l.x, l.z], a, c) > 0.05) continue;
+      const [ox, oz] = [l.x + l.nx * (FENCE_T / 2 + 0.22), l.z + l.nz * (FENCE_T / 2 + 0.22)];
+      bar(b, [l.x, l.z], [ox, oz], LIGHT_Y + 0.12, 0.06, STEEL_DARK, 0.06);
+      b.add(new THREE.BoxGeometry(0.34, 0.14, 0.2).rotateY(-Math.atan2(uz, ux)).translate(ox, LIGHT_Y, oz), STEEL_DARK);
+      b.add(new THREE.BoxGeometry(0.28, 0.02, 0.14).rotateY(-Math.atan2(uz, ux)).translate(ox, LIGHT_Y - 0.08, oz), WALL_LAMP);
+    }
+    // The razor wire: coils along the capping, each upright across the line
+    const coils = Math.max(1, Math.round(len / COIL_GAP));
+    const ring = new THREE.TorusGeometry(COIL_R, 0.012, 3, 10).rotateY(Math.PI / 2 - Math.atan2(uz, ux) + 0.35);
+    for (let k = 0; k < coils; k++) {
+      const t = (k + 0.5) / coils;
+      b.add(ring.clone().translate(a[0] + (c[0] - a[0]) * t, FENCE_H + COIL_R - 0.02, a[1] + (c[1] - a[1]) * t), WIRE);
     }
   });
 }
+/** How far a point is from the segment a to c */
+function toSeg([x, z]: Pt, a: Pt, c: Pt) {
+  const [dx, dz] = [c[0] - a[0], c[1] - a[1]];
+  const t = Math.max(0, Math.min(1, ((x - a[0]) * dx + (z - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+  return Math.hypot(x - a[0] - dx * t, z - a[1] - dz * t);
+}
 
-/** A gate: its posts, its sliding gate shut, the barrier outside it, the guardhouse inside, the apron to it */
-function gate(b: Batch, fxb: Batch, g: Gate, low: boolean) {
+/** A gate: the wall's piers, its steel sliding gate shut, the barrier outside it, the guardhouse inside, the apron to it */
+function gate(b: Batch, g: Gate, low: boolean) {
   const [w, e]: [Pt, Pt] = [
     [g.x - g.half, g.z],
     [g.x + g.half, g.z],
@@ -145,14 +173,24 @@ function gate(b: Batch, fxb: Batch, g: Gate, low: boolean) {
   for (const s of [-1, 1]) strip(b, [g.x + s * (g.half - 0.5), g.z - 10], [g.x + s * (g.half - 0.5), loopEdge - 0.3], 0.06, Y.line, LINE);
   // (the stop line before the barrier)
   strip(b, [g.x - g.half + 0.6, g.z + 2.6], [g.x + g.half - 0.6, g.z + 2.6], 0.15, Y.line, LINE);
-  // The gate's posts and its shut sliding gate: a frame round chain-link
-  for (const [x, z] of [w, e]) b.add(new THREE.BoxGeometry(0.3, FENCE_H + 0.2, 0.3).translate(x, (FENCE_H + 0.2) / 2, z), STEEL_DARK);
-  for (const y of [0.15, FENCE_H - 0.1]) bar(b, w, e, y, 0.07, STEEL);
-  for (let k = 1; k < 4; k++) {
-    const x = w[0] + ((e[0] - w[0]) * k) / 4;
-    b.add(new THREE.BoxGeometry(0.06, FENCE_H - 0.25, 0.06).translate(x, (FENCE_H - 0.25) / 2 + 0.12, g.z), STEEL);
+  // The wall's piers either side (Phase 6): square, a little taller than the wall, a cap on each
+  for (const [x, z] of piersOf(g)) {
+    block(b, [x - PIER / 2, z - PIER / 2, x + PIER / 2, z + PIER / 2], 0, PIER_H - 0.18, PANEL);
+    block(b, [x - PIER / 2 - 0.08, z - PIER / 2 - 0.08, x + PIER / 2 + 0.08, z + PIER / 2 + 0.08], PIER_H - 0.18, PIER_H, CONCRETE_DARK);
   }
-  chainMesh(fxb, w, e, 0.18, FENCE_H - 0.3);
+  // Its steel sliding gate, shut: a solid leaf on its track, a rail along its top (near only its ribs, both faces)
+  const LEAF = FENCE_H - 0.35;
+  bar(b, w, e, 0.03, 0.22, STEEL_DARK, 0.06);
+  bar(b, w, e, 0.08 + LEAF / 2, 0.12, STEEL_DARK, LEAF);
+  bar(b, w, e, 0.08 + LEAF + 0.05, 0.18, STEEL, 0.1);
+  if (!low)
+    b.detail(() => {
+      const n = Math.round((e[0] - w[0]) / 0.6);
+      for (let k = 1; k < n; k++) {
+        const x = w[0] + ((e[0] - w[0]) * k) / n;
+        b.add(new THREE.BoxGeometry(0.08, LEAF - 0.2, 0.18).translate(x, 0.18 + (LEAF - 0.2) / 2, g.z), STEEL);
+      }
+    });
   // The barrier, down: its post on the west, the arm across in red and white
   const [p, q] = barrierOf(g);
   block(b, [p[0] - 0.2, p[1] - 0.2, p[0] + 0.2, p[1] + 0.2], 0, BARRIER_Y + 0.15, WHITE);
@@ -195,37 +233,62 @@ function carPark(b: Batch) {
   }
 }
 
-/** The visitors' centre: low, concrete, glass to the car park, a door, its name, the terrace on its roof */
+/**
+ * The visitors' centre: concrete, glass to the car park on two floors, a door, its name, the terrace on its roof over
+ * the wall's top (Phase 6), and the stair up its west face to a landing level with the roof (airbase.ts)
+ */
 function centre(b: Batch, low: boolean) {
   const r = VISITOR_CENTRE;
   const H = VISITOR_CENTRE_H;
   block(b, r, 0, H - 0.4, CONCRETE);
   block(b, [r[0] - 0.2, r[1] - 0.2, r[2] + 0.2, r[3] + 0.2], H - 0.4, H, CONCRETE_DARK);
-  // (glass along its south face, the door in the middle, the name over it)
-  block(b, [r[0] + 1.5, r[3], r[2] - 1.5, r[3] + 0.02], 0.5, H - 1.3, GLASS);
+  // (glass along its south face on both floors, the door in the middle, the name over the upper band)
+  block(b, [r[0] + 1.5, r[3], r[2] - 1.5, r[3] + 0.02], 0.5, 2.9, GLASS);
+  block(b, [r[0] + 1.5, r[3], r[2] - 1.5, r[3] + 0.02], 3.4, H - 1.5, GLASS);
   const cx = (r[0] + r[2]) / 2;
   block(b, [cx - 1.1, r[3] + 0.02, cx + 1.1, r[3] + 0.05], 0, 2.3, DOOR);
-  block(b, [cx - 5.2, r[3] + 0.2, cx + 5.2, r[3] + 0.5], H - 1.2, H - 0.45, BRICK);
-  sign(b, 2, 9.6, 1.2, cx, H - 0.83, r[3] + 0.506);
+  block(b, [cx - 5.2, r[3] + 0.2, cx + 5.2, r[3] + 0.5], H - 1.3, H - 0.5, BRICK);
+  sign(b, 2, 9.6, 1.2, cx, H - 0.9, r[3] + 0.506);
+  // The stair: a solid concrete flight, a step a box from the ground up; the landing on its column; their rails
+  const [sx0, sz0, sx1, sz1] = VISITOR_STAIR.rect;
+  const n = VISITOR_STAIR.steps;
+  for (let k = 0; k < n; k++) {
+    const za = sz1 - ((sz1 - sz0) * k) / n;
+    const zb = sz1 - ((sz1 - sz0) * (k + 1)) / n;
+    block(b, [sx0, zb, sx1, za], 0, stairY((za + zb) / 2) + (H - 0.035) / n / 2, CONCRETE);
+  }
+  const L = VISITOR_LANDING;
+  block(b, [L[0], L[1], r[0] - 0.02, L[3]], H - 0.25, H, CONCRETE);
+  block(b, [L[0] + 0.1, L[1] + 0.1, L[0] + 0.5, L[1] + 0.5], 0, H - 0.25, CONCRETE_DARK);
+  // (the rails: the roof's round its edge with a gap where the landing meets it, the landing's, the flight's outer side)
+  const roofRail: [Pt, Pt][] = [
+    [[r[0] - 0.1, r[1] - 0.1], [r[2] + 0.1, r[1] - 0.1]],
+    [[r[2] + 0.1, r[1] - 0.1], [r[2] + 0.1, r[3] + 0.1]],
+    [[r[2] + 0.1, r[3] + 0.1], [r[0] - 0.1, r[3] + 0.1]],
+    [[r[0] - 0.1, r[3] + 0.1], [r[0] - 0.1, L[3]]],
+  ];
+  const landingRail: [Pt, Pt][] = [
+    [[r[0] - 0.1, L[1] - 0.1], [L[0] - 0.1, L[1] - 0.1]],
+    [[L[0] - 0.1, L[1] - 0.1], [L[0] - 0.1, L[3]]],
+  ];
+  const rail = (a: Pt, c: Pt, y0: number, y1: number) => {
+    // (posts every couple of metres, a top rail sloping with the flight)
+    const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    const k = Math.max(1, Math.round(len / 2));
+    for (let i = 0; i <= k; i++) {
+      const t = i / k;
+      const y = y0 + (y1 - y0) * t;
+      b.add(new THREE.BoxGeometry(0.05, 1.0, 0.05).translate(a[0] + (c[0] - a[0]) * t, y + 0.5, a[1] + (c[1] - a[1]) * t), STEEL);
+    }
+    const g = new THREE.BoxGeometry(Math.hypot(len, y1 - y0), 0.05, 0.05);
+    g.rotateZ(Math.atan2(y1 - y0, len)).rotateY(-Math.atan2(c[1] - a[1], c[0] - a[0])).translate((a[0] + c[0]) / 2, (y0 + y1) / 2 + 1.0, (a[1] + c[1]) / 2);
+    b.add(g, STEEL);
+  };
+  // (the flight's rail: always, it's how you read the stair from afar; the rest near only)
+  rail([sx0 - 0.05, sz1], [sx0 - 0.05, sz0], stairY(sz1), H);
   if (low) return;
   b.detail(() => {
-    // The roof's terrace: a rail round it, posts every couple of metres
-    const pts: Pt[] = [
-      [r[0] - 0.1, r[1] - 0.1],
-      [r[2] + 0.1, r[1] - 0.1],
-      [r[2] + 0.1, r[3] + 0.1],
-      [r[0] - 0.1, r[3] + 0.1],
-    ];
-    for (let i = 0; i < 4; i++) {
-      const [a, c] = [pts[i], pts[(i + 1) % 4]];
-      bar(b, a, c, H + 1.0, 0.05, STEEL);
-      const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
-      const n = Math.max(1, Math.round(len / 2));
-      for (let k = 0; k < n; k++) {
-        const t = k / n;
-        b.add(new THREE.BoxGeometry(0.05, 1.0, 0.05).translate(a[0] + (c[0] - a[0]) * t, H + 0.5, a[1] + (c[1] - a[1]) * t), STEEL);
-      }
-    }
+    for (const [a, c] of [...roofRail, ...landingRail]) rail(a, c, H, H);
   });
 }
 
@@ -459,6 +522,62 @@ function searchlights(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined)
   });
 }
 
+/**
+ * The wall's lights' washes (Phase 6): a quad down its outer face under each light (airbasedress.ts `WALL_LIGHTS`),
+ * narrow at the light and fanning out as it falls, fading to nothing at the grass; one additive mesh in the FX layer,
+ * at night only and under the bloom's threshold (the city's wall's floodlights' way, wall3d.ts). Not on phones
+ */
+function wallWash(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined) {
+  const pos: number[] = [];
+  const uv: number[] = [];
+  const idx: number[] = [];
+  const W = 2.6;
+  for (const l of WALL_LIGHTS) {
+    // (a hair off the outer face, out)
+    const off = FENCE_T / 2 + 0.04;
+    const [cx, cz] = [l.x + l.nx * off, l.z + l.nz * off];
+    const [ax, az] = [cx - l.nz * (W / 2), cz + l.nx * (W / 2)];
+    const [bx, bz] = [cx + l.nz * (W / 2), cz - l.nx * (W / 2)];
+    const n = pos.length / 3;
+    pos.push(ax, 0.05, az, bx, 0.05, bz, bx, LIGHT_Y, bz, ax, LIGHT_Y, az);
+    uv.push(0, 0, 1, 0, 1, 1, 0, 1);
+    idx.push(n, n + 1, n + 2, n, n + 2, n + 3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.setIndex(idx);
+  const mat = new THREE.ShaderMaterial({
+    name: 'airbase-wall-wash',
+    uniforms: { uNight: { value: 0 }, uColor: { value: new THREE.Color('#ffe9c4') } },
+    vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: `uniform float uNight; uniform vec3 uColor; varying vec2 vUv;
+void main() {
+  // (narrow at the light, at the top, fanning out as it falls; clamped: never a negative number to a power)
+  float across = 1.0 - pow(clamp(abs(vUv.x * 2.0 - 1.0), 0.0, 1.0), 2.0);
+  float widen = 0.2 + 0.8 * (1.0 - clamp(vUv.y, 0.0, 1.0));
+  float fan = smoothstep(1.0 - widen, 1.0, across);
+  float a = uNight * 0.36 * fan * pow(clamp(vUv.y, 0.0, 1.0), 0.8);
+  gl_FragColor = vec4(uColor * a, 1.0);
+  #include <colorspace_fragment>
+}`,
+    transparent: true,
+    blending: THREE.AdditiveBlending,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+  });
+  const m = fx(new THREE.Mesh(g, mat));
+  m.name = 'airbase-wall-wash';
+  m.visible = false;
+  scene.add(m);
+  const near = nearGate(400);
+  tick?.((env) => {
+    if (!near(...AIRBASE_RECT)) return;
+    mat.uniforms.uNight.value = env.night;
+    m.visible = env.night > 0.05;
+  });
+}
+
 /** The base's vehicles on their loops (airbaselife.ts), olive, as the Docks' truck: on the clock while the camera's
  * near, still under reduced motion */
 function vehicles(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined) {
@@ -497,19 +616,17 @@ function vehicles(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined) {
 }
 
 export function register({ low, scene, tick }: { low: boolean; scene?: THREE.Scene | null; tick?: (f: Tick) => void }) {
-  // The fence, a stretch a site
+  // The wall, a stretch a site
   FENCE_RUNS.forEach(([a, c], i) => {
     const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
     const n = Math.max(1, Math.ceil(len / PIECE));
     for (let k = 0; k < n; k++) {
       const p: Pt = [a[0] + ((c[0] - a[0]) * k) / n, a[1] + ((c[1] - a[1]) * k) / n];
       const q: Pt = [a[0] + ((c[0] - a[0]) * (k + 1)) / n, a[1] + ((c[1] - a[1]) * (k + 1)) / n];
-      site(`airbase fence ${i} ${k}`, rectOf([p, q], 1), (into) => {
+      site(`airbase wall ${i} ${k}`, rectOf([p, q], 1), (into) => {
         const b = new Batch();
-        const fxb = new Batch();
-        fence(b, fxb, p, q, low);
+        wall(b, p, q, low);
         b.build(into, { cast: true, receive: true });
-        buildFx(fxb, into);
       });
     }
   });
@@ -517,10 +634,8 @@ export function register({ low, scene, tick }: { low: boolean; scene?: THREE.Sce
   for (const g of GATES)
     site(`airbase gate ${g.id}`, [g.x - g.half - 3, g.z - 11, g.x + g.half + 6, g.z + LOOP_SHORT - 7], (into) => {
       const b = new Batch();
-      const fxb = new Batch();
-      gate(b, fxb, g, low);
+      gate(b, g, low);
       b.build(into, { cast: true, receive: true });
-      buildFx(fxb, into);
     });
   // The parade avenue, past the main gate's apron, in pieces
   const [start, ...rest] = AVENUE;
@@ -581,6 +696,7 @@ export function register({ low, scene, tick }: { low: boolean; scene?: THREE.Sce
   // left out on phones)
   if (!scene) return;
   searchlights(scene, tick);
+  if (!low) wallWash(scene, tick);
   addPeople(
     BASE_IDLE.filter((_, i) => !low || i % 2 === 0),
     BASE_MOVERS.filter((p) => !(low && p.trim))

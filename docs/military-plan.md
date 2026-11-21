@@ -634,3 +634,35 @@ grey-blue (`NIGHT.hor`); the City view thins it when pulled back, but only to 55
 haze's pale colour at night (about 37% by day), so the night picture reads as a hazy day. The same holds for the whole
 city's City view at night when pulled far back: a look question for the owner (sky.ts, the whole city), not a bug.
 
+
+## Phase 6: the base's wall and a polish pass (2026-11-21, the owner's call)
+
+The owner's call: **the fence round the base becomes a large concrete wall**, and **a polish pass across the whole
+base**, built in one go and signed off once. The fence's line (`FENCE`, `FENCE_RUNS`), the gates, the lots and every
+place stay where they stand (the snapshot holds them): only what stands on the line changes.
+
+| Question | Answer |
+| --- | --- |
+| The wall's height | **4.5** (over a truck): the base hidden from the street on foot and in a car; the watchtowers' cabins (8), the hangars (11), the tower, the radar and the water tower still show over it. |
+| Its look | **Precast panels with wire**: grey concrete slabs with joints every few metres and a capping strip; coiled razor wire along the top, near only. Not the city's smooth wall. |
+| The gates | **Wall ends and steel gates**: the wall turns in at each opening on thick piers; each gate a solid steel sliding gate, shut; the barriers and guardhouses as they are. |
+| Looking in | **The visitors' terrace raised** to about 6 with its rail, so a visitor up there sees over the wall to the parade ground and the airfield. |
+| The wall's lights | **Lights on the wall's top facing out**, on brackets, lighting its outer face and the grass at night (near only, under the bloom's threshold). The lamps inside stay. |
+| The polish | **All four**: review shots and fixes (every base view by day, night and on the phone tier); the seams at the edges (the stadium's band, the city's wall, Crestmont's hills, the woods); life and night tuned; the performance measured again. |
+| Phases | **One phase, one go**, one sign-off. |
+
+### What it changes
+
+- **Its lines** (airbase.ts): `FENCE_H` 2.6 → the wall's 4.5 (`AIRBASE_WALL`: its thickness, the panels' spacing, the
+  piers), its solids from `runBoxes()` as thick as the wall; the gates' shut boxes and the piers. The base's flights, the
+  watchtowers and the patrols already keep clear of the line; their tests hold the new height.
+- **Drawn** (airbase3d.ts, a stretch a site as the fence was): the panels (one box a run with its joints and capping
+  near only), the razor wire (near only, not on phones), the outward lights (near only); no chain-link mesh in the FX
+  layer, so the wall should cost fewer draws and less memory than the fence did. The gates: the piers and a steel leaf.
+- **The visitors' centre**: its terrace raised, `VISITOR_CENTRE_H` and its solid with it; Walk in unchanged.
+- **The world map** draws the wall as the fence's line, thicker.
+- **Its allowance**: nothing more than Phase 5's measure (no draws, triangles, phone memory or boot added: the wall
+  replaces the fence). The boot stands at 767.8 of 770 KB: the change there is a few numbers.
+- **Before and after**: review shots of the base's views (`docs/blend-shots/airbase-wall-before`, `-after`), by day
+  and night, desktop and phone, with six more views for the wall (outside the south side, the service gate, the
+  visitors' terrace, the west and east ends, the south side from above).

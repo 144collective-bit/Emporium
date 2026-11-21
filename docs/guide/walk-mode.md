@@ -68,7 +68,9 @@ keep it up to date when what it describes changes.
   (its height or the base, and stop: the bridges, the raised highway, the
   departures deck, Liberty Bridge) or `lift`s the base and goes on (the
   jetty, the terraces, the sky deck, the circuit, the banks; Endswood's sky
-  network, `sky`, takes: southsky.ts, with `skyWall()` its railings); the order
+  network, `sky`, takes: southsky.ts, with `skyWall()` its railings; and the
+  air base's visitors' centre's stair and terrace, `visitors`, takes:
+  airbase.ts, with `visitorsWall()` their rails); the order
   resolves the overlaps (the tunnel first, the decks before the river's
   banks, the mall by `yNow`, the kart park's flyover last). The test holds
   the old `groundAt()` word for word against it at over 20,000 points and

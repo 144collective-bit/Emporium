@@ -279,8 +279,8 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     ctx.strokeStyle = C.tower;
     ctx.lineWidth = 1;
     ctx.stroke();
-    // (Northgate Air Base, airbase.ts: its fence round the north, the parade avenue, the visitors' car park and centre,
-    // the gates' guardhouses)
+    // (Northgate Air Base, airbase.ts: its wall round the north (a heavier line than a fence's, Phase 6), the parade
+    // avenue, the visitors' car park and centre, the gates' guardhouses)
     rect(VISITORS, C.slab);
     for (const r of [VISITOR_CENTRE, ...GATES.map(guardhouseOf)]) rect(r, C.tower);
     poly(AVENUE);
@@ -290,7 +290,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     poly(FENCE);
     ctx.closePath();
     ctx.strokeStyle = C.tower;
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 2;
     ctx.stroke();
     ctx.fillStyle = C.park;
     // Westlake Park (westlake.ts): its lawns, the lake and its paths
