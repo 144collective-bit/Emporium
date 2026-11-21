@@ -76,10 +76,46 @@ picture is unchanged (the textures made at build time are the same).
 Measured before and after (`docs/blend-shots/buildings-before/`,
 `buildings-after/`): see "Numbers" below.
 
-### Phase 2: the rest of downtown
+### Phase 2: the rest of downtown (built, waiting on the owner's sign-off)
 
 Every infill building in `INFILL`; the fronts' side walls where they face
 a street or a lane.
+
+- **Every front:** `fineOf()` has no pilot bounds now: every infill
+  building downtown with a window type gets its modelled front (the
+  pilot's 133 windows and about 214 more).
+- **The sides:** a front's side walls that face a street, a lane, an
+  alley or a park take the same windows (`sideFronts()` in infill.ts):
+  their bays centred along the side, their corner piers, and their
+  painted band laid from those bays (`Fine.sides`, read by
+  `shellWalls()`), so each frame sits on its painted window. A side is
+  open where most of five points just outside it are clear of anything
+  taller than a person in `SOLIDS` (`sideOpen()` in facade.ts, tested):
+  31 of downtown's 78 sides, about 384 windows. The rest stand against a
+  neighbour's wall and stay paint. The sides' windows are drawn in a frame
+  turned to the side, so `modelled()` and `piers()` work there as on a
+  front; a side is painted from the ground up, so its windows count from
+  there.
+- **Measured** (headless, the medium tier at 1280 x 800 and the phone
+  tier at 390 x 844; draws and triangles from `?fps` at three downtown
+  views, a street, the square and from high; they swing a little with the
+  traffic):
+
+  | | Before | After |
+  |---|---|---|
+  | Draws, phone (street / square / high) | 316 / 288 / 292 | 314 / 279 / 294 |
+  | Triangles, phone | 0.53M / 0.45M / 0.43M | 0.52M / 0.47M / 0.45M |
+  | Draws, desktop | 527 / 450 / 569 | 533 / 426 / 542 |
+  | Triangles, desktop | 1.61M / 1.78M / 1.58M | 1.65M / 1.76M / 1.61M |
+  | The boot's own work, phone / desktop | 6.62 / 7.98 s | 6.75 / 8.02 s |
+  | The site's code (all of it, gzipped) | 1,450.2 KB | 1,450.6 KB |
+
+  No new draws (the shared paint), a few per cent more triangles near.
+  Geometry by count (the headless readings swing more with the sites
+  built than this moves them): about 600 windows more, two boxes each on
+  phones (about 2 KB) and four on desktops (about 4 KB), so about 1.2 MB
+  on a phone and 2.4 MB on a desktop, all of it near-only detail held
+  from the boot as the pilot's was.
 
 ### Phase 3: the kits
 
