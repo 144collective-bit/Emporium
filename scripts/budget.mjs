@@ -62,13 +62,16 @@ const BUDGETS = {
    * pair, the cable car's stations and doors, the Belvedere and the glasshouse, their places, doors and solids, read
    * by the boot's places, map and walk-in doors) took it to 765.0; what only the chunks read is in them; and Northgate Air Base's
    * (the owner's calls, 2026-11-20, docs/military-plan.md): its lines, solids, lamps, keep, look and sound at the boot,
-   * about 4.5 KB, its drawing-only data in its chunks' airbasedress.ts; and from 770 to 772 on purpose (the owner's
-   * call, 2026-11-21: "raise the boot budget to 772 KB for the settings", docs/settings-plan.md): main stood at 769.8,
-   * and the settings record and its store (settings.ts, settings-store.ts: the tier, time, sky and labels are read
-   * before the city is built) took it to about 771; the Settings tab's rows, pickers and screen are their own chunks
+   * about 4.5 KB, its drawing-only data in its chunks' airbasedress.ts; and from 770 to 775 on purpose (the owner's call,
+   * 2026-11-21, "Raise it to 775 KB"): the boot stood at 769.8 with Northgate's and Sunridge's latest, and Endswood's
+   * brutalist band on the wall atlas (docs/brutalist-plan.md Phase 1, painted at the boot with the rest of the atlas)
+   * took it to 770.3 (the far aircraft moved to a chunk of their own to make room first); the same day the owner raised
+   * it for the settings too ("raise the boot budget to 772 KB for the settings", docs/settings-plan.md): the settings
+   * record and its store (settings.ts, settings-store.ts: the tier, time, sky and labels are read before the city is
+   * built), about 1.2 KB, inside the 775; the Settings tab's rows, pickers and screen are their own chunks
    * (settings-rows.ts, settings-ui.ts)
    */
-  bootJs: 772,
+  bootJs: 775,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /**

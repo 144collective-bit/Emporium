@@ -39,7 +39,7 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 
 ## Phases
 
-1. **The concrete skin.** The same blocks, re-dressed: raw grey concrete with board-mark grain and rain streaks under
+1. **The concrete skin.** Done (2026-11-21, below). The same blocks, re-dressed: raw grey concrete with board-mark grain and rain streaks under
    every ledge (the wall atlas, `infill.ts`'s bands); the flats' fronts a deep grid of recessed balconies, each with
    its own bit of life (a plant, a bike, a dish, washing); hard chamfered corners for the rounded ones; the galleries'
    fronts plain concrete upstands; the concrete a cool grey, each block's own accent (mustard, teal, orange) kept bold
@@ -73,9 +73,26 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
    phones on their side for the new cards, the review shots by day and at night, the guides (endswood.md,
    economy.md) up to date.
 
+## What Phase 1 did (2026-11-21)
+
+- The wall atlas's `brutal` band (infill.ts `recessRow()`, its measures and the recesses' life in facade.ts): board-
+  marked concrete, the slab's edge at each floor, a fin between each two-bay recess, the window and door at the back,
+  a solid front over the recess's foot, life in them (mostly plain; a plant, a dish, an air-con unit, a bike, washing
+  now and then, the odd front painted), soot under the slabs and heavy rain streaks. The Trenches' `panel` band left
+  as it was.
+- The concrete a dark, cool grey (the owner's pick after the first look: "darker, heavier"); the corners chamfered
+  (45 degrees, tested); the galleries', balconies', ledges' and fascias' fronts concrete; each block's colour a stripe
+  down its ends (a tower's down its face away from The Core); the towers' plant rooms plain concrete boxes; the
+  bridges' glass and the stair slots a cool dark glass by day, lit warm at night.
+- No new draws: on the phone tier at the estate (four headings) 139, 142, 180 and 416 against 144, 147, 184 and 386
+  before (the north heading's difference all far city, the run-to-run spread).
+- The boot: the band is painted with the atlas at the boot; the far aircraft moved to a chunk of their own to make
+  room, and the budget raised from 770 to 775 KB (the owner's call, 2026-11-21).
+
 ## The owner's decisions (2026-11-21)
 
-- **The concrete:** a cool grey, each block's own accent kept bold as a stripe on its end.
+- **The concrete:** a cool grey, each block's own accent kept bold as a stripe on its end; after the first look, darker
+  and heavier (2026-11-21).
 - **The lookout:** a hexagonal drum on The Core.
 - **The flats:** a flat of Degen's own to live in (and wake in, if chosen); no flats let out.
 - **The shops under the deck:** a launderette and a corner shop.

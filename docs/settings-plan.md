@@ -123,7 +123,8 @@ Main stood at 769.8 KB of the boot's 770 before this; the settings take it
 to about 771 (the record and its store must be there at the boot: the
 tier, the sky and the labels are read before the city is built). The
 rows, the pickers and the tab are out of it. The owner raised the boot's
-budget to 772 for it, on purpose (2026-11-21).
+budget to 772 for it, on purpose (2026-11-21); the same day main's raise to
+775 for the brutalist plan's Phase 1 took it in.
 
 ## Status
 
