@@ -200,11 +200,16 @@ function convex(o: Pt[], sign: number) {
 const KEEP_CLEAR = 0.6;
 function grow(): Lot[] {
   const lots: Lot[] = LOTS.map((l) => ({ ...l, back: [[...l.back[0]], [...l.back[1]]] as [Pt, Pt] }));
+  const blockOf = new Map(SUN_BLOCKS.map((b) => [b.id, b]));
   const pad = (r: Rect): Rect => [r[0] - KEEP_CLEAR, r[1] - KEEP_CLEAR, r[2] + KEEP_CLEAR, r[3] + KEEP_CLEAR];
   // (each lot's: the land kept off with its margin, or without it where the lot was laid within the margin already)
-  const raw = [...ZONES.map((z) => z.rect), PATH];
-  const keepOf = LOTS.map((l) => raw.map((r) => (overlap(outline(l), rectPoly(pad(r))) ? rectPoly(r) : rectPoly(pad(r)))));
-  const blockOf = new Map(SUN_BLOCKS.map((b) => [b.id, b]));
+  // (only the amenity land whose middle is in the lot's own block: the school's and the club's rectangles reach across
+  // the loop into the blocks outside it, where the late lots are)
+  const ownZones = (l: Lot) => {
+    const b = blockOf.get(l.block)!;
+    return ZONES.filter((z) => inside(b.poly, [(z.rect[0] + z.rect[2]) / 2, (z.rect[1] + z.rect[3]) / 2])).map((z) => z.rect);
+  };
+  const keepOf = LOTS.map((l) => [...ownZones(l), PATH].map((r) => (overlap(outline(l), rectPoly(pad(r))) ? rectPoly(r) : rectPoly(pad(r)))));
   const landOf = new Map(SUN_BLOCKS.map((b) => [b.id, b.runs.filter((r) => !r.street).map((r) => r.pts)]));
   const streetsOf = new Map(SUN_BLOCKS.map((b) => [b.id, b.runs.filter((r) => r.street).map((r) => r.pts)]));
   const boxes = lots.map((l) => box(outline(l)));
