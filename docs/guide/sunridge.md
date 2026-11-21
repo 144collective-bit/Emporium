@@ -28,7 +28,8 @@ keep it up to date when what it describes changes.
   house a lot in its frame (`toWorld()`), four plans (`Plan`), three entries
   (`Elevation`), `SCHEMES` and `ROOFS` (neighbours never the same colour),
   the garage, its driveway and the walk, solar and chimneys; a shallow
-  ranch (`lay(..., shallow)`) on Ocotillo Court's two short lots, laid last
+  ranch (`lay(..., shallow)`) on Ocotillo Court's three short lots (87, 88
+  and 101, the second pass's: sunridgelots.ts `SHALLOW_D`, `late`), laid last
   (`LAID_LAST`) so every other house keeps its id, yard and residents;
   `HOUSE_SOLIDS` join the grids when the chunk loads (`addSolids()`). Drawn by
   `sunhouses3d.ts` (a site a house: tile roofs from a texture a colour, lit
