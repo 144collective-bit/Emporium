@@ -13,7 +13,7 @@
  *   picker (skylift-ui.ts) and the ride (index.ts `rideTo()`).
  */
 import {
-  BLOCKS, BLOCKS_RECT, BRIDGES, BRIDGE_HALF, CORES, DECKS, GALLERY_W, SKY_FLOORS, TWIN_CORE_HALF, blockById, floorY,
+  BLOCKS, BLOCKS_RECT, BRIDGES, BRIDGE_HALF, CAGE, CAGES, CORES, DECKS, GALLERY_W, SKY_FLOORS, TWIN_CORE_HALF, blockById, floorY,
   lineLength, outward, pointAt, section, storeysOf, type Block, type Pt,
 } from './southblocks';
 import { inside, shift } from './streetfaces';
@@ -92,8 +92,64 @@ const throughShapes = (): SkyShape[] =>
     const [o0, o1] = [b.depth! / 2 + GALLERY_W - UPSTAND_IN - 0.3, b.depth! / 2 + GALLERY_W + 0.6];
     return coreFloors(c.id).map((f) => level(`through ${c.id} ${f}`, [at(-h, o0), at(h, o0), at(h, o1), at(-h, o1)], floorY(b.base, f)));
   });
+/**
+ * The service towers' links (docs/brutalist-plan.md Phase 2): a covered way from the gallery to a tower standing off its
+ * block, at each landing it opens onto, on into the gallery and the landing a little each end
+ */
+const LINK_HALF = 0.62;
+const linkShapes = (): SkyShape[] =>
+  CORES.filter((c) => c.link).flatMap((c) => {
+    const [a, e] = c.link!;
+    const l = Math.hypot(e[0] - a[0], e[1] - a[1]);
+    const t: Pt = [(e[0] - a[0]) / l, (e[1] - a[1]) / l];
+    const r: Pt = [-t[1] * LINK_HALF, t[0] * LINK_HALF];
+    const [p0, p1]: Pt[] = [[a[0] - t[0] * 0.6, a[1] - t[1] * 0.6], [e[0] + t[0] * 0.6, e[1] + t[1] * 0.6]];
+    const poly: Pt[] = [[p0[0] + r[0], p0[1] + r[1]], [p1[0] + r[0], p1[1] + r[1]], [p1[0] - r[0], p1[1] - r[1]], [p0[0] - r[0], p0[1] - r[1]]];
+    return coreFloors(c.id).map((f) => level(`link ${c.id} ${f}`, poly, floorY(blockById(c.of).base, f)));
+  });
+/**
+ * The towers' stair cages (docs/brutalist-plan.md): from the street at the tower's face, up the first lane out to the
+ * cage's far landing, back up the second lane to a landing at the tower's face, a pair of flights a storey band, into the
+ * tower's landing at each floor it opens onto (on into it a little)
+ */
+export function cageLevels(id: string): number[] {
+  const g = CAGES.find((q) => q.id === id)!;
+  return [g.base, ...coreFloors(g.core).map((f) => floorY(g.base, f))];
+}
+const cageShapes = (): SkyShape[] =>
+  CAGES.flatMap((g) => {
+    const { len, half, land, gap } = CAGE;
+    const w = half - 0.12;
+    const rect = (a0: number, a1: number, b0: number, b1: number): Pt[] => [g.at(a0, b0), g.at(a1, b0), g.at(a1, b1), g.at(a0, b1)];
+    /** A flight: along its lane from a0 to a1, rising y0 to y1 */
+    const flight = (id: string, a0: number, a1: number, b0: number, b1: number, y0: number, y1: number): SkyShape => {
+      const y = (x: number, z: number) => {
+        const a = (x - g.root[0]) * g.out[0] + (z - g.root[1]) * g.out[1];
+        return y0 + (y1 - y0) * Math.max(0, Math.min(1, (a - a0) / (a1 - a0)));
+      };
+      return { id, poly: rect(Math.min(a0, a1), Math.max(a0, a1), b0, b1), y, lo: Math.min(y0, y1), hi: Math.max(y0, y1) };
+    };
+    const ys = cageLevels(g.id);
+    // (each landing on over its flights' ends a little: a step on or off, never a gap)
+    const over = 0.3;
+    const out: SkyShape[] = [level(`cage ${g.id} in`, rect(0, land + over, -w, w), ys[0])];
+    for (let k = 0; k + 1 < ys.length; k++) {
+      const [y0, y1] = [ys[k], ys[k + 1]];
+      const mid = (y0 + y1) / 2;
+      out.push(
+        flight(`cage ${g.id} ${k} up`, land, len - land, gap, w, y0, mid),
+        level(`cage ${g.id} ${k} turn`, rect(len - land - over, len - 0.12, -w, w), mid),
+        flight(`cage ${g.id} ${k} back`, len - land, land, -w, -gap, mid, y1),
+        // (the landing at the tower's face, on into its landing)
+        level(`cage ${g.id} ${k} landing`, rect(-0.6, land + over, -w, w), y1)
+      );
+    }
+    return out;
+  });
 const landingShapes = (): SkyShape[] => [
   ...throughShapes(),
+  ...linkShapes(),
+  ...cageShapes(),
   ...CORES.flatMap((c) => coreFloors(c.id).map((f) => level(`landing ${c.id} ${f}`, c.foot, floorY(blockById(c.of).base, f)))),
   ...coreFloors('twin-core').map((f) => level(`landing twin-core ${f}`, blockById('twin-core').foot, floorY(blockById('twin-core').base, f))),
 ];

@@ -56,7 +56,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   brook between its banks and the bridge's parapets, the hedges, the rec ground's and the churchyard's grass, the
   compound's paved plot and the compound itself (`registerHome()`, home3d.ts), and Lot 9's tunnel under the ring road
   (`tunnel3d.ts`, the estate's subway dressing it always had).
-- **The blocks** (`southblocks.ts`, DOM-free, tested in `tests/southblocks.test.ts`, docs/south-plan.md Phase 2): drawn
+- **The blocks** (`southblocks.ts`, DOM-free, tested in `tests/southblocks.test.ts`, docs/south-plan.md Phase 2; the cores
+  standing off their blocks as service towers, `SERVICE_GAP`, `CORE_GAPS`, `Core.link`: docs/brutalist-plan.md Phase 2): drawn
   by `southblocks3d.ts` (2b; `LAZY_DISTRICTS` id `south-blocks`, `BLOCKS_RECT`), walked on in 2c. `BLOCKS` (the Rampart, Harrier and Kite Points, The Core, Linnet, Marten
   and Wren Courts, Sorrel, Fennel and Teasel Houses: each its footprint, spine, depth, galleried side, steps of storeys,
   base, accent; the Rampart's `arch`, Teasel's `refit`), `CORES` (the stair cores), `GALLERIES` (every third floor,
@@ -77,13 +78,21 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   (southblocks.ts `CUT`, `CORNER_R`); the Rampart's arch (soffit, piers' faces); galleries at every third floor (deck,
   concrete upstand, warm strip light under it); balconies with concrete fronts on the slabs' other sides, Teasel's
   boarded windows and hoarding, sky garden planters on the roofs (near only, not on phones); the towers' ledge rings, a
-  concrete plant room box and beacon; the cores' stair slots; the bridges (concrete, a glass band each side); the glass
+  concrete plant room box and beacon; the cores' stair slots, each core a service tower standing off its block (its
+  link from the gallery at each landing drawn as a bridge, a boiler house and flue on its top: brutalist plan Phase 2;
+  its caged stair outside, `CAGES`, `drawCage()`, and its door's sodium lamp); the bridges (concrete, a glass band each
+  side, inside a ceiling strip, mullions, puddles and tags near only; `drawPortal()` at each link's gallery end; piers
+  under the long spans, `PIERS`, `drawPier()`; block names at their ends, `SIGN_TEX`); the grit (brutalist plan
+  Phase 2's polish: the `brutalDeck` gallery band, `deckRow()`; boarded and burnt flats in `RECESS_LIFE`; bin bags,
+  dumped mattresses, sofas and trolleys at the bin stores; bikes in the sheds; netting under the links; dishes on the
+  roofs; tired and dead link lights); the glass
   and the slots dark glass by day, lit warm at night (`lit()` toons); the podium deck on its columns; Bunker Sound's door
   with its neon. Built with `lift: false` (kit.ts `Batch.build()`): they stand level on their plinths, not on the
   rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in solids.ts. Bench views `south-blocks` and
   `south-rampart`.
 - **The sky network walked** (`southsky.ts`, DOM-free, tested in `tests/southsky.test.ts`, docs/south-plan.md 2c):
-  `SKY_SHAPES` (the galleries, the bridges, the podium deck, the cores' open landings, the ways through the Rampart's
+  `SKY_SHAPES` (the galleries, the bridges, the podium deck, the cores' open landings, the towers' links
+  (`linkShapes()`) and caged stairs (`cageShapes()`: level, flight, turn, flight, landing up each storey pair), the ways through the Rampart's
   gallery fronts, The Core's stair and landing), `skyFloorAt()` (groundheight.ts's `sky` layer, before `south`),
   `skyUp()` / `skyWall()` (walk.ts's `blocked()`: up there only the railings stop you, the solids don't); the lifts
   (`SKY_LIFTS`, `skyLiftDoors()`, `liftArrival()`, `floorName()`) and their floor picker (`skylift-ui.ts`: the metro's

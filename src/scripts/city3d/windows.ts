@@ -33,8 +33,10 @@ export type WallKindName =
   | 'brickGlazed'
   | 'panel'
   // (Endswood's blocks made brutalist, docs/brutalist-plan.md Phase 1: board-marked concrete, deep balcony recesses)
-  | 'brutal';
-export type WindowType = 'sash' | 'pair' | 'casement' | 'arched' | 'shuttered' | 'balcony' | 'steel' | 'curtain' | 'ribbon' | 'recess';
+  | 'brutal'
+  // (their gallery sides: the flats' front doors and kitchen windows off the deck, brutalist plan's polish)
+  | 'brutalDeck';
+export type WindowType = 'sash' | 'pair' | 'casement' | 'arched' | 'shuttered' | 'balcony' | 'steel' | 'curtain' | 'ribbon' | 'recess' | 'deck';
 
 export const WINDOW_TYPE: Record<WallKindName, WindowType> = {
   brick: 'sash',
@@ -56,6 +58,8 @@ export const WINDOW_TYPE: Record<WallKindName, WindowType> = {
   panel: 'ribbon',
   // (a window and a door set deep in a balcony recess, two bays a recess, behind a solid concrete front)
   brutal: 'recess',
+  // (a front door and a kitchen window behind its grille, two bays a flat, off the gallery's deck)
+  brutalDeck: 'deck',
 };
 
 /** The light behind a lit window at night */

@@ -45,7 +45,7 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
    fronts plain concrete upstands; the concrete a cool grey, each block's own accent (mustard, teal, orange) kept bold
    as a stripe down its end so the blocks are told apart, and colour otherwise only in small doses (doors, balcony
    panels). Night: the patchy windows as now, the stair slots lit. No new draws.
-2. **The service towers.** The slabs' stair cores pulled out of the galleries into towers of their own, standing a
+2. **The service towers.** Done (2026-11-21, below). The slabs' stair cores pulled out of the galleries into towers of their own, standing a
    bridge's length off the block, a bridge to each gallery (every third floor), a boiler house jutting from the top
    with its flue; the Rampart's along its estate side, the Courts' at their ends. The Core's flared top made the same.
    Walked as the cores are now (their lifts and stairs).
@@ -88,6 +88,37 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
   before (the north heading's difference all far city, the run-to-run spread).
 - The boot: the band is painted with the atlas at the boot; the far aircraft moved to a chunk of their own to make
   room, and the budget raised from 770 to 775 KB (the owner's call, 2026-11-21).
+
+## What Phase 2 did (2026-11-21)
+
+- The slabs' and the Rampart's stair cores stand off their blocks as service towers (southblocks.ts `SERVICE_GAP`, 3,
+  a bridge's length), each with a covered link from its gallery at every landing (`Core.link`, walked by southsky.ts
+  `linkShapes()`, drawn as the estate's bridges are), a boiler house jutting from its top and its flue beside it.
+- Where there wasn't the room (measured: a street, a parking court or the underpass's ramp near) a tower stands nearer
+  (`CORE_GAPS`): Sorrel's west one 1.5 off, Fennel's east one and the Rampart's fourth 1, the Rampart's third and
+  Linnet's south one against their blocks as before. 12 of the 17 stand a full bridge off.
+- The bridges between the towers follow them (worked out from where they stand); the lifts' doors with them. Nothing
+  held in place moved (the snapshot unchanged).
+
+### Phase 2's polish (2026-11-21, the owner's picks)
+
+- **Caged stairs outside the towers**, walkable (southblocks.ts `CAGES`, `CAGE`, `CAGE_FACES`; southsky.ts
+  `cageShapes()`, `cageLevels()`): on the 12 towers with room, a steel cage on one face, a dog-leg flight up each
+  storey pair between ground and every landing, its mesh, bars and strip lights drawn (`drawCage()`, the bars and
+  treads near only). Their solids (`cageSolids()`) keep you out of the frame at street level.
+- **The bridges:** inside, a ceiling strip light, mullions every 1.2, puddles and tags (near only); a portal where each
+  link meets its gallery; piers under the spans of 10 or more (`PIERS`, six, clear of the paths, courts and blocks);
+  each block's name stencilled at its bridges' ends (`SIGN_TEX`, near only, not on phones).
+- **The grit** ("gritty, a ghetto", rough but never threatening): the gallery band's doors (`deckRow()`, the
+  `brutalDeck` kind: painted, steel or boarded doors, meter cupboards, grilled kitchen windows, tags, grime);
+  `RECESS_LIFE`'s boarded and burnt-out flats (dark at night); soot under the slabs and rain streaks; bin stores with
+  bags, a dumped mattress, sofa or trolley; chained bikes in the sheds; pigeon netting under the links; dish clusters
+  on the slab and tower roofs; a sodium lamp over each tower's door, a puddle and a tag at its foot; one link in four
+  tired (`STRIP_TIRED`), one in seven dark. All the small mess near only and off on phones.
+
+- **The boot:** merging main took it to 775.6 KB; trimmed, not raised (the owner's call): the memory measures
+  (`perf.ts`) load only with `?fps`, `?bench` and `__mem()`. 774.6 KB after. Main's next merge took it to 775.6
+  again: the readout's text moved to its own chunk too (`readout.ts`), 774.6 KB after.
 
 ## The owner's decisions (2026-11-21)
 

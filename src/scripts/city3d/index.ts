@@ -6,7 +6,6 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { texSourceLine } from './texsource';
 import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, glName, loadBuiltTextures, loadImage, loadTex, setGroundLift, texSources, updateLights, updateWind } from './kit';
 import { SOUTH_GROUND_RECT, southLift } from './southground';
 import { CROWD_PACK, loadMocap } from './mocap-load';
@@ -151,7 +150,6 @@ import type { Outfit } from './wardrobe';
 import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
-import { mb, memoryRows, sceneMemory, targetMemory } from './perf';
 import { antialias } from './targets';
 import { PACKED, UV, tileBatch } from './tilebatch';
 import { hazeHorizon } from './tileplan';
@@ -2007,7 +2005,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (the benchmark is a chunk of its own, loaded only when asked for; it starts once every site is built)
   let bench: Bench | null = null;
   if (query.has('bench'))
-    void import('./bench').then(({ createBench }) => {
+    void Promise.all([import('./bench'), import('./perf')]).then(([{ createBench }, { targetMemory }]) => {
       bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), targets: () => targetMemory(post.targets(), scene), home, conditions: benchSky, boot: bootTimes, textures: texSources, extra: [] }, query.get('bench') === 'night');
     });
   // ?shots: the blending plan's review shots (shots.ts, docs/blend-plan.md), a chunk of its own too
@@ -2025,9 +2023,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       );
     });
   const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
+  // (the readout's text and the memory measures are chunks of their own too, loaded only with it: readout.ts, perf.ts)
+  let perf: typeof import('./perf') | null = null;
+  let readout: typeof import('./readout') | null = null;
+  if (statsEl) {
+    void import('./perf').then((m) => (perf = m));
+    void import('./readout').then((m) => (readout = m));
+  }
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
-  /** (the camera's look, for the readout) */
-  const statLook = new THREE.Vector3();
   function bootTimes() {
     const r = (a: number, b: number) => Math.round(b - a);
     // (`build` includes merging per tile, `tiles`, which includes building the sites round the home view, `sites`;
@@ -2070,7 +2073,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           Q.far
         )
       );
-    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() });
+    (window as unknown as { __mem?: () => unknown }).__mem = () => perf && (({ sceneMemory, targetMemory, memoryRows }) => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() }))(perf);
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -2407,38 +2410,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       stat.last = now;
       stat.frames++;
       if (now - stat.since >= 1000) {
-        const n = Math.max(1, stat.frames);
         const lost = Object.entries(lowered).filter(([, v]) => v).map(([k]) => k);
-        // Memory every few seconds (it walks the whole scene)
-        if (now - stat.memAt > 5000) {
-          const m = sceneMemory(scene);
-          stat.mem = `geometry ${mb(m.geometry)} · textures ${mb(m.textures)} · targets ${mb(targetMemory(post.targets(), scene))}${aa.msaa ? ` (MSAA ${aa.msaa}x)` : aa.smaa ? ' (SMAA)' : ''}`;
-          stat.memAt = now;
-        }
-        const b = bootTimes();
-        statsEl.textContent = [
-          `${Math.round((stat.frames * 1000) / (now - stat.since))} fps · slowest ${Math.round(stat.worst)} ms`,
-          `${Math.round(stat.draws / n)} draws · ${(stat.tris / n / 1e6).toFixed(2)}M tris`,
-          `of which shadows ${Math.round(stat.shadowDraws / n)} draws · ${(stat.shadowTris / n / 1e6).toFixed(2)}M tris`,
-          stat.mem,
-          `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms${((f) => (f.places ? ` (${f.places} near forms freed, ${mb(f.bytes)})` : ''))(freedNear())}`,
-          `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
-          (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
-          (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
-          `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
-          texSourceLine(texSources()),
-          // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
-          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : walk.position.y < -0.5 ? ` · down ${(-walk.position.y).toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
-          // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
-          // reads here as under the ground, or the near plane, or the view gone wrong)
-          ...(walking
-            ? [
-                `height ${walk.position.y.toFixed(2)} · camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(1)} · near ${camera.near.toFixed(2)} · looks ${camera.getWorldDirection(statLook).y.toFixed(2)} · fog ${(scene.fog as THREE.FogExp2 | null)?.density?.toFixed(4) ?? '-'}`,
-              ]
-            : []),
-          // and where City view's free camera is (freecam.ts)
-          ...(!walking ? [`camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)} · near ${camera.near.toFixed(2)}`] : []),
-        ].join('\n');
+        if (readout) statsEl.textContent = readout.readout({ stat, scene, camera, renderer, targets: post.targets(), aa, tiled, works, districts, boot: bootTimes(), tier, why: picked.why, lost, gpu, walking, walk }, now);
         Object.assign(stat, { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, since: now });
       }
     }

@@ -24,7 +24,7 @@ import * as THREE from 'three';
 import { Batch, canvasTex, FONT_DISPLAY, fx, glowTex, lit, neon, PAL, rng, shadeHex, siteMat, toon } from './kit';
 import { ALLEYS, ALLEY_LAMPS, ALLEY_PIPES, ALLEY_PROPS, DIAGONALS, FLOOR, INFILL, LANES, NAMED_SHOPS, PARKS, SHOP_H, SIGNS, SQUARE, WATER_TOWER, bodyOf, stoopOf, type Infill, type Pt, type SignId } from './downtown';
 import { CORE_ROADS, DOWNTOWN, LANE } from './layout';
-import { BALCONY_DOOR, CASEMENT_BANDS, CELL_W, COLS, LINTEL, PAIR_SASH, PANES, PX, PX_H, PX_W, RECESS, RECESS_PANELS, ROWS, baysOf, recessLife, sideOpen, styleOf, windowsOf, type Bays, type FacadeStyle } from './facade';
+import { BALCONY_DOOR, CASEMENT_BANDS, CELL_W, COLS, LINTEL, PAIR_SASH, PANES, PX, DECK, DOOR_PAINTS, PX_H, PX_W, RECESS, RECESS_PANELS, ROWS, baysOf, deckLife, recessLife, sideOpen, styleOf, windowsOf, type Bays, type FacadeStyle } from './facade';
 import { SOLIDS } from './solids';
 import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
@@ -48,7 +48,7 @@ const GROUND_PX = 100;
 
 type WallKind = WallKindName;
 type GroundKind = 'shopWarm' | 'shopPink' | 'shopCyan' | 'diner' | 'lobby' | 'stoneBase' | 'loading' | 'lobbyWarm';
-const WALL_KINDS: WallKind[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark', 'brickOrange', 'brickPurple', 'brickPainted', 'brickGlazed', 'panel', 'brutal'];
+const WALL_KINDS: WallKind[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark', 'brickOrange', 'brickPurple', 'brickPainted', 'brickGlazed', 'panel', 'brutal', 'brutalDeck'];
 // (`lobbyWarm` last: the south's blocks' entrance halls, docs/south-plan.md Phase 6d)
 const GROUND_KINDS: GroundKind[] = ['shopWarm', 'shopPink', 'shopCyan', 'diner', 'lobby', 'stoneBase', 'loading', 'lobbyWarm'];
 /** Each wall's own colour (for its trim and parapet) and the colour of its stone trim */
@@ -73,6 +73,7 @@ const WALL_COLOR: Record<WallKind, { wall: string; trim: string }> = {
   panel: { wall: '#8f8c86', trim: '#6e6b66' },
   // Endswood's blocks (docs/brutalist-plan.md): raw concrete, a cool grey, dark and weathered (the owner's pick, 2026-11-21)
   brutal: { wall: '#6f7277', trim: '#4f5257' },
+  brutalDeck: { wall: '#6a6d72', trim: '#4f5257' },
 };
 
 interface Band {
@@ -193,6 +194,8 @@ function recessRow(c: CanvasRenderingContext2D, wall: string, y: number, seed: n
     // The window and the door at the back of the recess (lit or not, as any window)
     const p = paneAt(seed, row, i * 2);
     if (glow) {
+      // (a boarded or burnt-out flat: dark at night)
+      if (life === 'boarded' || life === 'burnt') continue;
       glazed(c, x + pane.x, y + pane.y, pane.w, pane.h, '#2a2c31', p, true, 2, false);
       glazed(c, x + door.x, y + door.y, door.w, PX_H - door.y - 4, '#2a2c31', paneAt(seed, row, i * 2 + 1), true, 0, false);
       continue;
@@ -205,6 +208,24 @@ function recessRow(c: CanvasRenderingContext2D, wall: string, y: number, seed: n
     c.fillRect(x + fin, y + slab, PX_W * 2 - fin, PX_H - slab);
     glazed(c, x + pane.x, y + pane.y, pane.w, pane.h, '#2a2c31', p, false, 2, false);
     glazed(c, x + door.x, y + door.y, door.w, PX_H - door.y - 4, '#2a2c31', paneAt(seed, row, i * 2 + 1), false, 0, false);
+    if (life === 'boarded') {
+      // A flat boarded up: plywood over its window and its door, screwed on
+      c.fillStyle = '#9c7b4a';
+      c.fillRect(x + pane.x - 3, y + pane.y - 3, pane.w + 6, pane.h + 6);
+      c.fillRect(x + door.x - 2, y + door.y - 2, door.w + 4, PX_H - door.y - 2);
+      c.fillStyle = '#7a5f37';
+      for (const k of [6, 14, 22]) c.fillRect(x + pane.x - 3, y + pane.y + k, pane.w + 6, 1);
+    } else if (life === 'burnt') {
+      // One burnt out: its glass gone black, soot licked up the wall over it
+      c.fillStyle = '#0d0d0f';
+      c.fillRect(x + pane.x, y + pane.y, pane.w, pane.h);
+      c.fillRect(x + door.x, y + door.y, door.w, PX_H - door.y - 4);
+      const g2 = c.createLinearGradient(0, y + pane.y, 0, y - 6);
+      g2.addColorStop(0, 'rgba(12, 12, 14, 0.75)');
+      g2.addColorStop(1, 'rgba(12, 12, 14, 0)');
+      c.fillStyle = g2;
+      c.fillRect(x + pane.x - 4, y - 6, pane.w + 8, pane.y + 6);
+    }
     // Washing on a line across the recess's top, behind the front
     if (life === 'washing') {
       c.fillStyle = '#c9c6bc';
@@ -280,6 +301,89 @@ function recessRow(c: CanvasRenderingContext2D, wall: string, y: number, seed: n
   }
 }
 
+/** A scrawled tag: a few loops of marker, illegible (never words, never a real crew's), in a spray-can colour */
+const TAG_INKS = ['#e0e0e0', '#d94fb0', '#38c6d9', '#e6c13a', '#141414'];
+function tag(c: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, wr: () => number) {
+  c.strokeStyle = TAG_INKS[Math.floor(wr() * TAG_INKS.length)];
+  c.lineWidth = 1.5 + wr() * 1.5;
+  c.beginPath();
+  c.moveTo(x, y + h * (0.4 + wr() * 0.4));
+  for (let k = 0; k < 4; k++) {
+    const x1 = x + (w * (k + 1)) / 4;
+    c.bezierCurveTo(x1 - w * 0.3, y - h * 0.2 + wr() * h * 0.6, x1 - w * 0.1, y + h * 1.1 - wr() * h * 0.6, x1, y + h * (0.3 + wr() * 0.5));
+  }
+  c.stroke();
+}
+
+/**
+ * One floor of a brutalist block's gallery side (the brutalist plan's polish): the slab's edge at the floor, each flat
+ * two bays, its front door (worn council paint, the odd steel security door, the odd one boarded), its meter cupboard,
+ * its kitchen window behind a grille; tags scrawled here and there, rust and grime streaking down from the slab
+ */
+function deckRow(c: CanvasRenderingContext2D, wall: string, y: number, seed: number, row: number, glow: boolean, wr: () => number) {
+  const W = ATLAS_W;
+  const pane = PANES.deck;
+  const { door, meter } = DECK;
+  const slab = RECESS.slab;
+  if (!glow) {
+    c.fillStyle = shadeHex(wall, -0.07);
+    for (let k = 2; k < PX_H; k += 5) c.fillRect(0, y + k, W, 1);
+  }
+  for (let i = 0; i < COLS / 2; i++) {
+    const x = i * PX_W * 2;
+    const life = deckLife(seed, row, i);
+    const p = paneAt(seed, row, i * 2);
+    if (glow) {
+      glazed(c, x + pane.x, y + pane.y, pane.w, pane.h, '#2a2c31', p, true, 1, false);
+      continue;
+    }
+    // The door: its frame, its paint (a steel one dull grey with rivets; a boarded one plywood, screwed on)
+    const [dx, dy, dw, dh] = [x + door.x, y + door.y, door.w, PX_H - door.y];
+    c.fillStyle = '#1c1d21';
+    c.fillRect(dx - 2, dy - 2, dw + 4, dh + 2);
+    c.fillStyle = life === 'steel' ? '#5b5f66' : life === 'boarded' ? '#a3804f' : DOOR_PAINTS[(seed + row * 5 + i * 3) % DOOR_PAINTS.length];
+    c.fillRect(dx, dy, dw, dh);
+    if (life === 'steel') {
+      c.fillStyle = '#3c3f45';
+      for (let k = 0; k < 4; k++) for (const sx of [3, dw - 4]) c.fillRect(dx + sx, dy + 5 + k * 11, 1.5, 1.5);
+    } else if (life === 'boarded') {
+      c.fillStyle = '#7d6139';
+      for (const k of [8, 24, 40]) c.fillRect(dx, dy + k, dw, 1);
+    } else {
+      // (its letterbox and its handle, scuffed round)
+      c.fillStyle = '#c9b77a';
+      c.fillRect(dx + 5, dy + 24, 10, 2);
+      c.fillRect(dx + dw - 5, dy + 20, 2, 4);
+      c.fillStyle = 'rgba(0, 0, 0, 0.18)';
+      c.fillRect(dx + dw - 9, dy + 14, 8, 16);
+    }
+    // The meter cupboard beside it
+    c.fillStyle = shadeHex(wall, -0.18);
+    c.fillRect(x + meter.x, y + meter.y, meter.w, meter.h);
+    c.fillStyle = shadeHex(wall, 0.12);
+    c.fillRect(x + meter.x, y + meter.y, meter.w, 1);
+    // The kitchen window behind its grille
+    glazed(c, x + pane.x, y + pane.y, pane.w, pane.h, '#2a2c31', p, false, 1, false);
+    c.fillStyle = '#2b2c30';
+    for (let k = 0; k <= 5; k++) c.fillRect(x + pane.x - 1 + (k * (pane.w + 2)) / 5, y + pane.y - 2, 1.5, pane.h + 4);
+    c.fillRect(x + pane.x - 2, y + pane.y + pane.h / 2, pane.w + 4, 1.5);
+    // A tag scrawled by the door, low
+    if (life === 'tag') tag(c, x + 36, y + 46, 40, 12, wr);
+    // The slab's edge
+    c.fillStyle = shadeHex(wall, 0.1);
+    c.fillRect(x, y, PX_W * 2, slab);
+    c.fillStyle = shadeHex(wall, -0.18);
+    c.fillRect(x, y + slab - 2, PX_W * 2, 2);
+  }
+  if (glow) return;
+  // Grime and rust running down from the slab, heavy by the doors
+  for (let k = 0; k < 56; k++) {
+    const x = wr() * W;
+    c.fillStyle = wr() < 0.2 ? `rgba(120, 70, 40, ${0.12 + wr() * 0.12})` : `rgba(20, 22, 26, ${0.14 + wr() * 0.18})`;
+    c.fillRect(x, y + slab, 1.5 + wr() * 2, 5 + wr() * wr() * 30);
+  }
+}
+
 /** One wall band: ROWS floors of COLS bays, `glow` for the light map; each kind its own window (windows.ts) */
 function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow: boolean, seed: number) {
   const { wall, trim } = WALL_COLOR[kind];
@@ -325,6 +429,10 @@ function wallBand(c: CanvasRenderingContext2D, kind: WallKind, y0: number, glow:
     }
     if (type === 'recess') {
       recessRow(c, wall, y, seed, row, glow, wr);
+      continue;
+    }
+    if (type === 'deck') {
+      deckRow(c, wall, y, seed, row, glow, wr);
       continue;
     }
     if (type === 'curtain') {

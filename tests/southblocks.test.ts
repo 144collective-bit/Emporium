@@ -5,12 +5,13 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARCH_X, BLOCKS, BLOCK_SOLIDS, BRIDGES, BRIDGE_CLEAR, BUNKER, CORES, COURTS, DECKS, DESIRE_LINES, GALLERIES, GRASS, PLAY,
-  BLOCKS_RECT, RAMPART, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
+  BLOCKS_RECT, CAGE, CAGES, PIERS, RAMPART, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
 } from '../src/scripts/city3d/southblocks';
 import { EDGE_Z, FOOTPATHS, LOT9_EDGE, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, UNDERHILL } from '../src/scripts/city3d/south';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { cross, distTo, inside, selfCrossings } from '../src/scripts/city3d/streetfaces';
 import { southLift } from '../src/scripts/city3d/southground';
+import { MOUTH_PATHS } from '../src/scripts/city3d/circus';
 
 const STREETS = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp');
 /** How far a point is from the nearest street's sidewalk's outer edge (negative: on the street or its sidewalk) */
@@ -105,10 +106,20 @@ test('the galleries: along each slab and the Rampart at every third floor it ris
       assert.equal(g.y, floorY(b.base, g.floor));
       for (const p of g.poly) if (!underArch(p)) assert.ok(offStreet(p) > 0.3, `${b.id}'s gallery over a street at ${p}`);
     }
-    // (each core of a slab touches its third floor's gallery)
+    // (each core of a slab touches its third floor's gallery; a service tower standing off its block by its link: the
+    // link from on the gallery's edge to the tower's face, `gap` long, docs/brutalist-plan.md Phase 2)
     for (const c of CORES.filter((q) => q.of === b.id)) {
-      const near = Math.min(...mine.filter((q) => q.floor === 3).flatMap((g) => along(c.foot).map((p) => Math.min(...along(g.poly).map((q) => Math.hypot(p[0] - q[0], p[1] - q[1]))))));
-      assert.ok(near < 0.4, `${c.id} ${near.toFixed(2)} from its gallery`);
+      const third = mine.filter((q) => q.floor === 3);
+      const dist = (pts: Pt[], poly: Pt[]) => Math.min(...pts.map((p) => Math.min(...along(poly).map((q) => Math.hypot(p[0] - q[0], p[1] - q[1])))));
+      if (!c.link) {
+        assert.equal(c.gap, 0);
+        assert.ok(Math.min(...third.map((g) => dist(along(c.foot), g.poly))) < 0.4, `${c.id} from its gallery`);
+        continue;
+      }
+      const [a, e] = c.link;
+      assert.ok(Math.min(...third.map((g) => dist([a], g.poly))) < 0.4, `${c.id}'s link off its gallery`);
+      assert.ok(dist([e], c.foot) < 0.4, `${c.id}'s link short of its tower`);
+      assert.ok(Math.abs(Math.hypot(e[0] - a[0], e[1] - a[1]) - c.gap) < 0.3, `${c.id}'s link ${c.gap} long`);
     }
   }
 });
@@ -250,4 +261,45 @@ test('brutalist (docs/brutalist-plan.md Phase 1): every corner cut straight, a c
       const ends = (sh.cutStart ? 0 : 1) + (sh.cutEnd ? 0 : 1);
       assert.equal(corners, ends * 2, `${b.id} step ${i}: ${corners} corner faces for ${ends} ends`);
     });
+});
+
+test('the service towers (docs/brutalist-plan.md Phase 2): most stand a bridge off their blocks, none nearer the streets', () => {
+  const off = CORES.filter((c) => c.gap > 0);
+  assert.ok(off.length >= 12, `${off.length} of ${CORES.length} stand off`);
+  for (const c of off) assert.ok(c.gap <= 3 && c.link, c.id);
+  // (each link clear of the streets as its galleries are)
+  for (const c of off) for (const p of along(c.link!, false)) assert.ok(offStreet(p) > 0.3, `${c.id}'s link over a street`);
+});
+
+test('the bridges\' piers (docs/brutalist-plan.md polish): under their spans, on the estate\'s land, clear of the streets', () => {
+  assert.ok(PIERS.length >= 4, `${PIERS.length} piers`);
+  for (const p of PIERS) {
+    const br = BRIDGES.find((q) => p.id.startsWith(`${q.id}-pier`))!;
+    assert.ok(br, `${p.id}'s bridge`);
+    // (on its span's line, under its deck, standing on the ground)
+    const [a, c] = br.pts;
+    const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    const off = Math.abs(((p.at[0] - a[0]) * (c[1] - a[1]) - (p.at[1] - a[1]) * (c[0] - a[0])) / l);
+    assert.ok(off < 0.05, `${p.id} ${off.toFixed(2)} off its span`);
+    assert.ok(p.top < Math.min(...br.ys) && p.top > Math.min(...br.ys) - 0.4, `${p.id}'s top`);
+    assert.ok(p.top - p.base > 2, `${p.id} too short`);
+    for (const q of [p.at, ...[[-0.4, -0.4], [0.4, -0.4], [0.4, 0.4], [-0.4, 0.4]].map(([dx, dz]): Pt => [p.at[0] + dx, p.at[1] + dz])]) {
+      assert.ok(offStreet(q) >= 0.95, `${p.id} by a street`);
+      for (const f of FOOTPATHS) assert.ok(distTo(f.pts, q) > PATH_HALF + 0.5, `${p.id} on ${f.id}`);
+    }
+  }
+});
+
+test("the towers' stair cages (docs/brutalist-plan.md): off the streets, the footpaths, the Circus's paths and the blocks", () => {
+  assert.ok(CAGES.length >= 10);
+  for (const g of CAGES)
+    for (let a = 0.4; a <= CAGE.len; a += 0.25)
+      for (let b = -CAGE.half; b <= CAGE.half + 1e-6; b += CAGE.half / 4) {
+        const p = g.at(a, b);
+        const at = `${g.id} at ${p[0].toFixed(1)}, ${p[1].toFixed(1)}`;
+        assert.ok(offStreet(p) > 0.3, `${at}: on a sidewalk`);
+        for (const f of FOOTPATHS) assert.ok(distTo(f.pts, p) > PATH_HALF, `${at}: on ${f.id}`);
+        for (const m of MOUTH_PATHS) assert.ok(distTo(m, p) > PATH_HALF, `${at}: on a subway's path`);
+        assert.ok(!inBlock(p), `${at}: in a block`);
+      }
 });

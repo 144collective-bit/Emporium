@@ -22,17 +22,17 @@
  */
 import * as THREE from 'three';
 import type { Tick } from './world';
-import { Batch, lit, neon, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, lit, neon, toon } from './kit';
 import { ATLAS, kit, type Frame } from './infill';
 import { site } from './tilework';
 import { PLANT } from './palette';
 import { shift } from './streetfaces';
 import {
-  ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CONCRETE, CORES, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
+  ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
   SKY_FLOORS, TOWER_HALF, blockById, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
-  type Block, type Core, type Pt,
+  type Block, type Cage, type Core, type Pt,
 } from './southblocks';
-import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, coreFloors } from './southsky';
+import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors } from './southsky';
 import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, COLUMN_R, DECK_COLUMNS, DECK_PROPS, FRAME, SANDPIT, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
 import { COURTS, DESIRE_LINES, GRASS, PLAY } from './southblocks';
 import { BANK, COVER, ROAD, STONE } from './palette';
@@ -58,12 +58,16 @@ const ACCENT: Record<keyof typeof ACCENTS, THREE.Material> = { orange: toon(ACCE
 /** Warm strip lights (under the galleries and bridges), the bridges' glass, the stair slots: dark glass by day (against the
  * grey concrete, not a tan band), lit warm at night */
 const STRIP = neon('#ffcf86', 0.1, 1.25);
+/** A tired tube: the odd link's light stuttering (still under reduced motion: kit.ts `lit()`) */
+const STRIP_TIRED = neon('#ffcf86', 0.1, 1.25, 0.55);
 const GLASS = lit(toon('#3b4656', { emissive: '#ffe2b4' }), 0, 0.95);
 const SLOT = lit(toon('#323b48', { emissive: '#ffe0a6' }), 0, 0.9);
 const BEACON = neon('#ff4a3a', 0.8, 2.2);
 const BUNKER_NEON = neon('#ff3fb0', 0.6, 1.7);
 // (brutalist: board-marked grey concrete, deep balcony recesses with life in them; docs/brutalist-plan.md Phase 1)
 const WALL = ATLAS.wall.brutal;
+/** The gallery sides: the flats' front doors and kitchen windows off the deck, tags, grime (the brutalist plan's polish) */
+const WALL_DECK = ATLAS.wall.brutalDeck;
 /** The entrance halls: the city's lobby glazing, warm and patchy at night (infill.ts `lobbyWarm`, Phase 6d) */
 const LOBBY = ATLAS.ground.lobbyWarm;
 /** The lobby band's height (downtown's `SHOP_H`); the ground floor's fascia over it to the first floor */
@@ -267,7 +271,7 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
       } else quad(b, a, c, y0, base + GROUND_H + 2 * 1, n, CONC);
       const upper = arch ? floorY(base, 3) : base + GROUND_H;
       if (refit) quad(b, a, c, upper, top, n, CONC_DARK);
-      else k.wall(WALL, a, c, upper, top, n, u0, 1);
+      else k.wall(tag === galleryTag ? WALL_DECK : WALL, a, c, upper, top, n, u0, 1);
       // The parapet over it (its outer face the wall's, carried up)
       parapet(b, a, c, n, top);
       // Its colour: a bold stripe down the middle of each end, the block told apart by it
@@ -328,6 +332,17 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
         }
       });
     });
+  // Satellite dishes clustered on its roof's edge, the side away from the galleries (the brutalist plan's grit)
+  if (!low)
+    b.detail(() => {
+      const edge = shift(part, -s * (blk.depth! / 2 - 0.5));
+      for (let q = 2; q < edge.length - 1; q += 5)
+        for (let j = 0; j < 3; j++) {
+          const p0 = edge[q];
+          const off: Pt = [p0[0] + (j - 1) * 0.55, p0[1] + ((q + j) % 2) * 0.3];
+          dish(b, off, top + PARAPET, (q * 7 + j * 3) % 6);
+        }
+    });
   // Sky gardens: planters along its roof, by the galleried side
   if (!low)
     b.detail(() => {
@@ -381,6 +396,15 @@ function drawTower(b: Batch, t: Block, low: boolean) {
     }
     // The plant room: a plain concrete box set back on the roof, its corners cut as the tower's, and its beacon
     prism(b, grow(ring, -TOWER_HALF * 0.3), top, top + PLANT_H, CONC, ROOF);
+    // (a cluster of dishes round the plant room's foot, near only, not on phones)
+    if (!low)
+      b.detail(() => {
+        ring.forEach((p, j) => {
+          if (j % 2) return;
+          const at: Pt = [c[0] + (p[0] - c[0]) * 0.82, c[1] + (p[1] - c[1]) * 0.82];
+          dish(b, at, top, j % 6);
+        });
+      });
     b.add(plain(new THREE.CylinderGeometry(0.05, 0.05, BEACON_H, 6).translate(c[0], top + PLANT_H + BEACON_H / 2, c[1])), CONC_DARK);
     b.add(plain(new THREE.SphereGeometry(0.13, 8, 6).translate(c[0], top + PLANT_H + BEACON_H, c[1])), BEACON);
   });
@@ -435,9 +459,177 @@ function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from:
       const p = (s: number): Pt => [f[0] + t[0] * s, f[1] + t[1] * s];
       quad(b, p(-0.5), p(0.5), base, base + 1.25, n, DOOR);
       quad(b, p(-0.55), p(0.55), base + 1.3, base + 1.36, n, STRIP);
+      // A sodium lamp over it on a bracket, orange at night (the brutalist plan's grit)
+      const lamp: Pt = [f[0] + n[0] * 0.25, f[1] + n[1] * 0.25];
+      b.add(plain(new THREE.BoxGeometry(0.3, 0.1, 0.18).translate(lamp[0], base + 1.62, lamp[1])), SODIUM);
+      // ...near only: a puddle at its foot, a tag scrawled low on the wall by it
+      b.detail(() => {
+        const h = Math.abs(Math.round(door.x * 13 + door.z * 7));
+        const c0: Pt = [f[0] + n[0] * (0.9 + (h % 3) * 0.2) + t[0] * (((h % 5) - 2) * 0.3), f[1] + n[1] * (0.9 + (h % 3) * 0.2) + t[1] * (((h % 5) - 2) * 0.3)];
+        flat(b, Array.from({ length: 10 }, (_, i): Pt => {
+          const q = (i / 10) * Math.PI * 2;
+          return [c0[0] + Math.cos(q) * 0.55, c0[1] + Math.sin(q) * 0.3];
+        }), base + 0.012, PUDDLE);
+        if (h % 3 !== 2) {
+          const paint = TAG_PAINT[h % TAG_PAINT.length];
+          const s0 = 0.7 + (h % 4) * 0.08;
+          for (let i = 0; i < 6; i++) {
+            const [v0, v1] = [0.25 + ((h + i * 3) % 4) * 0.09, 0.3 + ((h + i * 5) % 4) * 0.09];
+            quad(b, p(s0 + i * 0.13), p(s0 + i * 0.13 + 0.11), base + Math.min(v0, v1), base + Math.max(v0, v1) + 0.06, n, paint);
+          }
+        }
+      });
     }
   });
 }
+/**
+ * A service tower's top (docs/brutalist-plan.md Phase 2): a boiler house jutting out over its face away from its block,
+ * a concrete box, and its flue beside it
+ */
+function drawBoilerHouse(b: Batch, c: Core, near: Pt) {
+  const k = kit(b, WORLD);
+  const l = Math.hypot(c.at[0] - near[0], c.at[1] - near[1]) || 1;
+  const out: Pt = [(c.at[0] - near[0]) / l, (c.at[1] - near[1]) / l];
+  const side: Pt = [-out[1], out[0]];
+  const box = (m: Pt, hu: number, hv: number): Pt[] => [
+    [m[0] + out[0] * hu + side[0] * hv, m[1] + out[1] * hu + side[1] * hv],
+    [m[0] - out[0] * hu + side[0] * hv, m[1] - out[1] * hu + side[1] * hv],
+    [m[0] - out[0] * hu - side[0] * hv, m[1] - out[1] * hu - side[1] * hv],
+    [m[0] + out[0] * hu - side[0] * hv, m[1] + out[1] * hu - side[1] * hv],
+  ];
+  // (wound as the footprints are: anticlockwise seen from above)
+  const ring = (pts: Pt[]) => (pts.reduce((a, p, i) => a + p[0] * pts[(i + 1) % 4][1] - pts[(i + 1) % 4][0] * p[1], 0) < 0 ? [...pts].reverse() : pts);
+  const m: Pt = [c.at[0] + out[0] * (c.half * 0.55), c.at[1] + out[1] * (c.half * 0.55)];
+  k.all(() => {
+    prism(b, ring(box(m, c.half * 0.7, c.half * 0.55)), c.top - 0.02, c.top + 1.0, CONC, ROOF);
+    const f: Pt = [c.at[0] - out[0] * (c.half * 0.45) + side[0] * (c.half * 0.5), c.at[1] - out[1] * (c.half * 0.45) + side[1] * (c.half * 0.5)];
+    b.add(plain(new THREE.CylinderGeometry(0.13, 0.15, 1.8, 8).translate(f[0], c.top + 0.9, f[1])), CONC_DARK);
+    b.add(plain(new THREE.CylinderGeometry(0.17, 0.17, 0.1, 8).translate(f[0], c.top + 1.82, f[1])), CONC_DARK);
+  });
+}
+
+/** A satellite dish on a short stand, turned `k` sixths of the way round, at its foot's place */
+const DISH = toon('#d6d3cc');
+function dish(b: Batch, at: Pt, y: number, k: number) {
+  const a = (k / 6) * Math.PI * 2;
+  b.add(plain(new THREE.CylinderGeometry(0.03, 0.03, 0.35, 4).translate(at[0], y + 0.17, at[1])), RAIL);
+  b.add(plain(new THREE.SphereGeometry(0.26, 8, 4, 0, Math.PI * 2, 0, 0.9).rotateX(-Math.PI / 2 + 0.5).rotateY(a).translate(at[0], y + 0.42, at[1])), DISH);
+}
+
+/* ---------- The towers' stair cages (docs/brutalist-plan.md, the owner's pick: caged, walked) ---------- */
+
+/** The cages' anti-climb mesh: dark, seen through (the frame's rails over it) */
+const MESH = new THREE.MeshBasicMaterial({ color: '#4a5058', transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide });
+
+/** A sloped slab: from (a0, y0) to (a1, y1) along the cage, b0 to b1 across, its top and underside, `t` thick */
+function slope(b: Batch, g: Cage, a0: number, a1: number, b0: number, b1: number, y0: number, y1: number, t: number, m: THREE.Material) {
+  const P = (a: number, bb: number, y: number) => {
+    const p = g.at(a, bb);
+    return [p[0], y, p[1]];
+  };
+  const pos = [
+    // top (facing up and back along the rise)
+    ...P(a0, b0, y0), ...P(a1, b0, y1), ...P(a1, b1, y1), ...P(a0, b1, y0),
+    // underside
+    ...P(a0, b0, y0 - t), ...P(a0, b1, y0 - t), ...P(a1, b1, y1 - t), ...P(a1, b0, y1 - t),
+  ];
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  // (wound so the top faces up whichever way the cage turns)
+  const [p0, p1, p2] = [g.at(a0, b0), g.at(a1, b0), g.at(a1, b1)];
+  const upCCW = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]) < 0;
+  geo.setIndex(upCCW ? [0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7] : [0, 2, 1, 0, 3, 2, 4, 6, 5, 4, 7, 6]);
+  geo.computeVertexNormals();
+  b.add(geo, m);
+}
+/** A landing's slab in the cage: a0 to a1 out, b0 to b1 across, at y */
+function cageSlab(b: Batch, g: Cage, a0: number, a1: number, b0: number, b1: number, y: number, m: THREE.Material) {
+  const ring = [g.at(a0, b0), g.at(a1, b0), g.at(a1, b1), g.at(a0, b1)];
+  flat(b, ring, y, m);
+  flat(b, ring, y - 0.15, CONC_DARK, false);
+}
+/**
+ * A tower's stair cage: concrete posts at its corners and halfway along, a ring beam at each landing, its roof; a
+ * concrete spine wall between its two lanes; its flights (treads near only, not on phones), its landings with a strip
+ * light under each (the odd one tired); anti-climb mesh round its open sides, left open at the foot by the tower: the
+ * way in from the street
+ */
+function drawCage(b: Batch, g: Cage, low: boolean, tired: boolean) {
+  const k = kit(b, WORLD);
+  const { len, half, land, gap } = CAGE;
+  const w = half - 0.12;
+  const ys = cageLevels(g.id);
+  const top = Math.max(g.top, ys[ys.length - 1] + 1.9);
+  const corners: [number, number][] = [[0, -half], [len / 2, -half], [len, -half], [len, half], [len / 2, half], [0, half]];
+  k.all(() => {
+    // The frame
+    for (const [a, bb] of corners) {
+      const p = g.at(a, bb);
+      b.add(plain(new THREE.BoxGeometry(0.24, top - g.base, 0.24).rotateY(-Math.atan2(g.out[1], g.out[0])).translate(p[0], (g.base + top) / 2, p[1])), CONC);
+    }
+    const beams = [...ys.slice(1), ...ys.slice(1).map((y, i) => (ys[i] + y) / 2), top];
+    for (const y of beams) {
+      along(b, g.at(0, -half), g.at(len, -half), 0.2, y - 0.2, y + 0.05, CONC);
+      along(b, g.at(0, half), g.at(len, half), 0.2, y - 0.2, y + 0.05, CONC);
+      along(b, g.at(len, -half), g.at(len, half), 0.2, y - 0.2, y + 0.05, CONC);
+    }
+    flat(b, [g.at(0, -half), g.at(len, -half), g.at(len, half), g.at(0, half)], top + 0.05, ROOF);
+    // The spine wall between the lanes, from the street to the roof
+    along(b, g.at(land, 0), g.at(len - land, 0), gap * 2, g.base, top, CONC);
+    // The flights and the landings
+    for (let i = 0; i + 1 < ys.length; i++) {
+      const [y0, y1] = [ys[i], ys[i + 1]];
+      const mid = (y0 + y1) / 2;
+      slope(b, g, land, len - land, gap, w, y0, mid, 0.18, CONC);
+      slope(b, g, len - land, land, -w, -gap, mid, y1, 0.18, CONC);
+      cageSlab(b, g, len - land, len - 0.12, -w, w, mid, PAVING);
+      cageSlab(b, g, 0.02, land, -w, w, y1, PAVING);
+    }
+  });
+  // The landings' lights, under each (the odd cage's tired, stuttering)
+  for (let i = 1; i < ys.length; i++) {
+    const mid = (ys[i - 1] + ys[i]) / 2;
+    along(b, g.at(len - land / 2, -w + 0.2), g.at(len - land / 2, w - 0.2), 0.08, mid - 0.2, mid - 0.16, tired ? STRIP_TIRED : STRIP);
+  }
+  // The treads: near only, not on phones
+  if (!low)
+    b.detail(() => {
+      for (let i = 0; i + 1 < ys.length; i++) {
+        const [y0, y1] = [ys[i], ys[i + 1]];
+        const mid = (y0 + y1) / 2;
+        const n = Math.round((len - 2 * land) / 0.27);
+        for (let s = 0; s < n; s++) {
+          const f = (s + 0.5) / n;
+          for (const [b0, b1, ya, yb, dir] of [[gap, w, y0, mid, 1], [-w, -gap, mid, y1, -1]] as const) {
+            const a = dir > 0 ? land + (len - 2 * land) * f : len - land - (len - 2 * land) * f;
+            const y = ya + (yb - ya) * f;
+            const p = g.at(a, (b0 + b1) / 2);
+            b.add(plain(new THREE.BoxGeometry(0.06, 0.05, b1 - b0).rotateY(-Math.atan2(g.out[1], g.out[0])).translate(p[0], y + 0.03, p[1])), CONC_DARK);
+          }
+        }
+      }
+    });
+  // The mesh: the far end and both long sides, from a head's height over the street at the way in, the rest from the foot
+  const meshSide = (a0: number, a1: number, bb: number, y0: number, y1: number) => {
+    const n: Pt = [g.side[0] * Math.sign(bb), g.side[1] * Math.sign(bb)];
+    quad(b, g.at(a0, bb), g.at(a1, bb), y0, y1, n, MESH);
+  };
+  // (near only, not on phones: the mesh's bars, upright every 0.3, so it reads as a cage, the flights seen through it)
+  if (!low)
+    b.detail(() => {
+      for (const bb of [-half, half])
+        for (let a = 0.3; a < len; a += 0.3) {
+          if (bb > 0 && a < land + 0.3) continue;
+          const p = g.at(a, bb);
+          b.add(plain(new THREE.BoxGeometry(0.025, top - g.base, 0.025).translate(p[0], (g.base + top) / 2, p[1])), CONC_DARK);
+        }
+    });
+  meshSide(land + 0.3, len, half, g.base, top);
+  meshSide(0, land + 0.3, half, g.base + 1.7, top);
+  meshSide(0, len, -half, g.base, top);
+  quad(b, g.at(len, -half), g.at(len, half), g.base, top, g.out, MESH);
+}
+
 /** A rounded square's four corners, a little in: the ring's points furthest out each way round its middle */
 function cornersOf(ring: Pt[]): Pt[] {
   const c = centre(ring);
@@ -453,9 +645,14 @@ const centre = (ring: Pt[]): Pt => [ring.reduce((s, p) => s + p[0], 0) / ring.le
 
 /* ---------- The bridges, the podium deck, Bunker Sound's door ---------- */
 
-function drawBridge(b: Batch, a: Pt, c: Pt, y: number) {
+const PUDDLE = toon('#1b2230');
+/** The towers' door lamps: sodium orange, off by day */
+const SODIUM = neon('#ff9a3c', 0.08, 1.7);
+const TAG_PAINT = ['#d94fb0', '#38c6d9', '#e6c13a', '#e0e0e0'].map((c) => toon(c));
+function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | null = STRIP) {
   const k = kit(b, WORLD);
   const w = BRIDGE_HALF * 2;
+  const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
   k.all(() => {
     along(b, a, c, w, y - 0.2, y, CONC_DARK);
     for (const side of [-1, 1]) {
@@ -464,7 +661,121 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number) {
     }
     along(b, a, c, w + 0.12, y + 1.5, y + 1.68, CONC);
   });
-  along(b, a, c, 0.1, y - 0.24, y - 0.2, STRIP);
+  // (its lights under it and inside, down its ceiling; a dead one none)
+  if (strip) {
+    along(b, a, c, 0.1, y - 0.24, y - 0.2, strip);
+    along(b, a, c, 0.1, y + 1.44, y + 1.48, strip);
+  }
+  if (l < 1.5) return;
+  // ...near only: the glass's concrete mullions (wired glass, a pane each 1.2), a puddle or two, the odd tag
+  b.detail(() => {
+    const t: Pt = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+    const r: Pt = [-t[1], t[0]];
+    const at = (s: number, o: number): Pt => [a[0] + t[0] * s + r[0] * o, a[1] + t[1] * s + r[1] * o];
+    for (let s = 1.2; s < l - 0.3; s += 1.2)
+      for (const side of [-1, 1]) along(b, at(s - 0.04, side * (BRIDGE_HALF - 0.1)), at(s + 0.04, side * (BRIDGE_HALF - 0.1)), 0.07, y + 0.6, y + 1.5, CONC_DARK);
+    // (where, from a hash of the bridge's place: the same every time)
+    const h = Math.abs(Math.round(a[0] * 7 + a[1] * 13 + y * 31));
+    const puddle = (s: number, o: number, rx: number) => {
+      const ring: Pt[] = Array.from({ length: 10 }, (_, i) => {
+        const q = (i / 10) * Math.PI * 2;
+        return at(s + Math.cos(q) * rx, o + Math.sin(q) * rx * 0.45);
+      });
+      flat(b, ring, y + 0.006, PUDDLE);
+    };
+    if (h % 3 !== 0) puddle(l * (0.3 + (h % 5) * 0.08), ((h % 7) - 3) * 0.12, 0.35 + (h % 4) * 0.08);
+    if (l > 8 && h % 2 === 0) puddle(l * 0.75, -0.2, 0.3);
+    // A tag on the inside of a parapet: a few strokes of one paint, low
+    if (h % 4 !== 1) {
+      const side = h % 2 ? 1 : -1;
+      const s0 = l * (0.2 + (h % 6) * 0.1);
+      const paint = TAG_PAINT[h % TAG_PAINT.length];
+      const o = side * (BRIDGE_HALF - 0.125);
+      for (let i = 0; i < 5; i++) {
+        const [u0, u1] = [s0 + i * 0.16, s0 + i * 0.16 + 0.14];
+        const [v0, v1] = [0.15 + ((h + i * 3) % 4) * 0.08, 0.2 + ((h + i * 5) % 4) * 0.08];
+        along(b, at(u0, o), at(u1, o), 0.012, y + Math.min(v0, v1), y + Math.max(v0, v1) + 0.05, paint);
+      }
+    }
+  });
+}
+/* ---------- The blocks' names on their bridges (the brutalist plan's polish: painted, stencilled, worn) ---------- */
+
+/** The names a bridge's end can lead to: the blocks' own (made up), each a row of one painted texture */
+const SIGN_NAMES = BLOCKS.map((q) => q.name.toUpperCase());
+const SIGN_ROW = 64;
+const SIGN_TEX = canvasTex(512, SIGN_ROW * SIGN_NAMES.length, (c) => {
+  c.clearRect(0, 0, 512, SIGN_ROW * SIGN_NAMES.length);
+  SIGN_NAMES.forEach((name, i) => {
+    const y = i * SIGN_ROW + SIGN_ROW / 2;
+    c.font = `800 40px ${FONT_DISPLAY}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.fillStyle = '#e8e4d8';
+    c.fillText(name, 256, y, 496);
+    // (stencil breaks across the letters, a drip or two under them, worn through here and there)
+    c.globalCompositeOperation = 'destination-out';
+    for (let x = 18; x < 500; x += 23) c.fillRect(x, y - 2, 3, 4);
+    for (let k = 0; k < 40; k++) c.fillRect((k * 97 + i * 31) % 512, y - 20 + ((k * 53) % 40), 4, 3);
+    c.globalCompositeOperation = 'source-over';
+    c.fillStyle = '#e8e4d8';
+    for (let k = 0; k < 4; k++) c.fillRect(60 + ((k * 113 + i * 41) % 380), y + 16, 2, 8 + ((k * 7) % 10));
+  });
+});
+const SIGN = toon('#ffffff', { map: SIGN_TEX, alphaTest: 0.5 });
+/** A block's name painted on a bridge's parapet, inside, `s` along it from a to c, on its right (o) or left side */
+function drawName(b: Batch, a: Pt, c: Pt, y: number, s: number, side: 1 | -1, name: string) {
+  const row = SIGN_NAMES.indexOf(name.toUpperCase());
+  if (row < 0) return;
+  const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+  const t: Pt = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+  const r: Pt = [-t[1], t[0]];
+  const o = side * (BRIDGE_HALF - 0.125);
+  const w = 1.5;
+  // (read left to right walking towards the end: along t on the left parapet, against it on the right)
+  const dir = side < 0 ? 1 : -1;
+  const p0: Pt = [a[0] + t[0] * (s - (dir * w) / 2) + r[0] * o, a[1] + t[1] * (s - (dir * w) / 2) + r[1] * o];
+  const p1: Pt = [a[0] + t[0] * (s + (dir * w) / 2) + r[0] * o, a[1] + t[1] * (s + (dir * w) / 2) + r[1] * o];
+  const n: Pt = [-r[0] * side, -r[1] * side];
+  const [y0, y1] = [y + 0.18, y + 0.5];
+  const [v0, v1] = [1 - ((row + 1) * SIGN_ROW) / (SIGN_ROW * SIGN_NAMES.length), 1 - (row * SIGN_ROW) / (SIGN_ROW * SIGN_NAMES.length)];
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute([p0[0], y0, p0[1], p1[0], y0, p1[1], p1[0], y1, p1[1], p0[0], y1, p0[1]], 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute([n[0], 0, n[1], n[0], 0, n[1], n[0], 0, n[1], n[0], 0, n[1]], 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute([0, v0, 1, v0, 1, v1, 0, v1], 2));
+  const front = (p1[0] - p0[0]) * n[1] - (p1[1] - p0[1]) * n[0] > 0;
+  g.setIndex(front ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]);
+  b.add(g, SIGN);
+}
+/** Where a bridge's end leads: the block its core serves, the block it meets, nothing for the deck */
+const endName = (e: (typeof BRIDGES)[number]['a']) => ('core' in e ? blockById(CORES.find((q) => q.id === e.core)!.of).name : 'block' in e ? blockById(e.block).name : '');
+
+/** A bridge's pier: a concrete column under its span, a cap on it under the deck */
+function drawPier(b: Batch, p: (typeof PIERS)[number]) {
+  const k = kit(b, WORLD);
+  k.all(() => {
+    b.add(plain(new THREE.BoxGeometry(PIER_HALF * 2, p.top - p.base, PIER_HALF * 2).rotateY(-p.rot).translate(p.at[0], (p.base + p.top) / 2, p.at[1])), CONC);
+    b.add(plain(new THREE.BoxGeometry(PIER_HALF * 2 + 0.3, 0.25, BRIDGE_HALF * 2).rotateY(-p.rot).translate(p.at[0], p.top - 0.125, p.at[1])), CONC);
+  });
+}
+
+/**
+ * A link's mouth on the gallery (the brutalist plan's polish): a concrete portal, a post each side and a lintel across,
+ * so the gallery's front and the link's parapets meet at it, not at a kink
+ */
+function drawPortal(b: Batch, a: Pt, c: Pt, y: number) {
+  const k = kit(b, WORLD);
+  const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+  const t: Pt = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+  const r: Pt = [-t[1], t[0]];
+  const h = BRIDGE_HALF + 0.08;
+  k.all(() => {
+    for (const side of [-1, 1]) {
+      const m: Pt = [a[0] + r[0] * side * h, a[1] + r[1] * side * h];
+      along(b, [m[0] - t[0] * 0.15, m[1] - t[1] * 0.15], [m[0] + t[0] * 0.15, m[1] + t[1] * 0.15], 0.3, y - 0.2, y + 1.7, CONC);
+    }
+    along(b, [a[0] - t[0] * 0.15, a[1] - t[1] * 0.15], [a[0] + t[0] * 0.15, a[1] + t[1] * 0.15], h * 2 + 0.3, y + 1.68, y + 1.92, CONC);
+  });
 }
 
 function drawDeck(b: Batch, poly: Pt[], y: number, base: number) {
@@ -577,6 +888,11 @@ const PLAY_FLOOR = toon(STONE.edge);
 const SAND = toon(BANK.sand);
 const BIN_COLOURS = ['#2f6a3c', '#2b2d3a', '#55697f', '#8b5a2b'].map((c) => toon(c));
 const RAIL = toon('#3b3846');
+/** The grit by the bins (the brutalist plan): bin bags, a dumped mattress and sofa, a trolley's wire basket */
+const BAG = toon('#17181c');
+const MATTRESS = toon('#b9ab8e');
+const SOFA = toon('#5a3b34');
+const TROLLEY = new THREE.MeshBasicMaterial({ color: '#8e949c', transparent: true, opacity: 0.55, depthWrite: false });
 
 /** A thing's box (its corners, `y0` to `y1`) */
 function thingBox(b: Batch, t: Thing, y0: number, y1: number, m: THREE.Material, shrink = 0) {
@@ -610,6 +926,30 @@ function drawBins(b: Batch, t: Thing, low: boolean) {
       const at = longU ? inThing(t, s, 0) : inThing(t, 0, s);
       b.add(plain(new THREE.BoxGeometry(0.5, 0.85, 0.55).rotateY(-t.rot).translate(at[0], ON + 0.425, at[1])), BIN_COLOURS[i % BIN_COLOURS.length]);
     }
+    // The mess round it (the brutalist plan's grit): bin bags at its open front, and, by a hash of its place, a
+    // mattress leant on its back wall, a sofa dumped by it, a shopping trolley
+    const h = Math.abs(Math.round(t.at[0] * 11 + t.at[1] * 7));
+    const front = (u: number, v: number) => inThing(t, u, v);
+    for (let k = 0; k < 3 + (h % 3); k++) {
+      const p = front(-t.w / 2 + 0.3 + ((k * 0.55 + (h % 5) * 0.1) % Math.max(0.6, t.w - 0.6)), t.d / 2 + 0.35 + (k % 2) * 0.2);
+      b.add(plain(new THREE.IcosahedronGeometry(0.2 + (k % 2) * 0.05, 0).scale(1, 0.8, 1).translate(p[0], ON + 0.16, p[1])), BAG);
+    }
+    if (h % 3 === 0) {
+      const p = front(t.w / 2 + 0.25, 0);
+      b.add(plain(new THREE.BoxGeometry(0.12, 1.2, 0.9).rotateZ(0.25).rotateY(-t.rot).translate(p[0], ON + 0.58, p[1])), MATTRESS);
+    }
+    if (h % 4 === 1) {
+      const p = front(-t.w / 2 - 0.7, t.d / 2 + 0.3);
+      b.add(plain(new THREE.BoxGeometry(1.1, 0.25, 0.5).rotateY(-t.rot + 0.4).translate(p[0], ON + 0.2, p[1])), SOFA);
+      const q = front(-t.w / 2 - 0.7 - 0.05, t.d / 2 + 0.1);
+      b.add(plain(new THREE.BoxGeometry(1.1, 0.35, 0.15).rotateY(-t.rot + 0.4).translate(q[0], ON + 0.4, q[1])), SOFA);
+    }
+    if (h % 3 === 1) {
+      const p = front(t.w / 2 + 0.6, t.d / 2 + 0.5);
+      // (a trolley: its basket's wires, its handle, its wheels)
+      b.add(plain(new THREE.BoxGeometry(0.55, 0.4, 0.38).rotateY(-t.rot - 0.6).translate(p[0], ON + 0.55, p[1])), TROLLEY);
+      b.add(plain(new THREE.BoxGeometry(0.04, 0.6, 0.38).rotateY(-t.rot - 0.6).translate(p[0], ON + 0.3, p[1])), RAIL);
+    }
   });
 }
 function drawShed(b: Batch, t: Thing) {
@@ -624,6 +964,12 @@ function drawShed(b: Batch, t: Thing) {
     for (let i = 0; i < 4; i++) {
       const p = inThing(t, -t.w / 2 + 0.5 + i * 0.75, 0);
       b.add(plain(new THREE.TorusGeometry(0.28, 0.025, 4, 10, Math.PI).rotateY(-t.rot + Math.PI / 2).translate(p[0], ON, p[1])), RAIL);
+      // (a bike chained to every other stand: its wheels and its frame)
+      if (i % 2 === 0)
+        for (const du of [-0.38, 0.38]) {
+          const w = inThing(t, -t.w / 2 + 0.5 + i * 0.75 + 0.15, du);
+          b.add(plain(new THREE.TorusGeometry(0.3, 0.03, 4, 12).rotateY(-t.rot).translate(w[0], ON + 0.3, w[1])), RAIL);
+        }
     }
   });
 }
@@ -758,13 +1104,41 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       });
   }
   CORES.forEach((c: Core) =>
-    site(`south-blocks core ${c.id}`, rectOf(c.foot, 1), (into) => {
+    site(`south-blocks core ${c.id}`, rectOf([...c.foot, ...(c.link ?? [])], 1), (into) => {
       const b = new Batch();
       const blk = BLOCKS.find((q) => q.id === c.of)!;
       // (its slot down the face away from its block's spine)
       const near = pointAt(blk.spine!, Math.min(lineLength(blk.spine!), Math.max(0, alongOf(blk.spine!, c.at)))).p;
       const lift = SKY_LIFTS.find((q) => q.id === c.id)!;
-      drawCore(b, c.foot, blk.base, c.top, c.at, [near], coreFloors(c.id).map((f) => floorY(blk.base, f)), lift.door);
+      const landings = coreFloors(c.id).map((f) => floorY(blk.base, f));
+      drawCore(b, c.foot, blk.base, c.top, c.at, [near], landings, lift.door);
+      // A service tower standing off its block: a covered link from the gallery to it at each landing
+      // (its portal at the gallery; every fourth tower's link lights tired, stuttering)
+      // (and every seventh's dead: no light at all)
+      const i = CORES.indexOf(c);
+      const light = i % 7 === 5 ? null : i % 4 === 3 ? STRIP_TIRED : STRIP;
+      if (c.link)
+        for (const y of landings) {
+          drawBridge(b, c.link[0], c.link[1], y, light);
+          drawPortal(b, c.link[0], c.link[1], y);
+          // Pigeon netting slung under it, near only, not on phones
+          if (!low)
+            b.detail(() => {
+              const [a, e] = c.link!;
+              const l = Math.hypot(e[0] - a[0], e[1] - a[1]) || 1;
+              const r: Pt = [(-(e[1] - a[1]) / l) * BRIDGE_HALF, ((e[0] - a[0]) / l) * BRIDGE_HALF];
+              flat(b, [[a[0] + r[0], a[1] + r[1]], [e[0] + r[0], e[1] + r[1]], [e[0] - r[0], e[1] - r[1]], [a[0] - r[0], a[1] - r[1]]], y - 0.5, MESH, false);
+            });
+        }
+      drawBoilerHouse(b, c, near);
+      b.build(into, opts);
+    })
+  );
+  // The towers' stair cages (one site each)
+  CAGES.forEach((g, i) =>
+    site(`south-blocks cage ${g.id}`, rectOf([g.at(0, -CAGE.half), g.at(CAGE.len, -CAGE.half), g.at(CAGE.len, CAGE.half), g.at(0, CAGE.half)], 1), (into) => {
+      const b = new Batch();
+      drawCage(b, g, low, i % 3 === 2);
       b.build(into, opts);
     })
   );
@@ -777,7 +1151,19 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
   [...spans.values()].forEach((set, i) =>
     site(`south-blocks bridge ${i}`, rectOf(set[0].pts, 2), (into) => {
       const b = new Batch();
-      for (const br of set) drawBridge(b, br.pts[0], br.pts[1], (br.ys[0] + br.ys[1]) / 2);
+      for (const br of set) {
+        const [a, c] = br.pts;
+        const y = (br.ys[0] + br.ys[1]) / 2;
+        drawBridge(b, a, c, y);
+        // (each end's block named on the parapet a little before it, on the left walking towards it)
+        const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+        if (l > 4 && !low)
+          b.detail(() => {
+            if (endName(br.b)) drawName(b, a, c, y, l - 1.3, -1, endName(br.b));
+            if (endName(br.a)) drawName(b, a, c, y, 1.3, 1, endName(br.a));
+          });
+      }
+      for (const p of PIERS.filter((q) => set.some((br) => q.id.startsWith(`${br.id}-pier`)))) drawPier(b, p);
       b.build(into, opts);
     })
   );

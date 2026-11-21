@@ -3,8 +3,8 @@
 // the floor under you by your height, only the railings stopping you up there, a lift in every core.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { REACH, SKY_LIFTS, SKY_SHAPES, STAIR, UP_FROM, floorName, liftArrival, liftFloorOf, skyFloorAt, skyLiftDoors, skyUp, skyWall, type SkyShape } from '../src/scripts/city3d/southsky';
-import { BLOCKS_RECT, BRIDGES, GALLERIES, blockById, floorY, inBlock, type Pt } from '../src/scripts/city3d/southblocks';
+import { REACH, SKY_LIFTS, SKY_SHAPES, STAIR, UP_FROM, cageLevels, coreFloors, floorName, liftArrival, liftFloorOf, skyFloorAt, skyLiftDoors, skyUp, skyWall, type SkyShape } from '../src/scripts/city3d/southsky';
+import { BLOCKS_RECT, BRIDGES, CAGE, CAGES, CORES as CORES_ALL, GALLERIES, blockById, floorY, inBlock, type Pt } from '../src/scripts/city3d/southblocks';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
 import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
@@ -41,8 +41,8 @@ test('one network: at the third floor every gallery, bridge, landing and the dec
     while (todo.length) for (const j of adj[todo.pop()!]) if (!seen.has(j)) (seen.add(j), todo.push(j));
     return seen;
   };
-  // (from every lift's landings and the stair's foot)
-  const starts = SKY_SHAPES.map((s, i) => (s.id.startsWith('landing') || s.id.startsWith('stair twin-core') ? i : -1)).filter((i) => i >= 0);
+  // (from every lift's landings, the stair's foot and the stair cages' ways in from the street)
+  const starts = SKY_SHAPES.map((s, i) => (s.id.startsWith('landing') || s.id.startsWith('stair twin-core') || (s.id.startsWith('cage') && s.id.endsWith(' in')) ? i : -1)).filter((i) => i >= 0);
   const all = reach(starts);
   for (let i = 0; i < n; i++) assert.ok(all.has(i), `${SKY_SHAPES[i].id} can't be reached`);
   // (the third floor walked end to end: from the Rampart's gallery to Wren's, Fennel's, the deck and The Core's stair)
@@ -149,4 +149,55 @@ test("The Core's stair: from the grass by it, clear of the towers, the street an
   assert.ok(door.poly.some((p) => inside(land.poly, p)), 'its landing into The Core');
   // (and the bridges' heights: over every street, a bus's clearance)
   for (const br of BRIDGES) assert.ok(Math.min(...br.ys) - 0.3 > 3, br.id);
+});
+
+test('walked end to end (docs/brutalist-plan.md Phase 2): every link and bridge has floor underfoot all the way, at its level', () => {
+  const { CORES, coreFloorsOf } = { CORES: CORES_ALL, coreFloorsOf: coreFloors };
+  const step = 0.25;
+  /** Floor underfoot at each step from `a` to `b` (`y0` to `y1`), someone standing on it; the worst miss */
+  const walk = (a: Pt, b: Pt, y0: number, y1: number, what: string) => {
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    // (nothing to walk: a bridge ending at a tower's door has no way on past it)
+    if (l < 0.01) return;
+    for (let d = 0; d <= l; d += step) {
+      const k = d / l;
+      const [x, z] = [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+      const want = y0 + (y1 - y0) * k;
+      const got = skyFloorAt(x, z, want + 0.1);
+      assert.ok(got !== null && Math.abs(got - want) < 0.3, `${what}: at ${x.toFixed(2)}, ${z.toFixed(2)} ${got === null ? 'no floor' : `floor ${got.toFixed(2)} not ${want.toFixed(2)}`}`);
+    }
+  };
+  // Each service tower's link: from a metre into its gallery, along the link, on to the middle of its landing
+  for (const c of CORES.filter((q) => q.link))
+    for (const f of coreFloorsOf(c.id)) {
+      const y = floorY(blockById(c.of).base, f);
+      const [a, e] = c.link!;
+      const l = Math.hypot(e[0] - a[0], e[1] - a[1]);
+      const t: Pt = [(e[0] - a[0]) / l, (e[1] - a[1]) / l];
+      walk([a[0] - t[0], a[1] - t[1]], c.at, y, y, `${c.id}'s link, floor ${f}`);
+    }
+  // Each stair cage (docs/brutalist-plan.md): from the street at the tower's face up every flight, across each turn, to
+  // each landing and on into the tower's landing
+  for (const g of CAGES) {
+    const ys = cageLevels(g.id);
+    const { len, land } = CAGE;
+    for (let k = 0; k + 1 < ys.length; k++) {
+      const [y0, y1] = [ys[k], ys[k + 1]];
+      const mid = (y0 + y1) / 2;
+      if (k === 0) walk(g.at(0.3, 0.5), g.at(land, 0.5), y0, y0, `${g.id} in`);
+      walk(g.at(land, 0.5), g.at(len - land, 0.5), y0, mid, `${g.id} flight ${k} up`);
+      walk(g.at(len - land, 0.5), g.at(len - land, -0.5), mid, mid, `${g.id} turn ${k}`);
+      walk(g.at(len - land, -0.5), g.at(land, -0.5), mid, y1, `${g.id} flight ${k} back`);
+      walk(g.at(land, -0.5), g.at(-1.2, -0.5), y1, y1, `${g.id} into the tower at ${y1.toFixed(1)}`);
+    }
+  }
+  // Each bridge: from the middle of what's at one end to the middle of what's at the other (a tower's face: its door)
+  const mid = (e: (typeof BRIDGES)[number]['a']): Pt | null => ('core' in e ? CORES.find((q) => q.id === e.core)!.at : 'deck' in e ? null : e.block === 'twin-core' ? centre(blockById('twin-core').foot) : null);
+  for (const br of BRIDGES) {
+    const [a, b] = br.pts;
+    const [ma, mb] = [mid(br.a) ?? a, mid(br.b) ?? b];
+    walk(ma, a, br.ys[0], br.ys[0], `${br.id} into its end`);
+    walk(a, b, br.ys[0], br.ys[1], br.id);
+    walk(b, mb, br.ys[1], br.ys[1], `${br.id} into its other end`);
+  }
 });
