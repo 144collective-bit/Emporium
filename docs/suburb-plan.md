@@ -388,8 +388,8 @@ These are my recommendations, made so the plan is complete; any can change.
      school and two in the gap on the south row; their houses are built
      after every other (sunhouses.ts, `rng(8823)`), so every house, yard
      and resident before keeps its id.
-   - **What's left:** about 1,860 square tiles: the corner at the loop's
-     south-east bend (about 540), the pockets between the cul-de-sacs'
+   - **What's left:** about 1,550 square tiles: the corner at the loop's
+     south-east bend (about 270), the pockets between the cul-de-sacs'
      gardens where two straight-sided gardens can't close a bent gap, the
      wedge west of the club, and the margins round the amenities.
 9. *(Optional)* **A home of your own** for Dorras, with the owner's say.
