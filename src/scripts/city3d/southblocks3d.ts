@@ -53,10 +53,11 @@ const HOARDING = toon('#55697f');
 const DOOR = toon('#1b1820');
 const GREEN = toon(PLANT.shrub);
 const ACCENT: Record<keyof typeof ACCENTS, THREE.Material> = { orange: toon(ACCENTS.orange), teal: toon(ACCENTS.teal), mustard: toon(ACCENTS.mustard) };
-/** Warm strip lights (under the galleries and bridges), the bridges' glass, the stair slots: dim by day, lit at night */
-const STRIP = neon('#ffcf86', 0.25, 1.25);
-const GLASS = neon('#ffe2b4', 0.16, 0.95);
-const SLOT = neon('#ffe0a6', 0.14, 0.9);
+/** Warm strip lights (under the galleries and bridges), the bridges' glass, the stair slots: dark glass by day (against the
+ * grey concrete, not a tan band), lit warm at night */
+const STRIP = neon('#ffcf86', 0.1, 1.25);
+const GLASS = neon('#ffe2b4', 0.05, 0.95);
+const SLOT = neon('#ffe0a6', 0.05, 0.9);
 const BEACON = neon('#ff4a3a', 0.8, 2.2);
 const BUNKER_NEON = neon('#ff3fb0', 0.6, 1.7);
 // (brutalist: board-marked grey concrete, deep balcony recesses with life in them; docs/brutalist-plan.md Phase 1)
