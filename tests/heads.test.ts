@@ -11,7 +11,7 @@ import { CHARACTERS, CHARACTER_LOOKS, DEFAULT_LOOK, PALETTE, cleanLook, type Cha
 import { SKIN_TONES } from '../src/scripts/city3d/crowdlook';
 import { describe as describeLook } from '../src/scripts/city3d/lookrows';
 import { DEGEN_HEAD, HEAD_ROWS, headGeometry, headModel, type HeadDef } from '../src/scripts/city3d/body';
-import { CHARACTER_IDS, characterGloves, characterParts, characterPendant, setHeadModel, SMILEX, SMILEX_HEAD, smilex, SLIME, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
+import { CHARACTER_IDS, characterChain, characterGloves, characterParts, characterPendant, setHeadModel, SMILEX, SMILEX_HEAD, smilex, SLIME, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
 import { newPose, poseSkeleton, weigh, type Influence } from '../src/scripts/city3d/skeleton';
 import { dress, inside, posed, shells, type Worn } from './dress';
 
@@ -48,7 +48,7 @@ const each = (gs: THREE.BufferGeometry | THREE.BufferGeometry[], f: (v: THREE.Ve
 test('heads: before their chunk is in, a character is Degen as he is (never a figure with no head)', () => {
   const worn = ids(3, SLIMEWHALE);
   assert.ok(worn.includes('head') && !worn.some((id) => id.startsWith('character-')));
-  useHeads({ ids: CHARACTER_IDS, parts: characterParts, pendant: characterPendant, gloves: characterGloves });
+  useHeads({ ids: CHARACTER_IDS, parts: characterParts, pendant: characterPendant, chain: characterChain, gloves: characterGloves });
 });
 
 test('heads: every character has its item; only Degen wears his own head', () => {
@@ -281,10 +281,39 @@ test("heads: Smilex's smile and eyes on the flat of his face, never inside his h
       n++;
       assert.ok(!SMILEX.inside(v.x, v.y, v.z - 0.0004), `detail ${q}: ink inside the head at ${v.toArray().map((x) => x.toFixed(3))}`);
       assert.ok(v.z - SMILEX.front(v.x, v.y) < 0.004, `detail ${q}: ink off his face`);
-      assert.ok(Math.abs(v.x) < SMILEX.rowAt(v.y)[1] * 0.75, `detail ${q}: ink round the edge at x ${v.x.toFixed(3)}`);
+      // (the border runs just inside the face's edge; nothing round onto the sides)
+      assert.ok(Math.abs(v.x) < SMILEX.rowAt(v.y)[1] * 0.92, `detail ${q}: ink round the edge at x ${v.x.toFixed(3)}`);
     });
     assert.ok(n > 0);
   }
+});
+
+test("heads: Smilex's block edges inked: every line on the head's rounded edges, none floating or sunk", () => {
+  for (const q of [3, 2] as const) {
+    const edges = smilex(q).edges;
+    assert.ok(edges.length >= 12 + 12 + 6, `detail ${q}: ${edges.length} lines and corners`);
+    const mid = SMILEX_HEAD.rows.reduce((a, r) => (r[1] > a[1] ? r : a));
+    const c = new THREE.Vector3(0, mid[0], mid[4]);
+    const d = new THREE.Vector3();
+    each(edges, (v) => {
+      // (a step in towards the head's middle is inside it, a step out isn't: the line hugs the surface)
+      d.subVectors(v, c).normalize();
+      const inP = v.clone().addScaledVector(d, -0.009);
+      const outP = v.clone().addScaledVector(d, 0.009);
+      assert.ok(SMILEX.inside(inP.x, inP.y, inP.z), `detail ${q}: an edge line floating at ${v.toArray().map((n) => n.toFixed(3))}`);
+      assert.ok(!SMILEX.inside(outP.x, outP.y, outP.z), `detail ${q}: an edge line sunk at ${v.toArray().map((n) => n.toFixed(3))}`);
+    });
+  }
+});
+
+test("heads: Smilex's chain is curb links along the necklace's path, his gloves stitched", () => {
+  const d = dress(SMILEX_OUTFIT, 3);
+  const gold = d.worn.find((w) => w.item === 'necklace-smilex-bomber' && w.piece.color === '#e2b04a' && w.rest.length / 9 > 1500)!;
+  assert.ok(gold, 'the chain');
+  const plain = dress({ ...SMILEX_OUTFIT, character: undefined }, 3).worn.find((w) => w.item === 'necklace-bomber')!;
+  assert.ok(gold.rest.length > plain.rest.length, 'links, not the cord');
+  const lines = d.worn.filter((w) => w.item === 'gloves-smilex' && w.piece.color === '#16141f');
+  assert.equal(lines.length, 2, 'stitch lines on both gloves');
 });
 
 test('heads: Smilex wears white gloves and the PulseChain pendant; everyone else as before', () => {

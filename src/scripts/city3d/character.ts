@@ -94,7 +94,7 @@ function items(q: Detail, hero = false): Item[] {
 export const loadHeads = lazy(async () => {
   const m = await import('./heads');
   m.setHeadModel(headModel);
-  useHeads({ ids: m.CHARACTER_IDS, parts: m.characterParts, pendant: m.characterPendant, gloves: m.characterGloves });
+  useHeads({ ids: m.CHARACTER_IDS, parts: m.characterParts, pendant: m.characterPendant, chain: m.characterChain, gloves: m.characterGloves });
   delete withRifle['2h'];
   delete withRifle['3h'];
   headsIn = true;

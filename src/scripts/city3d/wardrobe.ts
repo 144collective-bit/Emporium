@@ -1202,7 +1202,7 @@ export function items(q: Detail, hero = false): Item[] {
   const cuffs = (color: string): Piece[] =>
     ([-1, 1] as const).map((s) => {
       const S = s < 0 ? 'L' : 'R';
-      const geo = new THREE.TorusGeometry(0.0275, 0.0062, R(6), R(14)).rotateX(Math.PI / 2).translate(0, 0.046, -0.002).toNonIndexed();
+      const geo = new THREE.TorusGeometry(0.029, 0.0085, R(6), R(14)).rotateX(Math.PI / 2).translate(0, 0.047, -0.002).toNonIndexed();
       const p = geo.attributes.position as THREE.BufferAttribute;
       const skin: Influence[] = [];
       for (let i = 0; i < p.count; i++) {
@@ -1210,6 +1210,15 @@ export function items(q: Detail, hero = false): Item[] {
         skin.push(f > 1e-4 ? [[`hand${S}` as BoneName, 1 - f], [`fore${S}` as BoneName, f]] : [[`hand${S}` as BoneName, 1]]);
       }
       return P(s < 0 ? 'handL' : 'handR', geo, color, { skin });
+    });
+  /** A cartoon glove's three stitch lines down the back of each hand, towards the knuckles (the palm is the hand's -x side on the +x hand) */
+  const stitchLines = (): Piece[] =>
+    ([-1, 1] as const).map((s) => {
+      const S = s < 0 ? 'L' : 'R';
+      const merged = one([-0.014, 0, 0.014].map((z) => new THREE.BoxGeometry(0.0014, 0.026, 0.0026).translate(s * 0.0165, 0.013, z)));
+      const geo = merged.index ? merged.toNonIndexed() : merged;
+      const skin: Influence[] = Array.from({ length: geo.attributes.position.count }, () => [[`hand${S}` as BoneName, 1]]);
+      return P(s < 0 ? 'handL' : 'handR', geo, BLACK, { skin, detail: true });
     });
   const suit = (o: Outfit) => o.kind === 'suit';
   const hoodie = (o: Outfit) => o.kind === 'hoodie';
@@ -4346,7 +4355,11 @@ export function items(q: Detail, hero = false): Item[] {
                     {
                       id: `necklace-${id}-${k}`,
                       when: (o: Outfit) => !!o.necklace && is(o) && o.character === id,
-                      pieces: [P('torso', one(necklace), GOLD), ...parts.map((h) => P('torso', one(h.geos.map((g) => g.clone().applyMatrix4(at))), h.color))],
+                      // (his own chain where he has one: Smilex's chunky curb links, along the cord's own path)
+                      pieces: [
+                        P('torso', one(heads!.chain(id, q as 2 | 3, (necklace[0] as THREE.TubeGeometry).parameters.path) ?? necklace), GOLD),
+                        ...parts.map((h) => P('torso', one(h.geos.map((g) => g.clone().applyMatrix4(at))), h.color)),
+                      ],
                     },
                   ];
                 })
@@ -4806,7 +4819,7 @@ export function items(q: Detail, hero = false): Item[] {
           ...(heads
             ? heads.ids.flatMap((id): Item[] => {
                 const c = heads!.gloves(id);
-                return c ? [{ id: `gloves-${id}`, when: (o: Outfit) => !soldier(o) && o.character === id, pieces: [...fingers(c), ...cuffs(c)] }] : [];
+                return c ? [{ id: `gloves-${id}`, when: (o: Outfit) => !soldier(o) && o.character === id, pieces: [...fingers(c), ...cuffs(c), ...stitchLines()] }] : [];
               })
             : []),
         ]
@@ -5202,6 +5215,8 @@ let heads: {
   parts: (id: CharacterId, q: 2 | 3) => HeadPart[];
   /** What hangs on a character's chain in place of the diamond (null: the diamond) */
   pendant: (id: CharacterId, q: 2 | 3) => HeadPart[] | null;
+  /** A character's own chain along the necklace's path (null: the smooth cord) */
+  chain: (id: CharacterId, q: 2 | 3, path: THREE.Curve<THREE.Vector3>) => THREE.BufferGeometry[] | null;
   /** A character's gloves' colour (null: bare hands) */
   gloves: (id: CharacterId) => string | null;
 } | null = null;

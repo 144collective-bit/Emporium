@@ -213,11 +213,12 @@ How he's built (Phase 1 for him, in the lab): his `HeadDef` in heads.ts
 (`SMILEX_HEAD`: Degen's neck rows, then the hexagon as rows whose
 half-width runs straight from the flats to the points, every row a ring
 so the points stay sharp, its edges rounded a few millimetres), his ink
-(`smilex()`, `inkOn()`), the pendant (`pulsePendant()`, handed to the
+(`smilex()`, `inkOn()`, the edges `hexEdges()`), the pendant (`pulsePendant()`, handed to the
 wardrobe as `characterPendant()`: the `necklace-smilex-<top>` items in
 place of `necklace-<top>`) and the gloves (`characterGloves()`: the
 `gloves-smilex` item in place of `fingers`). All in the heads' chunk (now
-3.7 KB); the boot grew 0.3 KB (769.0 of 770 KB). He's in `CHARACTER_IDS`
+4.6 KB with the detail); the boot grew 0.5 KB in all for him (769.2 of
+770 KB). He's in `CHARACTER_IDS`
 (heads.ts) but not yet in `CHARACTERS` (profile-data.ts), so the fitting
 room doesn't offer him and a saved `smilex` cleans to Degen until Phase 2.
 Lab:
@@ -227,6 +228,26 @@ his hexagon's flats, points and straight sides; his ink on the flat of his
 face; the gloves and pendant on him only (the diamond and bare hands on
 everyone else); the pendant clear of five tops and centred. Shots:
 `docs/characters-shots/smilex-phase1.png`.
+
+**More detail** (the owner's answers, 2026-11-21, after the first shots):
+- **The head's edges inked:** bold black lines along the block's own
+  edges, as in the owner's second reference: round the face where it turns
+  onto the sides, round the back, and down each of the six corners
+  (`hexEdges()`: black tubes half sunk into the rounded edges, a ball at
+  each corner). A ring drawn inside the face was tried first and taken out
+  (the owner: "the hexagon on his face isn't correct"). One flat yellow, no
+  darker sides (the owner's call).
+- **The pendant set like a jewel:** a gold back plate and a bezel standing
+  round the edge, the four colour facets bevelled and set into it, the
+  pulse line thicker with rounded joins, edge to edge, a chunkier bail. Its
+  size as it was (6 cm across).
+- **A chunky curb chain:** oval gold links every centimetre, each turned a
+  quarter from the last (`curbChain()`, along the necklace cord's own path:
+  `characterChain()`).
+- **Cartoon gloves:** three black stitch lines down the back of each glove
+  and puffier rolled cuffs.
+- Not changed: his head's depth (the reference's block is a little
+  thinner) and its size; ask the owner if either should change.
 
 Smilex's phases are SlimeWhale's: 1, the head in the lab (built,
 2026-11-21, waiting on the owner's sign-off), 2, wearing him (his line in

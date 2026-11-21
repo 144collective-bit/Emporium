@@ -319,9 +319,11 @@ export let SMILEX: HeadModel;
 export const SMILEX_EYE_Y = 0.15;
 export const SMILEX_MOUTH_Y = 0.085;
 
-/** A flat outline in ink laid on a head's front, `lift` off it */
-function inkOn(m: HeadModel, outline: [number, number][], lift: number, depth = 0.0012) {
-  const g = new THREE.ExtrudeGeometry(new THREE.Shape(outline.map(([x, y]) => new THREE.Vector2(x, y))), { depth, bevelEnabled: false, curveSegments: 6 });
+/** A flat outline in ink laid on a head's front, `lift` off it (with holes: a border) */
+function inkOn(m: HeadModel, outline: [number, number][], lift: number, depth = 0.0012, holes: [number, number][][] = []) {
+  const shape = new THREE.Shape(outline.map(([x, y]) => new THREE.Vector2(x, y)));
+  for (const h of holes) shape.holes.push(new THREE.Path(h.map(([x, y]) => new THREE.Vector2(x, y))));
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 6 });
   const p = g.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < p.count; i++) p.setZ(i, m.front(p.getX(i), p.getY(i)) + lift + p.getZ(i));
   g.computeVertexNormals();
@@ -380,46 +382,169 @@ export function smilex(q: 2 | 3) {
     const d = 0.012;
     return inkOn(SMILEX, bar([end[0] - Math.cos(a) * d, end[1] - Math.sin(a) * d], [end[0] + Math.cos(a) * d, end[1] + Math.sin(a) * d], 0.006), 0.0011);
   });
-  return { head: [head], ink: [...eyes, smile, ...ticks] };
+  return { head: [head], ink: [...eyes, smile, ...ticks], edges: hexEdges(q) };
 }
 
 /**
- * The PulseChain symbol as a pendant (the owner's call, 2026-11-21): a flat-topped hexagon in a gold rim, its face in
- * four bands for the logo's gradient (cyan, violet, magenta, red), the white pulse line across it, and a bail at the
- * top for the chain. Centred on the origin, its face towards +z, about 6 cm across.
+ * The block's edges inked (the owner's call, after the art: a cartoon block, black lines along its edges, not a ring
+ * drawn on the face): round the face where it turns onto the sides, round the back the same, and along each of the
+ * six corners from front to back, following the rounded edge. Black tubes half sunk into the rounded edges, so each
+ * reads as a bold line from the face and from the side alike; a ball at each corner joins them.
+ */
+export const EDGE_R = 0.0038;
+function hexEdges(q: 2 | 3) {
+  const M = SMILEX;
+  const seg = q === 3 ? 6 : 4;
+  // (the rounded edge's middle on a row: its squircle at 45 degrees, front or back)
+  const rim = (x: number, y: number, side: 1 | -1, k = 0.5) => {
+    const [, hw, fr, back, zc, n] = M.rowAt(y);
+    const e = 2 / n;
+    const a = (Math.PI / 2) * k;
+    return new THREE.Vector3(Math.sign(x) * Math.cos(a) ** e * hw, y, zc + side * Math.sin(a) ** e * (side > 0 ? fr : back));
+  };
+  // (the top and bottom flats: the edge between face and flat, a couple of millimetres in from each)
+  const yTop = HEX_Y1 - 0.0012;
+  const yBot = HEX_Y0 + 0.0012;
+  const flatZ = (side: 1 | -1) => HEX_ZC + side * (HEX_D - 0.0028);
+  const corners = (side: 1 | -1) => {
+    const top = hexHW(HEX_Y1) - 0.002;
+    const bot = hexHW(HEX_Y0) - 0.002;
+    const c = rim(1, HEX_MID, side).x;
+    return [
+      new THREE.Vector3(c, HEX_MID, rim(1, HEX_MID, side).z),
+      new THREE.Vector3(top * 0.97, yTop, flatZ(side)),
+      new THREE.Vector3(-top * 0.97, yTop, flatZ(side)),
+      new THREE.Vector3(-c, HEX_MID, rim(1, HEX_MID, side).z),
+      new THREE.Vector3(-bot * 0.97, yBot, flatZ(side)),
+      new THREE.Vector3(bot * 0.97, yBot, flatZ(side)),
+    ];
+  };
+  const out: THREE.BufferGeometry[] = [];
+  const tube = (pts: THREE.Vector3[], n: number) => out.push(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0), n, EDGE_R, seg, false));
+  const ball = (p: THREE.Vector3) => out.push(new THREE.SphereGeometry(EDGE_R * 1.05, seg + 2, Math.max(3, seg - 1)).translate(p.x, p.y, p.z));
+  for (const side of [1, -1] as const) {
+    const c = corners(side);
+    // Round the face (or the back): the slanted sides follow the rim row by row, the flats run straight
+    for (let i = 0; i < 6; i++) {
+      const a = c[i];
+      const b = c[(i + 1) % 6];
+      if (Math.abs(a.y - b.y) < 1e-6) tube([a, b], 2);
+      else {
+        const pts: THREE.Vector3[] = [];
+        for (let k = 0; k <= 8; k++) {
+          const y = a.y + ((b.y - a.y) * k) / 8;
+          const p = rim(a.x, y, side);
+          // (towards the flats the line eases onto the flat's edge line)
+          pts.push(k === 8 ? b.clone() : k === 0 ? a.clone() : p);
+        }
+        tube(pts, 10);
+      }
+      ball(c[i]);
+    }
+  }
+  // Along each corner, front to back: the side points round their rows' rounded ends, the four flats' corners along
+  // where the flat meets the slanted side
+  for (const [x, y] of [
+    [1, HEX_MID],
+    [-1, HEX_MID],
+  ] as const) {
+    const pts: THREE.Vector3[] = [];
+    for (let k = 0; k <= 8; k++) {
+      const t = 1 - k / 4;
+      pts.push(rim(x, y, t >= 0 ? 1 : -1, Math.abs(t) * 0.5));
+    }
+    tube(pts, 10);
+  }
+  for (const [sx, y] of [
+    [1, yTop],
+    [-1, yTop],
+    [1, yBot],
+    [-1, yBot],
+  ] as const) {
+    const w = (y === yTop ? hexHW(HEX_Y1) : hexHW(HEX_Y0)) - 0.002;
+    tube([new THREE.Vector3(sx * w * 0.97, y, flatZ(1)), new THREE.Vector3(sx * w * 1.0, y, HEX_ZC), new THREE.Vector3(sx * w * 0.97, y, flatZ(-1))], 6);
+  }
+  return out;
+}
+
+/**
+ * The PulseChain symbol as a pendant (the owner's call, 2026-11-21), set like a jewel: a gold back plate and a bezel
+ * standing round the edge, the face set into it in four bevelled facets for the logo's gradient (cyan, violet, magenta,
+ * red), the white pulse line across it edge to edge with rounded joins, and a chunky bail at the top for the chain.
+ * Flat-topped, centred on the origin, its face towards +z, about 6 cm across.
  */
 export function pulsePendant(q: 2 | 3) {
-  const r = 0.03;
-  const T = 0.007;
-  const rim = new THREE.CylinderGeometry(r, r, T, 6, 1).rotateX(Math.PI / 2).rotateZ(Math.PI / 6);
+  const r = 0.031;
+  const T = 0.008;
   const hex = (rr: number, k: number): [number, number] => [Math.cos((k * Math.PI) / 3) * rr, Math.sin((k * Math.PI) / 3) * rr];
-  const f = r * 0.84;
+  const hexPts = (rr: number) => Array.from({ length: 6 }, (_, k) => hex(rr, k));
+  const shapeOf = (pts: [number, number][]) => new THREE.Shape(pts.map(([x, y]) => new THREE.Vector2(x, y)));
+  const flat = (outline: [number, number][], z: number, d: number, bevel = 0) =>
+    new THREE.ExtrudeGeometry(shapeOf(outline), { depth: d, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel * 0.8, bevelSegments: 1 }).translate(0, 0, z);
+  // The back plate, and the bezel: a hexagonal ring standing proud of the face
+  const plate = new THREE.CylinderGeometry(r, r, T, 6, 1).rotateX(Math.PI / 2).rotateZ(Math.PI / 6);
+  const IN = r * 0.84;
+  const bezelShape = shapeOf(hexPts(r));
+  bezelShape.holes.push(new THREE.Path(hexPts(IN).reverse().map(([x, y]) => new THREE.Vector2(x, y))));
+  const bezel = new THREE.ExtrudeGeometry(bezelShape, { depth: 0.0035, bevelEnabled: true, bevelThickness: 0.0009, bevelSize: 0.0007, bevelSegments: q === 3 ? 2 : 1 }).translate(0, 0, T / 2);
+  // The face's four facets, set a little below the bezel's lip, each bevelled so it catches the light like a cut stone
+  const f = IN - 0.0012;
   const h = (f * Math.sqrt(3)) / 2;
-  const g = 0.0022;
-  const flat = (outline: [number, number][], z: number, d = 0.0008) =>
-    new THREE.ExtrudeGeometry(new THREE.Shape(outline.map(([x, y]) => new THREE.Vector2(x, y))), { depth: d, bevelEnabled: false }).translate(0, 0, z);
-  const face = T / 2 + 0.0005;
-  // (the face's four quarters, either side of the middle and above and below the pulse line)
+  const g = 0.0026;
+  const face = T / 2 + 0.0003;
   const xAt = (y: number) => f - Math.abs(y) / Math.sqrt(3);
+  const B = 0.0007;
   const bands = {
-    cyan: flat([[0, g], [xAt(g), g], hex(f, 1), [0, h]], face),
-    violet: flat([[0, g], [0, h], hex(f, 2), [-xAt(g), g]], face),
-    magenta: flat([[0, -g], [0, -h], hex(f, 5), [xAt(g), -g]], face),
-    red: flat([[0, -g], [-xAt(g), -g], hex(f, 4), [0, -h]], face),
+    cyan: flat([[0.0009, g], [xAt(g), g], hex(f, 1), [0.0009, h]], face, 0.0012, B),
+    violet: flat([[-0.0009, g], [-0.0009, h], hex(f, 2), [-xAt(g), g]], face, 0.0012, B),
+    magenta: flat([[0.0009, -g], [0.0009, -h], hex(f, 5), [xAt(g), -g]], face, 0.0012, B),
+    red: flat([[-0.0009, -g], [-xAt(g), -g], hex(f, 4), [-0.0009, -h]], face, 0.0012, B),
   };
-  // The pulse line: flat from the left, up, down past the middle, up again, flat to the right
+  // The pulse line: flat in from each edge, up, down past the middle, up again; thick, its joins round
   const P: [number, number][] = [
     [-1, 0],
     [-0.4, 0],
-    [-0.24, 0.6],
-    [-0.06, -0.72],
-    [0.1, 0.45],
-    [0.22, 0],
+    [-0.25, 0.62],
+    [-0.07, -0.74],
+    [0.1, 0.46],
+    [0.23, 0],
     [1, 0],
-  ].map(([x, y]) => [x * f, y * f]);
-  const pulse = P.slice(1).map((b, i) => flat(bar(P[i], b, 0.0045), face + 0.0009, 0.0008));
-  const bail = new THREE.TorusGeometry(0.0055, 0.0016, R2(q, 6), R2(q, 12)).rotateY(Math.PI / 2).translate(0, (r * Math.sqrt(3)) / 2 + 0.005, 0);
-  return { gold: [rim, bail], bands, white: pulse };
+  ].map(([x, y]) => [x * IN, y * f]);
+  const W = 0.0055;
+  const lineZ = face + 0.0012 + B + 0.0003;
+  const pulse = [
+    ...P.slice(1).map((b2, i) => flat(bar(P[i], b2, W), lineZ, 0.0009)),
+    ...P.slice(1, -1).map(([x, y]) => new THREE.CylinderGeometry(W / 2, W / 2, 0.0009, R2(q, 10)).rotateX(Math.PI / 2).translate(x, y, lineZ + 0.00045)),
+  ];
+  const bail = new THREE.TorusGeometry(0.0062, 0.0022, R2(q, 6), R2(q, 14)).rotateY(Math.PI / 2).translate(0, (r * Math.sqrt(3)) / 2 + 0.0055, 0);
+  return { gold: [plate, bezel, bail], bands, white: pulse };
+}
+
+/**
+ * A chunky curb chain along a path (Smilex's: docs/characters-plan.md): oval links every centimetre, each turned a
+ * quarter from the one before so they interlock, laid where the necklace's cord would be
+ */
+export function curbChain(path: THREE.Curve<THREE.Vector3>, q: 2 | 3) {
+  const len = path.getLength();
+  const n = Math.round(len / 0.0105);
+  const links: THREE.BufferGeometry[] = [];
+  const link = new THREE.TorusGeometry(0.0066, 0.0021, q === 3 ? 5 : 3, q === 3 ? 10 : 7).scale(1.35, 1, 1);
+  const up = new THREE.Vector3(0, 1, 0);
+  const front = new THREE.Vector3(0, 0, 1);
+  for (let i = 0; i <= n; i++) {
+    const u = i / n;
+    const p = path.getPointAt(u);
+    const t = path.getTangentAt(u).normalize();
+    // (a link lies flat on the chest, the next stands across it)
+    const lie = new THREE.Vector3().crossVectors(t, up);
+    if (lie.lengthSq() < 1e-4) lie.crossVectors(t, front);
+    lie.normalize();
+    if (lie.z < 0) lie.negate();
+    const normal = i % 2 ? new THREE.Vector3().crossVectors(t, lie).normalize() : lie;
+    const side = new THREE.Vector3().crossVectors(normal, t).normalize();
+    links.push(link.clone().applyMatrix4(new THREE.Matrix4().makeBasis(t, side, normal).setPosition(p)));
+  }
+  return links;
 }
 const R2 = (q: 2 | 3, n: number) => Math.max(4, Math.round(n * (q === 3 ? 1 : 0.7)));
 
@@ -452,6 +577,7 @@ export function characterParts(id: CharacterId, q: 2 | 3): HeadPart[] {
       return [
         { geos: s.head, color: SMILEX_YELLOW },
         { geos: s.ink, color: SLIME_INK },
+        { geos: s.edges, color: SLIME_INK },
       ];
     }
   }
@@ -469,6 +595,11 @@ export function characterPendant(id: CharacterId, q: 2 | 3): HeadPart[] | null {
     { geos: [p.bands.red], color: '#ee3070' },
     { geos: p.white, color: '#e9e7ef' },
   ];
+}
+
+/** A character's own chain along the necklace's path (null: the necklace's smooth cord) */
+export function characterChain(id: CharacterId, q: 2 | 3, path: THREE.Curve<THREE.Vector3>): THREE.BufferGeometry[] | null {
+  return id === 'smilex' ? curbChain(path, q) : null;
 }
 
 /** The colour of a character's gloves (null: bare hands in the skin tone) */
