@@ -38,6 +38,7 @@ import { HX, harbourY } from '../src/scripts/city3d/harbour';
 import { vergeY } from '../src/scripts/city3d/verges';
 import { GARAGE_SITE } from '../src/scripts/city3d/solids';
 import { PLAN, inPoly, type Pt } from '../src/scripts/city3d/streetplan';
+import { VISITOR_CENTRE_H, VISITOR_TERRACE } from '../src/scripts/city3d/airbase';
 
 /* ---------- The old groundAt(), word for word (walk.ts before the split) ---------- */
 type Box = [number, number, number, number, number];
@@ -207,6 +208,8 @@ test('every layer answers alone where it stands, and nowhere on the open street 
     civic: [CITYHALL_SPAWN.x, (PORTICO[1] + PORTICO[3]) / 2, 0],
     circuit: [sample(12)[0], sample(12)[1], 0],
     banks: [sample(12)[0], sample(12)[1], 0],
+    // (the air base's visitors' centre: up on its roof's terrace)
+    visitors: [(VISITOR_TERRACE[0] + VISITOR_TERRACE[2]) / 2, (VISITOR_TERRACE[1] + VISITOR_TERRACE[3]) / 2, VISITOR_CENTRE_H],
   };
   for (const L of GROUND_LAYERS) {
     const w = where[L.id];

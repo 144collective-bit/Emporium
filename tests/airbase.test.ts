@@ -1,8 +1,8 @@
-// Northgate Air Base (docs/military-plan.md Phase 1): its land, its fence and its gates, where the plan's signed-off
-// lines put them (docs/military-map.png)
+// Northgate Air Base (docs/military-plan.md Phase 1): its land, its fence (its wall since Phase 6) and its gates, where
+// the plan's signed-off lines put them (docs/military-map.png)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { AIRBASE_RECT, AIRBASE_SOLIDS, AVENUE, FENCE, FENCE_H, FENCE_RUNS, GATES, GATE_ROAD_ENDS, KEPT, LOOP_SHORT, MAIN_GATE, VISITORS, VISITORS_DRIVE, VISITOR_CENTRE, VISITOR_SPAWN, WALL_GATE, barrierOf, guardhouseOf, inAirbase, southFenceZ } from '../src/scripts/city3d/airbase';
+import { AIRBASE_RECT, AIRBASE_SOLIDS, AVENUE, FENCE, FENCE_H, FENCE_RUNS, FENCE_T, PIER, PIER_H, VISITOR_CENTRE_H, VISITOR_LANDING, VISITOR_STAIR, VISITOR_TERRACE, piersOf, stairY, visitorsFloorAt, visitorsUp, visitorsWall, GATES, GATE_ROAD_ENDS, KEPT, LOOP_SHORT, MAIN_GATE, VISITORS, VISITORS_DRIVE, VISITOR_CENTRE, VISITOR_SPAWN, WALL_GATE, barrierOf, guardhouseOf, inAirbase, southFenceZ } from '../src/scripts/city3d/airbase';
 import { CAMERAS, FLOODS, WALL_INNER } from '../src/scripts/city3d/wall';
 import { RURAL, RURAL_RUNS } from '../src/scripts/city3d/rural';
 import { PLAN, distToStreet, type Pt } from '../src/scripts/city3d/streetplan';
@@ -65,8 +65,8 @@ test('both country roads end at their gates: a turning loop in front of each shu
   assert.equal(GATES.length, 2);
   const want: Record<string, Pt> = { 'ns0-n': [-4.5, -292], 'ns3-n': [64.5, -294] };
   for (const g of GATES) {
-    // On the fence's line, on its road's line
-    assert.ok(fenceDist([g.x - g.half - 0.01, g.z]) < 0.5 && fenceDist([g.x + g.half + 0.01, g.z]) < 0.5);
+    // On the wall's line, on its road's line (the wall stops at the piers either side of the opening)
+    assert.ok(fenceDist([g.x - g.half - PIER - 0.01, g.z]) < 0.5 && fenceDist([g.x + g.half + PIER + 0.01, g.z]) < 0.5);
     const r = RURAL_RUNS.find((q) => q.id === g.road);
     assert.ok(r && r.gated && r.c === g.x, `${g.road} doesn't end at the ${g.name}`);
     assert.equal(r.to, GATE_ROAD_ENDS[g.road]);
@@ -89,13 +89,23 @@ test('both country roads end at their gates: a turning loop in front of each shu
   for (const s of PLAN.streets) for (const p of s.pts) assert.ok(!inAirbase(...p), `${s.id} inside the base at ${p}`);
 });
 
-test('the fence and its shut gates are solid, too high to climb; nothing in town stands on it', () => {
+test('the wall and its shut gates are solid, over a truck (Phase 6); a pier each side of each gate; nothing in town stands on it', () => {
+  assert.ok(FENCE_H >= 4.5, 'the wall stands over a truck');
   const fence = AIRBASE_SOLIDS.filter((b) => b[4] === FENCE_H);
   assert.ok(fence.length > 500);
-  // (thin: a slanting run's pieces at most 0.3 wider than the fence, as Lot 9's)
-  for (const b of fence) assert.ok(Math.min(b[2] - b[0], b[3] - b[1]) < 0.41 && Math.max(b[2] - b[0], b[3] - b[1]) > 0.09, `a fence box ${b}`);
-  // Each gate's opening is closed (a box across it at the fence's height)
-  for (const g of GATES) assert.ok(fence.some((b) => b[0] <= g.x && b[2] >= g.x && b[1] <= g.z && b[3] >= g.z), `the ${g.name} open`);
+  // (as thick as the wall's panels: a slanting run's pieces at most 0.3 wider)
+  for (const b of fence) assert.ok(Math.min(b[2] - b[0], b[3] - b[1]) < FENCE_T + 0.31 && Math.max(b[2] - b[0], b[3] - b[1]) > FENCE_T - 0.01, `a wall box ${b}`);
+  // Each gate's opening is closed (a box across it at the wall's height), between its two piers
+  for (const g of GATES) {
+    assert.ok(fence.some((b) => b[0] <= g.x && b[2] >= g.x && b[1] <= g.z && b[3] >= g.z), `the ${g.name} open`);
+    for (const [x, z] of piersOf(g)) assert.ok(AIRBASE_SOLIDS.some((b) => b[4] === PIER_H && b[0] <= x && b[2] >= x && b[1] <= z && b[3] >= z), `no pier at ${x}, ${z}`);
+  }
+  // (and the wall meets each pier: no gap either side of a gate's opening)
+  for (const g of GATES)
+    for (const s of [-1, 1]) {
+      const x = g.x + s * (g.half + 1.15);
+      assert.ok(fence.some((b) => b[0] <= x && b[2] >= x && b[1] <= g.z + 0.5 && b[3] >= g.z - 0.5), `a gap by the ${g.name} at ${x}`);
+    }
   // A walk along every country road keeps off the fence
   for (const r of RURAL_RUNS) for (let v = Math.min(r.from, r.to); v <= Math.max(r.from, r.to); v += 2) {
     const p: Pt = r.axis === 'x' ? [v, r.c] : [r.c, v];
@@ -114,6 +124,42 @@ test("the visitors' car park and centre outside the main gate, off the road, cle
   const ns0n = PLAN.streets.find((s) => s.id === 'ns0-n')!;
   assert.ok(distToStreet(ns0n, [VISITORS_DRIVE[2] + 0.1, (VISITORS_DRIVE[1] + VISITORS_DRIVE[3]) / 2]) < ns0n.half + 0.1);
   assert.ok(!inRect(VISITOR_CENTRE, VISITOR_SPAWN.x, VISITOR_SPAWN.z, 0.5) && inRect(VISITORS, VISITOR_SPAWN.x, VISITOR_SPAWN.z));
+});
+
+test("the visitors' centre's stair (Phase 6): climbed from the car park a step at a time to the terrace over the wall, its rails stopping you", () => {
+  // Over the wall's top up there: someone standing on the terrace sees over it
+  assert.ok(VISITOR_CENTRE_H > FENCE_H + 1);
+  const [x0, z0, x1, z1] = VISITOR_STAIR.rect;
+  const x = (x0 + x1) / 2;
+  // Up the flight from its foot, a hand's breadth at a time: each floor within a step of the last, never up at the
+  // foot, up from the first steps on
+  let y = visitorsFloorAt(x, z1 - 0.05, 0.035);
+  assert.ok(y !== null && y < 0.2, `the foot at ${y}`);
+  for (let z = z1 - 0.05; z > z0 - 0.5; z -= 0.1) {
+    const f = visitorsFloorAt(x, z, y!);
+    assert.ok(f !== null && Math.abs(f - y!) < 0.15, `a step of ${f! - y!} at ${z.toFixed(2)}`);
+    y = f;
+    // (walking asks the rails only once you're up: off the ground)
+    if (visitorsUp(x, z, y!)) assert.ok(!visitorsWall(x, z, y!, 0.3), `a rail across the flight at ${z.toFixed(2)}`);
+  }
+  assert.ok(Math.abs(y! - VISITOR_CENTRE_H) < 0.05);
+  // (a climb no steeper than a stair's: under 40 degrees)
+  assert.ok((VISITOR_CENTRE_H - 0.035) / (z1 - z0) < Math.tan((40 * Math.PI) / 180));
+  // Across the landing and onto the terrace, and all round it, never off its edges
+  const [lx0, lz0, lx1, lz1] = VISITOR_LANDING;
+  assert.equal(visitorsFloorAt((lx0 + lx1) / 2, (lz0 + lz1) / 2, VISITOR_CENTRE_H), VISITOR_CENTRE_H);
+  for (let xx = lx0 + 0.4; xx < VISITOR_TERRACE[2] - 0.4; xx += 0.5) assert.ok(!visitorsWall(xx, (lz0 + lz1) / 2, VISITOR_CENTRE_H, 0.3), `walled at ${xx}`);
+  const T = VISITOR_TERRACE;
+  assert.ok(visitorsUp((T[0] + T[2]) / 2, (T[1] + T[3]) / 2, VISITOR_CENTRE_H));
+  for (const [px, pz] of [[T[0] - 0.4, (T[1] + T[3]) / 2], [T[2] + 0.4, (T[1] + T[3]) / 2], [(T[0] + T[2]) / 2, T[1] - 0.4], [(T[0] + T[2]) / 2, T[3] + 0.4], [x0 - 0.5, (z0 + z1) / 2]] as Pt[])
+    assert.ok(visitorsWall(px, pz, VISITOR_CENTRE_H - (px < x1 ? VISITOR_CENTRE_H / 2 : 0), 0.3), `no rail at ${px}, ${pz}`);
+  // From the ground: the foot's open to step on, the flight past it solid (nobody walks under it), nothing up there
+  // for someone on the ground beside it
+  const under = AIRBASE_SOLIDS.filter((b) => b[0] <= x && b[2] >= x && b[4] === VISITOR_CENTRE_H);
+  assert.ok(!under.some((b) => b[1] <= z1 - 0.3 && b[3] >= z1 - 0.3), 'the foot walled off');
+  assert.ok(under.some((b) => b[1] <= (z0 + z1) / 2 && b[3] >= (z0 + z1) / 2), 'walked under the flight');
+  assert.equal(visitorsFloorAt(x, (z0 + z1) / 2, 0.035), null);
+  assert.ok(stairY(z1) < 0.05 && Math.abs(stairY(z0) - VISITOR_CENTRE_H) < 1e-9);
 });
 
 test('the lots kept for the airfield and the base are inside the fence', () => {
