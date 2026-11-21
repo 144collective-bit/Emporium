@@ -35,8 +35,6 @@ import { CORNER_SHOPS } from './projects';
 import { MY_STALL_DOOR, MY_STALL_NAME } from './nightmarket';
 import { LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { Sfx } from './combat';
-import type { WeaponId } from './combat-sim';
-import type { SpotId } from '../../lib/city';
 import { createMissionsUI } from './missions-ui';
 import { guideAt, type GuideStep } from './guide';
 import { TYCOON_KEY as KEY } from './backup';
@@ -61,13 +59,12 @@ export const cornerName = (i: number) => CORNER_SHOPS[i].name.toLowerCase().repl
 export const NIGHT_ID = 'm0' as const;
 export const nightName = () => MY_STALL_NAME;
 export const LETTER = 'ABC';
-export type Tab = 'stall' | 'units' | 'workshop' | 'car' | 'bag';
+export type Tab = 'stall' | 'units' | 'workshop' | 'car';
 export const TABS: { id: Tab; label: string }[] = [
   { id: 'stall', label: 'Stall' },
   { id: 'units', label: 'Units' },
   { id: 'workshop', label: 'Workshop' },
   { id: 'car', label: 'Car' },
-  { id: 'bag', label: 'Bag' },
 ];
 /** The building panels the economy fills in, by spot (the Emporium's market hall, the Workshop, the Signal tower's contracts, the Post office's couriers, the Apartments' staff) */
 export const PANELS = {
@@ -101,10 +98,6 @@ export interface TycoonHooks {
   sfx(kind: Sfx, gain?: number): void;
   /** Getting started's way in from the City view: open a building's panel or start walking there */
   guideGo(g: GuideStep): void;
-  /** The Bag's ways in from the City view: a building's panel (the Armoury, the Night Market) */
-  openSpot(id: SpotId): void;
-  /** May he carry this gun (a starter his score unlocked, or one he bought): the Bag's locker */
-  mayCarry(id: WeaponId): boolean;
 }
 
 /** What the screens (tycoon-ui.ts) share with the boot: the save, the card's state and the ways to repaint */
@@ -241,7 +234,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   }
   /** Open the card on a tab, or on a place (a unit opens the Units tab on it) */
   function openCard(at?: PlaceId | Tab) {
-    if (at === 'stall' || at === 'units' || at === 'workshop' || at === 'car' || at === 'bag') state.tab = at;
+    if (at === 'stall' || at === 'units' || at === 'workshop' || at === 'car') state.tab = at;
     else if (at?.startsWith('u') || at?.startsWith('l')) {
       state.tab = 'units';
       state.unitSel = ROW_IDS.indexOf(at);
@@ -282,6 +275,13 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     true
   );
   tabsEl.innerHTML = TABS.map((t) => `<button type="button" data-tab="${t.id}" aria-pressed="false">${t.label}</button>`).join('');
+  // LT / RT on a gamepad step the sections while the hub shows Business (hub.ts sends `mk-subtab`; docs/header-plan.md)
+  card.closest('[data-hub]')?.addEventListener('mk-subtab', (e) => {
+    if (!cardOpen()) return;
+    const i = TABS.findIndex((t) => t.id === state.tab);
+    openCard(TABS[(i + (e as CustomEvent<number>).detail + TABS.length) % TABS.length].id);
+    tabsEl.querySelector<HTMLButtonElement>(`[data-tab="${state.tab}"]`)?.focus({ preventScroll: true });
+  });
   // (a tab tapped before the screens are in: the screens take the card's clicks once they are)
   tabsEl.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-tab]');

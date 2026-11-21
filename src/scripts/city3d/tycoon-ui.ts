@@ -14,8 +14,7 @@
  *     what it can make;
  *   - Car: what's in your car, and Load / Unload when it's parked at one of
  *     your places;
- *   - Bag: what Degen carries (inventory-ui.ts's `bagHtml()`), read-only,
- *     with the Armoury and the Night Market as ways in from the City view.
+ *   (what Degen carries is the hub's own Bag tab: docs/header-plan.md).
  *   It opens from the readout anywhere, and at your stall or a unit in walk
  *   mode (on that place).
  * - The market hall, inside the Emporium's state.panel (`[data-market]`): every
@@ -162,7 +161,6 @@ type PlayerCar = (typeof CAR_IDS)[number];
 import { CARS } from './carspec';
 import { LV, whyNot } from './ui';
 import { confirmHtml, focusConfirm } from './menukit';
-import type { SpotId } from '../../lib/city';
 import { BACKUP_KEYS, TYCOON_KEY as KEY, backupName, packBackup, readBackup, type ReadBackup } from './backup';
 import { CORNER_IDS, LETTER, LOT_IDS, NIGHT_ID, PLACE_LIST, ROW_IDS, STAND, TABS, UNIT_IDS, cornerName, fmt, nightName, type Tab, type TycoonCore, type TycoonScreens } from './tycoon-boot';
 
@@ -791,29 +789,18 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
     if (!cardOpen()) return;
     const now = Date.now();
     tabsEl.querySelectorAll<HTMLButtonElement>('[data-tab]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tab === state.tab)));
-    const view = state.tab === 'stall' ? stallView(now) : state.tab === 'units' ? unitView(now) : state.tab === 'workshop' ? workshopView() : state.tab === 'car' ? carView(now) : bagView();
+    const view = state.tab === 'stall' ? stallView(now) : state.tab === 'units' ? unitView(now) : state.tab === 'workshop' ? workshopView() : carView(now);
     repaint(
       cardBody,
       `<div class="stall-till">
         <div><small>Till · stall and shops</small><span class="stall-till-amount">${D(save.till)}</span></div>
-        <button type="button" class="shop-take stall-collect" data-collect ${save.till > 0 ? '' : 'disabled'}>Collect</button>
+        <button type="button" class="shop-take stall-collect${save.till > 0 ? ' is-ready' : ''}" data-collect ${save.till > 0 ? '' : 'disabled'}>Collect</button>
       </div>
       ${view}
       ${state.note ? `<p class="shop-note" role="status">${esc(state.note)}</p>` : ''}`
     );
     card.querySelector<HTMLElement>('[data-biz-balance]')!.innerHTML = D(save.dorras);
   }
-  /** The Bag tab: inventory-ui.ts's list, its chunk fetched the first time (walking fetches it too) */
-  let inv: typeof import('./inventory-ui') | null = null;
-  function bagView() {
-    if (inv) return inv.bagHtml(save, { may: h.mayCarry, ways: !h.walker() });
-    void import('./inventory-ui').then((m) => {
-      inv = m;
-      paintCard();
-    });
-    return '<p class="stall-empty">Opening your bag…</p>';
-  }
-
   /** Every button on the card, the market hall and the Workshop's state.panel */
   function act(btn: HTMLButtonElement, now: number) {
     const ds = btn.dataset;
@@ -821,11 +808,6 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
     state.note = '';
     if ('bizClose' in ds) return void closeCard();
     if (ds.tab) return void openCard(ds.tab as Tab);
-    if (ds.bagGo) {
-      closeCard();
-      h.openSpot(ds.bagGo as SpotId);
-      return;
-    }
     if ('openStall' in ds) return void openCard(marketAt === 'car' ? 'car' : marketAt);
     if ('toMarket' in ds) {
       marketAt = at;

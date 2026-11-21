@@ -147,16 +147,31 @@ export function gridParts(save: TycoonSave, o: GridOpts) {
     .join('');
   return { weapons, cells };
 }
-/** The business card's Bag tab: the weapons and the grid, read-only, and the ways in */
-export function bagHtml(save: TycoonSave, o: { may(id: WeaponId): boolean; ways?: boolean }) {
-  const { weapons, cells } = gridParts(save, { may: o.may, live: false });
-  const ways = o.ways
-    ? `<div class="city-panel-actions bag-ways"><button type="button" class="chip-link" data-bag-go="plan">The Armoury</button><button type="button" class="chip-link" data-bag-go="nightmarket">The Night Market</button></div>`
-    : '';
+/**
+ * The hub's Bag tab (docs/header-plan.md): the two weapon slots, then only what's in the bag (a row each: its art,
+ * name and count, and Use on a snack or a boost, where the hotbar's would work; greyed in the City view), how full
+ * it is, and the ways to get more (the Armoury, the Night Market)
+ */
+export function bagHtml(save: TycoonSave, o: { may(id: WeaponId): boolean; walking: boolean }) {
+  const { weapons } = gridParts(save, { may: o.may, live: false });
+  const keys = layout(save, o.may);
+  const things = keys.map((k) => (k ? thing(save, k) : null)).filter((t): t is NonNullable<typeof t> => !!t);
+  const rows = things
+    .map((t) => {
+      const use =
+        t.it.kind === 'item'
+          ? `<button type="button" class="mk-btn is-small bag-use" data-bag-use="${t.it.item}" ${o.walking ? '' : 'disabled'} aria-label="Use: ${esc(t.name)}">Use</button>`
+          : '';
+      const count = t.it.kind === 'gun' ? `${t.count} rounds` : t.count;
+      return `<li class="set-row bag-row"><span class="bag-art" aria-hidden="true">${t.art}</span><span class="set-name"><span class="set-label">${esc(t.name)}</span><small class="set-hint">${esc(count)}</small></span>${use}</li>`;
+    })
+    .join('');
   return (
     `<p class="bag-head">Weapons</p><div class="inv-weapons is-card">${weapons}</div>` +
-    `<p class="bag-head">Your bag</p><div class="inv-grid is-card">${cells}</div>` +
-    `<p class="walk-pad">Tab opens the bag while walking. Ammo is free.</p>${ways}`
+    `<p class="bag-head bag-head-row"><span>Your bag</span><span class="bag-count">${things.length} / ${keys.length}</span></p>` +
+    (rows ? `<ul class="bag-list">${rows}</ul>` : '<p class="hub-text">Nothing in it yet</p>') +
+    (o.walking ? '' : '<p class="walk-pad">Use things on foot</p>') +
+    `<div class="city-panel-actions bag-ways"><button type="button" class="chip-link" data-bag-go="plan">The Armoury</button><button type="button" class="chip-link" data-bag-go="nightmarket">The Night Market</button></div>`
   );
 }
 

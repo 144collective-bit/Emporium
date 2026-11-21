@@ -159,7 +159,7 @@ import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
-import { FAR_PHONE, farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
+import { FAR_PHONE, farForm, freedNear, primeAverages, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
 import { createQuality, type QualityStep } from './quality';
@@ -1434,8 +1434,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     },
     sfx: (kind, gain) => sound.sfx(kind, gain),
     guideGo: (g) => ('open' in g.go ? open(g.go.open) : startWalking(g.go.walk)),
-    openSpot: (id) => open(id),
-    mayCarry: (id) => walk.combat.canTake(id),
   });
   // A chunk that fails to fetch says so here (lazy.ts)
   setLazyToast((text, ms) => tycoon?.toast(text, ms));
@@ -1452,15 +1450,28 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       if (walking) canvas.focus({ preventScroll: true });
       dirty = true;
     };
-    // The Bag tab's grid: what he carries, read-only (inventory-ui.ts's chunk, fetched the first time the tab shows)
+    // The Bag tab: what he carries, a row each, Use on a snack or a boost (inventory-ui.ts's chunk, fetched the first time
+    // the tab shows)
     const bagGrid = root.querySelector<HTMLElement>('[data-hub-bag-grid]');
     const bagMod = lazy(() => import('./inventory-ui'), 'your bag');
     const paintBag = () => {
       if (!bagGrid) return;
       void bagMod().then((m) => {
-        if (hub.tab === 'bag') repaint(bagGrid, m.bagHtml(game.save(), { may: (id) => walk.combat.canTake(id) }));
+        if (hub.tab === 'bag') repaint(bagGrid, m.bagHtml(game.save(), { may: (id) => walk.combat.canTake(id), walking }));
       });
     };
+    // Its Use (the hotbar's own, where it works: docs/header-plan.md) and its ways to get more (a building's panel)
+    bagGrid?.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      const use = t.closest<HTMLButtonElement>('[data-bag-use]');
+      if (use && !use.disabled) {
+        walk.useItem(use.dataset.bagUse as import('./catalog').ItemId);
+        setTimeout(paintBag, 60);
+        return;
+      }
+      const go = t.closest<HTMLButtonElement>('[data-bag-go]');
+      if (go) open(go.dataset.bagGo!);
+    });
     hub.hooks.tab = (id) => {
       root.classList.toggle('is-stall', id === 'business');
       if (id === 'business') tycoon!.paint();

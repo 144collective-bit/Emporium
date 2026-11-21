@@ -385,14 +385,14 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
           </div>
       </div>
       <div class="mk-page hub-page" data-page="bag" role="tabpanel" aria-label="Bag" hidden>
-        <p class="hub-text">Guns, gear and snacks</p>
-        {/* What you carry, read-only (inventory-ui.ts's bagHtml(), painted by index.ts when the tab shows) */}
-        <div class="hub-bag" data-hub-bag-grid></div>
+        {/* What you carry (docs/header-plan.md: inventory-ui.ts's bagHtml(), painted by index.ts when the tab shows): the
+            weapons, then only what's in the bag, Use on a snack or a boost, and the ways to get more */}
         <button type="button" class="mk-btn is-main hub-wide" data-inv-open data-hub-walk>Open your bag<span class="hub-key" aria-hidden="true">Tab</span></button>
-        <p class="mk-note" data-hub-city>Open it on foot</p>
+        <div class="hub-bag" data-hub-bag-grid></div>
       </div>
       <div class="mk-page hub-page" data-page="business" role="tabpanel" aria-label="Business" hidden>
-        {/* Your business (tycoon-ui.ts): the till, then Stall, Units, Workshop, Car and Bag. Opens on this tab from the Dorras readout, or at your stall or a unit. */}
+        {/* Your business (tycoon-ui.ts): the till on top, then Stall, Units, Workshop and Car as the settings' chips (docs/header-plan.md;
+            what you carry is the Bag tab's). Opens on this tab from the Dorras readout, or at your stall or a unit. */}
   <section class="shop stall-card mk-skin" data-biz aria-labelledby="biz-title">
     <header class="shop-head">
       <h2 id="biz-title" class="shop-title">Your business</h2>
@@ -401,7 +401,7 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
         <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </header>
-    <div class="seg biz-tabs" data-biz-tabs role="group" aria-label="Your business"></div>
+    <div class="set-tabs biz-tabs" data-biz-tabs role="group" aria-label="Your business"></div>
     <div class="stall-body" data-biz-body></div>
       </section>
       </div>

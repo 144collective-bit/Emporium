@@ -94,7 +94,7 @@ keep it up to date when what it describes changes.
   sign-off: **the hub** (`hub.ts`, markup `[data-hub]` in `CityMap.astro`,
   styles `.mk-hub` in `menus.css`), the pause screen: tabs Map (World map,
   every place, More's comic and store, PulseChain native, X and Telegram),
-  Bag (opens the inventory; what you carry is Business's Bag), Business
+  Bag (what you carry, Use on a snack or a boost, and the full inventory's button: `docs/header-plan.md`), Business
   (the business card `[data-biz]`, moved in; also opened by the desk in Degen's office upstairs, home.ts
   `home:desk`), Missions (level and badges),
   Profile (look, finish, wardrobe, wallet), Settings (below) and Online
@@ -339,3 +339,10 @@ keep it up to date when what it describes changes.
   Profile tabs' wiring is `hubtabs-ui.ts` (its own chunk, the first time
   either shows); every picker's is `pickerkit.ts`, Settings' too. A new
   place goes in `AREAS` in its district.
+  **Bag** (inventory-ui.ts `bagHtml()`): the weapon slots, then only what's
+  in the bag, a row each (Use on a snack or a boost, greyed in the City
+  view), how full it is, the Armoury and the Night Market. **Business**
+  (`[data-biz]`): the till on top, then Stall · Units · Workshop · Car as the
+  settings' chips (`.set-tabs`, LT / RT); its old Bag section is gone (the
+  hub's Bag tab is the one), and so is its own Dorras chip in the hub. Car
+  shows for everyone: the starter car is owned from the start.
