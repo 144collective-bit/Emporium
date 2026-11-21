@@ -1,6 +1,7 @@
 # Phone far-view plan: the far city in fewer draws on phones
 
-Signed off by the owner (2026-11-20). Each phase with the owner's sign-off; keep this plan up to date.
+Signed off by the owner (2026-11-20); closed after Phase 4 (2026-11-21, the owner's call: finish it and go on to the
+estate's rework). The result is under "Where it ended".
 
 ## Why
 
@@ -46,12 +47,11 @@ the ground. Desktops unchanged. Measured before and after each phase with the sa
    place's far form in one piece (facades flattened too), small cut-out signs not drawn past `far`, the kept glows
    not drawn while they're clear, and a far form for the swing bridge (a district of its own, so it was never in the
    boot's queue of far forms).
-4. **The small far parts**, in order of their draws until the aim's reached: the target range (about 17: a far form
-   of its own), the traffic (about 26: each model's paint and detail in one mesh on phones), the river's boats (about
-   14: lamps and wakes merged per boat), the Docks' moving parts (about 11), the lamps' far glows (about 11),
-   Trench Avenue's string lights (neighbourhoods.ts, about 8). Each named in its code as it's changed.
-5. **Measured after, the look checked.** The six views on the phone tier against phase 1's baseline, the review
-   shots by day and at night (nothing far away visibly changed), the guides (performance.md) brought up to date.
+4. **The small far parts.** Done (below). Measured by the true count and distance (below), the plan's list mostly
+   wasn't far: the traffic's fleets draw only the cars within `far` in walk mode (far ones are already the one-piece
+   far cars), the lamps' glows weren't far either. What was: the target range's dummies and drones, and the river's
+   boats' lamps and wakes, both not drawn past `far` on phones (`hideFar()`), each named in its code.
+5. **Measured after.** Done: "Where it ended", below.
 
 ## What Phase 1 measured (2026-11-20)
 
@@ -148,10 +148,56 @@ Where the aim stands: Phase 4's kinds (about 60 to 70 draws a view) would leave 
 350. The biggest share left is what's hidden behind near buildings, and the outline pass (about 80 to 200 within
 145 m).
 
-## The owner's decisions (2026-11-20)
+## What Phase 4 found and measured (2026-11-21)
+
+Two faults in the breakdown, both fixed (drawrows.ts, each with its test):
+
+- It counted draws three never makes: an instanced mesh with no copies to show (the traffic's fleets, the crowd's
+  meshes, set to none in their `onBeforeRender`) or a batch with nothing in view goes through three's draw but draws
+  nothing and isn't counted by the renderer. Counted, they added about 25 to 70 draws a view to every reading before
+  this, Phase 1's baseline included. Now the breakdown counts only what three draws, and says the renderer's own count
+  of the frame's draws beside it: the two agree to the draw at every view.
+- It put an instanced mesh as far off as its bounds, which can span the city: the traffic's fleets read as far when
+  every car drawn was near. Now it's as far as its nearest copy that's drawn.
+
+Phases 2 and 3 saved real draws (their own rows, the aircraft's and the landmarks', were never the ones counted
+wrong); the totals before this were high.
+
+## Where it ended (2026-11-21)
+
+The six views at their worst heading on the phone tier, the true count (the breakdown's and the renderer's the same):
+
+| View (worst heading) | At the start (true, estimated) | At the end |
+| --- | --- | --- |
+| St Aldwyn's churchyard (N) | about 565 | 452 |
+| The Docks' quay (E) | about 560 | 397 to 430 |
+| Crestmont Boulevard (W) | about 575 | 488 to 535 |
+| The Trenches (N) | about 485 | 482 to 486 |
+| Exit 6A, Corner Road (N) | about 285 | 247 to 261 |
+| Downtown (W) | (669 by the old count) | 581 |
+
+("At the start" is Phase 1's reading less what the old count added at each view, the difference between the old and
+the true count on the same build; the ends are the range over the last runs: a view moves 30 to 50 draws from run to
+run with what's built and where the traffic and the boats are.)
+
+So the open views came down by about 40 to 160 draws each, most at the Docks and the village (the aircraft, the
+swing bridge, the places' far forms in one piece, the signs, the target range, the boats). The aim of about 350
+wasn't reached. What's left in them, by true distance (the village: 373 in the main pass, about half far):
+
+- the landmarks' kept parts, which stay as they are at every distance (the Emporium's hologram and beams, Liberty's
+  flames, the kart park's big signs and fans, the pier's rides, the club's screens, the Signal tower's beams): about
+  70 to 80 a view;
+- what's near (the town round you, its trees, lamps and people) and the outline pass (60 to 200 within 145 m);
+- a long tail of things at 1 to 6 draws each.
+
+Most of what's drawn far in the open views is hidden behind the nearest buildings (nothing culls what's hidden): the
+biggest saving left, and the place to start if phones need more (a plan of its own, the owner's call).
+
+## The owner's decisions (2026-11-20, 2026-11-21)
 
 - The plan signed off; Phase 1 started.
 - The aim: about **350 draws** in the open views on phones.
 - On phones the landmarks' far forms may lose their facade textures: a flat colour per part, the texture's average
   baked in.
 - Phase 4 stops once the aim's reached.
+- Phase 4 stopped with the target range and the boats; the plan closed there (2026-11-21), the aim not reached.

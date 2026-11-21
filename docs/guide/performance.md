@@ -302,11 +302,12 @@ keep it up to date when what it describes changes.
 - **Near and far** (growth plan Phase 2): past the tier's `far` (`TIERS`:
   120 high, 110 medium, 90 low) from the camera, things are drawn in a far
   form; `isNear()` in `tiles.ts` decides, with a margin so nothing flickers
-  on the line. On phones the open views (the village, exit 6A) draw about
-  520 against downtown's 250, nearly all of it separate far meshes from the
-  rest of the city (landmarks' far forms, the aircraft, small far parts):
-  `docs/phone-far-plan.md` (signed off 2026-11-20; `__draws()` and `?made` under ?fps, drawrows.ts) is the plan
-  to bring them down.
+  on the line. On phones the open views (the village, the Docks, Crestmont
+  looking back at the city) draw about 400 to 530 (2026-11-21, the true
+  count), about half of it far: what `docs/phone-far-plan.md` (closed
+  2026-11-21; `__draws()` and `?made` under ?fps, drawrows.ts) brought down
+  and what's left (mostly landmarks' kept parts and things hidden behind
+  the nearest buildings).
   - A Batch's details are near only (`Batch.lod`, `Batch.detail()`; Lod
     'all' / 'near' / 'far'): `tileBatch()` keeps each tile's near and far
     pieces apart and swaps them together (`tiled.update()`). The infill's
@@ -360,7 +361,9 @@ keep it up to date when what it describes changes.
     as the far forms leave out) and whatever's given to `hideFar()` not
     drawn past `far`, taken off every layer (`layers.mask` 0, the old mask
     kept in `userData.farMask`) so code showing or hiding them still can,
-    their places worked out every couple of seconds; the places' kept
+    their places worked out every couple of seconds (the target range's
+    dummies and drones, combat.ts, and the river boats' lamps and wakes,
+    life.ts, are given to it); the places' kept
     see-through glows not drawn while they're clear (`material.visible`
     follows `opacity`: a floodlight's glow by day); and the swing bridge,
     a district of its own, makes its far form as it's built (its span
