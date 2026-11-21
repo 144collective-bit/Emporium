@@ -14,6 +14,8 @@ export function createSound() {
   let real: Sound | null = null;
   let ctx: AudioContext | null = null;
   let loading: Promise<Sound> | null = null;
+  /** Settings > Sound > Volume, held till the synth is in */
+  let volume: number | null = null;
   return {
     get on() {
       return real?.on ?? false;
@@ -25,8 +27,13 @@ export function createSound() {
         void ctx.resume();
         loading ??= import('./sound').then((m) => (real = m.createSound(ctx!)));
         await loading;
+        if (volume !== null) real!.setVolume(volume);
       }
       return real!.toggle();
+    },
+    setVolume(v: number) {
+      volume = v;
+      real?.setVolume(v);
     },
     sfx: (kind: Sfx, gain?: number) => real?.sfx(kind, gain),
     engine: (revs: number, voice?: Voice) => real?.engine(revs, voice),

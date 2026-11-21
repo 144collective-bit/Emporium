@@ -38,7 +38,7 @@ interface Stepper {
 export interface PadHost {
   /** The hub, the ride's skip, the world map and "something was pressed" (walk.ts's own deps) */
   d: {
-    hub?: { open: boolean; pad(edge: Edge, any: boolean): void; show(): void } | null;
+    hub?: { open: boolean; pad(edge: Edge, any: boolean, held?: (i: number) => boolean): void; show(): void } | null;
     touched(): void;
     skipRide?(): void;
     worldMap?(): void;
@@ -123,7 +123,7 @@ export function pollPad(gp: PadLike | null | undefined, dt: number, s: PadState,
   if (pad.x || pad.y || rx || ry || b.some(Boolean)) setInput('pad');
   // The hub: the D-pad moves round it, LB / RB the tabs, A presses, B or Start closes
   if (d.hub?.open) {
-    d.hub.pad(edge, b.some((x, i) => x && !pad.prev[i]));
+    d.hub.pad(edge, b.some((x, i) => x && !pad.prev[i]), (i) => !!b[i]);
     pad.x = pad.y = 0;
     pad.prev = b;
     return;

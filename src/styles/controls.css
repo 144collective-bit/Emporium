@@ -11,10 +11,10 @@
 .walk-prompt-tap {
   display: none;
 }
-/* The Settings tab's touch buttons' row: touch screens only */
+/* Settings > Touch (settings-ui.ts): touch screens only */
 @media (pointer: fine) {
-  .hub-touchset {
-    display: none;
+  .set-touch-only {
+    display: none !important;
   }
 }
 .tc-sprite {
@@ -616,9 +616,6 @@
   margin: 8px 0 0;
   color: var(--m-dim);
   font-size: 11px;
-}
-.mk-hub .km-card {
-  justify-self: start;
 }
 @media (pointer: coarse), (max-width: 640px) {
   /* phones: centred under the header, clear of the View button and the compass on the right */

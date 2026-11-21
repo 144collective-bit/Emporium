@@ -3,8 +3,8 @@
  * screen, in the menus' arcade kit (menus.css `.mk-hub`, menukit.ts). Markup `[data-hub]` in CityMap.astro.
  *
  * - Its tabs: Map (the world map, every place, the comic and the links), Bag, Business (the business card,
- *   tycoon-ui.ts), Missions (your level and badges, missions-ui.ts), Profile (profile-ui.ts), Settings (the city's
- *   time, weather and sound, the walk controls, the credits) and Online when there's a game server
+ *   tycoon-ui.ts), Missions (your level and badges, missions-ui.ts), Profile (profile-ui.ts), Settings (settings-ui.ts:
+ *   sub-tabs Game, Graphics, Camera, Controls, Touch, Sound: docs/settings-plan.md) and Online when there's a game server
  *   (multiplayer.ts). Tabs a mode can't use are hidden (`data-hub-walk`: walking only).
  * - It opens from the header's hub button (`[data-hub-open]`), Esc (index.ts: after whatever else Esc closes),
  *   Start on a gamepad (walk.ts) and the header's pills on a tab (`[data-hub-tab]`: the Dorras readout on
@@ -30,6 +30,10 @@ export interface HubHooks {
 /** Phones, upright or on their side: the header's one slim row (controls.css) */
 const PHONE = '(max-width: 640px), (pointer: coarse) and (max-height: 500px)';
 
+/** The d-pad held: how long before it repeats, then how often (ms) */
+const REPEAT_FIRST = 380;
+const REPEAT_EVERY = 90;
+
 /** Inside the hub, these open screens of their own: the hub closes first */
 const OWN_SCREENS = '[data-worldmap-open], [data-inv-open], [data-dir-spot], [data-open-char], [data-open-fitting], [data-hub-leave], [data-account-open]';
 
@@ -39,9 +43,15 @@ export function createHub(root: HTMLElement) {
   const hooks: HubHooks = {};
   let shown = false;
   let back: HTMLElement | null = null;
+  /** The d-pad direction held, and when it next repeats */
+  let repeat: { i: number; next: number } | null = null;
+  // The Settings tab's rows (settings-ui.ts): their own chunk, the first time the tab shows
+  let settingsUI: Promise<{ shown(): void }> | null = null;
+  const loadSettings = () => (settingsUI ??= import('./settings-ui').then(({ createSettingsUI }) => createSettingsUI(root, el)));
   const kit = menuKit(el, {
     close: () => void close(),
     onTab: (id) => {
+      if (id === 'settings') void loadSettings().then((ui) => ui.shown());
       if (shown) hooks.tab?.(id as HubTab);
     },
   });
@@ -56,6 +66,8 @@ export function createHub(root: HTMLElement) {
   /** Walking only, or not: the tabs and the lines that depend on the mode */
   function fit() {
     const walking = root.dataset.mode === 'walk';
+    // Over the title screen only Settings shows (docs/settings-plan.md: its Settings button opens it)
+    el.classList.toggle('is-start', root.classList.contains('has-start'));
     el.querySelectorAll<HTMLElement>('[data-hub-walk]').forEach((n) => (n.hidden = !walking));
     el.querySelectorAll<HTMLElement>('[data-hub-city]').forEach((n) => (n.hidden = walking));
     el.dataset.walking = String(walking);
@@ -165,13 +177,25 @@ export function createHub(root: HTMLElement) {
     fit,
     move: (dir: Dir) => kit.move(dir),
     input: (kind: Input) => kit.input(kind),
-    /** A gamepad while it's open (`edge(i)`: button i just pressed): the d-pad moves, LB / RB the tabs, A presses, B or Start closes */
-    pad(edge: (i: number) => boolean, any: boolean) {
+    /**
+     * A gamepad while it's open (`edge(i)`: button i just pressed, `held(i)`: down): the d-pad moves (held, it keeps
+     * on: a picker keeps stepping), LB / RB the tabs, LT / RT Settings' sections, A presses, B or Start closes
+     */
+    pad(edge: (i: number) => boolean, any: boolean, held: (i: number) => boolean = () => false) {
       if (any) kit.input('pad');
-      if (edge(12)) kit.move('up');
-      if (edge(13)) kit.move('down');
-      if (edge(14)) kit.move('left');
-      if (edge(15)) kit.move('right');
+      const now = performance.now();
+      const DIRS: [number, Dir][] = [[12, 'up'], [13, 'down'], [14, 'left'], [15, 'right']];
+      for (const [i, dir] of DIRS) {
+        if (edge(i)) {
+          kit.move(dir);
+          repeat = { i, next: now + REPEAT_FIRST };
+        } else if (repeat?.i === i && held(i) && now >= repeat.next) {
+          kit.move(dir);
+          repeat.next = now + REPEAT_EVERY;
+        }
+      }
+      if (repeat && !held(repeat.i)) repeat = null;
+      if (edge(6) || edge(7)) el.dispatchEvent(new CustomEvent('mk-subtab', { detail: edge(6) ? -1 : 1 }));
       if (edge(4)) kit.step(-1);
       if (edge(5)) kit.step(1);
       if (edge(0)) kit.press();
