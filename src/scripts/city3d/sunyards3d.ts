@@ -31,6 +31,8 @@ const CONCRETE = toon('#c8c0b0');
 const DECK = toon('#d8cdb6');
 const COPING = toon('#e2d7c0');
 const POOL = siteMat('sun-pool', lit(toon('#4fb5d6', { emissive: '#2fd2ff' }), 0, 0.55));
+/** A lit fire pit's embers: charcoal by day, a steady low orange glow after dark (small: under the bloom's threshold but its middle) */
+const EMBER = siteMat('sun-ember', lit(toon('#3a2620', { emissive: '#ff6a1f' }), 0, 0.85));
 const AGAVE = toon('#6f9a86');
 const CACTUS = toon('#4f7d3d');
 const PEAR = toon('#6b9245');
@@ -302,6 +304,16 @@ function drawDress(b: Batch, h: House, y: Yard, low: boolean) {
       add(at(new THREE.IcosahedronGeometry(0.85 * s, 1).scale(1, 0.85, 1), u, v, 1.85 * s), LEAF);
     }
   }
+  // The fire pits at every distance: a pad of pavers, the stone ring, its ashes, or on a lit one its embers, a low mound
+  // glowing after dark (a few warm points across the gardens at night)
+  for (const d of y.dress) {
+    if (d.kind !== 'firepit') continue;
+    add(at(new THREE.CircleGeometry(DRESS_R.firepit - 0.1, 20).rotateX(-Math.PI / 2), d.u, d.v, 0.014), CONCRETE);
+    add(at(new THREE.CylinderGeometry(0.42, 0.46, 0.26, 12, 1, true), d.u, d.v, 0.13), BOULDER);
+    add(at(new THREE.RingGeometry(0.33, 0.43, 12).rotateX(-Math.PI / 2), d.u, d.v, 0.26), BOULDER);
+    add(at(new THREE.CircleGeometry(0.34, 12).rotateX(-Math.PI / 2), d.u, d.v, 0.1), d.burning ? EMBER : MAT);
+    if (d.burning) add(at(new THREE.SphereGeometry(0.2, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.35, 1), d.u, d.v, 0.1), EMBER);
+  }
   b.detail(() => {
     for (const d of y.dress) {
       if (d.kind === 'bed') {
@@ -323,11 +335,7 @@ function drawDress(b: Batch, h: House, y: Yard, low: boolean) {
             else put(new THREE.SphereGeometry(0.075, 5, 4).translate(x, H + 0.03, z), FLOWERS[(k + (side > 0 ? 1 : 0)) % 3]);
           }
       } else if (d.kind === 'firepit') {
-        // A pad of pavers, the pit's stone ring and its ashes, the chairs round it facing in
-        add(at(new THREE.CircleGeometry(DRESS_R.firepit - 0.1, 20).rotateX(-Math.PI / 2), d.u, d.v, 0.014), CONCRETE);
-        add(at(new THREE.CylinderGeometry(0.42, 0.46, 0.26, 12, 1, true), d.u, d.v, 0.13), BOULDER);
-        add(at(new THREE.RingGeometry(0.33, 0.43, 12).rotateX(-Math.PI / 2), d.u, d.v, 0.26), BOULDER);
-        add(at(new THREE.CircleGeometry(0.34, 12).rotateX(-Math.PI / 2), d.u, d.v, 0.1), MAT);
+        // The chairs round it, facing in
         if (low) continue;
         for (let k = 0; k < d.chairs; k++) {
           const a = (k / d.chairs) * Math.PI * 2 + d.u;

@@ -96,7 +96,8 @@ keep it up to date when what it describes changes.
   to the garden's walls; the walls on every garden edge but the open front
   yard, sunyards.ts `walls()`; the big gardens' trees, beds, fire pits and
   stepping stones, `dressOf()`, `Yard.dress`, drawn by sunyards3d.ts
-  `drawDress()`); eight late lots and houses on the field
+  `drawDress()`; about half the fire pits' embers glowing after dark,
+  `burning`, `EMBER`); eight late lots and houses on the field
   east of the school and the south row's gap (sunridgelots.ts `late()`,
   `LATE_FROM`; sunhouses.ts builds them after every other house).
 - **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views

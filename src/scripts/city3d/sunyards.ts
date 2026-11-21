@@ -40,12 +40,12 @@ export type Extra = 'trampoline' | 'swing' | 'shed';
  * What dresses a big back garden (Phase 8, the owner's call: "a varied mix, not in every garden"): a tree out
  * toward its far end (a lemon, a mesquite or a shade tree), a raised timber bed along a wall (vegetables or
  * flowers), a fire pit with its chairs on a pad of pavers, and stepping stones from the patio out to one of them
- * or the shed. In the frame (u, v); a bed's `rot` is its length's way in the frame (from u toward v), along its wall.
+ * or the shed; about half the fire pits with their embers glowing after dark (`burning`). In the frame (u, v); a bed's `rot` is its length's way in the frame (from u toward v), along its wall.
  */
 export type Dress =
   | { kind: 'tree'; sort: 'lemon' | 'mesquite' | 'shade'; u: number; v: number; s: number }
   | { kind: 'bed'; crop: 'veg' | 'flowers'; u: number; v: number; rot: number }
-  | { kind: 'firepit'; u: number; v: number; chairs: number }
+  | { kind: 'firepit'; u: number; v: number; chairs: number; burning: boolean }
   | { kind: 'stones'; pts: Pt[] };
 /** How far each reaches round its spot (a bed: half its length; its half width is `BED_W`) */
 export const DRESS_R = { tree: 0.85, bed: 0.95, firepit: 1.35 } as const;
@@ -549,7 +549,7 @@ function dressOf(h: House, f: GFrame, patio: Yard['patio'], pool: Yard['pool'], 
         (q) => free(q[0], q[1], r) && clearOf(ring(q[0], q[1], r, 10), 0.3),
       );
       if (!p) continue;
-      out.push({ kind: 'firepit', u: p[0], v: p[1], chairs: rand() < 0.5 ? 3 : 4 });
+      out.push({ kind: 'firepit', u: p[0], v: p[1], chairs: rand() < 0.5 ? 3 : 4, burning: false });
       taken.push([p[0], p[1], r]);
     }
   }
@@ -580,6 +580,8 @@ function dressOf(h: House, f: GFrame, patio: Yard['patio'], pool: Yard['pool'], 
       if (pts.length >= 3) out.push({ kind: 'stones', pts });
     }
   }
+  // (which fire pits are lit of an evening: chosen last, so the rest is laid as it was)
+  for (const d of out) if (d.kind === 'firepit') d.burning = rand() < 0.5;
   return out;
 }
 

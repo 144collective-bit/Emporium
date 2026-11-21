@@ -415,7 +415,11 @@ These are my recommendations, made so the plan is complete; any can change.
      shade tree), a raised timber bed along a wall (vegetables or flowers)
      and a fire pit with three or four chairs on a pad of pavers, each where
      it has room, and stepping stones from the patio out to one of them or
-     the shed on most (sunyards.ts `dressOf()`, `Yard.dress`, `DRESS_FROM`,
+     the shed on most; about half the fire pits lit of an evening, their
+     embers a steady low orange glow after dark, charcoal by day (the
+     owner's call: steady, no flicker; `burning`, sunyards3d.ts `EMBER`,
+     a `lit()` material, the pits at every distance, their chairs near
+     only) (sunyards.ts `dressOf()`, `Yard.dress`, `DRESS_FROM`,
      its own generator, so every yard keeps what it had). Drawn in the
      yard's own materials (sunyards3d.ts `drawDress()`: no new draw calls),
      the trees at every distance, the rest near only, fewer on phones; the

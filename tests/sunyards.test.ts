@@ -290,4 +290,8 @@ test('the big gardens dressed (Phase 8): a varied mix in some, none in a small o
   // (not in every big garden, but in most; every kind of each)
   assert.ok(dressed > big * 0.45 && dressed < big * 0.85, `${dressed} of ${big} big gardens dressed`);
   for (const k of ['treelemon', 'treemesquite', 'treeshade', 'bedveg', 'bedflowers', 'firepit', 'stones']) assert.ok((kinds.get(k) ?? 0) >= 2, `only ${kinds.get(k) ?? 0} ${k}`);
+  // (about half the fire pits lit of an evening, steady)
+  const pits = YARDS.flatMap((y) => y.dress.filter((d) => d.kind === 'firepit'));
+  const lit = pits.filter((d) => d.kind === 'firepit' && d.burning).length;
+  assert.ok(lit >= pits.length * 0.25 && lit <= pits.length * 0.75, `${lit} of ${pits.length} fire pits lit`);
 });
