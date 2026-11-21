@@ -229,3 +229,25 @@ test("each step's outline (what's drawn): its edges tagged, its cuts where steps
   // (and the district's rect round every block)
   for (const b of BLOCKS) for (const [x, z] of b.foot) assert.ok(x > BLOCKS_RECT[0] && x < BLOCKS_RECT[2] && z > BLOCKS_RECT[1] && z < BLOCKS_RECT[3]);
 });
+
+test('brutalist (docs/brutalist-plan.md Phase 1): every corner cut straight, a chamfer at 45 degrees, none rounded', () => {
+  // (a corner's face: the edge between two sides at right angles, at 45 degrees to both)
+  const turn = (a: Pt, b: Pt, c: Pt) => {
+    const [u, v] = [Math.atan2(b[1] - a[1], b[0] - a[0]), Math.atan2(c[1] - b[1], c[0] - b[0])];
+    return Math.abs(((v - u + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+  };
+  // The towers and The Core: squares with their four corners cut, eight faces, each turn a right angle's half
+  for (const id of ['harrier', 'kite', 'twin-core']) {
+    const f = blockById(id).foot;
+    assert.equal(f.length, 8, `${id}: ${f.length} corners`);
+    for (let i = 0; i < 8; i++) assert.ok(Math.abs(turn(f[i], f[(i + 1) % 8], f[(i + 2) % 8]) - Math.PI / 4) < 1e-6, `${id} corner ${i}`);
+  }
+  // The slabs' ends: one cut each corner (two corner faces an end, the end's face between them, square to it)
+  for (const b of BLOCKS.filter((x) => x.kind === 'slab' || x.kind === 'rampart'))
+    b.steps.forEach((st, i) => {
+      const sh = stepShape(b, st);
+      const corners = sh.tags.filter((t) => t === 'corner').length;
+      const ends = (sh.cutStart ? 0 : 1) + (sh.cutEnd ? 0 : 1);
+      assert.equal(corners, ends * 2, `${b.id} step ${i}: ${corners} corner faces for ${ends} ends`);
+    });
+});

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BALCONY_DOOR, CELL_W, COLS, END_MIN, LINTEL, PANES, PX, REACH, baysOf, styleOf, windowsOf, type FacadeStyle } from '../src/scripts/city3d/facade';
+import { BALCONY_DOOR, CELL_W, COLS, END_MIN, LINTEL, PANES, PX, RECESS, RECESS_LIFE, REACH, ROWS, baysOf, recessLife, styleOf, windowsOf, type FacadeStyle } from '../src/scripts/city3d/facade';
 import { FLOOR, INFILL, bodyOf } from '../src/scripts/city3d/downtown';
 import { WINDOW_TYPE } from '../src/scripts/city3d/windows';
 
@@ -88,4 +88,17 @@ test("downtown's own fronts: every building with floors gets at least one bay", 
     const style: FacadeStyle = f.type === 'loft' ? 'steel' : f.type === 'hotel' ? 'balcony' : 'sash';
     assert.ok(baysOf(w, style, 0).n >= 1, `${f.type} ${w.toFixed(2)} wide`);
   }
+});
+
+test('the brutalist recesses (docs/brutalist-plan.md Phase 1): the window inside its recess, life in them mostly plain', () => {
+  const p = PANES.recess;
+  // (two bays a recess; its window past the fin, over the front's top, clear of the door at the back)
+  assert.equal(p.span, 2);
+  assert.ok(p.x > RECESS.fin && p.x + p.w < RECESS.door.x && p.y > RECESS.slab && p.y + p.h <= RECESS.front + 4);
+  // Over a whole band (each floor's recesses): mostly plain, washing out only now and then, every kind there
+  const all = Array.from({ length: 40 }, (_, seed) => Array.from({ length: ROWS }, (_, row) => Array.from({ length: COLS / 2 }, (_, i) => recessLife(60 + seed, row, i)))).flat(2);
+  const share = (k: string) => all.filter((x) => x === k).length / all.length;
+  assert.ok(share('none') >= 0.25, `plain ${share('none')}`);
+  assert.ok(share('washing') <= 0.1, `washing ${share('washing')}`);
+  for (const k of new Set(RECESS_LIFE)) assert.ok(share(k) > 0, k);
 });

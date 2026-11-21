@@ -24,7 +24,7 @@ import * as THREE from 'three';
 import { Batch, canvasTex, FONT_DISPLAY, fx, glowTex, lit, neon, PAL, rng, shadeHex, siteMat, toon } from './kit';
 import { ALLEYS, ALLEY_LAMPS, ALLEY_PIPES, ALLEY_PROPS, DIAGONALS, FLOOR, INFILL, LANES, NAMED_SHOPS, PARKS, SHOP_H, SIGNS, SQUARE, WATER_TOWER, bodyOf, stoopOf, type Infill, type Pt, type SignId } from './downtown';
 import { CORE_ROADS, DOWNTOWN, LANE, THIRDS } from './layout';
-import { BALCONY_DOOR, CASEMENT_BANDS, CELL_W, COLS, LINTEL, PAIR_SASH, PANES, PX, PX_H, PX_W, RECESS, ROWS, baysOf, styleOf, windowsOf, type Bays, type FacadeStyle } from './facade';
+import { BALCONY_DOOR, CASEMENT_BANDS, CELL_W, COLS, LINTEL, PAIR_SASH, PANES, PX, PX_H, PX_W, RECESS, RECESS_PANELS, ROWS, baysOf, recessLife, styleOf, windowsOf, type Bays, type FacadeStyle } from './facade';
 import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './world';
 import type { Idle } from './landmarks';
 import { ROOF_TONES, corniceAt, roofTone, type CorniceKind } from './rooftones';
@@ -167,8 +167,6 @@ function glazed(c: CanvasRenderingContext2D, x: number, y: number, w: number, h:
   if (transom) c.fillRect(x, y + h * 0.42, w, 2);
 }
 
-/** What lives in a brutalist recess, by a hash of where it is: washing, a plant, a dish, an air-con unit, a bike, or nothing */
-const RECESS_LIFE = ['washing', 'plant', 'dish', 'ac', 'bike', 'none', 'plant', 'none', 'washing', 'ac'] as const;
 const WASHING = ['#e8e4dc', '#d94f4f', '#3f7fd1', '#f0c64a', '#7ac08a', '#c06bc0'];
 
 /**
@@ -190,7 +188,7 @@ function recessRow(c: CanvasRenderingContext2D, wall: string, y: number, seed: n
   }
   for (let i = 0; i < pairs; i++) {
     const x = i * PX_W * 2;
-    const life = RECESS_LIFE[(seed * 131 + row * 17 + i * 7) % RECESS_LIFE.length];
+    const life = recessLife(seed, row, i);
     // The window and the door at the back of the recess (lit or not, as any window)
     const p = paneAt(seed, row, i * 2);
     if (glow) {
@@ -220,8 +218,8 @@ function recessRow(c: CanvasRenderingContext2D, wall: string, y: number, seed: n
     c.fillRect(x, y, fin, PX_H);
     c.fillStyle = shadeHex(wall, -0.32);
     c.fillRect(x + fin, y + slab, 3, PX_H - slab);
-    // The front over the recess's foot: solid concrete, a lighter top, its own board marks
-    c.fillStyle = shadeHex(wall, 0.05);
+    // The front over the recess's foot: solid concrete (the odd one painted), a lighter top, its own board marks
+    c.fillStyle = life === 'panel' ? RECESS_PANELS[(seed + row * 3 + i) % RECESS_PANELS.length] : shadeHex(wall, 0.05);
     c.fillRect(x + fin, y + front, PX_W * 2 - fin, PX_H - front);
     c.fillStyle = shadeHex(wall, 0.2);
     c.fillRect(x + fin, y + front, PX_W * 2 - fin, 2);

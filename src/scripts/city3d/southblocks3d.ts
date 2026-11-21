@@ -1,15 +1,17 @@
 /*
  * Endswood's blocks drawn (docs/south-plan.md Phase 2, step 2b; the data is southblocks.ts), a district loaded as you
- * approach (districts.ts `LAZY_DISTRICTS` id `south-blocks`), as sites (tilework.ts), in the owner's 70s retro-future:
- * warm board-marked concrete, the precast panels' ribbon windows from the wall atlas (lit at night), rounded ends,
- * each block's accent on its gallery and balcony fronts and its ground floor's fascia.
+ * approach (districts.ts `LAZY_DISTRICTS` id `south-blocks`), as sites (tilework.ts). Brutalist since
+ * docs/brutalist-plan.md Phase 1 (the owner's ask, 2026-11-21): raw board-marked concrete in a cool grey, the wall
+ * atlas's `brutal` band (deep balcony recesses between fins, the slab's edge at each floor, life in the recesses, rain
+ * streaks), hard chamfered corners, the trim all concrete, each block's colour a stripe down its ends.
  *
  * - **The slabs and the Rampart**, a step at a time: walls (a glazed ground floor on the galleried side and the ends,
  *   concrete on the other), the steps' walls where a taller one meets a lower, roofs and parapets, sky gardens on the
  *   roofs (near only); the Rampart's archway (its soffit and its piers' faces); the galleries at every third floor
- *   (deck, accent front, a warm strip light under it at night); balconies with curved accent fronts on the slabs'
- *   other sides (near only).
- * - **The towers**: their walls, a ledge ring every third floor, the flared plant room on top, the beacon.
+ *   (deck, concrete front, a warm strip light under it at night); balconies with concrete fronts on the slabs'
+ *   other sides (near only); the block's colour a stripe down each end.
+ * - **The towers**: their walls, a ledge ring every third floor, the plant room (a concrete box) on top, the beacon,
+ *   the tower's colour a stripe down its face away from The Core.
  * - **The cores**: concrete towers with a lit stair slot down their outer faces.
  * - **The bridges**: covered, a band of glass along each side lit warm at night, a strip light under each.
  * - **The podium deck** on its columns; **Teasel House's** hoarded half (boarded windows, hoarding at the ground) and
@@ -20,7 +22,7 @@
  */
 import * as THREE from 'three';
 import type { Tick } from './world';
-import { Batch, neon, toon } from './kit';
+import { Batch, lit, neon, toon } from './kit';
 import { ATLAS, kit, type Frame } from './infill';
 import { site } from './tilework';
 import { PLANT } from './palette';
@@ -56,8 +58,8 @@ const ACCENT: Record<keyof typeof ACCENTS, THREE.Material> = { orange: toon(ACCE
 /** Warm strip lights (under the galleries and bridges), the bridges' glass, the stair slots: dark glass by day (against the
  * grey concrete, not a tan band), lit warm at night */
 const STRIP = neon('#ffcf86', 0.1, 1.25);
-const GLASS = neon('#ffe2b4', 0.05, 0.95);
-const SLOT = neon('#ffe0a6', 0.05, 0.9);
+const GLASS = lit(toon('#3b4656', { emissive: '#ffe2b4' }), 0, 0.95);
+const SLOT = lit(toon('#323b48', { emissive: '#ffe0a6' }), 0, 0.9);
 const BEACON = neon('#ff4a3a', 0.8, 2.2);
 const BUNKER_NEON = neon('#ff3fb0', 0.6, 1.7);
 // (brutalist: board-marked grey concrete, deep balcony recesses with life in them; docs/brutalist-plan.md Phase 1)

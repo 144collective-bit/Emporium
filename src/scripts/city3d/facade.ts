@@ -59,6 +59,15 @@ export const PANES: Record<FacadeStyle, Pane> = {
 /** The brutalist recesses (`recess`), in pixels: the fin between two, the slab's edge at each floor, the front's top,
  * the door at the back beside the window */
 export const RECESS = { fin: 10, slab: 9, front: 42, door: { x: 76, w: 12, y: 14 } };
+/** What lives in a brutalist recess (by a hash of where it is): a plant, a dish, an air-con unit, a bike, washing out,
+ * a front painted in a colour (the odd one, the blocks' own accents), or nothing; mostly plain, so a long front reads
+ * calm, washing only now and then */
+export const RECESS_LIFE = ['plant', 'none', 'dish', 'ac', 'none', 'bike', 'plant', 'none', 'washing', 'none', 'panel', 'ac', 'none', 'dish'] as const;
+export type RecessLife = (typeof RECESS_LIFE)[number];
+/** What's in a recess: `seed` the band's, `row` its floor in the band, `i` the recess along it */
+export const recessLife = (seed: number, row: number, i: number): RecessLife => RECESS_LIFE[(seed * 131 + row * 17 + i * 7) % RECESS_LIFE.length];
+/** The painted fronts' colours: the blocks' own accents (southblocks.ts `ACCENTS`), muted a little by weather */
+export const RECESS_PANELS = ['#c7652f', '#2c8f88', '#c99a2c'];
 /** A hotel's even bays are balcony doors, down to the floor */
 export const BALCONY_DOOR: Pane = { x: 12, y: 8, w: 24, h: PX_H - 8, span: 1 };
 /** The casements' concrete bands across each floor, in pixels from the floor's top: the lintel's and the sill's */
