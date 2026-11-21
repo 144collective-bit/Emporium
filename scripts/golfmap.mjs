@@ -16,7 +16,7 @@ const dir = mkdtempSync(join(tmpdir(), 'golfmap-'));
 try {
   const out = join(dir, 'golf.mjs');
   await build({
-    stdin: { contents: `export * from './golf'; export * from './golfground';`, resolveDir: resolve('src/scripts/city3d'), loader: 'ts' },
+    stdin: { contents: `import './golfbake';\nexport * from './golf';\nexport * from './golfground';\nexport { golfTrees, LAND, golfLand } from './golflift';`, resolveDir: resolve('src/scripts/city3d'), loader: 'ts' },
     outfile: out,
     bundle: true,
     format: 'esm',
@@ -39,6 +39,8 @@ try {
     rough: [96, 150, 78],
     native: [128, 140, 84],
     grounds: [190, 184, 170],
+    path: [196, 192, 210],
+    drive: [60, 58, 80],
     off: [150, 156, 150],
   };
   // The heights on the pixels' corners, then each pixel shaded by its slope towards the light (from the north-west)
@@ -68,7 +70,10 @@ try {
   const px = ([x, z]) => `${((x - X0) * S).toFixed(1)},${((z - Z0) * S).toFixed(1)}`;
   const parts = [];
   parts.push(`<polygon points="${g.COURSE.map(px).join(' ')}" fill="none" stroke="#3b3b3b" stroke-width="${S}" stroke-dasharray="${4 * S},${3 * S}"/>`);
-  parts.push(`<polyline points="${g.DRIVE.map(px).join(' ')}" fill="none" stroke="#6b5b4b" stroke-width="${3 * S}"/>`);
+  parts.push(`<polyline points="${g.DRIVE.map(px).join(' ')}" fill="none" stroke="#3c3a50" stroke-width="${3.4 * S}"/>`);
+  parts.push(`<polyline points="${g.FOOTPATH.map(px).join(' ')}" fill="none" stroke="#c4c0d2" stroke-width="${1.6 * S}"/>`);
+  // The course's woods (golflift.ts), a dot a tree
+  for (const t of g.golfTrees()) parts.push(`<circle cx="${((t.x - X0) * S).toFixed(1)}" cy="${((t.z - Z0) * S).toFixed(1)}" r="${(t.pine ? 1.1 : 1.4) * t.s * S}" fill="${t.pine ? '#1d5a3f' : '#2f8a55'}" stroke="#123" stroke-width="${0.3 * S}"/>`);
   const [gx0, gz0, gx1, gz1] = g.CLUB_GROUNDS;
   parts.push(`<rect x="${(gx0 - X0) * S}" y="${(gz0 - Z0) * S}" width="${(gx1 - gx0) * S}" height="${(gz1 - gz0) * S}" fill="none" stroke="#5a4a3a" stroke-width="${S}"/>`);
   const font = `font-family="DejaVu Sans, Arial, sans-serif" font-weight="bold"`;
@@ -88,7 +93,7 @@ try {
   // The key, top left
   const par = g.HOLES.reduce((s, h) => s + h.par, 0);
   const len = Math.round(g.HOLES.reduce((s, h) => s + g.lengthOf(h), 0));
-  const rows = [`Sector 7 golf course: ${label}`, `18 holes, par ${par}, ${len} tiles (about ${Math.round((len * 1.8) / 10) * 10} m)`, `Contours every tile (1.8 m); ground ${lo.toFixed(1)} to ${hi.toFixed(1)} tiles`, `North is up; x ${Math.round(X0)} to ${Math.round(X1)}, z ${Math.round(Z0)} to ${Math.round(Z1)}`];
+  const rows = [`Sector 7 golf course: ${label} (${g.golfTrees().length} trees)`, `18 holes, par ${par}, ${len} tiles (about ${Math.round((len * 1.8) / 10) * 10} m)`, `Contours every tile (1.8 m); ground ${lo.toFixed(1)} to ${hi.toFixed(1)} tiles`, `North is up; x ${Math.round(X0)} to ${Math.round(X1)}, z ${Math.round(Z0)} to ${Math.round(Z1)}`];
   rows.forEach((t, k) => parts.push(`<text x="${6 * S}" y="${(10 + k * 7) * S}" ${font} font-size="${5 * S}" fill="#111">${t}</text>`));
   const svg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${parts.join('')}</svg>`);
   mkdirSync('docs/golf-shots', { recursive: true });

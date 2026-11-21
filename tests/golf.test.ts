@@ -162,31 +162,6 @@ test("the club's land is clear of everything that stands: the air base, the wall
   for (const s of PLAN.streets) for (const p of s.pts) assert.ok(insetOf(...p) < -10, `${s.id} runs onto the course at ${p}`);
 });
 
-test('the drive in: off the country road east, up the hills\' east foot to the grounds, off the course', () => {
-  const road = PLAN.streets.find((s) => s.id === 'ew0-e')!;
-  const [a, b] = [road.pts[0], road.pts.at(-1)!];
-  const start = DRIVE[0];
-  assert.ok(Math.abs(start[1] - a[1]) < 1e-6 && start[0] > a[0] + 20 && start[0] < b[0] - 20, 'it leaves the country road');
-  const end = DRIVE.at(-1)!;
-  assert.ok(end[0] >= CLUB_GROUNDS[0] - 4 && end[1] <= CLUB_GROUNDS[3] + 10, 'it ends at the grounds');
-  for (let i = 1; i < DRIVE.length; i++) {
-    const [p, q] = [DRIVE[i - 1], DRIVE[i]];
-    for (let t = 0; t <= 1; t += 0.1) {
-      const r: Pt = [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
-      // (but its last stretch, in across the club's edge to the grounds)
-      if (r[1] < CLUB_GROUNDS[3] + 18) continue;
-      assert.ok(insetOf(...r) < -3, `the drive on the course at ${r}`);
-      assert.ok(r[0] > TERRAIN_RECT[2] + 4, `the drive on the hills' land at ${r}`);
-    }
-  }
-  // (it wanders as the land does: no long straight)
-  for (let i = 2; i < DRIVE.length; i++) {
-    const [p, q, r] = [DRIVE[i - 2], DRIVE[i - 1], DRIVE[i]];
-    const turn = Math.abs(Math.atan2(r[1] - q[1], r[0] - q[0]) - Math.atan2(q[1] - p[1], q[0] - p[0]));
-    assert.ok(turn > 0.01, `the drive runs straight on at ${q}`);
-  }
-});
-
 test("the club's edge wanders: no ruler-straight run", () => {
   for (let i = 0; i < COURSE.length; i++) {
     const [p, q] = [COURSE[i], COURSE[(i + 1) % COURSE.length]];
@@ -217,4 +192,57 @@ test("what's underfoot: tees, greens, fringes, fairways, bunkers, the water, the
   for (let x = COURSE_RECT[0]; x <= COURSE_RECT[2]; x += 9) for (let z = COURSE_RECT[1]; z <= COURSE_RECT[3]; z += 9) assert.equal(surfaceAt(x, z) !== null, inCourse(x, z), `${x}, ${z}`);
   // (the green's middle is a green's ellipse's 0)
   for (const h of HOLES) assert.equal(ellipseAt(greenOf(h).at, greenOf(h).dir, h.green, ...greenOf(h).at), 0);
+});
+
+test('the cart paths: beside every hole, green to next tee, never over play or water, on the club\'s land', async () => {
+  const { PATHS, PATH_HALF, fromPaths } = await import('../src/scripts/city3d/golf');
+  for (const h of HOLES) assert.ok(PATHS.some((p) => p.id === `hole-${h.n}`), `hole ${h.n}'s path`);
+  for (let n = 1; n < 18; n++) if (n !== 9) assert.ok(PATHS.some((p) => p.id === `hole-${n}-${n + 1}`), `from ${n} to ${n + 1}`);
+  for (const id of ['grounds-1', '9-grounds', 'grounds-10', '18-grounds', 'footpath']) assert.ok(PATHS.some((p) => p.id === id), id);
+  const PLAY = ['fairway', 'green', 'fringe', 'tee', 'bunker', 'water'];
+  for (const p of PATHS)
+    for (let i = 1; i < p.pts.length; i++) {
+      const [a, b] = [p.pts[i - 1], p.pts[i]];
+      const n = Math.max(1, Math.ceil(dist(a, b)));
+      for (let k = 0; k <= n; k++) {
+        const q: Pt = [a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n];
+        assert.ok(insetOf(...q) >= 3 || p.id === 'footpath', `${p.id} at the club's edge at ${q}`);
+        const onGrounds = q[0] >= CLUB_GROUNDS[0] && q[0] <= CLUB_GROUNDS[2] && q[1] >= CLUB_GROUNDS[1] && q[1] <= CLUB_GROUNDS[3];
+        if (insetOf(...q) > 0 && !onGrounds) assert.equal(surfaceAt(...q), 'path', `${p.id}'s lie at ${q}`);
+        // (what's under the path's edges: nothing in play)
+        for (const o of [-PATH_HALF - 0.3, PATH_HALF + 0.3]) {
+          const [ux, uz] = [(b[0] - a[0]) / (dist(a, b) || 1), (b[1] - a[1]) / (dist(a, b) || 1)];
+          const e: Pt = [q[0] - uz * o, q[1] + ux * o];
+          const s = surfaceAt(...e);
+          assert.ok(!s || !PLAY.includes(s), `${p.id} runs over ${s} at ${e}`);
+        }
+      }
+    }
+  assert.ok(fromPaths(...HOLES[0].line[0]) > 5, "the tee's not on a path");
+});
+
+test('the drive: off the country road, along the hills\' foot, over the club\'s edge once and up to the grounds clear of the holes', () => {
+  const road = PLAN.streets.find((s) => s.id === 'ew0-e')!;
+  const start = DRIVE[0];
+  assert.ok(Math.abs(start[1] - (road.pts[0][1] - road.half)) < 1e-6 && start[0] > road.pts[0][0] + 20 && start[0] < road.pts.at(-1)![0] - 20, 'it leaves the country road');
+  const end = DRIVE.at(-1)!;
+  assert.ok(end[0] > CLUB_GROUNDS[0] && end[0] < CLUB_GROUNDS[2] && Math.abs(end[1] - CLUB_GROUNDS[3]) < 1e-6, 'it ends at the grounds');
+  let crossings = 0;
+  let was = insetOf(...start) > 0;
+  for (let i = 1; i < DRIVE.length; i++) {
+    const [p, q] = [DRIVE[i - 1], DRIVE[i]];
+    for (let t = 0; t <= 1; t += 0.05) {
+      const r: Pt = [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+      const on = insetOf(...r) > 0;
+      if (on !== was) crossings++;
+      was = on;
+      assert.ok(r[0] > TERRAIN_RECT[2] + 4, `the drive on the hills' land at ${r}`);
+      for (const h of HOLES) assert.ok(nearestOn(h, ...r).d > 18 || dist(r, CLUB_CENTRE) < 60, `the drive by hole ${h.n} at ${r}`);
+    }
+  }
+  assert.equal(crossings, 1, 'onto the course once');
+  for (let i = 2; i < DRIVE.length; i++) {
+    const [p, q, r] = [DRIVE[i - 2], DRIVE[i - 1], DRIVE[i]];
+    assert.ok(Math.abs(Math.atan2(r[1] - q[1], r[0] - q[0]) - Math.atan2(q[1] - p[1], q[0] - p[0])) > 0.01, `the drive runs straight on at ${q}`);
+  }
 });

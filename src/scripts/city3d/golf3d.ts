@@ -8,20 +8,30 @@
  *   on golflift.ts `golfMesh()` as the grass is, near and far, so it never sinks into it nor parts from a neighbour),
  *   its edges the texture's (alpha-tested), so they're crisp however coarse the triangles.
  * - **The water**: each lake at its level (golflift.ts `golfWater()`), the city's water shader, on the main thread.
+ * - **The cart paths** in the turf too (golf.ts `PATHS`, Phase 3), under what's mown.
+ * - **Clubhouse Drive** (Phase 3): asphalt over the ground from the country road up to the grounds (`driveMesh()`), its
+ *   lamps (`DRIVE_LAMPS`), stone pillars where it comes onto the club's land.
+ * - **The club's edge** (Phase 3, near only): a white post-and-rail fence round it (`FENCE_RUNS`: open where the drive
+ *   and the footpath come in, posts either side of the footpath's way), reeds round the lakes (`reedsOf()`).
  *
  * The course's grass itself (its rough and native grass, its hills) is the boot's (world.ts), so the course stands
  * before this chunk comes; the woods between the holes are the outskirts' trees (landuse.ts keeps them off the play).
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { Batch, canvasTex, siteMat, toon } from './kit';
+import { Batch, canvasTex, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
-import { COVER } from './palette';
+import { COVER, LAMP, LAMP_POST, ROAD, STONE } from './palette';
 import { waterMat } from './world';
 import { TILE } from './tiles';
-import { GOLF_RECT, golfIn, golfLift, golfMesh, golfWater } from './golflift';
+import { DRIVE, DRIVE_HALF, FOOTPATH, GOLF_RECT, PATH_HALF, golfIn, golfLift, golfMesh, golfWater } from './golflift';
 import {
+  COURSE,
   FIRST_CUT,
+  PATHS,
+  fromPaths,
+  insetOf,
+  surfaceAt,
   FRINGE,
   HOLES,
   LAKES,
@@ -105,6 +115,16 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
     ctx.ellipse((c[0] - X0) * sx, (c[1] - Z0) * sz, r[0] * sx, r[1] * sz, Math.atan2(dir[1], dir[0]), 0, Math.PI * 2);
   };
   ctx.clearRect(0, 0, w, h);
+  // The cart paths (and the footpath's stretch on the course), under all that's mown
+  ctx.strokeStyle = STONE.path;
+  ctx.lineWidth = 2 * PATH_HALF * sx;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (const line of [...PATHS.map((p) => p.pts), FOOTPATH]) {
+    ctx.beginPath();
+    line.forEach((p, i) => (i ? ctx.lineTo(...P(p)) : ctx.moveTo(...P(p))));
+    ctx.stroke();
+  }
   // The first cut round each fairway, then the fairway, mown in stripes across it
   for (const hole of HOLES) {
     if (!hole.fairway) continue;
@@ -192,6 +212,7 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
 /** Whether anything's mown within `pad` of x, z (a fairway with its first cut, a green with its fringe, a tee, a
  * bunker with its lip) */
 export function mownNear(x: number, z: number, pad: number) {
+  if (fromPaths(x, z) <= PATH_HALF + pad) return true;
   for (const h of HOLES) {
     const n = nearestOn(h, x, z);
     if (n.d > Math.max(h.fairway ? h.fairway.half + 4 : 0, ...h.green, TEE[0]) + FRINGE + FIRST_CUT + 16 + pad) continue;
@@ -265,6 +286,111 @@ function turfMat() {
   return TURF_MAT;
 }
 
+/* ---------- Clubhouse Drive ---------- */
+
+/** How far the drive's asphalt is laid over the ground */
+export const DRIVE_LIFT = 0.05;
+/** A line resampled every `step` along it (its ends kept) */
+function resample(line: Pt[], step: number): Pt[] {
+  const out: Pt[] = [line[0]];
+  for (let k = 1; k < line.length; k++) {
+    const [a, b] = [line[k - 1], line[k]];
+    const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
+    for (let i = 1; i <= n; i++) out.push([a[0] + ((b[0] - a[0]) * i) / n, a[1] + ((b[1] - a[1]) * i) / n]);
+  }
+  return out;
+}
+/** The drive's asphalt between `from` and `to` along its resampled points: a strip a tile a step, on the ground */
+export function driveMesh(pts: Pt[], half = DRIVE_HALF, lift = DRIVE_LIFT): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const idx: number[] = [];
+  const across = 3;
+  pts.forEach((p, k) => {
+    const [a, b] = [pts[Math.max(0, k - 1)], pts[Math.min(pts.length - 1, k + 1)]];
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const [nx, nz] = [-(b[1] - a[1]) / l, (b[0] - a[0]) / l];
+    for (let i = 0; i < across; i++) {
+      const o = -half + (2 * half * i) / (across - 1);
+      const [x, z] = [p[0] + nx * o, p[1] + nz * o];
+      pos.push(x, golfLift(x, z) + lift, z);
+    }
+    if (k)
+      for (let i = 0; i + 1 < across; i++) {
+        const [a0, a1, b0, b1] = [(k - 1) * across + i, (k - 1) * across + i + 1, k * across + i, k * across + i + 1];
+        idx.push(a0, b0, a1, a1, b0, b1);
+      }
+  });
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  // (wound to face up whichever way the line runs)
+  const n = new THREE.Vector3();
+  g.computeVertexNormals();
+  n.fromBufferAttribute(g.getAttribute('normal') as THREE.BufferAttribute, 0);
+  if (n.y < 0) {
+    for (let t = 0; t < idx.length; t += 3) [idx[t + 1], idx[t + 2]] = [idx[t + 2], idx[t + 1]];
+    g.setIndex(idx);
+    g.computeVertexNormals();
+  }
+  return g;
+}
+/** The drive's lamps: along it every so far, on its east side (the course's), their heads' height */
+export const DRIVE_LAMPS: { at: Pt; dir: Pt }[] = (() => {
+  const pts = resample(DRIVE, 1);
+  const out: { at: Pt; dir: Pt }[] = [];
+  for (let k = 30; k < pts.length - 10; k += 70) {
+    const [a, b] = [pts[k - 1], pts[k + 1]];
+    const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const [ux, uz] = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+    // (east of a drive running north is its right: -uz, ux)
+    out.push({ at: [pts[k][0] - uz * (DRIVE_HALF + 0.9), pts[k][1] + ux * (DRIVE_HALF + 0.9)], dir: [-uz, ux] });
+  }
+  return out;
+})();
+export const LAMP_H = 3.2;
+
+/* ---------- The club's edge ---------- */
+
+/** Where a line crosses the club's edge (the drive, the footpath): a gap in the fence */
+function crossings(line: Pt[]): Pt[] {
+  const out: Pt[] = [];
+  const pts = resample(line, 0.5);
+  for (let i = 1; i < pts.length; i++) if (insetOf(...pts[i - 1]) <= 0 !== insetOf(...pts[i]) <= 0) out.push(pts[i]);
+  return out;
+}
+/** Where the fence is open, and how wide either side of the middle */
+export const FENCE_GAPS: { at: Pt; half: number; kind: 'drive' | 'path' }[] = [
+  ...crossings(DRIVE).map((at) => ({ at, half: DRIVE_HALF + 1.2, kind: 'drive' as const })),
+  ...crossings(FOOTPATH).map((at) => ({ at, half: PATH_HALF + 0.7, kind: 'path' as const })),
+];
+/** The fence's posts' spacing, height and the rails' heights */
+export const FENCE = { gap: 2.5, h: 1.05, rails: [0.45, 0.88] };
+/** The fence's runs: the club's edge, broken at the gaps */
+export const FENCE_RUNS: Pt[][] = (() => {
+  const pts = resample([...COURSE, COURSE[0]], FENCE.gap);
+  const runs: Pt[][] = [];
+  let run: Pt[] = [];
+  for (const p of pts) {
+    if (FENCE_GAPS.some((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) < g.half)) {
+      if (run.length > 1) runs.push(run);
+      run = [];
+    } else run.push(p);
+  }
+  if (run.length > 1) runs.push(run);
+  return runs;
+})();
+
+/** The reeds round a lake: clumps along its shore where the bank isn't in play (a tee, a green, a fairway, a path) */
+export function reedsOf(l: Lake): Pt[] {
+  const shore = shoreOf(l, Math.round((Math.PI * (l.r[0] + l.r[1])) / 2.2));
+  return shore.filter(([x, z], k) => {
+    const [dx, dz] = [x - l.at[0], z - l.at[1]];
+    const d = Math.hypot(dx, dz) || 1;
+    const out: Pt = [x + (dx / d) * 1.5, z + (dz / d) * 1.5];
+    return k % 3 !== 1 && ['rough', 'native'].includes(surfaceAt(...out) ?? '');
+  });
+}
+
 export function register({ scene }: { low: boolean; scene: THREE.Scene | null }) {
   const mat = turfMat();
   // The turf, a site a tile, over every tile the course's land comes into
@@ -278,6 +404,89 @@ export function register({ scene }: { low: boolean; scene: THREE.Scene | null })
         const far = turfMesh(r, true, TURF_LIFT);
         if (near) b.detail(() => b.add(near, mat), 'near');
         if (far) b.detail(() => b.add(far, mat), 'far');
+        b.build(into, { cast: false, receive: true });
+      });
+    }
+  // Clubhouse Drive: its asphalt in stretches (a site each), its lamps, the pillars where it comes onto the course
+  const asphalt = toon(ROAD.asphalt);
+  const post = toon(LAMP_POST.black);
+  const head = neon(LAMP.sodium.bulb, 0.25, 1.8);
+  const pillar = toon(STONE.cap);
+  const rail = toon('#ece8dc');
+  const reed = toon('#7f9a52');
+  const reedTop = toon('#9c7a4a');
+  const drive = resample(DRIVE, 1);
+  for (let k = 0; k < drive.length - 1; k += 40) {
+    const part = drive.slice(k, Math.min(drive.length, k + 41));
+    const xs = part.map((p) => p[0]);
+    const zs = part.map((p) => p[1]);
+    site(`golf drive ${k}`, [Math.min(...xs) - 4, Math.min(...zs) - 4, Math.max(...xs) + 4, Math.max(...zs) + 4], (into) => {
+      const b = new Batch();
+      b.add(driveMesh(part), asphalt);
+      for (const l of DRIVE_LAMPS.filter((q) => part.some((p) => Math.hypot(p[0] - q.at[0], p[1] - q.at[1]) < 2.6))) {
+        const y = golfLift(...l.at);
+        b.add(new THREE.CylinderGeometry(0.06, 0.08, LAMP_H, 6).translate(l.at[0], y + LAMP_H / 2, l.at[1]), post);
+        // (its arm out over the drive, the lamp's head at its end)
+        const [hx, hz] = [l.at[0] - l.dir[0] * 0.9, l.at[1] - l.dir[1] * 0.9];
+        b.add(new THREE.BoxGeometry(0.07, 0.07, 1).lookAt(new THREE.Vector3(-l.dir[0], 0, -l.dir[1])).translate((l.at[0] + hx) / 2, y + LAMP_H, (l.at[1] + hz) / 2), post);
+        b.add(new THREE.BoxGeometry(0.3, 0.12, 0.3).translate(hx, y + LAMP_H - 0.06, hz), head);
+      }
+      b.build(into, { cast: true, receive: true });
+    });
+  }
+  // The fence round the club's edge and the pillars and posts at its ways in (near only: far, the woods are the edge)
+  for (let tx = Math.floor(X0 / TILE) * TILE; tx < X1; tx += TILE)
+    for (let tz = Math.floor(Z0 / TILE) * TILE; tz < Z1; tz += TILE) {
+      const r: Rect = [tx, tz, tx + TILE, tz + TILE];
+      const inR = (p: Pt) => p[0] >= r[0] && p[0] < r[2] && p[1] >= r[1] && p[1] < r[3];
+      const runs = FENCE_RUNS.map((run) => run.filter((_, i) => i < run.length - 1 && inR(run[i])).map((p) => [p, run[run.indexOf(p) + 1]] as [Pt, Pt])).filter((x) => x.length);
+      const gaps = FENCE_GAPS.filter((g) => inR(g.at));
+      const lakes = LAKES.filter((l) => inR(l.at));
+      if (!runs.length && !gaps.length && !lakes.length) continue;
+      site(`golf edge ${tx} ${tz}`, r, (into) => {
+        const b = new Batch();
+        b.detail(() => {
+          for (const pairs of runs)
+            for (const [p, q] of pairs) {
+              const [yp, yq] = [golfLift(...p), golfLift(...q)];
+              b.add(new THREE.BoxGeometry(0.12, FENCE.h, 0.12).translate(p[0], yp + FENCE.h / 2, p[1]), rail);
+              const L = Math.hypot(q[0] - p[0], q[1] - p[1]);
+              for (const ry of FENCE.rails) {
+                const g = new THREE.BoxGeometry(L, 0.07, 0.05);
+                g.rotateZ(Math.atan2(yq - yp, L));
+                g.rotateY(-Math.atan2(q[1] - p[1], q[0] - p[0]));
+                b.add(g.translate((p[0] + q[0]) / 2, (yp + yq) / 2 + ry, (p[1] + q[1]) / 2), rail);
+              }
+            }
+          for (const g of gaps) {
+            // (either side of the way in: stone pillars for the drive, posts for the footpath)
+            const dir = g.kind === 'drive' ? DRIVE : FOOTPATH;
+            const k = resample(dir, 0.5).reduce((best, p, i, all) => (Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) < Math.hypot(all[best][0] - g.at[0], all[best][1] - g.at[1]) ? i : best), 0);
+            const pts = resample(dir, 0.5);
+            const [a, c] = [pts[Math.max(0, k - 1)], pts[Math.min(pts.length - 1, k + 1)]];
+            const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+            const [nx, nz] = [-(c[1] - a[1]) / l, (c[0] - a[0]) / l];
+            for (const sgn of [-1, 1]) {
+              const [x, z] = [g.at[0] + nx * sgn * g.half, g.at[1] + nz * sgn * g.half];
+              const y = golfLift(x, z);
+              if (g.kind === 'drive') {
+                b.add(new THREE.BoxGeometry(0.7, 1.5, 0.7).translate(x, y + 0.75, z), pillar);
+                b.add(new THREE.BoxGeometry(0.85, 0.12, 0.85).translate(x, y + 1.56, z), pillar);
+              } else b.add(new THREE.BoxGeometry(0.16, 1.2, 0.16).translate(x, y + 0.6, z), rail);
+            }
+          }
+          // Reeds round the lakes: a clump of blades and a seed head or two
+          for (const l of lakes)
+            for (const [x, z] of reedsOf(l)) {
+              const y = golfLift(x, z);
+              for (let j = 0; j < 3; j++) {
+                const [ox, oz] = [Math.cos(x * 3.1 + j * 2.1) * 0.35, Math.sin(z * 2.7 + j * 2.1) * 0.35];
+                const hgt = 0.9 + 0.25 * Math.sin(x + z + j);
+                b.add(new THREE.ConeGeometry(0.07, hgt, 4).translate(x + ox, y + hgt / 2, z + oz), reed);
+                if (j === 0) b.add(new THREE.CylinderGeometry(0.06, 0.06, 0.25, 5).translate(x + ox, y + hgt - 0.05, z + oz), reedTop);
+              }
+            }
+        });
         b.build(into, { cast: false, receive: true });
       });
     }

@@ -47,7 +47,7 @@ import { BANK, COVER, KERB, LAMP, LAMP_POST, PLANT, ROAD, TREE, VERGE } from './
 import { EDGE, RAMP, VERGES, edgePieces, pieceLine } from './verges';
 import { colourAt, groundStep } from './ground';
 import { ROLL, rollGrad, rollSlope, rollsAt, rollsIn } from './rolls';
-import { golfIn, golfLift, golfMesh } from './golflift';
+import { golfIn, golfLift, golfMesh, golfTrees } from './golflift';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one pad each (layout.ts DISTRICTS). */
@@ -1350,6 +1350,8 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
 export function scatterOutskirts(count: number, sparse = 0.6, keep = 1) {
   // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim)
   for (const t of outskirtsTrees(count, sparse)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : rollsAt(t.x, t.z) - 0.08 * t.s * rollSlope(t.x, t.z));
+  // The golf course's woods in their place there (golflift.ts, docs/golf-plan.md Phase 3)
+  for (const t of golfTrees(keep)) addTree(t.x, t.z, t.s, t.pine, heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z));
 }
 
 

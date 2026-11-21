@@ -121,3 +121,26 @@ test('each hole as long as its line, its green over its approach', () => {
     assert.ok(H(...g.at) >= H(...front) - 0.6, `hole ${h.n}'s green sunk under its approach`);
   }
 });
+
+test("Clubhouse Drive's bed: from today's ground at the club's edge up to the grounds, gentle along, level across", async () => {
+  const { driveBed, driveBedY } = await import('../src/scripts/city3d/golfground');
+  const { DRIVE_HALF, insetOf } = await import('../src/scripts/city3d/golf');
+  const b = driveBed();
+  assert.ok(b.pts.length >= 3, 'it comes onto the course');
+  assert.ok(Math.abs(insetOf(...b.pts[0])) < 1.5, "from the club's edge");
+  assert.ok(Math.abs(H(...b.pts[0])) < 0.05 && Math.abs(H(...b.pts.at(-1)!) - groundsLevel()) < 0.02, 'today\'s ground to the grounds');
+  const L = b.cum.at(-1)! - b.s0;
+  assert.ok((b.y1 - b.y0) / L <= 0.06, `it climbs ${((b.y1 - b.y0) / L).toFixed(3)}`);
+  for (let i = 1; i < b.pts.length; i++) {
+    const [p, q] = [b.pts[i - 1], b.pts[i]];
+    const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    const [nx, nz] = [-(q[1] - p[1]) / l, (q[0] - p[0]) / l];
+    for (let t = 0.2; t <= 0.8; t += 0.2) {
+      const s = b.cum[i - 1] + t * l;
+      const [x, z] = [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+      // (its first few tiles, by the club's edge, hold today's ground as the edge does)
+      if (s < b.s0) continue;
+      for (const k of [-1, 0, 1]) assert.ok(Math.abs(H(x + nx * k * DRIVE_HALF, z + nz * k * DRIVE_HALF) - driveBedY(s)) < 0.03, `the drive not level at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+    }
+  }
+});

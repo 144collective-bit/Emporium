@@ -135,13 +135,40 @@ comes home to it.
   1428 (phones half), made at build time with the rest.
 - Not yet: the drive, paths, woods planted between the holes, the clubhouse, flags (Phases 3 to 5).
 
-### Phase 3: the drive, the paths and the woods
+### Phase 3: the drive, the paths and the woods (built)
 
-- Clubhouse Drive a street (its junction on `ew0-e`, its bed up the clubhouse's rise), a sodium lamp or two.
-- Cart paths from each green to the next tee, over the water on little bridges; a footpath on from the clubhouse to
-  the country road's loop and to Crestmont's Ridge Road (nowhere a dead end on foot).
-- The woods between the holes (pines and oaks, from data, kept off the play), a hedge and a post-and-rail fence round
-  the club's edge with gates, reeds round the lakes.
+The owner's go: 2026-11-21 ("1": the drive, the paths and the woods). The map: `docs/golf-shots/phase-3-layout.png`.
+
+**What's built:**
+
+- **Clubhouse Drive** (golflift.ts `DRIVE`, the boot's: the clearing rule and the country road's fence read it): off
+  the country road east (`ew0-e`, its north edge, x 502) north along the hills' east foot, over the club's edge once
+  (about z -380) into its land and up to the clubhouse's grounds. A private drive, as Northgate's visitors' drive is:
+  not a street of the plan (no traffic, no new crossing), its gap in the road's fence (`CLUB_GAPS`, ruralfence.ts
+  `DRIVES`). On the course it rides a bed (golfground.ts `driveBed()`, `DRIVE_BED`): today's ground till it's `BED_IN`
+  in from the edge, then up evenly (under 4%) to the grounds' level, level across. Drawn by golf3d.ts (`driveMesh()`:
+  asphalt a hair over the ground), three lamps on its course side (`DRIVE_LAMPS`, sodium heads; no pools of light) and
+  stone pillars where it comes onto the course.
+- **The cart paths** (golf.ts `PATHS`): beside each hole `PATH_OFF` out (past the first cut and the fairway bunkers),
+  on the side and in the shape (round behind the green or not) that crosses no play with its way on to the next tee
+  (`pathCost()`; `SIDES` where it's chosen: the 12th's on the road's side, for the footpath), each green's on to the
+  next tee bent round what's in the way, the grounds out to the 1st and 10th and back from the 9th and 18th. Painted
+  on the turf, under what's mown (golf3d.ts); the lie `path` (`surfaceAt()`, `fromPaths()`).
+- **The footpath** (golflift.ts `FOOTPATH`): from the 12th's path out over the club's edge to the country road (x
+  688), its own gap in the road's fence: the course is a way through on foot, drive to footpath (nowhere a dead end).
+- **The woods** (golflift.ts `golfTrees()`): the baked land now in four (`LAND`: off, native, rough well clear of the
+  holes, play; golfbake.ts `landAt()`, `TREES_CLEAR`); a tree on most native grid points' share (`WOODS_CHANCE`), a few
+  in the far rough, none in play, none with a neighbour in play or off the course; the city's own trees, near and far
+  (world.ts `scatterOutskirts()`, phones half: the trim). The outskirts' trees keep off the club's land, its drive and
+  its footpath (`KEEPS` `golf`, `golf-drive`, `golf-footpath`). 1,393 trees.
+- **The club's edge** (golf3d.ts, near only): a white post-and-rail fence along it (`FENCE_RUNS`, `FENCE`), open where
+  the drive and the footpath come in (`FENCE_GAPS`); not solid (a low rail, as a field's). Reeds round the lakes where
+  the bank isn't in play (`reedsOf()`).
+- The ground's paint: the drive's and footpath's verges worn (`INFLUENCES` `golf-drive`, `golf-footpath`).
+- Changed on the way: the 6th's tee 9 back (its par 5 227 long), so the 5th's path passes it; the bunkers a shallow
+  bowl (Phase 2).
+- **Not done** (the owner's to choose, later): bridges over the water (the paths keep off it instead), the cart path a
+  street for the carts (Phase 5's carts ride it).
 
 ### Phase 4: the clubhouse, and the old club retired
 

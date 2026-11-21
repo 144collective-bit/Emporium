@@ -6,9 +6,12 @@
  * - `golfLift()`: the ground's height over today's (0 off the course), each square of the grid two flat triangles,
  *   split from its low corner (x, z) to its high one, as world.ts draws it (`golfPlane()`) and the rolls are split, so
  *   what's drawn is what's walked on (terrain.ts `heightAt()` reads it).
- * - `golfLand()`: what the land is at a point: off the course (0), its native grass between the holes, where the
- *   outskirts' trees may stand (1), or in play (2: a hole's rough, fairway, green or tee, a bunker, the water, the
- *   grounds); the clearing rule (landuse.ts) and the ground's paint (ground.ts) read it.
+ * - `golfLand()`: what the land is at a point (`LAND`): off the course (0), its native grass between the holes (1:
+ *   woods), its rough well away from the holes (2: a tree here and there), or in play (3: a hole's rough, fairway,
+ *   green or tee, a bunker, the water, the paths, the drive, the grounds); the clearing rule (landuse.ts), the ground's
+ *   paint (ground.ts) and the course's woods (`golfTrees()`, world.ts) read it.
+ * - `DRIVE` (Clubhouse Drive, off the country road east up to the clubhouse's grounds) and `FOOTPATH` (from the course
+ *   out to the country road): their lines, for the clearing rule, the country road's fences' gaps and the drawing.
  * - `golfWater()`: each lake's water level (golf.ts `LAKES`, in their order), for the course's drawing.
  *
  * The grid is packed for the page: the heights in 64ths of a tile, each from the one before it along its row, a
@@ -23,6 +26,45 @@
 import { BUILT, baked } from './baked';
 
 type Rect = [number, number, number, number];
+
+/** What the land is (`golfLand()`) */
+export const LAND = { off: 0, native: 1, rough: 2, play: 3 } as const;
+export type Land = 0 | 1 | 2 | 3;
+
+/** Clubhouse Drive (docs/golf-plan.md Phase 3): off the country road east (ew0-e, its north edge) north along the
+ * hills' east foot, over the club's edge into its land and up its bed to the clubhouse's grounds (golfground.ts) */
+export const DRIVE: [number, number][] = [
+  [502, -6.2],
+  [501, -26],
+  [498, -64],
+  [503, -110],
+  [499, -170],
+  [501, -240],
+  [498, -310],
+  [501, -352],
+  [506, -374],
+  [515, -388],
+  [520, -406],
+  [522, -428],
+  [520.5, -450],
+  [521, -470],
+];
+/** The drive's half width (a lane each way, as a country road's) */
+export const DRIVE_HALF = 1.7;
+/** The footpath from the course out to the country road east (its north edge), joining the cart path by hole 12 */
+export const FOOTPATH: [number, number][] = [
+  [688, -6.2],
+  [689, -24],
+  [690, -40],
+  [691, -54],
+];
+/** A path's half width (the cart paths, the footpath) */
+export const PATH_HALF = 0.8;
+/** Where the drive and the footpath cross the country road's fence (x0, z0, x1, z1: ruralfence.ts leaves a gap) */
+export const CLUB_GAPS: Rect[] = [
+  [DRIVE[0][0] - DRIVE_HALF - 1, -14, DRIVE[0][0] + DRIVE_HALF + 1, -6.2],
+  [FOOTPATH[0][0] - PATH_HALF - 0.6, -14, FOOTPATH[0][0] + PATH_HALF + 0.6, -6.2],
+];
 
 /** The grid's step (tiles): world.ts draws the course's grass near on it */
 export const GOLF_STEP = 2;
@@ -124,7 +166,7 @@ const NX = (GOLF_RECT[2] - GOLF_RECT[0]) / GOLF_STEP + 1;
 const NZ = (GOLF_RECT[3] - GOLF_RECT[1]) / GOLF_STEP + 1;
 
 /** Packs a grid worked out point by point (golfbake.ts): its height (tiles) and its land at each */
-export function packGolf(heightAt: (x: number, z: number) => number, landAt: (x: number, z: number) => 0 | 1 | 2, water: number[]): GolfGrid {
+export function packGolf(heightAt: (x: number, z: number) => number, landAt: (x: number, z: number) => Land, water: number[]): GolfGrid {
   const q = new Int32Array(NX * NZ);
   const m = new Uint8Array(NX * NZ);
   for (let j = 0; j < NZ; j++)
@@ -191,19 +233,19 @@ export function golfLift(x: number, z: number) {
   if (h00 === 0 && h10 === 0 && h01 === 0 && h11 === 0) return 0;
   return fu >= fv ? h00 + (h10 - h00) * fu + (h11 - h10) * fv : h00 + (h01 - h00) * fv + (h11 - h01) * fu;
 }
-/** What the land is at x, z (its nearest grid point): 0 off the course, 1 its native grass, 2 in play */
-export function golfLand(x: number, z: number): 0 | 1 | 2 {
+/** What the land is at x, z (its nearest grid point, `LAND`) */
+export function golfLand(x: number, z: number): Land {
   if (!onGolfGrid(x, z)) return 0;
   const i = Math.round((x - G.x0) / G.step);
   const j = Math.round((z - G.z0) / G.step);
   if (i < 0 || j < 0 || i >= G.nx || j >= G.nz) return 0;
-  return M()[j * G.nx + i] as 0 | 1 | 2;
+  return M()[j * G.nx + i] as Land;
 }
 /** How far the land's fields blur its edges (grid points either way) */
 const BLUR = 3;
-const fields: Partial<Record<1 | 2, Float32Array>> = {};
-/** The share of the land round each grid point that's at least `kind` (1: the course's land, 2: in play), blurred */
-function field(kind: 1 | 2) {
+const fields: Partial<Record<1 | 2 | 3, Float32Array>> = {};
+/** The share of the land round each grid point that's at least `kind` (`LAND`), blurred */
+function field(kind: 1 | 2 | 3) {
   let f = fields[kind];
   if (f) return f;
   const m = M();
@@ -229,9 +271,9 @@ function field(kind: 1 | 2) {
   fields[kind] = f;
   return f;
 }
-/** How much of the land round x, z is the course's (`kind` 1) or in play (2), 0 to 1, blurred over a few tiles: the
- * ground's paint eases from the open land's into the course's over it (ground.ts) */
-export function golfShare(x: number, z: number, kind: 1 | 2) {
+/** How much of the land round x, z is at least `kind` (1: the course's, 2: its rough or play, 3: in play), 0 to 1,
+ * blurred over a few tiles: the ground's paint eases from the open land's into the course's over it (ground.ts) */
+export function golfShare(x: number, z: number, kind: 1 | 2 | 3) {
   if (!onGolfGrid(x, z)) return 0;
   const f = field(kind);
   const u = Math.max(0, Math.min(G.nx - 1.001, (x - G.x0) / G.step));
@@ -355,4 +397,48 @@ export function golfMesh(r: Rect, far: boolean): GolfMesh {
     }
   }
   return { xz, tri };
+}
+
+/* ---------- The course's woods ---------- */
+
+/** How likely a grid point grows a tree: its native grass (woods), its rough well away from the holes (a few) */
+export const WOODS_CHANCE = { native: 0.16, rough: 0.035 };
+/** A seeded number in [0, 1) for a grid point and a draw */
+const seeded = (i: number, j: number, k: number) => {
+  let h = Math.imul(i * 73856093 ^ j * 19349663 ^ k * 83492791, 2654435761) >>> 0;
+  h ^= h >>> 15;
+  h = Math.imul(h, 2246822519) >>> 0;
+  h ^= h >>> 13;
+  return (h >>> 0) / 4294967296;
+};
+/**
+ * The course's woods (docs/golf-plan.md Phase 3): a tree now and then on its land's grid, thick in the native grass
+ * between the holes and a few in the rough well away from them, never in play; the outskirts' trees keep off the
+ * course's land (landuse.ts), these stand in their place (world.ts `scatterOutskirts()`, as the outskirts' are drawn).
+ * The same trees every time, each a little off its grid point; `keep` under 1 leaves the rest out (phones: the trim).
+ */
+export function golfTrees(keep = 1): { x: number; z: number; s: number; pine: boolean }[] {
+  const m = M();
+  const out: { x: number; z: number; s: number; pine: boolean }[] = [];
+  for (let j = 0; j < G.nz; j++)
+    for (let i = 0; i < G.nx; i++) {
+      const land = m[j * G.nx + i];
+      if (land !== LAND.native && land !== LAND.rough) continue;
+      // (its neighbours too: a tree's crown never over the play, nor its trunk off the course)
+      if ([[1, 0], [-1, 0], [0, 1], [0, -1]].some(([di, dj]) => {
+        const n = m[(j + dj) * G.nx + i + di] ?? LAND.off;
+        return n === LAND.play || n === LAND.off;
+      }))
+        continue;
+      if (seeded(i, j, 0) >= (land === LAND.native ? WOODS_CHANCE.native : WOODS_CHANCE.rough)) continue;
+      if (seeded(i, j, 5) >= keep) continue;
+      const pine = seeded(i, j, 3) < (land === LAND.native ? 0.65 : 0.35);
+      out.push({
+        x: G.x0 + i * G.step + (seeded(i, j, 1) - 0.5) * G.step * 0.8,
+        z: G.z0 + j * G.step + (seeded(i, j, 2) - 0.5) * G.step * 0.8,
+        s: pine ? 1.5 + seeded(i, j, 4) * 1.2 : 1.1 + seeded(i, j, 4) * 0.8,
+        pine,
+      });
+    }
+  return out;
 }

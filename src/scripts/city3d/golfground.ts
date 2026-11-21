@@ -19,6 +19,8 @@ import {
   CLUB_CENTRE,
   CLUB_GROUNDS,
   COURSE_RECT,
+  DRIVE,
+  DRIVE_HALF,
   FIRST_CUT,
   FRINGE,
   HOLES,
@@ -203,6 +205,10 @@ function shapedAt(x: number, z: number, dug = true) {
   const [gx0, gz0, gx1, gz1] = CLUB_GROUNDS;
   const dg = Math.hypot(Math.max(gx0 - x, 0, x - gx1), Math.max(gz0 - z, 0, z - gz1));
   if (dg < GROUNDS_EASE) h += (groundsLevel() - h) * (1 - smooth(0, GROUNDS_EASE, dg));
+  // Clubhouse Drive's bed, level across, up from the club's edge to the grounds (meeting them at their level)
+  // (never on the grounds themselves, which hold their own level: eased in from their edge)
+  const bed = dg > 0 ? driveBedAt(x, z) : null;
+  if (bed) h += (bed.y - h) * bed.w * smooth(0, 3, dg);
   // The tees, level; the greens, tilted planes
   for (const i of near) {
     const hole = HOLES[i];
@@ -228,6 +234,70 @@ function shapedAt(x: number, z: number, dug = true) {
       }
   return h;
 }
+/* ---------- Clubhouse Drive's bed ---------- */
+
+/** The drive's bed: held level this far either side of its line (the asphalt and its verge), eased back over `ease` */
+export const DRIVE_BED = { half: DRIVE_HALF + 1.2, ease: 8 };
+/** How far in from the club's edge the drive's bed starts to climb (nearer the edge it holds today's ground, as the
+ * edge does: `golfHeightAt()`) */
+export const BED_IN = 7;
+/** The drive's line on the course (from where it crosses the club's edge to the grounds) and its bed's height along it:
+ * today's ground till it's `BED_IN` in from the edge (`s0` along), then rising evenly to the grounds' level */
+let bedLine: { pts: Pt[]; cum: number[]; s0: number; y0: number; y1: number } | null = null;
+export function driveBed() {
+  if (bedLine) return bedLine;
+  // (the first point on the course, walked along the line a tile at a time)
+  const pts: Pt[] = [];
+  for (let i = 1; i < DRIVE.length && !pts.length; i++) {
+    const [a, b] = [DRIVE[i - 1], DRIVE[i]];
+    const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]));
+    for (let k = 0; k <= n; k++) {
+      const p: Pt = [a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n];
+      if (insetOf(...p) > 0) {
+        pts.push(p, ...DRIVE.slice(i));
+        break;
+      }
+    }
+  }
+  const cum = [0];
+  for (let i = 1; i < pts.length; i++) cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+  // (where it's first `BED_IN` in from the edge, a tile at a time)
+  let s0 = 0;
+  for (let s = 0; s < cum.at(-1)!; s += 1) {
+    let i = 1;
+    while (i < cum.length - 1 && cum[i] < s) i++;
+    const t = (s - cum[i - 1]) / (cum[i] - cum[i - 1] || 1);
+    const [p, q] = [pts[i - 1], pts[i]];
+    if (insetOf(p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t) >= BED_IN) {
+      s0 = s;
+      break;
+    }
+  }
+  return (bedLine = { pts, cum, s0, y0: 0, y1: groundsLevel() });
+}
+/** The drive's bed's height along it at `s` from where it comes onto the course */
+export function driveBedY(s: number) {
+  const b = driveBed();
+  return b.y0 + (b.y1 - b.y0) * Math.max(0, Math.min(1, (s - b.s0) / (b.cum.at(-1)! - b.s0)));
+}
+/** The bed over x, z: its height there and how firmly it holds (1 on the drive), or null */
+function driveBedAt(x: number, z: number): { y: number; w: number } | null {
+  const b = driveBed();
+  const reach = DRIVE_BED.half + DRIVE_BED.ease;
+  let best = { d: Infinity, s: 0 };
+  for (let i = 1; i < b.pts.length; i++) {
+    const [p, q] = [b.pts[i - 1], b.pts[i]];
+    if (Math.min(p[0], q[0]) - reach > x || Math.max(p[0], q[0]) + reach < x || Math.min(p[1], q[1]) - reach > z || Math.max(p[1], q[1]) + reach < z) continue;
+    const [vx, vz] = [q[0] - p[0], q[1] - p[1]];
+    const l2 = vx * vx + vz * vz || 1;
+    const t = Math.max(0, Math.min(1, ((x - p[0]) * vx + (z - p[1]) * vz) / l2));
+    const d = Math.hypot(x - p[0] - vx * t, z - p[1] - vz * t);
+    if (d < best.d) best = { d, s: b.cum[i - 1] + t * Math.sqrt(l2) };
+  }
+  if (best.d >= reach) return null;
+  return { y: driveBedY(best.s), w: 1 - smooth(DRIVE_BED.half, reach, best.d) };
+}
+
 let grounds: number | null = null;
 /** The clubhouse's grounds' level: the land at their middle */
 export const groundsLevel = () => (grounds ??= landAt(...CLUB_CENTRE));

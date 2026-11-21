@@ -4,8 +4,9 @@
 // and bunker, a hair over the grass; its lakes' water under their shores.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { GOLF_FAR, GOLF_RECT, GOLF_STEP, golfGrid, golfIn, golfLand, golfLift, golfMesh, golfNode, golfShare, golfWater, onGolf, packGolf, unpackGolf } from '../src/scripts/city3d/golflift';
+import { DRIVE, FOOTPATH, GOLF_FAR, GOLF_RECT, GOLF_STEP, LAND, golfGrid, golfTrees, golfIn, golfLand, golfLift, golfMesh, golfNode, golfShare, golfWater, onGolf, packGolf, unpackGolf } from '../src/scripts/city3d/golflift';
 import { golfHeightAt, lakeWater } from '../src/scripts/city3d/golfground';
+import { landAt } from '../src/scripts/city3d/golfbake';
 import { COURSE, COURSE_RECT, HOLES, LAKES, along, bunkersOf, fairwayEnd, greenOf, inCourse, lakeAt, surfaceAt, type Pt } from '../src/scripts/city3d/golf';
 import { heightAt, hillsAlong, onHills } from '../src/scripts/city3d/terrain';
 import { rollsAt } from '../src/scripts/city3d/rolls';
@@ -34,7 +35,9 @@ test("the grid holds the course's own heights and land, and each lake's water", 
       assert.ok(Math.abs(golfNode(i, j) - golfHeightAt(...p)) <= 1 / 128 + 1e-9, `the height at ${p}`);
       assert.ok(Math.abs(golfLift(...p) - golfHeightAt(...p)) <= 1 / 128 + 1e-9, `the lift at ${p}`);
       const s = surfaceAt(...p);
-      assert.equal(golfLand(...p), s === null ? 0 : s === 'native' ? 1 : 2, `the land at ${p}`);
+      assert.equal(golfLand(...p), landAt(...p), `the land at ${p}`);
+      if (s === null) assert.equal(golfLand(...p), LAND.off);
+      else if (s !== 'native' && s !== 'rough') assert.equal(golfLand(...p), LAND.play, `${s} in play at ${p}`);
     }
   LAKES.forEach((l, i) => assert.ok(Math.abs(golfWater(i) - lakeWater(l)) <= 1 / 128, l.name));
   // (off the grid, nothing)
@@ -94,9 +97,11 @@ test('the rolls and the trees keep off the play; the native grass keeps its wood
     for (const p of [h.line[0], h.line.at(-1)!]) assert.equal(keptOff(...p), 'golf', `hole ${h.n} kept clear`);
     if (h.fairway) assert.equal(keptOff(...along(h, (h.fairway.from + fairwayEnd(h)) / 2).at), 'golf');
   }
-  const trees = outskirtsTrees(150, 0.6, [], EXT).filter((t) => inCourse(t.x, t.z));
-  for (const t of trees) assert.notEqual(golfLand(t.x, t.z), 2, `a tree in play at ${t.x.toFixed(1)}, ${t.z.toFixed(1)}: ${surfaceAt(t.x, t.z)}`);
-  assert.ok(trees.length > 40, `the woods between the holes: ${trees.length} trees`);
+  // (the outskirts' trees keep off the club's land, its drive and its footpath: the course's own woods stand there)
+  const outskirts = outskirtsTrees(150, 0.6, [], EXT);
+  for (const t of outskirts) assert.equal(golfLand(t.x, t.z), LAND.off, `an outskirts tree on the course at ${t.x.toFixed(1)}, ${t.z.toFixed(1)}`);
+  for (const [line, half] of [[DRIVE, 3.7], [FOOTPATH, 2.3]] as const)
+    for (const p of line) for (const t of outskirts) assert.ok(Math.hypot(t.x - p[0], t.z - p[1]) > half, `a tree on the drive or the footpath at ${p}`);
 });
 
 test("the ground's paint: the course's rough in play, eased in from the open land", () => {
@@ -154,4 +159,47 @@ test('the mesh: near the grid, far a coarser middle, and their edges the same po
     assert.ok(Math.abs(area - (r[2] - r[0]) * (r[3] - r[1])) < 1e-6, `covers the box: ${area}`);
   }
   assert.equal(GOLF_FAR, 3 * GOLF_STEP);
+});
+
+test("the course's woods: thick between the holes, a few in the rough, none in play, the same every time", () => {
+  const trees = golfTrees();
+  assert.ok(trees.length > 800 && trees.length < 3000, `${trees.length} trees`);
+  for (const t of trees) {
+    assert.ok(inCourse(t.x, t.z), `a tree off the course at ${t.x.toFixed(1)}, ${t.z.toFixed(1)}`);
+    assert.notEqual(golfLand(t.x, t.z), LAND.play, `a tree in play at ${t.x.toFixed(1)}, ${t.z.toFixed(1)}`);
+    assert.ok(!['fairway', 'green', 'fringe', 'tee', 'bunker', 'water', 'path', 'drive', 'grounds', 'cut'].includes(surfaceAt(t.x, t.z)!), `a tree on ${surfaceAt(t.x, t.z)}`);
+  }
+  const native = trees.filter((t) => golfLand(t.x, t.z) === LAND.native).length;
+  assert.ok(native > trees.length / 2, 'most in the native grass');
+  assert.deepEqual(golfTrees(), trees, 'the same every time');
+  // (phones keep about half, the same ones)
+  const half = golfTrees(0.5);
+  assert.ok(half.length > trees.length * 0.4 && half.length < trees.length * 0.6);
+  const all = new Set(trees.map((t) => `${t.x},${t.z}`));
+  for (const t of half) assert.ok(all.has(`${t.x},${t.z}`));
+});
+
+test("Phase 3's drawing: the drive on the ground, its lamps beside it, the fence round the edge open at the ways in, reeds out of play", async () => {
+  const { driveMesh, DRIVE_LAMPS, DRIVE_LIFT, FENCE_GAPS, FENCE_RUNS, FENCE, reedsOf, mownNear } = await import('../src/scripts/city3d/golf3d');
+  const { insetOf, PATHS, fromDrive } = await import('../src/scripts/city3d/golf');
+  // (the asphalt a hair over the ground all along)
+  const g = driveMesh(DRIVE);
+  const pos = g.getAttribute('position');
+  for (let k = 0; k < pos.count; k++) assert.ok(Math.abs(pos.getY(k) - (golfLift(pos.getX(k), pos.getZ(k)) + DRIVE_LIFT)) < 1e-5);
+  // (the lamps beside it, off it, off the play)
+  assert.ok(DRIVE_LAMPS.length >= 3, `${DRIVE_LAMPS.length} lamps`);
+  for (const l of DRIVE_LAMPS) {
+    const d = fromDrive(...l.at);
+    assert.ok(d > 1.7 && d < 3.5, `a lamp ${d.toFixed(2)} from the drive`);
+    assert.ok(!['fairway', 'green', 'tee', 'bunker', 'water', 'path'].includes(surfaceAt(...l.at) ?? ''), 'a lamp in play');
+  }
+  // (the fence on the club's edge, open where the drive and the footpath come in, and only there)
+  assert.deepEqual(FENCE_GAPS.map((x) => x.kind).sort(), ['drive', 'path']);
+  for (const run of FENCE_RUNS) for (const p of run) assert.ok(Math.abs(insetOf(...p)) < 0.6, `a post off the edge at ${p}`);
+  for (const gap of FENCE_GAPS) for (const run of FENCE_RUNS) for (const p of run) assert.ok(Math.hypot(p[0] - gap.at[0], p[1] - gap.at[1]) >= gap.half - FENCE.gap / 2, `a post across the ${gap.kind}`);
+  assert.ok(FENCE_RUNS.length <= 3, 'one fence, broken only at the ways in');
+  // (the reeds on the lakes' banks, not on a tee, green, fairway or path)
+  for (const l of LAKES) for (const p of reedsOf(l)) assert.ok(['rough', 'native', 'water'].includes(surfaceAt(...p) ?? ''), `reeds on ${surfaceAt(...p)}`);
+  // (the turf over every path)
+  for (const p of PATHS) for (const q of p.pts) if (insetOf(...q) > 0) assert.ok(mownNear(...q, 0), `${p.id} not mown at ${q}`);
 });

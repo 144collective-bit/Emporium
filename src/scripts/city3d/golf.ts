@@ -13,13 +13,16 @@
  *   hole's own frame (along from the tee, across to the right). The front nine loop the north arm, the back nine the
  *   east, each out from the clubhouse and home to it. Par 72: four par 3s, ten par 4s, four par 5s.
  * - `LAKES`: the water (each an ellipse, its shore wobbled), `inLake()`.
- * - `CLUB_GROUNDS` (the clubhouse, its car park, the putting green and the range's tee, Phase 4), `DRIVE` (the drive in).
+ * - `CLUB_GROUNDS` (the clubhouse, its car park, the putting green and the range's tee, Phase 4), `DRIVE` (the drive in)
+ *   and `FOOTPATH` (out to the country road; both golflift.ts's), the cart paths (`PATHS`, Phase 3: beside each hole,
+ *   green to next tee, to and from the grounds).
  * - `surfaceAt()`: what's underfoot at a point (water, bunker, green, fringe, tee, fairway, first cut, rough, native
  *   grass, the grounds, or off the course): the lie the golf game will read.
  *
  * Distances are tiles (about 1.8 m): the holes about half real length (the city's scale), so a par 4 is 145 to 185.
  */
 import { distTo, inside } from './streetfaces';
+import { DRIVE, DRIVE_HALF, FOOTPATH, PATH_HALF } from './golflift';
 
 export type Pt = [number, number];
 type Rect = [number, number, number, number];
@@ -79,20 +82,9 @@ export const insetOf = (x: number, z: number) => (inCourse(x, z) ? distTo(COURSE
 /** The clubhouse's grounds where the arms meet (Phase 4: the clubhouse, its car park, the putting green, the range's tee) */
 export const CLUB_GROUNDS: Rect = [500, -520, 572, -470];
 export const CLUB_CENTRE: Pt = [(CLUB_GROUNDS[0] + CLUB_GROUNDS[2]) / 2, (CLUB_GROUNDS[1] + CLUB_GROUNDS[3]) / 2];
-/** The drive in: off the country road east (ew0-e, z -4.5) north along the hills' east foot to the grounds (Phase 3
- * makes it a street; here its line, so the holes keep clear) */
-export const DRIVE: Pt[] = [
-  [502, -4.5],
-  [501, -26],
-  [498, -64],
-  [503, -110],
-  [499, -170],
-  [501, -240],
-  [498, -310],
-  [502, -380],
-  [499, -430],
-  [503, -470],
-];
+/** The drive in and the footpath out (golflift.ts: their lines are the boot's, for the clearing rule and the country
+ * road's fences) */
+export { DRIVE, DRIVE_HALF, FOOTPATH, PATH_HALF } from './golflift';
 
 /* ---------- The holes ---------- */
 
@@ -142,7 +134,7 @@ export const HOLES: Hole[] = /* @__PURE__ */ (() => [
   { n: 3, name: 'Long Wall', par: 5, line: [[368, -700], [470, -706], [578, -694]], fairway: fw(42, 12), raise: 0.9, green: [7.5, 5.5], bunkers: [[112, 11, 5, 2.6, 'f'], [165, -11, 5, 2.6, 'f'], ...sides()] },
   { n: 4, name: 'The Climb', par: 4, line: [[598, -708], [672, -702], [746, -690]], fairway: fw(38, 12), raise: 0.4, green: [7, 6], bunkers: [[-6, -10, 4.5, 2.4, 'g'], [2, 10, 4, 2.4, 'g']] },
   { n: 5, name: 'Knob Drop', par: 3, line: [[736, -664], [698, -590]], fairway: null, raise: 0.3, green: [7.5, 6], bunkers: [...sides(2, 10.5), [11.5, 0, 3, 5, 'g']] },
-  { n: 6, name: 'Mid Run', par: 5, line: [[680, -602], [560, -612], [445, -626]], fairway: fw(42, 12), raise: 0.5, green: [7.5, 5.5], bunkers: [[115, -11, 5, 2.6, 'f'], [175, 11, 5, 2.6, 'f'], ...sides()] },
+  { n: 6, name: 'Mid Run', par: 5, line: [[672, -607], [560, -612], [445, -626]], fairway: fw(42, 12), raise: 0.5, green: [7.5, 5.5], bunkers: [[115, -11, 5, 2.6, 'f'], [175, 11, 5, 2.6, 'f'], ...sides()] },
   { n: 7, name: 'Fen Turn', par: 4, line: [[418, -578], [500, -552], [575, -552]], fairway: fw(38, 12), raise: 0.4, green: [7, 5.5], bunkers: [[95, 11, 5, 2.6, 'f'], ...sides()] },
   { n: 8, name: 'The Pond', par: 3, line: [[595, -556], [680, -548]], fairway: null, raise: 0.4, green: [7, 6], bunkers: [[-5, 10, 4, 2.4, 'g'], [10.5, -3, 3.5, 2.2, 'g']] },
   { n: 9, name: 'Homeward', par: 4, line: [[735, -540], [660, -505], [592, -488]], fairway: fw(38, 12), raise: 0.5, green: [7, 5.5], bunkers: [[98, -11, 5, 2.6, 'f'], ...sides()] },
@@ -287,7 +279,7 @@ export const inLake = (x: number, z: number, m = 0) => LAKES.some((l) => lakeAt(
 
 /* ---------- What's underfoot ---------- */
 
-export type Surface = 'water' | 'bunker' | 'green' | 'fringe' | 'tee' | 'fairway' | 'cut' | 'rough' | 'native' | 'grounds';
+export type Surface = 'water' | 'bunker' | 'green' | 'fringe' | 'tee' | 'fairway' | 'cut' | 'rough' | 'native' | 'grounds' | 'path' | 'drive';
 /** Each hole's box (its line, out to `NATIVE`), to skip the far ones fast */
 const BOXES: Rect[] = /* @__PURE__ */ HOLES.map((h) => {
   const xs = h.line.map((p) => p[0]);
@@ -302,6 +294,12 @@ export function surfaceAt(x: number, z: number): Surface | null {
   if (inLake(x, z)) return 'water';
   const [gx0, gz0, gx1, gz1] = CLUB_GROUNDS;
   if (x >= gx0 && x <= gx1 && z >= gz0 && z <= gz1) return 'grounds';
+  if (fromDrive(x, z) <= DRIVE_HALF + 0.3) return 'drive';
+  if (fromPaths(x, z) <= PATH_HALF) return 'path';
+  return holeSurface(x, z);
+}
+/** What's underfoot of the holes' own at x, z on the course (no path, drive, water or grounds) */
+function holeSurface(x: number, z: number): Surface | null {
   let near = Infinity;
   let best: Surface | null = null;
   const rank: Surface[] = ['bunker', 'green', 'fringe', 'tee', 'fairway', 'cut'];
@@ -333,3 +331,137 @@ export function holesApart(a: Hole, b: Hole) {
   m = Math.min(m, nearestOn(b, ...a.line.at(-1)!).d);
   return m;
 }
+
+/* ---------- The paths ---------- */
+
+/** How far a cart path runs from its hole's line (out past the first cut and the fairway bunkers), and by its tee */
+export const PATH_OFF = 17;
+const TEE_OFF = 7;
+/** Which side of each hole its path runs (1 right, -1 left, as you face the green), where it's chosen, not found */
+const SIDES: Partial<Record<number, 1 | -1>> = { 12: 1 };
+/** The path beside a hole on one side: by its tee, along it, round behind its green */
+function besideHole(h: Hole, side: 1 | -1, round: boolean): Pt[] {
+  const L = lengthOf(h);
+  const pts: Pt[] = [framePt(h, -5, side * TEE_OFF), framePt(h, 8, side * 12)];
+  for (let s = 22; s < L - 10; s += 18) pts.push(framePt(h, s, side * PATH_OFF));
+  pts.push(framePt(h, L - 4, side * PATH_OFF));
+  // (and on round behind the green, or not: whichever comes to the next tee clear)
+  if (round) pts.push(framePt(h, 9, side * 15, true), framePt(h, 16, side * 8, true));
+  return pts;
+}
+/** What it costs a path to run over the course here: play it mustn't cross, the water, the club's edge */
+function pathCost(pts: Pt[]) {
+  let cost = 0;
+  for (let i = 1; i < pts.length; i++) {
+    const [a, b] = [pts[i - 1], pts[i]];
+    const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 2));
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const [ux, uz] = [(b[0] - a[0]) / L, (b[1] - a[1]) / L];
+    for (let k = 0; k <= n; k++)
+      for (const o of [-PATH_HALF - 0.3, 0, PATH_HALF + 0.3]) {
+        const [x, z] = [a[0] + ((b[0] - a[0]) * k) / n - uz * o, a[1] + ((b[1] - a[1]) * k) / n + ux * o];
+        if (insetOf(x, z) < 5) cost += 50;
+        else if (inLake(x, z, -0.25)) cost += 20;
+        else if (['fairway', 'green', 'fringe', 'tee', 'bunker', 'cut'].includes(holeSurface(x, z) ?? '')) cost += 5;
+      }
+  }
+  return cost;
+}
+/** The nearest point on a line to x, z */
+function nearestPt(pts: Pt[], x: number, z: number): Pt {
+  let best: Pt = pts[0];
+  let bd = Infinity;
+  for (let i = 1; i < pts.length; i++) {
+    const [a, b] = [pts[i - 1], pts[i]];
+    const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
+    const l2 = vx * vx + vz * vz || 1;
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (z - a[1]) * vz) / l2));
+    const p: Pt = [a[0] + vx * t, a[1] + vz * t];
+    const d = Math.hypot(x - p[0], z - p[1]);
+    if (d < bd) [bd, best] = [d, p];
+  }
+  return best;
+}
+/** The nearest point on the clubhouse's grounds' edge to x, z */
+const toGrounds = (x: number, z: number): Pt => [Math.max(CLUB_GROUNDS[0], Math.min(CLUB_GROUNDS[2], x)), Math.max(CLUB_GROUNDS[1], Math.min(CLUB_GROUNDS[3], z))];
+
+export interface Path {
+  id: string;
+  pts: Pt[];
+}
+/**
+ * The cart paths (docs/golf-plan.md Phase 3): beside each hole (on the side that crosses no play, `SIDES` where it's
+ * chosen), from each hole's green on to the next tee, from the clubhouse's grounds out to the 1st and 10th and back from
+ * the 9th and 18th, and the footpath's last stretch to the 12th's path. Painted on the turf (golf3d.ts); the lie
+ * `path`.
+ */
+export const PATHS: Path[] = /* @__PURE__ */ (() => {
+  // (each hole's on the side, round its green or not, that costs least with its way on to the next tee, nearest first)
+  const beside = HOLES.map((h, i) => {
+    const sides: (1 | -1)[] = SIDES[h.n] ? [SIDES[h.n]!] : [1, -1];
+    const next = HOLES[i + 1];
+    let best: { pts: Pt[]; cost: number } | null = null;
+    for (const side of sides)
+      for (const round of [true, false]) {
+        const pts = besideHole(h, side, round);
+        const on = next && i !== 8 ? [pts.at(-1)!, framePt(next, -5, TEE_OFF * (SIDES[next.n] ?? 1))] : [];
+        const cost = pathCost(pts) + (on.length ? pathCost(on) : 0);
+        if (!best || cost < best.cost) best = { pts, cost };
+      }
+    return best!.pts;
+  });
+  const out: Path[] = beside.map((pts, i) => ({ id: `hole-${i + 1}`, pts }));
+  // (a way from one to the next: straight, or bent out round what's in the way, whichever's clearest)
+  const link = (a: Pt, b: Pt): Pt[] => {
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+    const [nx, nz] = [-(b[1] - a[1]) / L, (b[0] - a[0]) / L];
+    const mid: Pt = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+    const tries: Pt[][] = [[a, b], ...[6, -6, 12, -12, 20, -20].map((d): Pt[] => [a, [mid[0] + nx * d, mid[1] + nz * d], b])];
+    return tries.reduce((best, t) => (pathCost(t) < pathCost(best) ? t : best));
+  };
+  for (let i = 0; i < 17; i++) {
+    if (i === 8) continue;
+    out.push({ id: `hole-${i + 1}-${i + 2}`, pts: link(beside[i].at(-1)!, beside[i + 1][0]) });
+  }
+  for (const i of [0, 9]) out.push({ id: `grounds-${i + 1}`, pts: [toGrounds(...beside[i][0]), beside[i][0]] });
+  for (const i of [8, 17]) out.push({ id: `${i + 1}-grounds`, pts: [beside[i].at(-1)!, toGrounds(...beside[i].at(-1)!)] });
+  const join = FOOTPATH.at(-1)!;
+  out.push({ id: 'footpath', pts: [join, nearestPt(beside[11], ...join)] });
+  return out;
+})();
+
+/** The paths' stretches, filed by cell (so a point asks only the ones near it) */
+const CELL = 16;
+type Seg = [number, number, number, number];
+function fileSegs(lines: Pt[][], reach: number) {
+  const map = new Map<number, Seg[]>();
+  for (const pts of lines)
+    for (let i = 1; i < pts.length; i++) {
+      const [a, b] = [pts[i - 1], pts[i]];
+      for (let cx = Math.floor((Math.min(a[0], b[0]) - reach) / CELL); cx <= Math.floor((Math.max(a[0], b[0]) + reach) / CELL); cx++)
+        for (let cz = Math.floor((Math.min(a[1], b[1]) - reach) / CELL); cz <= Math.floor((Math.max(a[1], b[1]) + reach) / CELL); cz++) {
+          const k = cx * 100003 + cz;
+          if (!map.has(k)) map.set(k, []);
+          map.get(k)!.push([a[0], a[1], b[0], b[1]]);
+        }
+    }
+  return map;
+}
+function fromSegs(map: Map<number, Seg[]>, x: number, z: number) {
+  const list = map.get(Math.floor(x / CELL) * 100003 + Math.floor(z / CELL));
+  if (!list) return Infinity;
+  let m = Infinity;
+  for (const [ax, az, bx, bz] of list) {
+    const [vx, vz] = [bx - ax, bz - az];
+    const l2 = vx * vx + vz * vz || 1;
+    const t = Math.max(0, Math.min(1, ((x - ax) * vx + (z - az) * vz) / l2));
+    m = Math.min(m, Math.hypot(x - ax - vx * t, z - az - vz * t));
+  }
+  return m;
+}
+let pathSegs: Map<number, Seg[]> | null = null;
+let driveSegs: Map<number, Seg[]> | null = null;
+/** How far x, z is from the nearest cart path's line (or the footpath's; Infinity past `CELL` or so) */
+export const fromPaths = (x: number, z: number) => fromSegs((pathSegs ??= fileSegs([...PATHS.map((p) => p.pts), FOOTPATH], 6)), x, z);
+/** How far x, z is from the drive's line */
+export const fromDrive = (x: number, z: number) => fromSegs((driveSegs ??= fileSegs([DRIVE], 8)), x, z);
