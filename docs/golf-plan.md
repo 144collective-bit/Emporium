@@ -23,6 +23,10 @@ Nothing is built until the owner signs off a phase; keep this plan up to date. T
 | The ground | Elevation changes and hills, made for the course |
 | What's on it | Bunkers, fairways, greens, rough (and the water, the tees, the fringe and first cut with them) |
 | Start | Plan and Phase 1 now |
+| Phase 1's layout (2026-11-21) | Signed off as drawn (`docs/golf-shots/phase-1-layout.png`) |
+| The club's name | **Knob Hill Golf Club** (for the Knob, the course's big hill in the corner) |
+| The practice range | By the clubhouse: a short range and a putting green on the grounds (Phase 4) |
+| Phase 2 | Go (2026-11-21) |
 
 ## The land
 
@@ -72,7 +76,7 @@ comes home to it.
   quarter of its hillside's fall across it; a par 3's carry the land as it lies. The tees level (raised a little, the
   Knob's cut and filled evenly), the greens planes tilted 1.8% up to the back, their fronts meeting their approaches.
 - **The hazards:** 50 bunkers (greenside pairs, fairway bunkers biting the fairways' edges at the landing zones, a pot
-  behind 5 and 8), dug half a tile in; five lakes (Fen Pond, the Pond, Heron Lake, Reed Water, Clubhouse Lake), each
+  behind 5 and 8), dug a third of a tile in (a shallow bowl, Phase 2); five lakes (Fen Pond, the Pond, Heron Lake, Reed Water, Clubhouse Lake), each
   held under its lowest shore.
 - **What's underfoot** (`surfaceAt()`): water, bunker, green, fringe, tee, fairway, first cut, rough, native grass (past
   34 from any hole's line: the woods' land), the grounds: the lie the golf game reads.
@@ -93,15 +97,37 @@ comes home to it.
 - `scripts/golfmap.mjs` (`npm run golfmap -- <label>`): the design map from the data, to `docs/golf-shots/`.
 - Not in the city yet: nothing drawn, walked or driven on changes. The snapshot is untouched.
 
-### Phase 2: the ground in the city
+### Phase 2: the ground in the city (built)
 
-- The course's ground under the city's: `golfHeightAt()` read off a grid (as `southLift()`), in terrain.ts's
-  `heightAt()`, `onHills()` and `hillsAlong()`, so walking, driving, flying and the camera follow it; world.ts draws its
-  grass on a grid (as the hills), lakes below 0 included.
-- What's underfoot painted from `surfaceAt()`: new covers in `palette.ts` (fairway, green, tee, first cut, rough, native
-  grass, bunker sand), a mown stripe on the fairways and greens, the lakes' water (the reservoir's shader).
-- The land in `KEEPS` (with `since`), so the outskirts' trees and the rolls keep off; its ground in `INFLUENCES`; its
-  edge in `BY_CHARACTER`. Measured with `?fps` and `?bench` before and after; checked on the phone tier.
+**What's built:**
+
+- **The ground, baked** (`golflift.ts`, DOM-free, on `DOM_FREE`, tested in `tests/golflift.test.ts`): golfground.ts's
+  heights and golf.ts's land on a grid every 2 tiles over a fixed box (`GOLF_RECT`, x 296 to 784, z -744 to -30), worked
+  out when the site is built (`baked()` key `golf-ground`, about 29 KB gzipped) and read back: `golfLift()` (each square
+  two triangles from its low corner to its high one, as drawn), `golfLand()` (off the course, native grass, or in play),
+  `golfShare()` (the land blurred, for the paint), `golfWater()`, `golfIn()`, `onGolf()`. The boot never imports
+  golf.ts or golfground.ts (they'd have come into the boot's code, 3.5 KB, with the boot at 770 of its 775): the grid is
+  worked out by `golfbake.ts`, which only the bake (first in `scripts/bake.mjs`), the tests (each test file's entry,
+  `scripts/test.mjs`) and the seam map's script load. The boot grew 1.5 KB.
+- **Walked, driven and seen round:** terrain.ts's `heightAt()` adds `golfLift()`, `onHills()` takes the course's land,
+  `hillsAlong()` its box, so walking, driving, flying, the cameras, shots and the outskirts' trees follow the course.
+- **The grass** (world.ts `golfPlane()`): every ground piece the course's land comes into, on the course's grid near
+  (`GOLF_STEP`, exactly what's walked on) and far a middle every third point with its edges still on the grid
+  (`golfMesh()`: a band zips the two, so a tile drawn far meets one drawn near with no gap; skirts were tried first and
+  their ink showed through the gaps); painted from the ground's cover (`paintGolf()`), a little lighter up the hills.
+- **The land rules:** the course's play is in `KEEPS` (`golf`, `since`), so the outskirts' trees keep off it and its
+  native grass keeps its woods; the rolls keep off the course (rolls.ts `kept()`); the ground's paint eases into the
+  course's rough and native grass (`INFLUENCES` `golf-native`, `golf`; new covers in `palette.ts`: `courseRough`,
+  `courseNative`, `fairway`, `fairwayStripe`, `firstCut`, `green`, `greenStripe`, `fringe`, `tee`, `sand`,
+  `sandLip`). No block edges (`BY_CHARACTER`), lamps, crowd or open patch (`GAP_NAMES`: it's outside the highway).
+- **The turf and the water** (`golf3d.ts`, the district `golf` in `LAZY_DISTRICTS`, its own chunk, about 10 KB): what's
+  mown in one texture (`drawTurf()`: the first cut, the fairways in stripes, the tees, the fringes, the greens in fine
+  stripes, the bunkers' sand with its lip; clear over the water and everywhere else), 2 pixels a tile (phones half), made
+  at build time; laid on the grass's own triangles a hair over it (`turfMesh()`: only where it shows, `mownNear()`, near
+  and far as the grass), a site a tile, alpha-tested so its edges are the texture's,
+  one draw. Each lake's water at its level (`shoreOf()`, the city's water shader), on the main thread.
+- The shots: `docs/golf-shots/phase-2-*.webp` (desktop and phone, by day; taken before the bunkers were made shallower and the turf laid at one height near and far, the last two fixes for ink lines). Measured with `?bench`: the views `golf` and `golf-green` (bench.ts).
+- Not yet: the drive, paths, woods planted between the holes, the clubhouse, flags (Phases 3 to 5).
 
 ### Phase 3: the drive, the paths and the woods
 
@@ -113,8 +139,8 @@ comes home to it.
 
 ### Phase 4: the clubhouse, and the old club retired
 
-- The clubhouse on its rise (its name on its roof, made up), the car park, the putting green, a practice range, the cart
-  shed; collision boxes and doors.
+- The clubhouse on its rise (Knob Hill Golf Club, its name on its roof), the car park, the putting green and a short
+  practice range on the grounds (the owner's call), the cart shed; collision boxes and doors.
 - It's a place: the `golfclub` spot moves here (its door, panel and pin; `PLACES` and `LIVE_PLACES`, its marquee and live
   lines), renamed for the new club. The snapshot test is rewritten for the move (the owner's call).
 - Crestmont Hills Club retired: its six holes, clubhouse, carts and terrace taken off the hills (`crestsites.ts`,
@@ -134,8 +160,6 @@ comes home to it.
 - Play a hole, nine or eighteen; rewards Dorras and XP only. Its save (`degen-city-golf-v1`) with its migration and its
   key in `BACKUP_KEYS`; in through `live.closed()`; touch controls.
 
-## Open questions (for the owner, before Phase 2 and 4)
+## Open questions (for the owner, later)
 
-- The club's name (made up; the old one was Crestmont Hills Club).
-- Whether the practice range goes by the clubhouse (in place of part of the grounds) or out on its own.
 - How long the golf game's rounds should be on a phone (a hole, nine, or eighteen).

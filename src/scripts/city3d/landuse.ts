@@ -49,6 +49,7 @@ import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
 import type { Rect } from './tiles';
 import { AIRBASE_RECT, VISITORS, airbaseKeep } from './airbase';
+import { GOLF_RECT, golfLand } from './golflift';
 
 /** How far further out a margin may wobble (tiles), and the noise's size (tiles across a swell) */
 export const WOBBLE = 3;
@@ -181,6 +182,9 @@ export const KEEPS: Keep[] = [
   // the lots kept for later (the rest of it keeps its woods)
   { ...shaped('airbase', [AIRBASE_RECT[0], AIRBASE_RECT[1], AIRBASE_RECT[2], VISITORS[3]], 2, airbaseKeep), since: true },
   ...line('lot9-path', LOT9_PATH, 1.5, false, true),
+  // The golf course (golflift.ts, docs/golf-plan.md Phase 2): its holes, lakes and grounds in play (its native grass
+  // between the holes keeps its woods)
+  { id: 'golf', since: true, box: GOLF_RECT, hit: (x, z) => golfLand(x, z) === 2 },
   // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the
   // billboards, Sunridge's wash and the path beside it
   ...FRINGE_KEEPS.rects.map((r, i) => land(`fringe-${i}`, r, 1.2, true)),

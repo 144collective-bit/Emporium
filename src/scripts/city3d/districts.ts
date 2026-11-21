@@ -14,6 +14,7 @@
  * Once built, it's held like the rest of the city: its tiles' near pieces go
  * when far away and the near forms held pass the budget (tilework.ts).
  */
+import { GOLF_RECT } from './golflift';
 import { SWING_RECT } from './swingbridge';
 import type * as THREE from 'three';
 import type { DistrictModule, SiteWorker } from './sitework';
@@ -69,6 +70,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // Palm Court and Starlight Mall north of downtown (mall.ts, docs/mall-plan.md): the shops, the cinema, the mall, the
   // loop, the car parks (mall3d.ts)
   { id: 'mall', rect: MALL_AREA, load: () => import('./mall3d') },
+  // The golf course in the north-east corner (golf.ts, docs/golf-plan.md): its turf and its lakes' water (golf3d.ts)
+  { id: 'golf', rect: GOLF_RECT, load: () => import('./golf3d') },
   // Crestmont, the north-east town (crestmont.ts, docs/crestmont-plan.md): its streets in the Flats and up the hills (crestmont3d.ts)
   { id: 'crestmont', rect: CREST_RECT, load: () => import('./crestmont3d') },
   // The Docks, the port west of The Trenches past the highway (docks.ts, docs/docks-plan.md): its streets and quays (docks3d.ts)

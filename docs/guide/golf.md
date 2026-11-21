@@ -8,8 +8,9 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   later) on the open land in the north-east corner past Crestmont's hills: the north arm across the top of the hills,
   the east arm down Crestmont's east side, the clubhouse where they meet, Clubhouse Drive up from the country road east
   (`ew0-e`). Built a phase at a time, each with the owner's sign-off. Phase 1 (the layout and the ground, as data) is
-  built; **nothing of it is in the city yet** (Phase 2 puts its ground under the city's).
-- **`golf.ts`** (DOM-free, on `DOM_FREE`; tested in `tests/golf.test.ts`): the layout.
+  built, and Phase 2 (the ground in the city: its hills walked on, its turf and its lakes drawn).
+- **`golf.ts`** (DOM-free, on `DOM_FREE`; tested in `tests/golf.test.ts`): the layout (its top-level values marked
+  `/* @__PURE__ */` so the bundler can drop what isn't used).
   - `COURSE` (the club's land: `wander()` round `COURSE_BASE`, `EDGE_AMP`, `EDGE_STEP`, no ruler-straight edge),
     `COURSE_RECT`, `inCourse()`, `insetOf()` (how far inside the edge; negative outside).
   - `HOLES`: eighteen, par 72 (four par 3s, ten par 4s, four par 5s, `PAR_LENGTH`: about half real length), each its
@@ -37,6 +38,25 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
     `LAKE_DEPTH` under that.
   - `golfHeightAt()` (tiles over today's ground; 0 off the course and at its edge; `dug` false leaves the bunkers out,
     for the tests).
+- **`golflift.ts`** (DOM-free, on `DOM_FREE`, the boot's; tested in `tests/golflift.test.ts`): the course's ground as
+  the city reads it, baked (`golf-ground`) on a grid every `GOLF_STEP` over the fixed `GOLF_RECT`: `golfLift()` (each
+  square two triangles from its low corner to its high one, as world.ts draws it), `golfNode()`, `golfLand()` (0 off
+  the course, 1 its native grass, 2 in play), `golfShare()` (the land blurred over `BLUR` points, for the ground's
+  paint), `golfWater()`, `golfIn()`, `onGolf()`, `onGolfGrid()`; packed by `packGolf()` (heights in 64ths, a character
+  a step along each row, `ESC` for big ones; the land in runs), `unpackGolf()`. It never imports golf.ts or
+  golfground.ts: **`golfbake.ts`** works the grid out (`makeGolfGrid()`, `setGolfMaker()`), loaded only by the bake
+  (first in `scripts/bake.mjs`), the tests (each test file's entry in `scripts/test.mjs`) and `scripts/seams.mjs`. Never
+  import golf.ts or golfground.ts from the boot's code: they'd come into the boot.
+  - `golfMesh()`: the ground over a box as triangles, near the grid (each square split as `golfLift()` reads it), far a
+    middle every `GOLF_FAR` with its edges still every `GOLF_STEP`, a band zipping the two (so a tile drawn far meets
+    one drawn near with no gap: the near and far forms swap per tile).
+  - Read by terrain.ts (`heightAt()` adds `golfLift()`, `onHills()` takes `onGolf()`, `hillsAlong()` the box), world.ts
+    (`golfPlane()`: the course's grass on `golfMesh()`, near and far; `paintGolf()`), rolls.ts (kept off the course), landuse.ts (`KEEPS` `golf`: the play; the native grass keeps
+    the outskirts' trees) and ground.ts (`INFLUENCES` `golf-native`, `golf`).
+- **`golf3d.ts`** (the district `golf`, `LAZY_DISTRICTS`; tested in `tests/golflift.test.ts`): the turf, one texture
+  (`drawTurf()`, `TURF_SCALE` pixels a tile, the palette's golf covers, mown stripes `FAIRWAY_STRIPE` / `GREEN_STRIPE`,
+  the bunkers' `LIP`, clear over the water) on a toon material, alpha-tested (`golf-turf`); laid by `turfMesh()` on
+  `golfMesh()`'s own triangles `TURF_LIFT` over the grass, only where `mownNear()`, near and far; a site a tile. The lakes' water (`shoreOf()`, `golfWater()`, world.ts `waterMat`) on the main thread.
 - **The design map:** `npm run golfmap -- <label>` (`scripts/golfmap.mjs`) draws the course from the data (what's
   underfoot, shading, contours every tile, each hole's line and number) into `docs/golf-shots/<label>.png`. Draw one
   for each phase's sign-off.

@@ -51,7 +51,7 @@ export interface Feature {
   turn: number;
   h: number;
 }
-export const FEATURES: Feature[] = [
+export const FEATURES: Feature[] = /* @__PURE__ */ (() => [
   { id: 'knob', name: 'The Knob', at: [714, -664], r: [74, 60], turn: 0.4, h: 13 },
   { id: 'beacon', name: 'Beacon Hill', at: [338, -704], r: [96, 70], turn: -0.6, h: 8 },
   { id: 'spine', name: 'The Spine', at: [650, -318], r: [120, 26], turn: 1.57, h: 6.5 },
@@ -62,7 +62,7 @@ export const FEATURES: Feature[] = [
   { id: 'south-bank', name: 'The south bank', at: [640, -58], r: [110, 24], turn: 0, h: 2 },
   { id: 'hollow', name: 'The Hollow', at: [650, -160], r: [46, 34], turn: 0.2, h: -1.2 },
   ...LAKES.map((l): Feature => ({ id: `${l.id}-hollow`, name: `${l.name}'s hollow`, at: l.at, r: [l.r[0] * 2, l.r[1] * 2], turn: l.turn, h: -1.4 })),
-];
+] as Feature[])();
 /** The low waves over all of it: amplitude, direction (radians), wavelength, phase */
 const WAVES: [number, number, number, number][] = [
   [0.55, 0.5, 130, 0.4],
@@ -161,14 +161,15 @@ const GREEN_HOLD = FRINGE + 1.2;
 const GREEN_EASE = 5;
 /** How far round a tee's box it eases back */
 const TEE_EASE = 8;
-/** How deep a bunker's sand lies under the ground round it */
-export const BUNKER_DEPTH = 0.5;
+/** How deep a bunker's sand lies under the ground round it (a shallow bowl: on the city's 2-tile grid a deeper, sharper
+ * one creased the ground, and the creases were inked) */
+export const BUNKER_DEPTH = 0.3;
 /** The clubhouse's grounds: level, eased back over this */
 const GROUNDS_EASE = 14;
 
 /** Each hole's box, as far as it shapes the ground */
 const REACH = 12 + FIRST_CUT + BANK_EASE;
-const BOXES: Rect[] = HOLES.map((h) => {
+const BOXES: Rect[] = /* @__PURE__ */ HOLES.map((h) => {
   const xs = h.line.map((p) => p[0]);
   const zs = h.line.map((p) => p[1]);
   return [Math.min(...xs) - REACH - 12, Math.min(...zs) - REACH - 12, Math.max(...xs) + REACH + 12, Math.max(...zs) + REACH + 12];
@@ -223,7 +224,7 @@ function shapedAt(x: number, z: number, dug = true) {
     for (const i of near)
       for (const b of bunkersOf(HOLES[i])) {
         const e = ellipseAt(b.at, b.dir, b.r, x, z);
-        if (e < 1) h -= BUNKER_DEPTH * (1 - smooth(0.45, 1, e));
+        if (e < 1) h -= BUNKER_DEPTH * (1 - smooth(0, 1, e));
       }
   return h;
 }
@@ -236,7 +237,7 @@ export const groundsLevel = () => (grounds ??= landAt(...CLUB_CENTRE));
 /** How far under its lowest shore a lake's water lies, and its bed under that */
 export const SHORE_OVER = 0.35;
 export const LAKE_DEPTH = 1.2;
-const waters = new Map<string, number>();
+const waters = /* @__PURE__ */ new Map<string, number>();
 /** A lake's water level: under the lowest of its shore */
 export function lakeWater(l: Lake) {
   let w = waters.get(l.id);

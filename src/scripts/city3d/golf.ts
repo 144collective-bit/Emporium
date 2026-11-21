@@ -68,9 +68,9 @@ export const COURSE_BASE: Pt[] = [
 /** How far the edge wanders in or out, and how often */
 export const EDGE_AMP = 4;
 export const EDGE_STEP = 26;
-export const COURSE: Pt[] = wander(COURSE_BASE, EDGE_STEP, EDGE_AMP, 7);
+export const COURSE: Pt[] = /* @__PURE__ */ wander(COURSE_BASE, EDGE_STEP, EDGE_AMP, 7);
 /** The course's box (x0, z0, x1, z1) */
-export const COURSE_RECT: Rect = [Math.min(...COURSE.map((p) => p[0])), Math.min(...COURSE.map((p) => p[1])), Math.max(...COURSE.map((p) => p[0])), Math.max(...COURSE.map((p) => p[1]))];
+export const COURSE_RECT: Rect = /* @__PURE__ */ (() => [Math.min(...COURSE.map((p) => p[0])), Math.min(...COURSE.map((p) => p[1])), Math.max(...COURSE.map((p) => p[0])), Math.max(...COURSE.map((p) => p[1]))] as Rect)();
 /** Is x, z on the club's land */
 export const inCourse = (x: number, z: number) => x > COURSE_RECT[0] && x < COURSE_RECT[2] && z > COURSE_RECT[1] && z < COURSE_RECT[3] && inside(COURSE, [x, z]);
 /** How far inside the club's land a point is (0 or less outside) */
@@ -134,7 +134,7 @@ const sides = (short = 3, off = 10.5): Bunker[] => [
 ];
 
 /** The eighteen, as laid (the plan's routing, docs/golf-plan.md; `fairway.to` negative is back from the green's middle) */
-export const HOLES: Hole[] = [
+export const HOLES: Hole[] = /* @__PURE__ */ (() => [
   // The front nine: the north arm, out west from the clubhouse, up the air base side, east along the wall to the
   // Knob in the corner, and home through the middle
   { n: 1, name: 'First Light', par: 4, line: [[485, -498], [410, -490], [340, -505]], fairway: fw(38, 12), raise: 0.5, green: [7, 5.5], bunkers: [[100, 11, 5, 2.6, 'f'], ...sides()] },
@@ -157,7 +157,7 @@ export const HOLES: Hole[] = [
   { n: 16, name: 'Reed Carry', par: 3, line: [[675, -192], [625, -125]], fairway: null, raise: 0.5, green: [7, 6], bunkers: [...sides(2, 10)] },
   { n: 17, name: 'The Hollow', par: 4, line: [[602, -140], [604, -215], [606, -290]], fairway: fw(38, 12), raise: 0.4, green: [7, 5.5], bunkers: [[98, -11, 5, 2.6, 'f'], ...sides()] },
   { n: 18, name: 'Clubhouse', par: 4, line: [[610, -310], [616, -405], [588, -455]], fairway: fw(38, 12), raise: 0.5, green: [7.5, 6], bunkers: [[-4, 10.5, 4, 2.4, 'g'], [-2, -11, 4.5, 2.4, 'g']] },
-];
+] as Hole[])();
 
 /* ---------- A hole's frame ---------- */
 
@@ -289,7 +289,7 @@ export const inLake = (x: number, z: number, m = 0) => LAKES.some((l) => lakeAt(
 
 export type Surface = 'water' | 'bunker' | 'green' | 'fringe' | 'tee' | 'fairway' | 'cut' | 'rough' | 'native' | 'grounds';
 /** Each hole's box (its line, out to `NATIVE`), to skip the far ones fast */
-const BOXES: Rect[] = HOLES.map((h) => {
+const BOXES: Rect[] = /* @__PURE__ */ HOLES.map((h) => {
   const xs = h.line.map((p) => p[0]);
   const zs = h.line.map((p) => p[1]);
   return [Math.min(...xs) - NATIVE, Math.min(...zs) - NATIVE, Math.max(...xs) + NATIVE, Math.max(...zs) + NATIVE];
