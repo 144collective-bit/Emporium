@@ -88,6 +88,26 @@ later). The owner sends one screenshot at a time. Each becomes:
 Order: a model repair's own job first, then its sweep. Then the next model
 repair.
 
+### The hunt (the owner's ask, 2026-11-21)
+
+The loop doesn't only wait for screenshots: it **searches for aesthetic
+imperfections and logs them** as jobs for the work schedule. The aim: **find
+every cheap build and make it premium.** A hunt run:
+
+1. Takes review shots (`npm run shots`, `npm run seams`, or Playwright on
+   `npm run preview` with `?spawn=x,z`) of one district at a time, on foot
+   and from the air, by day and at night.
+2. Looks for what reads as cheap: bare colours where a material belongs
+   (R1), joins that don't meet (R2), slabs cut off open, shapes that don't
+   explain themselves, repeated copies side by side, empty or untextured
+   patches, flicker, things floating or sunk, edges with no trim, signs or
+   props at the wrong scale.
+3. Logs each find as a job: the spot, a shot in the log, the fault, and its
+   model repair (an existing one, or a new one written in the same form).
+4. Fixes nothing in that run: the jobs join the schedule in order.
+
+A hunt runs whenever no job is ready, and once a week otherwise.
+
 ### Model repairs
 
 #### R1. Bare slab
