@@ -117,11 +117,33 @@ a street or a lane.
   on a phone and 2.4 MB on a desktop, all of it near-only detail held
   from the boot as the pilot's was.
 
-### Phase 3: the kits
+### Phase 3: the kits (built, waiting on the owner's sign-off)
 
 The buildings the kits lay (The Trenches' tenements and rows, the
 recipes' districts): `IN_SITE` buildings take a modelled front too, built
 in their sites (and in the site worker).
+
+- **What takes it:** the kits' buildings of the downtown types, drawn
+  through `infillBuilding()` in their sites: The Trenches' rows (48
+  brownstones and 17 shops, projects3d.ts) and its tenements (65 shops,
+  streetwall3d.ts). Southfield's yards have none of those types. All 130
+  are in `SOLIDS`, so their side walls are judged as downtown's are: 92 of
+  their 260 sides face a street or a lane. The side test
+  (`tests/facade.test.ts`) covers them too.
+- **Desktops only** (`fineOf()`: `IN_SITE && LOW`). They're about 3,300
+  windows (about 1,700 on the fronts and 1,600 on the sides, the rows
+  being long and deep), about 6.6 MB of sills and lintels on a phone
+  where downtown's 750 or so are under 2 MB, and the phone's geometry is
+  the tight one; phones keep them painted. On desktops it's near-only
+  detail in the sites, let go with them past the haze.
+- **Measured** (headless, the medium tier and the phone tier, at the bench
+  view over The Block, a row's corner and a tenement's): desktop draws
+  282 / 523 / 267 before, 292 / 514 / 292 after; triangles 1.49M / 1.79M /
+  0.86M before, 1.51M / 1.72M / 0.90M after (they swing with the traffic
+  and with how much of the Trenches' sites had built). With every window
+  on phones too, the phone's geometry rose about 7 MB and the view over
+  The Block 0.38M to 0.46M triangles; with phones kept painted, the
+  phone's geometry after the views is 111.6 MB before and after.
 
 ### Phase 4: the glass and the extras
 
