@@ -226,6 +226,10 @@ A hunt runs whenever no job is ready, and once a week otherwise.
       the podium deck of the estate; the junction rebuilt to read. Find the
       exact spot first (the shot's angle: the highway's lanes below to the
       right, the deck running towards them) and take the before shot there.
+      Note: the brutalist plan's Phase 1 (the concrete skin, #227) reached
+      main the same day and re-dressed the estate's walls; the screenshot
+      may predate it. Check what's left of the fault on main first, and
+      keep to Phase 1's concrete (`docs/brutalist-plan.md`).
 - [ ] **J2 (R2): the cypress drives in Crestmont** (the owner's screenshot,
       2026-11-21: a drive lined with cypresses, two stone piers at its
       gate, meeting a curving two-lane road with lamps on its far side). The

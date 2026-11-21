@@ -2,7 +2,8 @@
 // where the near livery is, its lights glowing; each aircraft near or far by its own distance, as the places are
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { aircraftModel, aircraftNear, farGeometry, type ModelKind } from '../src/scripts/city3d/aircraft';
+import { aircraftModel, aircraftNear, type ModelKind } from '../src/scripts/city3d/aircraft';
+import { farGeometry } from '../src/scripts/city3d/aircraftfar';
 import { FAR_MARGIN } from '../src/scripts/city3d/tiles';
 
 const KINDS: ModelKind[] = ['jet', 'freighter', 'prop', 'heli', 'bizjet'];
