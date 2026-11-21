@@ -191,7 +191,7 @@ const faceItems: Item[] = [
       icon: CHARACTER_ICONS[c.id],
       on: (l) => l.character === c.id,
       wear: (l) => ({ ...l, character: c.id }),
-      colors: [toneColors, hairColors],
+      colors: c.hair ? [toneColors, hairColors] : [toneColors],
     })
   ),
 ];

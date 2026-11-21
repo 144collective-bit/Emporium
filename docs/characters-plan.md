@@ -188,7 +188,9 @@ SlimeWhale's). The owner's answers:
   (the owner's call, 2026-11-21: an exception to "made-up names only").
 - **The head:** a thick hexagon, flat on top and bottom, pointed at the
   sides, bright yellow (`SMILEX_YELLOW`, under the bloom threshold), a bit
-  bigger than Degen's head as in the art (27 cm point to point); two tall
+  bigger than Degen's head as in the art (27 cm point to point), a slab
+  8.4 cm deep (the owner's call after the second reference: thinner;
+  centred on his neck, which tapers inside it); two tall
   oval eyes and a wide smile with a tick across each end, flat ink on its
   flat front. No nose, ears or hair. Nothing worn over it, as SlimeWhale.
 - **The gloves:** always white cartoon gloves (the owner's call): his hands
@@ -219,9 +221,14 @@ wardrobe as `characterPendant()`: the `necklace-smilex-<top>` items in
 place of `necklace-<top>`) and the gloves (`characterGloves()`: the
 `gloves-smilex` item in place of `fingers`). All in the heads' chunk (now
 4.6 KB with the detail); the boot grew 0.5 KB in all for him (769.2 of
-770 KB). He's in `CHARACTER_IDS`
-(heads.ts) but not yet in `CHARACTERS` (profile-data.ts), so the fitting
-room doesn't offer him and a saved `smilex` cleans to Degen until Phase 2.
+770 KB). Phase 2 (built,
+2026-11-21): he's in `CHARACTERS` (`chain: 'Gold Chain'`, no `hair`), so
+the Face tab offers his card (the head alone, a Skin row only) and his
+Full look chip (`CHARACTER_LOOKS.smilex`: the bomber, denim, sneakers, the
+necklace and the Sector 7 mark in green on the chest); the character
+screen names him, his necklace the Gold Chain; the first-person hands and
+fists wear his gloves (`gloveColour()` in wardrobe.ts, in viewmodel.ts
+and fistsview.ts). Shots: `docs/characters-shots/smilex-phase2.png`.
 Lab:
 `?anim&prog=idle&cam=free&orbit=0.6,0.08,0.7&at=0,0.78,0&outfit=bomber&wear=character:smilex,necklace,top:%236b4428,bottoms:denim,bottom:%233f5f8f,shoeStyle:sneaker,shoes:%23c9c7cf,mark:seven,ink:%231f9d6a,cap:`.
 Tests: the collar, hood-down and budget checks run for every character;
@@ -255,13 +262,12 @@ everyone else); the pendant clear of five tops and centred. Shots:
   `characterChain()`).
 - **Cartoon gloves:** three black stitch lines down the back of each glove
   and puffier rolled cuffs.
-- Not changed: his head's depth (the reference's block is a little
-  thinner) and its size; ask the owner if either should change.
+- Not changed: his head's size.
 
-Smilex's phases are SlimeWhale's: 1, the head in the lab (built,
-2026-11-21, waiting on the owner's sign-off), 2, wearing him (his line in
-`CHARACTERS`, his Face tab card and Full look chip, the first-person
-hands gloved), 3, checked.
+Smilex's phases are SlimeWhale's: 1, the head in the lab (built; the
+detail passes and the thinner slab, 2026-11-21), 2, wearing him (built,
+2026-11-21, the owner's go-ahead; waiting on the owner's sign-off), 3,
+checked.
 
 ## Adding the next character (once SlimeWhale's done)
 
@@ -285,5 +291,5 @@ crowd unless the owner asks.
 Planned and signed off (2026-11-21). Phase 1 built and signed off
 (2026-11-21: the likeness as it is). Phase 2 built and signed off
 (2026-11-21). Phase 3 built and signed off
-(2026-11-21): SlimeWhale is done. Smilex (the second): Phase 1 built
-(2026-11-21), waiting on the owner's sign-off of the likeness.
+(2026-11-21): SlimeWhale is done. Smilex (the second): Phases 1 and 2 built
+(2026-11-21), waiting on the owner's sign-off before his Phase 3.

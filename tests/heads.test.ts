@@ -6,7 +6,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { headless, items, lookOutfit, PLAYER, useHeads, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
+import { gloveColour, headless, items, lookOutfit, PLAYER, useHeads, type Detail, type Outfit } from '../src/scripts/city3d/wardrobe';
 import { CHARACTERS, CHARACTER_LOOKS, DEFAULT_LOOK, PALETTE, cleanLook, type CharacterId, type Look } from '../src/scripts/net/profile-data';
 import { SKIN_TONES } from '../src/scripts/city3d/crowdlook';
 import { describe as describeLook } from '../src/scripts/city3d/lookrows';
@@ -456,4 +456,33 @@ test('heads: the character screen names him, nothing on his head or eyes', () =>
   assert.equal(rows.get('Eyewear')!.v, 'None');
   assert.equal(rows.get('Gear')!.v, 'Nothing');
   assert.ok(!rows.get('Extras')!.v.includes('Shades Chain'));
+});
+
+/* ----- Smilex, Phase 2: worn from the look ----- */
+
+test('heads: Smilex worn from the look: his head, gloves, chain and pendant, the Sector 7 mark; nothing over his head', () => {
+  assert.ok(CHARACTERS.some((c) => c.id === 'smilex'));
+  const look = cleanLook({ ...DEFAULT_LOOK, ...CHARACTER_LOOKS.smilex, hat: 'cap', faceGear: 'gasmask', chain: true });
+  assert.equal(look.character, 'smilex');
+  assert.equal(look.mark, 'seven');
+  const o = lookOutfit(look);
+  assert.equal(o.character, 'smilex');
+  assert.equal(gloveColour(o), characterGloves('smilex'));
+  assert.equal(gloveColour(lookOutfit({ ...look, character: null })), null);
+  assert.equal(gloveColour(lookOutfit({ ...look, character: 'slimewhale' })), null);
+  for (const q of [3, 2] as Detail[]) {
+    const on = ids(q, o);
+    for (const id of ['character-smilex', 'gloves-smilex', 'necklace-smilex-bomber', 'bomber', 'denim', 'sneakers']) assert.ok(on.includes(id), `detail ${q}: ${id} in ${on.join(' ')}`);
+    assert.ok(!on.some((id) => /^(head|mask|features|cap|fingers|hair-|shades-|face-|chain-)$|^(hair-|shades-|face-|chain-)/.test(id)), `detail ${q}: ${on.join(' ')}`);
+    assert.ok(on.some((id) => id.startsWith('mark-')), `detail ${q}: the chest mark`);
+  }
+});
+
+test('heads: the character screen names Smilex, his skin only (no hair)', () => {
+  const rows = new Map(describeLook(cleanLook({ ...DEFAULT_LOOK, ...CHARACTER_LOOKS.smilex })).map(([k, v, c]) => [k, { v, c }]));
+  assert.equal(rows.get('Face')!.v, 'Smilex');
+  assert.equal(rows.get('Face')!.c.length, 1);
+  assert.equal(rows.get('Head')!.v, 'Nothing');
+  // (his necklace carries the PulseChain pendant, not the diamond)
+  assert.ok(rows.get('Extras')!.v.includes('Gold Chain') && !rows.get('Extras')!.v.includes('Diamond'));
 });

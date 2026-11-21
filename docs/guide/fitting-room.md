@@ -42,10 +42,12 @@ keep it up to date when what it describes changes.
   (`hair`) rows from `PALETTE.tone` / `PALETTE.hair`, and on a face a
   Shape row of chips (`HEAD_SHAPES`, `data-face-shape`, drawn with the
   Merch tab's chips); all free. The characters (`docs/characters-plan.md`):
-  a card a character (`char-<id>`: SlimeWhale, his head alone) and a
+  a card a character (`char-<id>`: SlimeWhale and Smilex, the head
+  alone; a Hair row only where the character has hair, `CHARACTERS`'s
+  `hair`) and a
   **Full look** row of chips (`data-char-look`: the whole look in one tap,
   `CHARACTER_LOOKS`); with one on, the Head, Eyewear and Gear tabs
-  (`OVER_HEAD`) show only "Nothing goes over SlimeWhale's head.", the
+  (`OVER_HEAD`) show only "Nothing goes over <name>'s head.", the
   Shades Chain isn't offered and the Merch tab's hat says so; picking the
   Balaclava or a cut takes it off. Unmasking turns the shades on; on a face
   the Shades tab offers Shades or No shades (`shades`), and Extras' Shades

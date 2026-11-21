@@ -5226,6 +5226,8 @@ export function useHeads(h: NonNullable<typeof heads>) {
   delete itemsCache['2h'];
   delete itemsCache['3h'];
 }
+/** A character's gloves' colour on this outfit (null: bare hands): the first-person hands and fists wear it too */
+export const gloveColour = (o: Outfit): string | null => (o.character && heads?.gloves(o.character)) || null;
 /** Degen's own head: the head and its balaclava, the face's ink, the hair (docs/characters-plan.md) */
 const DEGEN_HEAD_ITEMS = (id: string) => id === 'head' || id === 'mask' || id === 'features' || id.startsWith('hair-');
 /**

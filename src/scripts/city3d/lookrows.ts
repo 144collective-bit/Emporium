@@ -17,20 +17,21 @@ const markName = (id: MarkId) => MARKS.find((m) => m.id === id)?.name ?? id;
 /** What he's wearing, a row a part: [label, what, colours] */
 export function describe(look: Look): [string, string, string[]][] {
   // (a character's head, docs/characters-plan.md: nothing over it, whatever's saved; its Face row names it)
-  const character = CHARACTERS.find((c) => c.id === look.character)?.name;
+  const who = CHARACTERS.find((c) => c.id === look.character);
+  const character = who?.name;
   const l: Look = character ? { ...look, hat: null, hood: false, faceGear: null, chain: false, face: true, shades: false } : look;
   const hood = l.kind === 'hoodie' && l.hood;
   const patched = !hood && (l.hat === 'cap' || l.hat === 'backcap' || l.hat === 'beanie' || l.hat === 'skully');
   const stitched = !hood && l.hat === 'fitted';
   // (the shades: always in the balaclava, a choice on a face; off for a gas mask or goggles)
   const shaded = (!l.face || l.shades) && !coversEyes(l.faceGear);
-  const extras = [l.headphones && 'Headphones', l.chain && shaded && 'Shades Chain', l.necklace && 'Diamond Chain', l.watch && 'Gold Watch'].filter(Boolean) as string[];
+  const extras = [l.headphones && 'Headphones', l.chain && shaded && 'Shades Chain', l.necklace && (who?.chain ?? 'Diamond Chain'), l.watch && 'Gold Watch'].filter(Boolean) as string[];
   const rows: [string, string, string[]][] = [
     ['Top', FITS[l.kind], l.kind === 'suit' || l.kind === 'double' || l.kind === 'waistcoat' || l.kind === 'overcoat' ? [l.top, l.shirt, l.tie] : l.kind === 'blazer' ? [l.top, l.shirt] : l.kind === 'vest' || l.kind === 'hivis' ? [l.top, l.shirt] : [l.top]],
     ['Bottoms', l.kind === 'coveralls' ? 'Coveralls' : BOTTOMS[l.bottoms], l.kind === 'coveralls' ? [l.top] : [l.bottom]],
     ['Head', hood ? 'Hood up' : l.hat ? HATS[l.hat] + (patched ? ` · ${markName(l.hatMark)} patch` : stitched ? ` · ${markName(l.hatMark)}` : '') : 'Nothing', !hood && l.hat ? [l.hatColor] : []],
     // (docs/faces-plan.md: the balaclava, or his face with a haircut)
-    ['Face', character ? character : l.face ? [l.cut === 'bald' ? 'Bald' : `${CUTS.find((c) => c.id === l.cut)!.name} cut`, l.shape !== 'standard' && `${HEAD_SHAPES.find((h) => h.id === l.shape)!.name} head`].filter(Boolean).join(' · ') : 'Balaclava', character || (l.face && l.cut !== 'bald') ? [l.tone, l.hair] : [l.tone]],
+    ['Face', character ? character : l.face ? [l.cut === 'bald' ? 'Bald' : `${CUTS.find((c) => c.id === l.cut)!.name} cut`, l.shape !== 'standard' && `${HEAD_SHAPES.find((h) => h.id === l.shape)!.name} head`].filter(Boolean).join(' · ') : 'Balaclava', (character ? who!.hair : l.face && l.cut !== 'bald') ? [l.tone, l.hair] : [l.tone]],
     ['Eyewear', coversEyes(l.faceGear) ? 'Off (face gear)' : !shaded ? 'None' : (EYE_STYLES.find((e) => e.id === l.eyewear)?.name ?? 'Classic'), shaded ? [l.frame, l.lens] : []],
     ['Gear', l.faceGear ? (FACE_GEAR.find((f) => f.id === l.faceGear)?.name ?? '') : 'Nothing', l.faceGear ? [l.gear] : []],
     ['Bag', l.bag ? BAGS[l.bag] : 'None', l.bag ? [l.bagColor] : []],

@@ -197,14 +197,21 @@ export const HAIR_DYE = ['#ff6ad5', '#00b8d8', '#8f3dff', '#1f9d6a', '#f3f2f7'];
  * The characters (docs/characters-plan.md): Degen's body with a head of its own, worn from the fitting room's Face tab
  * (all free). Their heads are drawn by heads.ts, its own chunk; nothing is worn over one.
  */
-/** (Smilex is drawn in the lab only until the characters plan's Phase 2 for him: not in `CHARACTERS` yet) */
 export type CharacterId = 'slimewhale' | 'smilex';
-export const CHARACTERS: { id: CharacterId; name: string }[] = [{ id: 'slimewhale', name: 'SlimeWhale' }];
+/**
+ * (`hair`: the look's hair colour shows on him, SlimeWhale's buzz; Smilex has none, only his skin row. `chain`: what
+ * the necklace is called on him, where it carries his own pendant)
+ */
+export const CHARACTERS: { id: CharacterId; name: string; hair?: boolean; chain?: string }[] = [
+  { id: 'slimewhale', name: 'SlimeWhale', hair: true },
+  // (a real name, the owner's call: docs/characters-plan.md)
+  { id: 'smilex', name: 'Smilex', chain: 'Gold Chain' },
+];
 export const CHARACTER_IDS = CHARACTERS.map((c) => c.id);
 /** A character's whole look, put on in one tap (the head, the clothes and colours from the owner's art) */
 export const CHARACTER_LOOKS: Record<CharacterId, Partial<Look>> = {
   slimewhale: { character: 'slimewhale', kind: 'hoodie', top: '#1f2436', hood: false, bottoms: 'joggers', bottom: '#16141f', shoeStyle: 'sneaker', shoes: '#1b1830', tone: '#efc4ae', hair: '#8c7b6b' },
-  smilex: { character: 'smilex', kind: 'bomber', top: '#6b4428', bottoms: 'denim', bottom: '#3f5f8f', shoeStyle: 'sneaker', shoes: '#c9c7cf', necklace: true },
+  smilex: { character: 'smilex', kind: 'bomber', top: '#6b4428', bottoms: 'denim', bottom: '#3f5f8f', shoeStyle: 'sneaker', shoes: '#c9c7cf', necklace: true, mark: 'seven', markAt: 'chest', ink: '#1f9d6a' },
 };
 
 export interface Look {

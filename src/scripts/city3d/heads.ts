@@ -294,8 +294,9 @@ const HEX_H = Math.sqrt(3) * HEX_R;
 const HEX_Y0 = 0.008;
 const HEX_MID = HEX_Y0 + HEX_H / 2;
 const HEX_Y1 = HEX_Y0 + HEX_H;
-const HEX_D = 0.062;
-const HEX_ZC = 0.004;
+// (a slab, as in the owner's reference: 8.4 cm deep for 27 across; centred on the neck)
+const HEX_D = 0.042;
+const HEX_ZC = -0.007;
 /** The hexagon's half-width at height y: its flat top and bottom, its points at the sides */
 const hexHW = (y: number) => HEX_R / 2 + (HEX_R / 2) * (1 - Math.min(1, Math.abs(y - HEX_MID) / (HEX_H / 2)));
 /** Smilex's head: the neck as Degen's, then the hexagon, its edges rounded a few millimetres */
@@ -324,10 +325,12 @@ const NECK_DEF: HeadDef = {
     [-0.085, 0.05, 0.051, 0.05, -0.01, 2],
     [-0.045, 0.047, 0.048, 0.049, -0.009, 2],
     [-0.008, 0.046, 0.05, 0.048, -0.008, 2],
-    [HEX_Y0 + 0.012, 0.047, 0.049, 0.048, -0.006, 2],
+    // (tapering inside the slab, so none of it shows through the thinner block's face or back)
+    [HEX_Y0 + 0.002, 0.045, 0.033, 0.033, -0.008, 2],
+    [HEX_Y0 + 0.012, 0.04, 0.028, 0.028, -0.008, 2],
   ],
   features: () => 0,
-  rings: () => [-0.085, -0.06, -0.035, -0.015, -0.008, 0.004, HEX_Y0 + 0.012],
+  rings: () => [-0.085, -0.06, -0.035, -0.015, -0.008, HEX_Y0 + 0.002, HEX_Y0 + 0.012],
 };
 /** The block's edges are rounded this much, front, back and round the sides */
 const HEX_BEVEL = 0.006;
