@@ -1,7 +1,8 @@
 # The improvement loop: nightly passes over the whole city
 
-A scheduled task runs a fresh cloud session every hour from **22:00 to 04:00
-GMT**. Each run picks the next item from this plan, makes the change, checks
+A scheduled task sends a pass to one dedicated runner session (with the repo
+attached and push access) every hour at **22:07, 23:07, 00:07, 01:07, 02:07
+and 03:07 GMT**. Each pass starts from fresh `main`, picks the next item from this plan, makes the change, checks
 it and merges it to `main`. Merging to `main` puts it live. When every item in
 a level is done, the run that finished it writes the next level and the loop
 carries on.
@@ -66,6 +67,13 @@ asking, as long as everything in **The rules** below holds:
     live settings.
 11. **Pause switch.** If the line under **Status** says `PAUSED`, the run
     does nothing and ends.
+
+## The board
+
+The owner's kanban board tracks every item: https://claude.ai/artifact/GsX2xpXCSNhkr4KFVuQmJH
+(collection `cards`; columns backlog, needs-you, ready, in-progress, checking,
+live). A pass that can reach it moves its item's card; this plan stays the
+source of truth.
 
 ## Status
 
