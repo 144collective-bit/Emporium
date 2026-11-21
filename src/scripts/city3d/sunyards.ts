@@ -16,7 +16,7 @@
  * `YARD_SOLIDS`: the walls (cells along them) and the sheds, joined to the grids when the chunk loads.
  */
 import { HOUSES, across, depthAt, frameOf, toWorld, type House } from './sunhouses';
-import { LOTS, type Lot } from './sunridgelots';
+import { GARDENS, LOTS, type Lot } from './sunridgelots';
 import { SUN_BLOCKS, WALL_RUNS, distTo, inside as inBlock, type Pt } from './sunridge';
 import { rng } from './recipes';
 
@@ -49,6 +49,8 @@ export interface Yard {
   islands: Pt[][];
   plants: Plant[];
   bins: { u: number; v: number };
+  /** Everything inside the walls behind the returns (the garden from the return walls back), in the frame (Phase 8) */
+  inner: Pt[];
   /** The back yard: across (u0..u1) and from the house (v0) to the back wall (v1) */
   back: [number, number, number, number];
   patio: [number, number, number, number];
@@ -74,6 +76,18 @@ function frontOver(h: House, u0: number, u1: number, side: number) {
 
 const houseOf = new Map(HOUSES.map((h) => [h.lot, h]));
 const lotOf = new Map(LOTS.map((l) => [l.id, l]));
+/** Each lot's garden (sunridgelots.ts `GARDENS`, Phase 8: grown into the land behind), by the lot's id */
+const gardenOf = new Map(GARDENS.map((g) => [g.id, g]));
+/**
+ * A lot's frame (the house's: its front's middle, along it and in) with its garden's corners in it: the yard's sides
+ * and back are the garden's, everything the house set in the frame stays where it was
+ */
+export function gardenFrame(l: Lot) {
+  const f = frameOf(l);
+  const g = gardenOf.get(l.id) ?? l;
+  const local = (p: Pt): Pt => [(p[0] - f.o[0]) * f.u[0] + (p[1] - f.o[1]) * f.u[1], (p[0] - f.o[0]) * f.v[0] + (p[1] - f.o[1]) * f.v[1]];
+  return { ...f, fl: local(g.front[0]), fr: local(g.front[1]), bl: local(g.back[0]), br: local(g.back[1]) };
+}
 /** Where a house's side walls start: a little behind its main front */
 const sideStart = (h: House) => h.parts.find((p) => p.kind === 'main')!.v0 + RETURN_BACK;
 
@@ -157,11 +171,11 @@ export function streetV(h: House, block: Pt[], u: number): number {
   const at = (t: number): Pt => [px + dx * t, pz + dz * t];
   if (inBlock(block, at(0))) {
     let t = 0;
-    while (t < 2 && inBlock(block, at(t + 0.01))) t += 0.01;
+    while (t < 4 && inBlock(block, at(t + 0.01))) t += 0.01;
     return -t;
   }
   let t = 0;
-  while (t < 2 && !inBlock(block, at(-t - 0.01))) t += 0.01;
+  while (t < 4 && !inBlock(block, at(-t - 0.01))) t += 0.01;
   return t + 0.01;
 }
 /** Points along the street edge from u0 to u1 (v at each from `edge`), a step about a fifth of a tile */
@@ -198,7 +212,7 @@ function lay(): Yard[] {
   let prev: Yard['front'] | null = null;
   let prev2: Yard['front'] | null = null;
   for (const h of HOUSES) {
-    const f = frameOf(lotOf.get(h.lot)!);
+    const f = gardenFrame(lotOf.get(h.lot)!);
     let front: Yard['front'] = rand() < 0.55 ? 'desert' : 'lawn';
     if (prev === front && prev2 === front) front = front === 'desert' ? 'lawn' : 'desert';
     [prev2, prev] = [prev, front];
@@ -288,7 +302,9 @@ function lay(): Yard[] {
       const pw = Math.min(3.6, bu1 - bu0 - 1.4);
       if (pd > 1.1) {
         const pu = (bu0 + bu1) / 2 + (rand() - 0.5) * (bu1 - bu0 - pw - 1.4);
-        pool = { u0: pu - pw / 2, u1: pu + pw / 2, v0: backV - 0.5 - pd, v1: backV - 0.5 };
+        // (no further from the house than a pool in a lot's own back yard would be: a grown garden's far end is lawn)
+        const pb = Math.min(backV, vb + 9);
+        pool = { u0: pu - pw / 2, u1: pu + pw / 2, v0: pb - 0.5 - pd, v1: pb - 0.5 };
       }
     }
     const extras: Yard['extras'] = [];
@@ -330,7 +346,7 @@ function lay(): Yard[] {
             .filter((isl, k) => fits(isl, inFrom(ground[k])))
         : [];
     const drive = driveOf(h, d0, d1, Math.max(0, Math.min(FLARE, d0 - L(0) - 0.05)), Math.max(0, Math.min(FLARE, R(0) - d1 - 0.05)), edge);
-    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground: ground.map(toEdge), drive, islands, plants, bins, back, patio, ramada, grill, pool, extras, gates });
+    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground: ground.map(toEdge), drive, islands, inner: [[across(f, ss)[0], ss], [across(f, ss)[1], ss], f.br, f.bl], plants, bins, back, patio, ramada, grill, pool, extras, gates });
   }
   return out;
 }
@@ -349,7 +365,7 @@ const lerp = (a: Pt, b: Pt, t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + 
 /** Where along a lot's side (front to back) a house's side walls start */
 const sideT = (l: Lot, h: House | undefined, side: 0 | 1) => {
   if (!h) return 0.35;
-  const f = frameOf(l);
+  const f = gardenFrame(l);
   const back = side === 0 ? f.bl : f.br;
   return Math.min(0.9, sideStart(h) / Math.max(1, back[1]));
 };
@@ -357,30 +373,39 @@ const sideT = (l: Lot, h: House | undefined, side: 0 | 1) => {
 function walls(): WallSeg[] {
   const out: WallSeg[] = [];
   const onPerimeter = (a: Pt, b: Pt) => [a, b, lerp(a, b, 0.5)].every((p) => WALL_RUNS.some((r) => distTo(r, p) < 0.8));
-  const rears: [Pt, Pt][] = [];
-  for (const l of LOTS) {
-    const h = houseOf.get(l.id);
-    // Its right side, always (from where the walls start, behind the house's front, to the back); its left side
-    // only where no lot's right side is there already
-    const right = LOTS.find((q) => q !== l && near(q.front[0], l.front[1], 0.05));
-    const left = LOTS.find((q) => q !== l && near(q.front[1], l.front[0], 0.05));
-    const tR = Math.min(sideT(l, h, 1), right ? sideT(right, houseOf.get(right.id), 0) : 1);
-    const segR: [Pt, Pt] = [lerp(l.front[1], l.back[1], tR), l.back[1]];
-    if (!onPerimeter(...segR)) out.push({ a: segR[0], b: segR[1] });
-    if (!left) {
-      const segL: [Pt, Pt] = [lerp(l.front[0], l.back[0], sideT(l, h, 0)), l.back[0]];
-      if (!onPerimeter(...segL)) out.push({ a: segL[0], b: segL[1] });
+  // (a wall on a line another garden has walled already is left out: grown gardens meet along each other's sides and
+  // backs, a wall's thickness apart at most)
+  const covered = (p: Pt) => out.some((w) => distTo([w.a, w.b], p) < 0.3);
+  const push = (a: Pt, b: Pt) => {
+    const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+    if (L < 0.2 || onPerimeter(a, b)) return;
+    // (only the stretches of it no wall stands along already)
+    const n = Math.max(2, Math.ceil(L / 0.1));
+    let start = -1;
+    for (let k = 0; k <= n; k++) {
+      const free = k < n && !covered(lerp(a, b, (k + 0.5) / n));
+      if (free && start < 0) start = k;
+      if (!free && start >= 0) {
+        const [p, q] = [lerp(a, b, start / n), lerp(a, b, k / n)];
+        if (Math.hypot(q[0] - p[0], q[1] - p[1]) > 0.25 && !onPerimeter(p, q)) out.push({ a: p, b: q });
+        start = -1;
+      }
     }
-    // Its back, unless the perimeter wall stands there or a lot before it walled the same line
-    const rear: [Pt, Pt] = [l.back[0], l.back[1]];
-    const mid = lerp(...rear, 0.5);
-    if (!onPerimeter(...rear) && !rears.some(([a, b]) => distTo([a, b], mid) < 0.45)) out.push({ a: rear[0], b: rear[1] });
-    rears.push(rear);
+  };
+  for (const lot of LOTS) {
+    const h = houseOf.get(lot.id);
+    // The garden's sides (from where the walls start, behind the house's front, to its back) and its back
+    const l = gardenOf.get(lot.id) ?? lot;
+    const right = LOTS.find((q) => q !== lot && near((gardenOf.get(q.id) ?? q).front[0], l.front[1], 0.2));
+    const tR = Math.min(sideT(lot, h, 1), right ? sideT(right, houseOf.get(right.id), 0) : 1);
+    push(lerp(l.front[1], l.back[1], tR), l.back[1]);
+    push(lerp(l.front[0], l.back[0], sideT(lot, h, 0)), l.back[0]);
+    push(l.back[0], l.back[1]);
     // The returns from the house's sides to the lot's side lines, each with its gate
     if (h) {
       const y = YARDS.find((q) => q.house === h.id)!;
       for (const g of y.gates) {
-        const f = frameOf(l);
+        const f = gardenFrame(lot);
         const [a0, a1] = across(f, g.v);
         // (which side: the gate nearer the lot's left or right line)
         const leftSide = Math.abs(g.u0 - (a0 + 0.02)) < Math.abs(g.u1 - (a1 - 0.02));

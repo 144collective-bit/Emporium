@@ -17,7 +17,7 @@ import { HOUSES, SCHEMES, type House } from './sunhouses';
 import { BLOCK, GROUNDS, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, islandOf, sprayAt, sprinklerOn, type Plant, type Yard } from './sunyards';
 import { SUNRIDGE_RECT } from './sunridge';
 import { CROWD_VIEW } from './character';
-import { LOTS } from './sunridgelots';
+import { GARDENS, LOTS } from './sunridgelots';
 import type { Pt } from './sunridge';
 import { COVER } from './palette';
 
@@ -182,7 +182,8 @@ function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
   // The back yard's ground: decomposed granite to the walls, a patch of lawn in it where there's no pool
   {
     const [u0, v0, u1, v1] = y.back;
-    rect(u0, u1, v0, v1, 0.006, DG[(y.groundTone + 1) % DG.length]);
+    // (the whole garden inside the walls, its side yards too: Phase 8's gardens are wider and deeper than the yard)
+    flat(y.inner, 0.006, DG[(y.groundTone + 1) % DG.length]);
     // (its edges soft, as the front's turf: sunyards.ts `islandOf()`, Phase 7)
     if (!y.pool && v1 - v0 > 2) {
       const [a0, a1, b0, b1] = [u0 + 0.3, u1 - 0.3, y.patio[3] + 0.2, v1 - 0.3];
@@ -275,7 +276,9 @@ export function registerYards(low: boolean, scene: THREE.Scene | null) {
   for (const y of YARDS) {
     const h = houses.get(y.house)!;
     const l = lots.get(h.lot)!;
-    const pts = [...l.front, ...l.back];
+    // (round the garden: grown into the land behind, Phase 8)
+    const g = GARDENS.find((q) => q.id === l.id) ?? l;
+    const pts = [...l.front, ...l.back, ...g.front, ...g.back];
     const rect: [number, number, number, number] = [Math.min(...pts.map((p) => p[0])) - 2, Math.min(...pts.map((p) => p[1])) - 2, Math.max(...pts.map((p) => p[0])) + 2, Math.max(...pts.map((p) => p[1])) + 2];
     site(`sunridge yard ${h.id}`, rect, (into) => {
       const b = new Batch();
