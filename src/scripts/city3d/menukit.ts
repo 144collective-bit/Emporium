@@ -32,7 +32,10 @@ export interface KitOpts {
 /** Something that scrolls sideways itself (a row of cards): a swipe that starts on it is its own */
 const scrollsAcross = (n: HTMLElement) => /auto|scroll/.test(getComputedStyle(n).overflowX) && n.scrollWidth > n.clientWidth + 2;
 
-const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), [tabindex="0"]';
+/** (`data-mk-skip`: a pointer's helper, the settings' ◀ ▶, which the arrows and the d-pad pass over) */
+const FOCUSABLE = 'button:not([disabled]):not([data-mk-skip]), [href], input:not([disabled]), select:not([disabled]), [tabindex="0"]';
+/** A picker's value (settings-ui.ts): left and right step it rather than move off it */
+const PICKER = '[data-pick-val]';
 
 export function menuKit(el: HTMLElement, o: KitOpts) {
   const strip = el.querySelector<HTMLElement>('[data-mk-tabs]');
@@ -79,8 +82,13 @@ export function menuKit(el: HTMLElement, o: KitOpts) {
       return r.width > 0 && r.height > 0;
     });
   }
-  /** The d-pad or an arrow key: the next button that way */
+  /** The d-pad or an arrow key: the next button that way (on a picker, left and right step it: `mk-step` on it) */
   function move(dir: Dir) {
+    const a = document.activeElement as HTMLElement | null;
+    if ((dir === 'left' || dir === 'right') && a && el.contains(a) && a.matches(PICKER)) {
+      a.dispatchEvent(new CustomEvent('mk-step', { bubbles: true, detail: dir === 'left' ? -1 : 1 }));
+      return;
+    }
     const items = focusables();
     if (!items.length) return;
     const at = items.indexOf(document.activeElement as HTMLElement);

@@ -85,10 +85,14 @@ export function cleanLost(raw: unknown, now: number): Lost | null {
   return { tier: tier as Tier, at };
 }
 
-/** The tier a device starts on, and why */
-export function pickTier(d: Device): Picked {
+/**
+ * The tier a device starts on, and why: `want`, set in Settings (docs/settings-plan.md), or by the device; either way
+ * a step under the tier whose graphics stopped lately, so a device that can't hold the one picked doesn't keep crashing
+ */
+export function pickTier(d: Device, want?: Tier): Picked {
   let picked: Picked;
-  if (d.small) picked = { tier: 'low', why: 'phone screen' };
+  if (want) picked = { tier: want, why: want === 'high' ? '' : 'set in Settings' };
+  else if (d.small) picked = { tier: 'low', why: 'phone screen' };
   else if (d.coarse) picked = { tier: 'medium', why: 'touch screen' };
   else if ((d.memory ?? 8) <= 4) picked = { tier: 'medium', why: 'little memory' };
   else if ((d.cores ?? 8) <= 4) picked = { tier: 'medium', why: 'few cores' };
