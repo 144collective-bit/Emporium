@@ -166,7 +166,9 @@ const KEEP_CLEAR = 0.6;
 function grow(): Lot[] {
   const lots: Lot[] = LOTS.map((l) => ({ ...l, back: [[...l.back[0]], [...l.back[1]]] as [Pt, Pt] }));
   const pad = (r: Rect): Rect => [r[0] - KEEP_CLEAR, r[1] - KEEP_CLEAR, r[2] + KEEP_CLEAR, r[3] + KEEP_CLEAR];
-  const keep = [...ZONES.map((z) => rectPoly(pad(z.rect))), rectPoly(pad(PATH))];
+  // (each lot's: the land kept off with its margin, or without it where the lot was laid within the margin already)
+  const raw = [...ZONES.map((z) => z.rect), PATH];
+  const keepOf = LOTS.map((l) => raw.map((r) => (overlap(outline(l), rectPoly(pad(r))) ? rectPoly(r) : rectPoly(pad(r)))));
   const blockOf = new Map(SUN_BLOCKS.map((b) => [b.id, b]));
   const landOf = new Map(SUN_BLOCKS.map((b) => [b.id, b.runs.filter((r) => !r.street).map((r) => r.pts)]));
   const streetsOf = new Map(SUN_BLOCKS.map((b) => [b.id, b.runs.filter((r) => r.street).map((r) => r.pts)]));
@@ -228,7 +230,7 @@ function grow(): Lot[] {
     const keeps = (runs: Pt[][], clear: number) => runs.every((r) => back.every(([p, q]) => distTo(r, p) >= clear - 1e-6 || distTo(r, p) >= distTo(r, q) - 1e-6));
     if (!keeps(landOf.get(cand.block)!, WALL.in) || !keeps(streetsOf.get(cand.block)!, STREET_CLEAR)) return false;
     // (off the amenities' land and the footpath, out of every other garden)
-    if (keep.some((z) => overlap(o, z))) return false;
+    if (keepOf[k].some((z) => overlap(o, z))) return false;
     const bx = box(o);
     for (let j = 0; j < lots.length; j++) {
       if (j === k) continue;
