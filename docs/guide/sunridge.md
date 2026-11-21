@@ -27,7 +27,9 @@ keep it up to date when what it describes changes.
   (DOM-free, the chunk's, tested in `tests/sunhouses.test.ts`): `HOUSES`, a
   house a lot in its frame (`toWorld()`), four plans (`Plan`), three entries
   (`Elevation`), `SCHEMES` and `ROOFS` (neighbours never the same colour),
-  the garage, its driveway and the walk, solar and chimneys;
+  the garage, its driveway and the walk, solar and chimneys; a shallow
+  ranch (`lay(..., shallow)`) on Ocotillo Court's two short lots, laid last
+  (`LAID_LAST`) so every other house keeps its id, yard and residents;
   `HOUSE_SOLIDS` join the grids when the chunk loads (`addSolids()`). Drawn by
   `sunhouses3d.ts` (a site a house: tile roofs from a texture a colour, lit
   windows at night, details near only); the hipped roofs are `roofs3d.ts`

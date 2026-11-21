@@ -133,11 +133,12 @@ export function depthAt(f: ReturnType<typeof frameOf>, u: number) {
  * A plan's footprint in a lot: as wide as the lot allows (side yards `SIDE_MIN`), set back until it is that wide all
  * the way back, with a back yard of `BACK_MIN` or more; null if it won't fit
  */
-function lay(plan: Plan, elevation: Elevation, mirror: boolean, f: ReturnType<typeof frameOf>): Omit<House, 'id' | 'lot' | 'scheme' | 'roof' | 'o' | 'u' | 'v' | 'solar' | 'chimney'> | null {
+function lay(plan: Plan, elevation: Elevation, mirror: boolean, f: ReturnType<typeof frameOf>, shallow = false): Omit<House, 'id' | 'lot' | 'scheme' | 'roof' | 'o' | 'u' | 'v' | 'solar' | 'chimney'> | null {
   const two = plan === 'two' || plan === 'porch';
-  const forward = plan === 'ranch' ? 0.7 : plan === 'ell' ? 2.0 : two ? 1.3 : 0.7;
+  // (a shallow ranch, `shallow`: its rooms flush with the garage and shallower, for a lot wide but short, Phase 6)
+  const forward = shallow ? 0 : plan === 'ranch' ? 0.7 : plan === 'ell' ? 2.0 : two ? 1.3 : 0.7;
   // (shallower where the lot is: a smaller house rather than none)
-  for (const depth of two ? [5.2, 4.7] : plan === 'ell' ? [5.6, 5.0] : [6.0, 5.4, 4.8, 4.4])
+  for (const depth of shallow ? [4.0, 3.6] : two ? [5.2, 4.7] : plan === 'ell' ? [5.6, 5.0] : [6.0, 5.4, 4.8, 4.4])
     // (the garage's front at DRIVE in from the street, or further back where the lot's too narrow there)
     for (let g = DRIVE; g < DRIVE + 4; g += 0.25) {
       const vf = g + forward;
@@ -244,6 +245,14 @@ function lay(plan: Plan, elevation: Elevation, mirror: boolean, f: ReturnType<ty
   return null;
 }
 
+/**
+ * Ocotillo Court's two lots round its turning circle that had no house till Phase 6 (docs/suburb-plan.md): one was too
+ * short for any plan, the other a bow tie (sunridgelots.ts). Laid after every other house, from their own numbers, so
+ * the houses before keep their ids, and their yards and residents (sunyards.ts, sunlife.ts, drawn in house order) don't
+ * change
+ */
+export const LAID_LAST = ['sun-lot-87', 'sun-lot-88'];
+
 function build(): House[] {
   const out: House[] = [];
   const rand = rng(8821);
@@ -264,7 +273,7 @@ function build(): House[] {
     for (const p of order) for (const m of [mirror, !mirror]) laid ??= lay(p, elevation, m, f) ?? lay(p, 'arch', m, f);
     const solar = rand() < 0.28;
     const chimney = rand() < 0.18;
-    if (!laid) continue;
+    if (!laid || LAID_LAST.includes(l.id)) continue;
     out.push({
       id: `sun-house-${out.length}`,
       lot: l.id,
@@ -278,6 +287,24 @@ function build(): House[] {
       chimney,
     });
     prev = { scheme, roof, plan: laid.plan, prev2: prev.plan };
+  }
+  // The lots laid last: a plan as above, or a shallow ranch where none fits; a colour and roof unlike the houses either side
+  const late = rng(8822);
+  for (const id of LAID_LAST) {
+    const l = LOTS.find((q) => q.id === id);
+    if (!l) continue;
+    const f = frameOf(l);
+    const mirror = late() < 0.5;
+    const elevation = (['arch', 'stone', 'tower'] as const)[Math.floor(late() * 3)];
+    let laid: ReturnType<typeof lay> = null;
+    for (const p of ['ranch', 'ell'] as Plan[]) for (const m of [mirror, !mirror]) laid ??= lay(p, elevation, m, f) ?? lay(p, 'arch', m, f);
+    for (const m of [mirror, !mirror]) laid ??= lay('ranch', elevation, m, f, true) ?? lay('ranch', 'arch', m, f, true);
+    if (!laid) continue;
+    const i = LOTS.indexOf(l);
+    const beside = out.filter((h) => h.lot === LOTS[i - 1]?.id || h.lot === LOTS[i + 1]?.id || LAID_LAST.includes(h.lot));
+    const scheme = [0, 1, 2, 3, 4, 5].map((k) => (k + Math.floor(late() * SCHEMES.length)) % SCHEMES.length).find((k) => !beside.some((h) => h.scheme === k))!;
+    const roof = [0, 1, 2].map((k) => (k + Math.floor(late() * ROOFS.length)) % ROOFS.length).find((k) => !beside.some((h) => h.roof === k)) ?? 0;
+    out.push({ id: `sun-house-${out.length}`, lot: l.id, ...laid, scheme, roof, o: f.o, u: f.u, v: f.v, solar: late() < 0.28, chimney: false });
   }
   return out;
 }

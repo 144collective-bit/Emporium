@@ -115,7 +115,7 @@ These are my recommendations, made so the plan is complete; any can change.
    shared in `roads3d.ts`. The outskirts' trees keep off (`inSunridge()`);
    the north ring avenue's median breaks at both entrances.
 2. **The houses** (built): `sunhouses.ts` (DOM-free, the chunk's, tested in
-   `tests/sunhouses.test.ts`): a house on 99 of the 101 lots (`HOUSES`), each
+   `tests/sunhouses.test.ts`): a house on 99 of the 101 lots (all 101 since Phase 6) (`HOUSES`), each
    in its lot's frame (`toWorld()`), set back until the lot is wide enough
    (pie-shaped lots widen as they go back) with side yards and a back yard;
    four plans (`Plan`: a one-storey ranch with its garage stepped forward and
@@ -235,7 +235,7 @@ These are my recommendations, made so the plan is complete; any can change.
    - `?bench` has three more Sunridge views (bench.ts `BENCH_VIEWS`):
      `sun-street` at street level down Sunridge Parkway's west side,
      `sun-court` over Palo Verde Court's turning circle (houses all round it;
-     Ocotillo Court's has two lots with no house, below), and `sun-pools` over
+     Ocotillo Court's had two lots with no house, below), and `sun-pools` over
      the back yards' pools along the west wall (four of the nineteen pools
      are in that row). With `sunridge`, over the loop, it has four.
    - Measured headless (swiftshader, so draws and triangles count, not frame
@@ -260,12 +260,21 @@ These are my recommendations, made so the plan is complete; any can change.
      streets, blocks, walls and monuments feed `SOLIDS` and the street
      plan); the few constants only the chunk reads are too small to be
      worth moving. It stays.
-   - Found while choosing the views, for the owner: Ocotillo Court's turning
-     circle stands in open ground. Two of its four lots (`sun-lot-87`,
-     `sun-lot-88`) are the two of the 101 with no house (sunhouses.ts
-     `build()`: no plan fits them, 87 being only 11 deep), and their
-     neighbours' yard walls still run along the empty lot lines (two of them
-     crossing). Left as it is until the owner picks what goes there.
+   - **Ocotillo Court's two empty lots** (found while choosing the views; the
+     owner's pick: a smaller house that fits, the lots where they are). Its
+     turning circle stood in open ground: `sun-lot-87` (west of the circle,
+     wide but under 10 deep) was too short for any plan, and `sun-lot-88`
+     (east of it) was a bow tie, its back corners crossed where the street
+     turns hard from the circle into its stem (sunridgelots.ts `fit()`:
+     their normals crossed), so its yard walls crossed too. Now the lot
+     fitter puts a back the right way round (no lot moved: only 88's back
+     corners swapped, every other lot the same), and both lots have a
+     **shallow ranch** (`lay(..., shallow)`: the rooms flush with the garage,
+     4 deep), laid after every other house from their own numbers
+     (`LAID_LAST`), so the 99 houses before keep their ids, yards and
+     residents exactly. 101 houses on 101 lots; one more driveway car.
+     The circle's north end and the stem's east side still have no lots
+     (the lots round them were laid first).
 7. *(Optional)* **A home of your own** for Dorras, with the owner's say.
 
 ## Constraints
