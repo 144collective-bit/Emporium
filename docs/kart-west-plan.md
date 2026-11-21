@@ -371,7 +371,7 @@ looks.
   items only show in a race, so they're not in the sheets; the headless
   runs' frames show them.
 
-To look at in the morning (nothing's on main):
+To look at in the morning (written before the merge to main on 2026-11-05):
 
 - the park from over exit 8 (`kart-new`) and the plaza from the gate
   (`kart-plaza`);

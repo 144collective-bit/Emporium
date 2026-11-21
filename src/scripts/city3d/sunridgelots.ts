@@ -80,6 +80,10 @@ function fit(b: (typeof SUN_BLOCKS)[number], street: string, pts: Pt[], cum: num
         [A.p[0] + n0[0] * depth, A.p[1] + n0[1] * depth],
         [B.p[0] + n1[0] * depth, B.p[1] + n1[1] * depth],
       ];
+      // (where the street turns hard between the front's two ends, as round a turning circle into its stem, the
+      // normals cross and so would the back's corners: a bow tie no house fits. Its corners the right way round, the
+      // back running the way the front does: docs/suburb-plan.md Phase 6, Ocotillo Court's)
+      if ((back[1][0] - back[0][0]) * (B.p[0] - A.p[0]) + (back[1][1] - back[0][1]) * (B.p[1] - A.p[1]) < 0) back.reverse();
       const bw = Math.hypot(back[1][0] - back[0][0], back[1][1] - back[0][1]);
       if (bw > BACK_MOST) continue;
       // (nor narrowing to nothing at the back, on the inside of a tight bend: no house would fit)
