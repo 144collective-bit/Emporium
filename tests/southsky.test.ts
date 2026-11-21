@@ -3,8 +3,8 @@
 // the floor under you by your height, only the railings stopping you up there, a lift in every core.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { REACH, SKY_LIFTS, SKY_SHAPES, STAIR, UP_FROM, cageLevels, coreFloors, floorName, liftArrival, liftFloorOf, skyFloorAt, skyLiftDoors, skyUp, skyWall, type SkyShape } from '../src/scripts/city3d/southsky';
-import { BLOCKS_RECT, BRIDGES, CAGE, CAGES, CORES as CORES_ALL, GALLERIES, blockById, floorY, inBlock, type Pt } from '../src/scripts/city3d/southblocks';
+import { REACH, SKY_LIFTS, SKY_SHAPES, STAIR, UP_FROM, cageLevels, coreFloors, floorName, liftArrival, liftFloorName, liftFloorOf, skyFloorAt, skyLiftDoors, skyUp, skyWall, type SkyShape } from '../src/scripts/city3d/southsky';
+import { BLOCKS_RECT, BRIDGES, CAGE, CAGES, PERCH, TOP_FLOOR, CORES as CORES_ALL, GALLERIES, blockById, floorY, inBlock, type Pt } from '../src/scripts/city3d/southblocks';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
 import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
@@ -199,5 +199,41 @@ test('walked end to end (docs/brutalist-plan.md Phase 2): every link and bridge 
     walk(ma, a, br.ys[0], br.ys[0], `${br.id} into its end`);
     walk(a, b, br.ys[0], br.ys[1], br.id);
     walk(b, mb, br.ys[1], br.ys[1], `${br.id} into its other end`);
+  }
+});
+
+test("The Perch walked (docs/brutalist-plan.md Phase 3): The Core's lift up to it by name, round its floor, out over each top bridge, held in by its glass", () => {
+  const l = SKY_LIFTS.find((q) => q.id === 'twin-core')!;
+  assert.ok(l.floors.includes(TOP_FLOOR));
+  assert.equal(liftFloorName(l, TOP_FLOOR), 'The Perch');
+  assert.equal(liftFloorName(l, 3), '3rd floor');
+  assert.equal(liftFloorName(SKY_LIFTS.find((q) => q.id !== 'twin-core')!, TOP_FLOOR), floorName(TOP_FLOOR));
+  const y = floorY(l.base, TOP_FLOOR);
+  // (from the lift, to each corner of its floor and out across each top bridge to the tower's door: floor all the way)
+  const a = liftArrival(l, TOP_FLOOR);
+  const walk = (from: Pt, to: Pt, what: string) => {
+    for (let t = 0; t <= 1; t += 0.02) {
+      const [x, z] = [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
+      assert.equal(skyFloorAt(x, z, y), y, `${what}: no floor at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+      assert.equal(skyWall(x, z, y, 0.25), false, `${what}: hemmed in at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+    }
+  };
+  for (const p of PERCH.foot) walk([a.x, a.z], [PERCH.at[0] + (p[0] - PERCH.at[0]) * 0.8, PERCH.at[1] + (p[1] - PERCH.at[1]) * 0.8], 'round The Perch');
+  // (up to a step short of the tower's door: the bridge ends at its face)
+  for (const br of BRIDGES.filter((q) => q.floor === TOP_FLOOR)) {
+    const [p, q] = br.pts;
+    const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    walk([a.x, a.z], [q[0] - ((q[0] - p[0]) / l) * 0.35, q[1] - ((q[1] - p[1]) / l) * 0.35], br.id);
+  }
+  // (its glass holds you in: a step past a face where no bridge is)
+  const faces = PERCH.foot.map((p, j): Pt => {
+    const c = PERCH.foot[(j + 1) % 6];
+    return [(p[0] + c[0]) / 2, (p[1] + c[1]) / 2];
+  });
+  const open = faces.filter((m) => !BRIDGES.some((br) => br.floor === TOP_FLOOR && Math.hypot(br.pts[0][0] - m[0], br.pts[0][1] - m[1]) < 1));
+  assert.equal(open.length, 4);
+  for (const m of open) {
+    const out: Pt = [m[0] + (m[0] - PERCH.at[0]) * 0.1, m[1] + (m[1] - PERCH.at[1]) * 0.1];
+    assert.equal(skyWall(out[0], out[1], y, 0.2), true, `out through its glass at ${out[0].toFixed(1)}, ${out[1].toFixed(1)}`);
   }
 });

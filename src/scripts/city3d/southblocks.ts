@@ -220,6 +220,27 @@ export const HARRIER = twin('harrier', 'Harrier Point', [-67, 371.5], 'orange');
 export const KITE = twin('kite', 'Kite Point', [-35, 378.5], 'teal');
 const twinCoreFoot = squareFoot([-51, 375], TWIN_CORE_HALF, TWIN_ROT, 0.6);
 export const TWIN_CORE: Block = { id: 'twin-core', name: 'The Core', kind: 'core', foot: twinCoreFoot, steps: [{ from: 0, to: 0, storeys: 19 }], base: baseOf(twinCoreFoot) };
+/** The top floor the twins and The Core share: a bridge from The Core to each tower at it (docs/brutalist-plan.md Phase 3) */
+export const TOP_FLOOR = 17;
+/**
+ * The Perch (docs/brutalist-plan.md Phase 3, the owner's name): a hexagonal concrete drum round The Core's top two
+ * floors, wider than it, a flat face to each tower (where the top bridges meet it); inside, one room two storeys high
+ * round a glass lift, a glass band all round it; its roof The Core's, so it's no taller (`topOf()` unchanged)
+ */
+export const PERCH = (() => {
+  const c: Pt = [twinCoreFoot.reduce((s, p) => s + p[0], 0) / twinCoreFoot.length, twinCoreFoot.reduce((s, p) => s + p[1], 0) / twinCoreFoot.length];
+  /** From its middle to the middle of a face, and to a corner */
+  const apothem = 4.3;
+  const r = apothem / Math.cos(Math.PI / 6);
+  const foot = Array.from({ length: 6 }, (_, k): Pt => {
+    const a = TWIN_ROT + Math.PI / 6 + (k * Math.PI) / 3;
+    return [c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r];
+  });
+  const base = TWIN_CORE.base;
+  /** Its floor (the top floor's), its roof (The Core's) */
+  const [y0, y1] = [floorY(base, TOP_FLOOR), roofY(base, storeysOf(TWIN_CORE))];
+  return { name: 'The Perch', at: c, apothem, r, foot, y0, y1, rot: TWIN_ROT };
+})();
 
 // The stairwell blocks: three tall slabs between the avenues (running south: their right side west, their galleries
 // there), three lower round the Circus along the streets' curves
@@ -461,7 +482,9 @@ export interface Bridge {
   pts: [Pt, Pt];
   ys: [number, number];
 }
-const footOf = (e: End) => ('core' in e ? coreById(e.core).foot : 'block' in e ? blockById(e.block).foot : DECKS.find((d) => d.id === e.deck)!.poly);
+/** (The Core's at its top floor: The Perch's, wider) */
+const footOf = (e: End, floor = 0) =>
+  'core' in e ? coreById(e.core).foot : 'block' in e ? (e.block === 'twin-core' && floor >= TOP_FLOOR ? PERCH.foot : blockById(e.block).foot) : DECKS.find((d) => d.id === e.deck)!.poly;
 const centreOf = (poly: Pt[]): Pt => [poly.reduce((s, p) => s + p[0], 0) / poly.length, poly.reduce((s, p) => s + p[1], 0) / poly.length];
 const baseOfEnd = (e: End) => ('core' in e ? blockById(coreById(e.core).of).base : 'block' in e ? blockById(e.block).base : null);
 /** Where a line from `from` to `to` crosses a ring's edge last (`last`) or first */
@@ -475,7 +498,7 @@ function edgeHit(poly: Pt[], from: Pt, to: Pt, last: boolean): Pt {
   return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
 }
 function bridge(id: string, a: End, b: End, floor: number, via?: [Pt, Pt]): Bridge {
-  const [fa, fb] = [footOf(a), footOf(b)];
+  const [fa, fb] = [footOf(a, floor), footOf(b, floor)];
   const [ca, cb] = via ?? [centreOf(fa), centreOf(fb)];
   const pts: [Pt, Pt] = [edgeHit(fa, ca, cb, true), edgeHit(fb, ca, cb, false)];
   const yOf = (e: End) => {
@@ -513,6 +536,9 @@ export const BRIDGES: Bridge[] = [
   ...[3, 6, 9].map((f) => bridge(`rampart-core-${f}`, { core: 'rampart-3' }, { block: 'twin-core' }, f)),
   // The core to each tower, every third floor
   ...[3, 6, 9, 12, 15].flatMap((f) => [bridge(`core-harrier-${f}`, { block: 'twin-core' }, { block: 'harrier' }, f), bridge(`core-kite-${f}`, { block: 'twin-core' }, { block: 'kite' }, f)]),
+  // ...and at the top floor, The Perch to each (the twins joined at the top: docs/brutalist-plan.md Phase 3)
+  bridge(`core-harrier-${TOP_FLOOR}`, { block: 'twin-core' }, { block: 'harrier' }, TOP_FLOOR),
+  bridge(`core-kite-${TOP_FLOOR}`, { block: 'twin-core' }, { block: 'kite' }, TOP_FLOOR),
   // Along the ring road, over the avenues: the Rampart's east end to Linnet, Linnet to Marten, Marten to Wren
   bridge('rampart-linnet', { core: 'rampart-4' }, { core: 'linnet-a' }, 3),
   ...[3, 6].flatMap((f) => [bridge(`linnet-marten-${f}`, { core: 'linnet-a' }, { core: 'marten-a' }, f), bridge(`marten-wren-${f}`, { core: 'marten-a' }, { core: 'wren-a' }, f)]),

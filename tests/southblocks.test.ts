@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARCH_X, BLOCKS, BLOCK_SOLIDS, BRIDGES, BRIDGE_CLEAR, BUNKER, CORES, COURTS, DECKS, DESIRE_LINES, GALLERIES, GRASS, PLAY,
-  BLOCKS_RECT, CAGE, CAGES, PIERS, RAMPART, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
+  BLOCKS_RECT, CAGE, CAGES, PERCH, PIERS, RAMPART, TOP_FLOOR, TWIN_CORE, TWIN_CORE_HALF, roofY, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
 } from '../src/scripts/city3d/southblocks';
 import { EDGE_Z, FOOTPATHS, LOT9_EDGE, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, UNDERHILL } from '../src/scripts/city3d/south';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
@@ -302,4 +302,28 @@ test("the towers' stair cages (docs/brutalist-plan.md): off the streets, the foo
         for (const m of MOUTH_PATHS) assert.ok(distTo(m, p) > PATH_HALF, `${at}: on a subway's path`);
         assert.ok(!inBlock(p), `${at}: in a block`);
       }
+});
+
+test("The Perch (docs/brutalist-plan.md Phase 3): a hexagon wider than The Core round its top two floors, no taller, joined to both twins at the top", () => {
+  // (a hexagon, a flat face to each tower, round The Core's whole footprint and wider, clear of the towers)
+  assert.equal(PERCH.foot.length, 6);
+  assert.ok(PERCH.apothem > TWIN_CORE_HALF + 1);
+  for (const p of TWIN_CORE.foot) assert.ok(inside(PERCH.foot, p), 'The Core out of its drum');
+  for (const id of ['harrier', 'kite']) for (const p of along(PERCH.foot)) assert.ok(!inside(blockById(id).foot, p), `in ${id}`);
+  // (its floor the top floor, its roof The Core's, The Core's top as it was: about 20, under 21)
+  assert.equal(PERCH.y0, floorY(TWIN_CORE.base, TOP_FLOOR));
+  assert.equal(PERCH.y1, roofY(TWIN_CORE.base, storeysOf(TWIN_CORE)));
+  assert.ok(TOP_FLOOR < storeysOf(TWIN_CORE) - 1 && TOP_FLOOR === storeysOf(blockById('harrier')) - 1, "the twins' top floor, The Core's top two");
+  assert.ok(topOf(TWIN_CORE) > 19 && topOf(TWIN_CORE) < 21);
+  // (a bridge to each twin at the top floor, from a face of the drum to the tower's, a few metres long, level)
+  for (const id of ['harrier', 'kite']) {
+    const br = BRIDGES.find((q) => q.id === `core-${id}-${TOP_FLOOR}`)!;
+    assert.ok(br, `no top bridge to ${id}`);
+    const [a, b] = br.pts;
+    assert.ok(Math.abs(Math.hypot(a[0] - PERCH.at[0], a[1] - PERCH.at[1]) - PERCH.apothem) < 0.05, `the ${id} bridge off the middle of a face`);
+    assert.ok(Math.hypot(b[0] - a[0], b[1] - a[1]) > 3, `the ${id} bridge too short`);
+    assert.ok(Math.abs(br.ys[0] - br.ys[1]) < 0.01);
+  }
+  // (the bridges under it, the fifteenth floor's, their roofs, 1.68 over their floor, under its soffit)
+  for (const br of BRIDGES.filter((q) => q.floor === 15 && q.id.startsWith('core-'))) assert.ok(Math.max(...br.ys) + 1.68 < PERCH.y0 - 0.25 - 0.005, `${br.id} into its underside`);
 });
