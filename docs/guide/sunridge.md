@@ -89,9 +89,10 @@ keep it up to date when what it describes changes.
   blocks' street corners rounded (sunridge.ts `roundCorners()`,
   `KERB_RETURNS`, drawn by sunridge3d.ts with the asphalt filled in and the
   kerb round); the gravel verge outside the perimeter wall (sunridge3d.ts);
-  each lot's garden grown into the land behind (sunridgelots.ts `GARDENS`,
-  baked `sun-gardens`; the yards and walls read them through sunyards.ts
-  `gardenFrame()`, `Yard.inner`); eight late lots and houses on the field
+  each block's land divided among its lots into gardens (sunridgelots.ts
+  `divide()`, `GARDENS`, baked `sun-gardens`: outlines; the yards and walls
+  read them through sunyards.ts `gardenFrame()`, `acrossG()`, `depthG()`,
+  `behind()`, `Yard.inner`); eight late lots and houses on the field
   east of the school and the south row's gap (sunridgelots.ts `late()`,
   `LATE_FROM`; sunhouses.ts builds them after every other house).
 - **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views

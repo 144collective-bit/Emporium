@@ -363,22 +363,37 @@ These are my recommendations, made so the plan is complete; any can change.
      rows, the strip by the club, park and school, the south avenue's
      strip, the wedges round the turning circles and the north-west and
      south-west corners.
-   - **The gardens grown:** sunridgelots.ts `GARDENS` (baked as
-     `sun-gardens`, with the lots): each lot's garden grown from its back
-     (each back corner deeper along its side, or out along its back) and
-     along its front (each front corner along the sidewalk's edge, only
-     where the whole lot stays in it), a step at a time and every lot in
-     turn (0.4, then 0.1, then 0.03), while it stays convex, in its block,
-     back from the streets' sidewalks (`STREET_CLEAR`), off the amenities'
-     land and the footpath with a margin (`KEEP_CLEAR`, where the lot
-     wasn't laid within it), out of every other garden, and no nearer the
-     land's edge than the perimeter wall's line (a garden reaching it backs
-     onto that wall); at most `GROW`. The houses keep their lots (`LOTS`);
-     the yards read the gardens: sunyards.ts `gardenFrame()` (the house's
-     frame, the garden's corners), their walls on the gardens' edges
-     (trimmed where another wall already stands: no two along one line),
-     the whole garden behind the returns in gravel (`Yard.inner`), a pool no
-     further from the house than in a lot's own yard.
+   - **The gardens, each block divided among its lots** (the owner, after the
+     first growth pass: "close the pockets ... do another pass to optimise
+     and balance the arrangement of the garden fences. take full creative
+     control and do what is needed to make it a realistic design and
+     layout"). A first pass grew each lot's four corners into the land
+     behind; it left bent gaps and long strips four corners couldn't close.
+     It was replaced by dividing the land as a subdivision is
+     (sunridgelots.ts `divide()`, `GARDENS`, baked as `sun-gardens`): every
+     bit of a block goes to the row of the street it's nearest (so
+     back-to-back rows meet on one rear fence along the block's middle, and
+     a corner's two rows on its diagonal), only where that row has houses
+     (`ROW_REACH` past its first and last), and in the row to the nearest
+     lot (side fences straight back from the street, fanned round a curve,
+     the land behind the inside of a bend shared out). Kept off: the
+     amenities' land in the lot's own block (`KEEP_CLEAR`, where the lot
+     wasn't laid within it), the footpath, every other street's sidewalk
+     and its own past the row's ends (`STREET_CLEAR`), the land's edge
+     nearer than the perimeter wall's line (a garden reaching it backs onto
+     that wall); no deeper than `DEEP`. Each garden is the outline round
+     its cells on a quarter-tile grid (`RES`, `contour()`), smoothed into
+     fence lines (`dp()`, `simplify()`, spikes out), holding its whole lot
+     (`holding()`), brought back inside its block (`pullIn()`): a `Garden`,
+     its `outline`. The houses keep their lots (`LOTS`); the yards read the
+     gardens in the house's frame (sunyards.ts `gardenFrame()`, `acrossG()`,
+     `depthG()`, `behind()`): the walls on every garden edge behind the
+     return walls (the front yard stays open, and the lot's own), shared
+     fences once (trimmed where another wall stands), one return a side;
+     the whole garden behind the returns in gravel (`Yard.inner`); a pool
+     no further from the house than in a lot's own yard. Tested: each
+     garden holds its lot and stays in its block, none overlaps another,
+     and over 90% of the free land is in a garden.
    - **More houses** (the owner's call for the field east of the school):
      the amenities' land is drawn as rough rectangles, and the school's
      and the club's reached across the loop into the blocks outside it, so
@@ -388,10 +403,9 @@ These are my recommendations, made so the plan is complete; any can change.
      school and two in the gap on the south row; their houses are built
      after every other (sunhouses.ts, `rng(8823)`), so every house, yard
      and resident before keeps its id.
-   - **What's left:** about 1,550 square tiles: the corner at the loop's
-     south-east bend (about 270), the pockets between the cul-de-sacs'
-     gardens where two straight-sided gardens can't close a bent gap, the
-     wedge west of the club, and the margins round the amenities.
+   - **What's left:** about 540 square tiles of the 4,800 the scan found,
+     nearly all the thin margins kept round the amenities and the streets
+     and a few slivers where three gardens meet.
 9. *(Optional)* **A home of your own** for Dorras, with the owner's say.
 
 ## Constraints
