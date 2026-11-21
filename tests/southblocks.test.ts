@@ -105,10 +105,20 @@ test('the galleries: along each slab and the Rampart at every third floor it ris
       assert.equal(g.y, floorY(b.base, g.floor));
       for (const p of g.poly) if (!underArch(p)) assert.ok(offStreet(p) > 0.3, `${b.id}'s gallery over a street at ${p}`);
     }
-    // (each core of a slab touches its third floor's gallery)
+    // (each core of a slab touches its third floor's gallery; a service tower standing off its block by its link: the
+    // link from on the gallery's edge to the tower's face, `gap` long, docs/brutalist-plan.md Phase 2)
     for (const c of CORES.filter((q) => q.of === b.id)) {
-      const near = Math.min(...mine.filter((q) => q.floor === 3).flatMap((g) => along(c.foot).map((p) => Math.min(...along(g.poly).map((q) => Math.hypot(p[0] - q[0], p[1] - q[1]))))));
-      assert.ok(near < 0.4, `${c.id} ${near.toFixed(2)} from its gallery`);
+      const third = mine.filter((q) => q.floor === 3);
+      const dist = (pts: Pt[], poly: Pt[]) => Math.min(...pts.map((p) => Math.min(...along(poly).map((q) => Math.hypot(p[0] - q[0], p[1] - q[1])))));
+      if (!c.link) {
+        assert.equal(c.gap, 0);
+        assert.ok(Math.min(...third.map((g) => dist(along(c.foot), g.poly))) < 0.4, `${c.id} from its gallery`);
+        continue;
+      }
+      const [a, e] = c.link;
+      assert.ok(Math.min(...third.map((g) => dist([a], g.poly))) < 0.4, `${c.id}'s link off its gallery`);
+      assert.ok(dist([e], c.foot) < 0.4, `${c.id}'s link short of its tower`);
+      assert.ok(Math.abs(Math.hypot(e[0] - a[0], e[1] - a[1]) - c.gap) < 0.3, `${c.id}'s link ${c.gap} long`);
     }
   }
 });
@@ -250,4 +260,12 @@ test('brutalist (docs/brutalist-plan.md Phase 1): every corner cut straight, a c
       const ends = (sh.cutStart ? 0 : 1) + (sh.cutEnd ? 0 : 1);
       assert.equal(corners, ends * 2, `${b.id} step ${i}: ${corners} corner faces for ${ends} ends`);
     });
+});
+
+test('the service towers (docs/brutalist-plan.md Phase 2): most stand a bridge off their blocks, none nearer the streets', () => {
+  const off = CORES.filter((c) => c.gap > 0);
+  assert.ok(off.length >= 12, `${off.length} of ${CORES.length} stand off`);
+  for (const c of off) assert.ok(c.gap <= 3 && c.link, c.id);
+  // (each link clear of the streets as its galleries are)
+  for (const c of off) for (const p of along(c.link!, false)) assert.ok(offStreet(p) > 0.3, `${c.id}'s link over a street`);
 });

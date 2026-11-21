@@ -314,23 +314,42 @@ export interface Core {
   /** Its roof: over its block's, the lift's machine room */
   top: number;
   foot: Pt[];
+  /**
+   * How far it stands off its block (docs/brutalist-plan.md Phase 2: a service tower of its own, a link from its
+   * gallery to it at each landing; 0: against its block as before). `SERVICE_GAP` where there's room, less where a
+   * street or a parking court is near (`CORE_GAPS`)
+   */
+  gap: number;
+  /** The link's line at each landing: from the gallery's end (or front) to the tower's face, and the way along it */
+  link: [Pt, Pt] | null;
 }
+/** A service tower's distance off its block: a bridge's length (docs/brutalist-plan.md Phase 2) */
+export const SERVICE_GAP = 3;
+/** The towers with less room than that (measured: a street or a parking court near; 0: still against its block) */
+const CORE_GAPS: Record<string, number> = { 'rampart-2': 0, 'rampart-3': 1, 'sorrel-b': 1.5, 'fennel-a': 1 };
 const rotOf = (dir: Pt) => Math.atan2(dir[1], dir[0]);
-function coreAt(b: Block, id: string, at: Pt, dir: Pt, storeys: number): Core {
+function coreAt(b: Block, id: string, at: Pt, dir: Pt, storeys: number, gap: number, link: [Pt, Pt] | null): Core {
   const rot = rotOf(dir);
-  return { id, of: b.id, at, rot, half: CORE_HALF, top: roofY(b.base, storeys) + CORE_OVER, foot: squareFoot(at, CORE_HALF, rot, 0.6) };
+  return { id, of: b.id, at, rot, half: CORE_HALF, top: roofY(b.base, storeys) + CORE_OVER, foot: squareFoot(at, CORE_HALF, rot, 0.6), gap, link };
 }
-/** A slab's cores: one past each end, flush with its galleries' outer edge, so each gallery runs into them */
+/** A slab's cores: past each end, in line with its galleries, standing `gap` off it (each gallery runs on to it by its link) */
 function endCores(b: Block): Core[] {
   const spine = b.spine!;
   const L = lineLength(spine);
   const s = SIDE[b.galleries!];
+  // (its outer face flush with the gallery's outer edge, as before; the link along the gallery band's middle)
   const off = s * (b.depth! / 2 + GALLERY_W - CORE_HALF);
+  const mid = s * (b.depth! / 2 + GALLERY_W / 2);
   return ([['a', 0, -1], ['b', L, 1]] as const).map(([k, d, out]) => {
+    const id = `${b.id}-${k}`;
+    const gap = CORE_GAPS[id] ?? SERVICE_GAP;
     const { p, dir } = pointAt(spine, d);
     const right: Pt = [-dir[1], dir[0]];
-    const at: Pt = [p[0] + dir[0] * out * (CORE_HALF + 0.05) + right[0] * off, p[1] + dir[1] * out * (CORE_HALF + 0.05) + right[1] * off];
-    return coreAt(b, `${b.id}-${k}`, at, dir, storeysAt(b, d));
+    const along = out * (CORE_HALF + 0.05 + gap);
+    const at: Pt = [p[0] + dir[0] * along + right[0] * off, p[1] + dir[1] * along + right[1] * off];
+    const from: Pt = [p[0] + right[0] * mid, p[1] + right[1] * mid];
+    const to: Pt = [p[0] + dir[0] * out * (gap + 0.05) + right[0] * mid, p[1] + dir[1] * out * (gap + 0.05) + right[1] * mid];
+    return coreAt(b, id, at, dir, storeysAt(b, d), gap, gap > 0 ? [from, to] : null);
   });
 }
 /** The Rampart's cores: standing out from its galleries, at these points along it (none under the arch) */
@@ -339,11 +358,15 @@ function sideCores(b: Block, xs: number[]): Core[] {
   const spine = b.spine!;
   const s = SIDE[b.galleries!];
   return xs.map((x, i) => {
+    const id = `${b.id}-${i}`;
+    const gap = CORE_GAPS[id] ?? SERVICE_GAP;
     const d = alongToX(spine, x);
     const { p, dir } = pointAt(spine, d);
     const right: Pt = [-dir[1], dir[0]];
-    const off = s * (b.depth! / 2 + GALLERY_W + CORE_HALF + 0.05);
-    return coreAt(b, `${b.id}-${i}`, [p[0] + right[0] * off, p[1] + right[1] * off], dir, storeysAt(b, d));
+    const edge = s * (b.depth! / 2 + GALLERY_W);
+    const off = s * (b.depth! / 2 + GALLERY_W + CORE_HALF + 0.05 + gap);
+    const link: [Pt, Pt] = [[p[0] + right[0] * edge, p[1] + right[1] * edge], [p[0] + right[0] * (edge + s * (gap + 0.05)), p[1] + right[1] * (edge + s * (gap + 0.05))]];
+    return coreAt(b, id, [p[0] + right[0] * off, p[1] + right[1] * off], dir, storeysAt(b, d), gap, gap > 0 ? link : null);
   });
 }
 export const CORES: Core[] = [...sideCores(RAMPART, RAMPART_CORE_XS), ...[LINNET, MARTEN, WREN, SORREL, FENNEL, TEASEL].flatMap(endCores)];

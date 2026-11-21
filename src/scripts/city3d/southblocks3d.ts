@@ -438,6 +438,32 @@ function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from:
     }
   });
 }
+/**
+ * A service tower's top (docs/brutalist-plan.md Phase 2): a boiler house jutting out over its face away from its block,
+ * a concrete box, and its flue beside it
+ */
+function drawBoilerHouse(b: Batch, c: Core, near: Pt) {
+  const k = kit(b, WORLD);
+  const l = Math.hypot(c.at[0] - near[0], c.at[1] - near[1]) || 1;
+  const out: Pt = [(c.at[0] - near[0]) / l, (c.at[1] - near[1]) / l];
+  const side: Pt = [-out[1], out[0]];
+  const box = (m: Pt, hu: number, hv: number): Pt[] => [
+    [m[0] + out[0] * hu + side[0] * hv, m[1] + out[1] * hu + side[1] * hv],
+    [m[0] - out[0] * hu + side[0] * hv, m[1] - out[1] * hu + side[1] * hv],
+    [m[0] - out[0] * hu - side[0] * hv, m[1] - out[1] * hu - side[1] * hv],
+    [m[0] + out[0] * hu - side[0] * hv, m[1] + out[1] * hu - side[1] * hv],
+  ];
+  // (wound as the footprints are: anticlockwise seen from above)
+  const ring = (pts: Pt[]) => (pts.reduce((a, p, i) => a + p[0] * pts[(i + 1) % 4][1] - pts[(i + 1) % 4][0] * p[1], 0) < 0 ? [...pts].reverse() : pts);
+  const m: Pt = [c.at[0] + out[0] * (c.half * 0.55), c.at[1] + out[1] * (c.half * 0.55)];
+  k.all(() => {
+    prism(b, ring(box(m, c.half * 0.7, c.half * 0.55)), c.top - 0.02, c.top + 1.0, CONC, ROOF);
+    const f: Pt = [c.at[0] - out[0] * (c.half * 0.45) + side[0] * (c.half * 0.5), c.at[1] - out[1] * (c.half * 0.45) + side[1] * (c.half * 0.5)];
+    b.add(plain(new THREE.CylinderGeometry(0.13, 0.15, 1.8, 8).translate(f[0], c.top + 0.9, f[1])), CONC_DARK);
+    b.add(plain(new THREE.CylinderGeometry(0.17, 0.17, 0.1, 8).translate(f[0], c.top + 1.82, f[1])), CONC_DARK);
+  });
+}
+
 /** A rounded square's four corners, a little in: the ring's points furthest out each way round its middle */
 function cornersOf(ring: Pt[]): Pt[] {
   const c = centre(ring);
@@ -758,13 +784,17 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       });
   }
   CORES.forEach((c: Core) =>
-    site(`south-blocks core ${c.id}`, rectOf(c.foot, 1), (into) => {
+    site(`south-blocks core ${c.id}`, rectOf([...c.foot, ...(c.link ?? [])], 1), (into) => {
       const b = new Batch();
       const blk = BLOCKS.find((q) => q.id === c.of)!;
       // (its slot down the face away from its block's spine)
       const near = pointAt(blk.spine!, Math.min(lineLength(blk.spine!), Math.max(0, alongOf(blk.spine!, c.at)))).p;
       const lift = SKY_LIFTS.find((q) => q.id === c.id)!;
-      drawCore(b, c.foot, blk.base, c.top, c.at, [near], coreFloors(c.id).map((f) => floorY(blk.base, f)), lift.door);
+      const landings = coreFloors(c.id).map((f) => floorY(blk.base, f));
+      drawCore(b, c.foot, blk.base, c.top, c.at, [near], landings, lift.door);
+      // A service tower standing off its block: a covered link from the gallery to it at each landing
+      if (c.link) for (const y of landings) drawBridge(b, c.link[0], c.link[1], y);
+      drawBoilerHouse(b, c, near);
       b.build(into, opts);
     })
   );

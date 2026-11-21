@@ -92,8 +92,24 @@ const throughShapes = (): SkyShape[] =>
     const [o0, o1] = [b.depth! / 2 + GALLERY_W - UPSTAND_IN - 0.3, b.depth! / 2 + GALLERY_W + 0.6];
     return coreFloors(c.id).map((f) => level(`through ${c.id} ${f}`, [at(-h, o0), at(h, o0), at(h, o1), at(-h, o1)], floorY(b.base, f)));
   });
+/**
+ * The service towers' links (docs/brutalist-plan.md Phase 2): a covered way from the gallery to a tower standing off its
+ * block, at each landing it opens onto, on into the gallery and the landing a little each end
+ */
+const LINK_HALF = 0.62;
+const linkShapes = (): SkyShape[] =>
+  CORES.filter((c) => c.link).flatMap((c) => {
+    const [a, e] = c.link!;
+    const l = Math.hypot(e[0] - a[0], e[1] - a[1]);
+    const t: Pt = [(e[0] - a[0]) / l, (e[1] - a[1]) / l];
+    const r: Pt = [-t[1] * LINK_HALF, t[0] * LINK_HALF];
+    const [p0, p1]: Pt[] = [[a[0] - t[0] * 0.6, a[1] - t[1] * 0.6], [e[0] + t[0] * 0.6, e[1] + t[1] * 0.6]];
+    const poly: Pt[] = [[p0[0] + r[0], p0[1] + r[1]], [p1[0] + r[0], p1[1] + r[1]], [p1[0] - r[0], p1[1] - r[1]], [p0[0] - r[0], p0[1] - r[1]]];
+    return coreFloors(c.id).map((f) => level(`link ${c.id} ${f}`, poly, floorY(blockById(c.of).base, f)));
+  });
 const landingShapes = (): SkyShape[] => [
   ...throughShapes(),
+  ...linkShapes(),
   ...CORES.flatMap((c) => coreFloors(c.id).map((f) => level(`landing ${c.id} ${f}`, c.foot, floorY(blockById(c.of).base, f)))),
   ...coreFloors('twin-core').map((f) => level(`landing twin-core ${f}`, blockById('twin-core').foot, floorY(blockById('twin-core').base, f))),
 ];
