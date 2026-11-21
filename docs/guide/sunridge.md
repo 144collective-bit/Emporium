@@ -75,7 +75,16 @@ keep it up to date when what it describes changes.
   and a lawnmower now and then by day, sound.ts `mower()`). Drawn by
   `sunlife3d.ts` (`registerLife()` from sunridge3d.ts's `register()`: the
   people into the crowd, the dogs and leads on the main thread, the cars
-  through `parkedCars()`).
+  through `parkedCars()`). Phase 6 (polish and performance) is built. Phase 7
+  (the loose ends) is built and signed off (2026-11-21): the club's and
+  school's panels describe the place; sunyards.ts's `SPRINKLERS` (a rotor on
+  every front lawn, on the clock, `sprinklerOn()`, `sprayAt()`), drawn by
+  sunyards3d.ts's `registerSprinklers()` (one instanced mesh, by day and not
+  in the rain); `sunbell.ts` (the school bell, weekdays, `bellDue()`), rung
+  by sound.ts; and the edges: the lawns' turf islands in their gravel
+  (sunyards.ts `islandOf()`, `Yard.islands`), the rolled kerbs along the streets and turning
+  circles (sunridge3d.ts `kerbAlong()`), the fringe's wash and path
+  meandering (fringes.ts).
 - **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views
   (`sunridge` over the loop, `sun-street`, `sun-court`, `sun-pools`). On
   phones it's about 120-190 draws and 0.27-0.53M triangles, among the city's

@@ -185,6 +185,8 @@ const LOTS: Record<string, THREE.Material> = {
   concrete: toon(COVER.concrete),
   dirt: toon(COVER.dirt),
   yard: new THREE.MeshToonMaterial({ map: yard, color: '#ffffff' }),
+  /** Sunridge's ground between and round its yards (docs/suburb-plan.md Phase 7): dry desert grass, so its lawns' turf reads as watered */
+  dryGrass: toon(COVER.dryGrass),
 };
 export type LotKind = keyof typeof LOTS;
 /** The lot surfaces (grass, paving, concrete, dirt), for squares and pads drawn elsewhere */
@@ -1118,7 +1120,7 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
     const kind: LotKind =
       lots[blk.id] ??
       // (Uptown's lots paved round its towers; its open lots' earth is uptown3d.ts's, behind their hoardings)
-      (blk.ref === 'garage' || blk.id === 'mall-park' ? 'concrete' : blk.ref === 'mall' || blk.ref === 'market' || blk.ref === 'units' || blk.ref === 'uptown' || (DRIVE_BLOCKS as readonly string[]).includes(blk.id) ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
+      (blk.ref === 'sunridge' ? 'dryGrass' : blk.ref === 'garage' || blk.id === 'mall-park' ? 'concrete' : blk.ref === 'mall' || blk.ref === 'market' || blk.ref === 'units' || blk.ref === 'uptown' || (DRIVE_BLOCKS as readonly string[]).includes(blk.id) ? 'paving' : blk.use === 'park' ? 'grass' : blk.id.startsWith('dt-') ? 'paving' : 'grass');
     if (isRect(slab) && !bigPoly(slab)) {
       const [x0, z0] = [Math.min(...slab.map((p) => p[0])), Math.min(...slab.map((p) => p[1]))];
       const [x1, z1] = [Math.max(...slab.map((p) => p[0])), Math.max(...slab.map((p) => p[1]))];

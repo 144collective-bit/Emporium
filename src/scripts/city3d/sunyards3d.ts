@@ -7,14 +7,16 @@
  * distance; the small plants and the back yards' things near only, fewer on phones.
  */
 import * as THREE from 'three';
-import { Batch, lit, siteMat, toon } from './kit';
+import { Batch, fx, lit, moving, siteMat, toon } from './kit';
 import { site } from './tilework';
-import { SLAB } from './world';
+import { SLAB, type Tick } from './world';
 import { hip } from './roofs3d';
 import { addSolids } from './solids';
 import { TILE, tileOf } from './tiles';
 import { HOUSES, SCHEMES, type House } from './sunhouses';
-import { BLOCK, GROUNDS, WALLS, YARDS, YARD_SOLIDS, type Plant, type Yard } from './sunyards';
+import { BLOCK, GROUNDS, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, islandOf, sprayAt, sprinklerOn, type Plant, type Yard } from './sunyards';
+import { SUNRIDGE_RECT } from './sunridge';
+import { CROWD_VIEW } from './character';
 import { LOTS } from './sunridgelots';
 import type { Pt } from './sunridge';
 import { COVER } from './palette';
@@ -69,8 +71,11 @@ function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
     add(new THREE.PlaneGeometry(u1 - u0, v1 - v0).rotateX(-Math.PI / 2).translate((u0 + u1) / 2, yy, -(v0 + v1) / 2), m);
   const at = (g: THREE.BufferGeometry, u: number, v: number, yy = 0) => g.translate(u, yy, -v);
 
-  // The front ground
-  for (const g of y.ground) flat(g, 0.008, y.front === 'desert' ? DG[y.groundTone] : LAWN);
+  // The front ground: a desert front its gravel; a lawn its turf islands laid in the gravel, their edges soft (Phase 7)
+  for (const g of y.ground) flat(g, 0.008, DG[y.groundTone]);
+  for (const g of y.islands) flat(g, 0.0135, LAWN);
+  // The driveway from the garage out to the sidewalk's edge, flared at its end (sunyards.ts `drive`)
+  flat(y.drive, 0.012, CONCRETE);
 
   // The plants: the trees at every distance, the rest near only (phones fewer)
   const big = (p: Plant) => p.kind === 'paloverde' || p.kind === 'saguaro' || p.kind === 'palm' || p.kind === 'shade';
@@ -178,7 +183,11 @@ function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
   {
     const [u0, v0, u1, v1] = y.back;
     rect(u0, u1, v0, v1, 0.006, DG[(y.groundTone + 1) % DG.length]);
-    if (!y.pool && v1 - v0 > 2) rect(u0 + 0.5, u1 - 0.5, y.patio[3] + 0.35, v1 - 0.45, 0.011, LAWN);
+    // (its edges soft, as the front's turf: sunyards.ts `islandOf()`, Phase 7)
+    if (!y.pool && v1 - v0 > 2) {
+      const [a0, a1, b0, b1] = [u0 + 0.3, u1 - 0.3, y.patio[3] + 0.2, v1 - 0.3];
+      flat(islandOf([[a0, b0], [a1, b0], [a1, b1], [a0, b1]], y.house.length * 13 + Math.round(a0 * 7)), 0.011, LAWN);
+    }
   }
   // The back yard: its patio, the ramada over it, the grill
   const [pu0, pv0, pu1, pv1] = y.patio;
@@ -312,4 +321,62 @@ export function registerYards(low: boolean, scene: THREE.Scene | null) {
     });
   }
   if (scene) addSolids(YARD_SOLIDS);
+}
+
+/**
+ * The lawns' sprinklers (docs/suburb-plan.md Phase 7; sunyards.ts `SPRINKLERS`): each a thin arching spray from its
+ * head over the lawn, turning round, while it's on (`sprinklerOn()`: a third of them at a time, on the clock), by day
+ * and not in the rain, as the sprinklers are heard. One instanced mesh in the FX layer (no ink), set each frame only
+ * while the camera's near Sunridge; under reduced motion the ticks run once, so they stand as they were.
+ */
+export function registerSprinklers(scene: THREE.Scene | null, tick: ((f: Tick) => void) | undefined) {
+  if (!scene || !tick || !SPRINKLERS.length) return;
+  // The spray, a reach of 1 along +x: a ribbon rising from the head and falling to the lawn, widening as it goes,
+  // its middle raised a little over its edges (so it reads from the side too)
+  const N = 10;
+  const pos: number[] = [];
+  const idx: number[] = [];
+  for (let i = 0; i <= N; i++) {
+    const k = i / N;
+    const y = 0.05 + 0.34 * 4 * k * (1 - k) * (1 - 0.25 * k);
+    const w = 0.03 + 0.2 * k;
+    pos.push(k, y - 0.02, -w, k, y + 0.015, 0, k, y - 0.02, w);
+    if (i)
+      for (const [a, b] of [
+        [0, 1],
+        [1, 2],
+      ]) {
+        const [p, q] = [(i - 1) * 3, i * 3];
+        idx.push(p + a, q + a, q + b, p + a, q + b, p + b);
+      }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(idx);
+  const mat = new THREE.MeshBasicMaterial({ color: '#d6f1ff', transparent: true, opacity: 0.42, depthWrite: false, side: THREE.DoubleSide, fog: true });
+  const sprays = new THREE.InstancedMesh(geo, mat, SPRINKLERS.length);
+  sprays.frustumCulled = false;
+  scene.add(moving(fx(sprays)));
+  const m4 = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const up = new THREE.Vector3(0, 1, 0);
+  const v = new THREE.Vector3();
+  const sc = new THREE.Vector3();
+  const [x0, z0, x1, z1] = SUNRIDGE_RECT;
+  const update = (t: number, wet: boolean) => {
+    SPRINKLERS.forEach((sp, i) => {
+      const on = wet && sprinklerOn(sp, t);
+      q.setFromAxisAngle(up, sprayAt(sp, t));
+      m4.compose(v.set(sp.x, SLAB + 0.008, sp.z), q, on ? sc.set(sp.r, 1, 1) : sc.set(0, 0, 0));
+      sprays.setMatrixAt(i, m4);
+    });
+    sprays.instanceMatrix.needsUpdate = true;
+  };
+  update(Date.now() / 1000, true);
+  tick(({ night, rain }) => {
+    const ex = CROWD_VIEW.eye.x;
+    const ez = CROWD_VIEW.eye.z;
+    sprays.visible = Math.hypot(Math.max(x0 - ex, ex - x1, 0), Math.max(z0 - ez, ez - z1, 0)) < 160;
+    if (sprays.visible) update(Date.now() / 1000, night < 0.5 && rain < 0.3);
+  });
 }

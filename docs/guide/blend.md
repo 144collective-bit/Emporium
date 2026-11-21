@@ -103,7 +103,9 @@ keep it up to date when what it describes changes.
     districts and the highway stay open land, dressed by their neighbours:
     `fringes.ts` (DOM-free, tested in `tests/fringes.test.ts`): the Kiln Lane
     substation east of Kiln Lane (`SUBSTATION`), Sunridge's fringe with its
-    dry wash (`WASH`, `HEADWALLS`) and the dirt path beside it
+    dry wash (`WASH`, `HEADWALLS`; meandering in bends a few tiles long
+    since the suburb plan's Phase 7, the owner's "fix the edges") and the
+    dirt path beside it, wandering between the wash and its old line
     (`FRINGE_PATH`, from Sunridge's footpath at Palm Court to the north ring
     avenue, `PATH_SQUEEZE`, `FRINGE_BENCHES`), four billboards facing the
     highway (`BILLBOARDS`, `BOARD_COPY`: fixed made-up copy, the city's own

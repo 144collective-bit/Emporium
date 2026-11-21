@@ -13,7 +13,7 @@ import { SLAB } from './world';
 import { Batch, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { registerHouses } from './sunhouses3d';
-import { registerYards } from './sunyards3d';
+import { registerSprinklers, registerYards } from './sunyards3d';
 import { registerAmenities } from './sunamenities3d';
 import { registerLife } from './sunlife3d';
 import { registerFringes } from './fringes3d';
@@ -21,7 +21,8 @@ import { COURT } from './mall';
 import { EW_ROADS, MEDIAN, WALK_W } from './layout';
 import { along, dashes, pieces, ribbon, unit } from './roads3d';
 import { BULB, COURTS, ENTRIES, ENTRY_MEDIAN, MONUMENTS, PATH, SUN_CROSSINGS, SUN_NAME, SUN_STREETS, WALL, WALL_RUNS, WEST_EDGE, type Pt, type Rect } from './sunridge';
-import { COVER, KERB as KERB_C, ROAD } from './palette';
+import { COVER, KERB as KERB_C, ROAD, STONE as STONE_C } from './palette';
+import { PLAN, onSlab } from './streetplan';
 
 export const SELF = import.meta.url;
 
@@ -41,6 +42,45 @@ const CAP = toon('#b39468');
 const STONE = toon('#8b7b68');
 const PAVING = toon('#cbbfa6');
 const UPLIGHT = neon('#ffd9a0', 0.15, 1.3);
+/** The rolled kerb along the sidewalk's edge (Phase 7): pale stone, so the street's edge reads */
+const KERB_STONE = toon(STONE_C.kerb);
+const KERB_W = 0.14;
+
+/** A line in steps no longer than `step` */
+function dense(pts: Pt[], step: number): Pt[] {
+  const out: Pt[] = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const [a, b] = [pts[i - 1], pts[i]];
+    const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
+    for (let k = 1; k <= n; k++) out.push([a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n]);
+  }
+  return out;
+}
+/** A point `d` right of a line at its point i (the line's way from i to the next, or from the one before) */
+function rightOf(pts: Pt[], i: number, d: number): Pt {
+  const [a, b] = i < pts.length - 1 ? [pts[i], pts[i + 1]] : [pts[i - 1], pts[i]];
+  const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  // (right of travel, seen from above with z south: (-dz, dx))
+  return [pts[i][0] - ((b[1] - a[1]) / l) * d, pts[i][1] + ((b[0] - a[0]) / l) * d];
+}
+/**
+ * The kerb along one side of a line `off` right of it (negative: left), `KERB_W` wide on the sidewalk's top: only
+ * where there is sidewalk (a slab), so it breaks where another street comes in or a crossing cuts through.
+ */
+function kerbAlong(b: Batch, line: Pt[], off: number) {
+  const pts = dense(line, 0.4);
+  const mid = off + Math.sign(off) * (KERB_W / 2);
+  let run: Pt[] = [];
+  const flush = () => {
+    if (run.length > 1) b.add(ribbon(run, Math.min(off, off + Math.sign(off) * KERB_W), Math.max(off, off + Math.sign(off) * KERB_W), () => SLAB + 0.005), KERB_STONE);
+    run = [];
+  };
+  pts.forEach((p, i) => {
+    if (onSlab(PLAN, rightOf(pts, i, mid))) run.push(p);
+    else flush();
+  });
+  flush();
+}
 
 /** The name on the monuments: bronze letters on a stone plaque */
 const NAME = siteMat(
@@ -87,6 +127,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerHouses(low, scene);
   // The yards and their walls (Phase 3: sunyards3d.ts)
   registerYards(low, scene);
+  registerSprinklers(scene, tick);
   // The slivers by the highway beside it (fringes3d.ts, docs/blend-plan.md Phase 5c)
   registerFringes(['sunridge'], low);
   // The club, the park and the school (Phase 4: sunamenities3d.ts)
@@ -105,6 +146,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       site(`sunridge street ${s.id} ${k}`, pc.rect, (into) => {
         const b = new Batch();
         b.add(ribbon(pc.pts, -s.half, s.half, () => Y), ASPHALT);
+        // (its kerbs, both sides)
+        for (const side of [-1, 1]) kerbAlong(b, pc.pts, side * s.half);
         const ys: THREE.Matrix4[] = [];
         if (centre) dashes(ys, pc.pts, 0, 1.1, 0.55, 0.07, () => Y + 0.006, (x, z) => nearCrossing(x, z, 4.6));
         b.instances(unit, YELLOW, ys);
@@ -132,6 +175,9 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     site(`sunridge bulb ${c.id}`, [e[0] - BULB - 1, e[1] - BULB - 1, e[0] + BULB + 1, e[1] + BULB + 1], (into) => {
       const b = new Batch();
       b.add(new THREE.CircleGeometry(BULB, low ? 20 : 32).rotateX(-Math.PI / 2).translate(e[0], Y + 0.002, e[1]), ASPHALT);
+      // (its kerb round the circle, where the sidewalk is: the stem's mouth stays open)
+      const ring: Pt[] = Array.from({ length: 65 }, (_, k) => [e[0] + Math.cos((k / 64) * Math.PI * 2) * BULB, e[1] + Math.sin((k / 64) * Math.PI * 2) * BULB]);
+      kerbAlong(b, ring, -1e-3);
       b.build(into, { cast: false, receive: true });
     });
   }
