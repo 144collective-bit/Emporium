@@ -275,7 +275,7 @@ These are my recommendations, made so the plan is complete; any can change.
      residents exactly. 101 houses on 101 lots; one more driveway car.
      The circle's north end and the stem's east side still have no lots
      (the lots round them were laid first).
-7. **The loose ends** (built, waiting on the owner's sign-off; the owner's
+7. **The loose ends** (built, signed off 2026-11-21; the owner's
    picks, 2026-11-21, from the audit after Phase 6):
    - **The panels:** the club's and the school's describe the place
      instead of "coming soon" (draft copy, the owner's to change).

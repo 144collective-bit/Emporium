@@ -76,7 +76,7 @@ keep it up to date when what it describes changes.
   `sunlife3d.ts` (`registerLife()` from sunridge3d.ts's `register()`: the
   people into the crowd, the dogs and leads on the main thread, the cars
   through `parkedCars()`). Phase 6 (polish and performance) is built. Phase 7
-  (the loose ends) is built, waiting on the owner's sign-off: the club's and
+  (the loose ends) is built and signed off (2026-11-21): the club's and
   school's panels describe the place; sunyards.ts's `SPRINKLERS` (a rotor on
   every front lawn, on the clock, `sprinklerOn()`, `sprayAt()`), drawn by
   sunyards3d.ts's `registerSprinklers()` (one instanced mesh, by day and not
