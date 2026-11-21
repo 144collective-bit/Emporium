@@ -3,6 +3,10 @@
 Part of the project guide (`CLAUDE.md` is its index). Moved here word for word from `CLAUDE.md`;
 keep it up to date when what it describes changes.
 
+- **The redesign** (the owner's call, 2026-11-21: "like central park",
+  ornate masonry, a bandstand and a café) is planned in
+  `docs/westlake-plan.md` in seven phases, each with the owner's sign-off;
+  keep it up to date.
 - **Westlake Park** (growth plan Phase 9b, the owner's call: a park
   district with a stadium as its attraction, scenery only for now) on the
   land west of town, north of the river, between the ring highway and the
