@@ -27,7 +27,7 @@ import { site } from './tilework';
 import { COVER, ROAD, STONE } from './palette';
 import { cyl, light, soft } from './airportkit';
 import { AVENUE, AVENUE_HALF, BARRIER_Y, FENCE_H, FENCE_RUNS, FENCE_T, PIER, PIER_H, WALL_CAP, WALL_PANEL, piersOf, GATES, GUARDHOUSE_H, LOOP_SHORT, SIGN_WALL, SIGN_WALL_H, VISITORS, VISITORS_DRIVE, VISITOR_CENTRE, VISITOR_CENTRE_H, VISITOR_LANDING, VISITOR_STAIR, stairY, barrierOf, guardhouseOf, type Gate, BARRACKS, BARRACKS_H, BERM, BERM_H, FLAGPOLES, FLAG_H, GATEHOUSE_H, HELI_HUT, HELI_PADS, HQ, HQ_H, MONUMENT, MOTOR_POOL, MOTOR_SHED, MOTOR_SHED_H, PARADE, RADAR, RANGE, RANGE_HOUSE, SERVICES, SERVICE_ROAD, WALL_GATE, WATCHTOWERS, WATCHTOWER_H, WATER_TOWER, AIRBASE_RECT } from './airbase';
-import { RANGE_LANES, BEAM_L, SWEEP, WALL_LIGHTS, searchRest } from './airbasedress';
+import { RANGE_LANES, BEAM_L, SWEEP, PIER_LIGHTS, WALL_LIGHTS, searchRest } from './airbasedress';
 import type { Pt } from './streetplan';
 import type { Rect } from './tiles';
 
@@ -185,6 +185,13 @@ function gate(b: Batch, g: Gate, low: boolean) {
   bar(b, w, e, 0.08 + LEAF + 0.05, 0.18, STEEL, 0.1);
   if (!low)
     b.detail(() => {
+      // (a lamp on each pier's outer face, as the wall's: its wash is wallWash()'s)
+      for (const l of PIER_LIGHTS) {
+        if (Math.abs(l.z - l.nz * (PIER / 2) - g.z) > 0.05 || Math.abs(l.x - g.x) > g.half + PIER + 0.05) continue;
+        const z = l.z + l.nz * 0.1;
+        b.add(new THREE.BoxGeometry(0.34, 0.14, 0.2).translate(l.x, LIGHT_Y, z), STEEL_DARK);
+        b.add(new THREE.BoxGeometry(0.28, 0.02, 0.14).translate(l.x, LIGHT_Y - 0.08, z), WALL_LAMP);
+      }
       const n = Math.round((e[0] - w[0]) / 0.6);
       for (let k = 1; k < n; k++) {
         const x = w[0] + ((e[0] - w[0]) * k) / n;
@@ -524,24 +531,35 @@ function searchlights(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined)
 
 /**
  * The wall's lights' washes (Phase 6): a quad down its outer face under each light (airbasedress.ts `WALL_LIGHTS`),
- * narrow at the light and fanning out as it falls, fading to nothing at the grass; one additive mesh in the FX layer,
- * at night only and under the bloom's threshold (the city's wall's floodlights' way, wall3d.ts). Not on phones
+ * narrow at the light and fanning out as it falls, and on (Phase 6's polish) as a pool on the grass at its foot; the
+ * piers' lamps the same, as narrow as a pier. One additive mesh in the FX layer, at night only and under the bloom's
+ * threshold (the city's wall's floodlights' way, wall3d.ts). Not on phones
  */
 function wallWash(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined) {
   const pos: number[] = [];
   const uv: number[] = [];
   const idx: number[] = [];
-  const W = 2.6;
-  for (const l of WALL_LIGHTS) {
-    // (a hair off the outer face, out)
-    const off = FENCE_T / 2 + 0.04;
-    const [cx, cz] = [l.x + l.nx * off, l.z + l.nz * off];
-    const [ax, az] = [cx - l.nz * (W / 2), cz + l.nx * (W / 2)];
-    const [bx, bz] = [cx + l.nz * (W / 2), cz - l.nx * (W / 2)];
+  const quad = (a: number[], c: number[], d: number[], e: number[], v0: number, v1: number) => {
     const n = pos.length / 3;
-    pos.push(ax, 0.05, az, bx, 0.05, bz, bx, LIGHT_Y, bz, ax, LIGHT_Y, az);
-    uv.push(0, 0, 1, 0, 1, 1, 0, 1);
+    pos.push(...a, ...c, ...d, ...e);
+    uv.push(0, v0, 1, v0, 1, v1, 0, v1);
     idx.push(n, n + 1, n + 2, n, n + 2, n + 3);
+  };
+  const POOL = 1.8;
+  for (const [lights, off, W] of [
+    [WALL_LIGHTS, FENCE_T / 2 + 0.04, 2.6],
+    [PIER_LIGHTS, 0.04, PIER - 0.12],
+  ] as const) {
+    for (const l of lights) {
+      // (a hair off the outer face, out: up the face (v 0 to 1), then out over the grass (v 0 to -1))
+      const [cx, cz] = [l.x + l.nx * off, l.z + l.nz * off];
+      const [ax, az] = [cx - l.nz * (W / 2), cz + l.nx * (W / 2)];
+      const [bx, bz] = [cx + l.nz * (W / 2), cz - l.nx * (W / 2)];
+      quad([ax, 0.05, az], [bx, 0.05, bz], [bx, LIGHT_Y, bz], [ax, LIGHT_Y, az], 0, 1);
+      const [px, pz] = [l.nx * POOL, l.nz * POOL];
+      const g = 0.4;
+      quad([ax, 0.04, az], [bx, 0.04, bz], [bx + px + l.nz * g, 0.04, bz + pz - l.nx * g], [ax + px - l.nz * g, 0.04, az + pz + l.nx * g], 0, -1);
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -557,7 +575,9 @@ void main() {
   float across = 1.0 - pow(clamp(abs(vUv.x * 2.0 - 1.0), 0.0, 1.0), 2.0);
   float widen = 0.2 + 0.8 * (1.0 - clamp(vUv.y, 0.0, 1.0));
   float fan = smoothstep(1.0 - widen, 1.0, across);
-  float a = uNight * 0.36 * fan * pow(clamp(vUv.y, 0.0, 1.0), 0.8);
+  float a = uNight * 0.36 * fan * (0.3 + 0.7 * pow(clamp(vUv.y, 0.0, 1.0), 0.8));
+  // (the pool on the grass: as bright as the face's foot where it meets it, fading out)
+  if (vUv.y < 0.0) { float d = clamp(1.0 + vUv.y, 0.0, 1.0); a = uNight * 0.11 * smoothstep(0.0, 1.0, across) * d * d; }
   gl_FragColor = vec4(uColor * a, 1.0);
   #include <colorspace_fragment>
 }`,

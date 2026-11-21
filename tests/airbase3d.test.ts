@@ -112,3 +112,27 @@ test("the wall's lights (Phase 6): along every run, outside the base, facing out
     assert.ok(!inAirbase(l.x + l.nx * 2, l.z + l.nz * 2) && inAirbase(l.x - l.nx * 2, l.z - l.nz * 2), `a light facing in at ${l.x}, ${l.z}`);
   }
 });
+
+test("the wall's lights clear of the panels' joints, and a lamp on each gate pier facing out (Phase 6's polish)", async () => {
+  const { WALL_LIGHTS, PIER_LIGHTS } = await import('../src/scripts/city3d/airbasedress');
+  const { FENCE_RUNS, GATES, PIER, WALL_PANEL, inAirbase, piersOf } = await import('../src/scripts/city3d/airbase');
+  for (const l of WALL_LIGHTS) {
+    const run = FENCE_RUNS.find(([a, c]) => {
+      const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      const t = ((l.x - a[0]) * (c[0] - a[0]) + (l.z - a[1]) * (c[1] - a[1])) / (len * len);
+      return t >= 0 && t <= 1 && Math.abs((l.x - a[0]) * (c[1] - a[1]) - (l.z - a[1]) * (c[0] - a[0])) / len < 0.05;
+    });
+    assert.ok(run, `a light off the line at ${l.x}, ${l.z}`);
+    const [a, c] = run;
+    const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    const panels = Math.max(1, Math.round(len / WALL_PANEL));
+    const along = (Math.hypot(l.x - a[0], l.z - a[1]) / len) * panels;
+    // (a joint at every whole panel: the light half a panel from the nearest)
+    assert.ok(Math.abs(along - Math.floor(along) - 0.5) < 0.01, `a light on a joint at ${l.x}, ${l.z}`);
+  }
+  assert.equal(PIER_LIGHTS.length, GATES.length * 2);
+  for (const l of PIER_LIGHTS) {
+    assert.ok(GATES.some((g) => piersOf(g).some(([x, z]) => x === l.x && Math.abs(l.z - z) === PIER / 2)), `a pier's lamp off its pier at ${l.x}, ${l.z}`);
+    assert.ok(!inAirbase(l.x, l.z + l.nz * 2) && inAirbase(l.x, l.z - l.nz * 3), `a pier's lamp facing in at ${l.x}, ${l.z}`);
+  }
+});
