@@ -117,7 +117,8 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
   tired (`STRIP_TIRED`), one in seven dark. All the small mess near only and off on phones.
 
 - **The boot:** merging main took it to 775.6 KB; trimmed, not raised (the owner's call): the memory measures
-  (`perf.ts`) load only with `?fps`, `?bench` and `__mem()`. 774.6 KB after.
+  (`perf.ts`) load only with `?fps`, `?bench` and `__mem()`. 774.6 KB after. Main's next merge took it to 775.6
+  again: the readout's text moved to its own chunk too (`readout.ts`), 774.6 KB after.
 
 ## The owner's decisions (2026-11-21)
 

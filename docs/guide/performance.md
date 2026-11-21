@@ -500,7 +500,8 @@ keep it up to date when what it describes changes.
   distance on any tier while walking, `?horizon=0` turns it off. Tested in
   `tests/tileplan.test.ts` and `tests/tilebatch.test.ts`.
 - `?fps` in the address (`.city-stats`, built in
-  `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
+  `index.ts`, its text by `readout.ts`, a chunk of its own loaded only with
+  `?fps` and `?bench`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory
   (`sceneMemory()` in `perf.ts`, its own chunk since 2026-11-21, loaded only
   with the readout, `?bench` and `__mem()`, which reads null until it's in), how many tile pieces were drawn and
