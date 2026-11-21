@@ -13,8 +13,9 @@
  * - The mission tracker in the walk HUD (`[data-missions-tracker]`): a line
  *   and a mini bar per active mission, hidden when there are none; on phones
  *   a pill with the count that opens on a tap.
- * - The Profile tab's level and badges (`[data-badges]`): level, title and
- *   XP bar, the badges earned, the rest dimmed.
+ * - The hub's Missions tab (`[data-badges]`, docs/header-plan.md): level, title
+ *   and XP bar, then Active (your missions, with Claim and Give up) · Badges
+ *   (earned, the rest dimmed) · Done.
  * - Getting started (guide.ts): the step you're on as a card under the header
  *   in the City view (`[data-guide]`, with a way there and an ×), the top row
  *   of the walk tracker, and the list of steps at the top of the Signal
@@ -202,22 +203,52 @@ export function createMissionsUI(root: HTMLElement, game: GameDeps, hooks: Missi
       levelSummary.title = `${title} · ${toGo}`;
     }
   }
-  /* ---------- The hub's Missions tab: level and badges ---------- */
+  /* ---------- The hub's Missions tab (docs/header-plan.md): the level, then Active · Badges · Done ---------- */
 
+  /** The Missions tab's section showing */
+  let hubTab: 'active' | 'badges' | 'done' = 'active';
   function badgesHtml() {
     const s = game.save();
     const lp = levelProgress(s.xp);
     const earned = BADGES.filter((b) => hasBadge(s, b.id));
     const locked = BADGES.filter((b) => !hasBadge(s, b.id));
+    const active = activeMissions(s);
+    const done = s.missions.done.map((id) => mission(id)).filter((m): m is Mission => !!m);
     const row = (b: (typeof BADGES)[number], on: boolean) =>
       `<li class="${on ? 'is-earned' : 'is-locked'}"><i class="badge-mark" aria-hidden="true"></i><b>${esc(b.name)}</b><small>${esc(b.blurb)}${b.xp ? ` +${fmt.format(b.xp)} XP` : ''}</small></li>`;
+    const tab = (id: typeof hubTab, label: string, n: string) =>
+      `<button type="button" role="tab" data-mtab="${id}" aria-selected="${hubTab === id}" tabindex="${hubTab === id ? 0 : -1}">${label} <small>${n}</small></button>`;
+    const body =
+      hubTab === 'active'
+        ? active.length
+          ? `<ul class="market-list">${active.map((a) => activeRow(s, a)).join('')}</ul>`
+          : '<p class="hub-text">None on the go. Take one at the board.</p>'
+        : hubTab === 'badges'
+          ? `<ul class="badge-list">${earned.map((b) => row(b, true)).join('')}${locked.map((b) => row(b, false)).join('')}</ul>`
+          : done.length
+            ? `<ul class="mission-done-list">${done.map((m) => `<li><span>${esc(m.name)}</span>${reward(m)}</li>`).join('')}</ul>`
+            : '<p class="hub-text">None done yet</p>';
     return `<p class="walk-skins-head"><span>Level ${lp.level} · ${esc(titleFor(lp.level))}</span><span>${fmt.format(s.xp)} XP</span></p>
       <i class="stall-bar" style="--v:${lp.into}"></i>
       <small class="level-togo">${lp.level >= MAX_LEVEL ? 'Top level' : `${fmt.format(lp.toGo)} XP to level ${lp.level + 1}`}</small>
-      <p class="walk-skins-head"><span>Badges</span><span><b>${earned.length}</b> / ${BADGES.length}</span></p>
-      <ul class="badge-list">${earned.map((b) => row(b, true)).join('')}${locked.map((b) => row(b, false)).join('')}</ul>`;
+      <div class="set-tabs mission-tabs" role="tablist" aria-label="Missions">${tab('active', 'Active', `${active.length}/${MISSIONS_MAX}`)}${tab('badges', 'Badges', `${earned.length}/${BADGES.length}`)}${tab('done', 'Done', String(done.length))}</div>
+      <div class="mission-tab" role="tabpanel">${body}</div>`;
   }
   const paintProfile = () => badgesEl && repaint(badgesEl, badgesHtml());
+  // The Missions tab: its sections, and Claim and Give up on its Active rows (the board's own buttons: act())
+  badgesEl?.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const sec = t.closest<HTMLButtonElement>('[data-mtab]');
+    if (sec) {
+      hubTab = sec.dataset.mtab as typeof hubTab;
+      paintProfile();
+      badgesEl.querySelector<HTMLElement>(`[data-mtab="${hubTab}"]`)?.focus({ preventScroll: true });
+      return;
+    }
+    const btn = t.closest<HTMLButtonElement>('button');
+    if (btn && !btn.disabled && badgesEl.contains(btn)) act(btn);
+    paintProfile();
+  });
 
   /* ---------- The walk HUD's tracker ---------- */
 

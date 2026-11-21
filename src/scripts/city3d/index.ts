@@ -118,6 +118,7 @@ import { MONO_STATIONS } from './monorail';
 import { CABLE_DOORS } from './cablecar';
 import { PLACES } from './places';
 import { placeName } from './places';
+import { hubHooks } from './hubhooks';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
@@ -1596,7 +1597,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   walkBtn.addEventListener('click', () => startWalking(new URLSearchParams(location.search).has('spawn') ? undefined : HOME_SPAWN));
   walkBtn.hidden = false;
   // The mode header's City button: back to the city view from walking
-  const head = createCityHead(root);
+  // (its words are screen readers' now: what they told everyone else comes as a toast, docs/header-plan.md)
+  const head = createCityHead(root, { toast: (text, ms) => tycoon && game.toast(text, ms) });
   head.city.addEventListener('click', () => {
     if (walking) stopWalking();
   });
@@ -1803,6 +1805,32 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         .catch(() => game.toast('No taxis · try again')),
     riding: () => walk.riding,
   });
+  // The hub's Map tab (docs/header-plan.md, hubtabs-ui.ts): the world map's own actions, by a place's spot
+  {
+    const placeOf = (spot: string) => PLACES.find((p) => p.spot === spot);
+    const m = travel.deps;
+    hubHooks.map = {
+      state: () => m.state(),
+      visited: () => m.visited(),
+      here: () => (walking ? walk.position : controls.target),
+      go(spot, act) {
+        const p = placeOf(spot);
+        if (!p) return;
+        if (act === 'view') m.openSpot(spot);
+        else if (act === 'walk') m.walkHere(p);
+        else if (act === 'travel') m.travel(p);
+        else if (act === 'taxi') m.taxi(p);
+        else this.pin(spot);
+      },
+      pin(spot) {
+        const p = placeOf(spot);
+        if (!p) return;
+        const name = placeName(root, p).name;
+        m.setWaypoint({ x: p.at.x, z: p.at.z }, name);
+        game.toast(`Waypoint · ${name}`);
+      },
+    };
+  }
   // The taxis (taxi.ts): loaded the first time one's called (the world map's Taxi here)
   let taxis: ReturnType<typeof createTaxis> | null = null;
   const loadTaxis = lazy(

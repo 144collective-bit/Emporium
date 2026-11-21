@@ -40,24 +40,27 @@ keep it up to date when what it describes changes.
   walking, the fly-in runs again instead, `city.intro()`); every visit opens at Day and Clear (the owner's call: Live
   and Auto, or any other time or weather, are the visitor's to pick, for
   that visit only); Multiplayer says "Coming soon" without `PUBLIC_GAME_SERVER`
-  and flips the Online switch on and enters with one; Options holds Time,
-  Weather and Sound, driving the header's own
-  settings controls (pressed when the city is up, queued until then). The
+  and flips the Online switch on and enters with one; Settings opens the
+  hub's own Settings over the title screen (`docs/settings-plan.md`). The
   root carries `has-start` until a choice is made; the loader and the
   welcome tip wait behind it.
 - The city page has **one header**: the city's own (`.city-head` in
   `CityMap.astro`, copy in `head.ts`), clear over the game since the
-  controls plan's Phase 5 (the owner's call: no bar, no logo, on every
-  screen; the title with a shadow under it, each button its own dark chip,
+  controls plan's Phase 5 (the owner's call: no bar on any screen; each
+  button its own dark chip,
   touches between them going through to the game). The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
   other pages. Walk mode carries the same header as the City view (the
   owner's call, after Phase 5 had it down to ☰ in play), so City / Walk
-  switches between the two from either. Left to right: the mode title and
-  subtitle (City view, Walk mode), then on the
+  switches between the two from either. Left to right: the game's title
+  art, small (`.city-head-logo`, the owner's call, 2026-11-21:
+  `docs/header-plan.md`; the mode's title and line, City view, Walk mode,
+  Driving · City Hatch, are for screen readers only, and what they told
+  everyone else is a toast: the City view's line the first time, `hints`
+  in the settings record, and a vehicle's name each time you get in), then on the
   right (the emotes, online, and ammo and score while walking), the City /
-  Walk switch (the current mode lit with a glow and a gradient underline,
-  the other dimmed), and the tools: in the 3D city (not while walking on
+  Walk switch (one button at every width: only the one that takes you to
+  the other mode, its icon in coin, its word where there's room), and the tools: in the 3D city (not while walking on
   phones) the Dorras readout (`[data-dorras]`, painted by `tycoon-ui.ts`, a
   green dot when the stall's till has takings; it opens the hub on
   Business) and the level pill (`[data-level]`, `missions-ui.ts`: level,
@@ -167,9 +170,9 @@ keep it up to date when what it describes changes.
   is the opacity, solid while held. A new touch button is a `.tc` with its
   icon and word, and its slot in `LAYOUTS`; anything new pinned near the
   buttons goes in `clash()`. Phase 5 (the clear header and the installed
-  game) is built, waiting on the owner's sign-off: the header clear and
-  without its logo on every screen (walk mode's the City view's, above, the
-  owner's later call); installed (added
+  game) is built, waiting on the owner's sign-off: the header clear on
+  every screen (walk mode's the City view's, above, the owner's later call;
+  its logo back, small, since `docs/header-plan.md`); installed (added
   to the home screen) the game opens full screen with no browser bars
   (`public/site.webmanifest`: `display` fullscreen, standalone on iPhones,
   whose status bar stays, black; the meta tags in `Base.astro`). Phase 6
@@ -314,3 +317,25 @@ keep it up to date when what it describes changes.
   Settings button opens the hub's Settings over it (the hub lifts over the
   title screen and shows only that tab there, `.is-start`); its Options
   pane is gone, and so is Reset view.
+- **The header and the hub's tabs** (the owner's call, 2026-11-21: "work on
+  the menu drop down and the header", planned and built in
+  `docs/header-plan.md`, waiting on the owner's sign-off): the header's
+  logo and one City / Walk switch (above); the hub's title is the tab
+  you're on, its tab strip slimmer on phones. **Map**: World map, then a
+  `‹ District ›` picker (`maptab.ts`, DOM-free, tested in
+  `tests/maptab.test.ts`: `AREAS`, `AREA_OF`, `DIRECTORY`, which the page
+  and the pins are built from, `areaHere()`) starting where you are
+  ("Here"), All among its choices; a row a place (`[data-map-row]`): its
+  name and line (`[data-dir-spot]`: `placeName()` reads them, a click
+  opens it), a Soon tag (`soonSplit()`), **Go** (`goAct()`: View in the
+  City view, Go to fast travel to a place walked to, Taxi to one not yet,
+  Route at a wheel or on a ride; done through the world map's own actions,
+  `travel-ui.ts` `deps`, filled into `hubhooks.ts` by index.ts) and **◎**
+  (a waypoint; X on a gamepad, the hub's `mk-alt`); More at the foot.
+  **Missions** (`missions-ui.ts`): the level and XP, then Active (Claim
+  and Give up, the board's own buttons) · Badges · Done. **Profile**: the
+  rifle finish a `‹ value ›` picker over combat.ts's own finish buttons
+  (kept out of sight); the wardrobe's two buttons together. The Map and
+  Profile tabs' wiring is `hubtabs-ui.ts` (its own chunk, the first time
+  either shows); every picker's is `pickerkit.ts`, Settings' too. A new
+  place goes in `AREAS` in its district.

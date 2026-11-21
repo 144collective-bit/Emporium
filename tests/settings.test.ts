@@ -165,3 +165,13 @@ test('what the game reads off it', () => {
 test('the record goes in the save backup', () => {
   assert.ok((BACKUP_KEYS as readonly string[]).includes('degen-city-settings-v1'));
 });
+
+test('the one-time hints are kept clean, and Reset all leaves them', () => {
+  assert.deepEqual(cleanSettings({ hints: ['city', 'city', 7, 'x'] }).hints, ['city', 'x']);
+  assert.deepEqual(cleanSettings({ hints: 'city' }).hints, []);
+  const s = cleanSettings({ hints: ['city'], fov: 70 });
+  const all = cleanSettings({ ...s, ...resetPatch() });
+  assert.deepEqual(all.hints, ['city']);
+  assert.equal(all.fov, FOV_BASE);
+});
+
