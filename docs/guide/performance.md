@@ -7,7 +7,16 @@ keep it up to date when what it describes changes.
   city stands still (no fly-in, no traffic) and CSS animations stop. It's drawn only when something changes
   (`dirty` in index.ts): what's built as you go asks for a frame at most
   once a second (`builtShows()`). Sound is always off until the visitor
-  turns it on.
+  turns it on. Its ticks run on the first frame, with the time held at 0,
+  and again once the sky has settled somewhere a step on (`stillticks.ts`, DOM-free,
+  `tests/stillticks.test.ts`; the owner's call, 2026-11-20): nothing moves,
+  but what follows the sky catches up when the time or weather changes
+  later (the menu's, the live hour's, the review shots' night): the murk
+  past the wall darkening, the districts' night lights. Before, they kept
+  the first frame's, the murk a pale day grey under a night sky. Once a
+  change, not on every step of the sky's glide to it: that ran them, and
+  drew the city, dozens of times on the way, and held the review shots'
+  software renderer from ever finishing the build.
 - Keep phones light: `src/scripts/city3d/index.ts` picks a quality tier
   (fewer cars and people, no shadows, smaller bloom on phones) by the rules
   in `gputier.ts` (DOM-free, `tests/gputier.test.ts`; the stability plan's
