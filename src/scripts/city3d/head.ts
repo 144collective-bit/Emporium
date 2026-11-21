@@ -3,7 +3,12 @@
  * "The Trenches", the game's name, while the city loads or where it can't run) with a line on what
  * you can do there, and keeps the City / Walk switch in step. It watches the city root
  * (data-view, data-mode, data-kart, data-plane, data-boat, data-fight, is-fp, is-online, is-driving, is-flying) so every mode change updates it.
+ *
+ * Since docs/header-plan.md the header shows the game's title art instead, and these words are for screen readers
+ * only; what they told everyone else is a toast: the City view's line the first time you're in it (`hints` in the
+ * settings record), and getting into a vehicle, its name ("Driving · City Hatch"), each time.
  */
+import { setSettings, settings } from './settings-store';
 const COPY = {
   /** Before the 3D city is up (data-view="loading"), or where it can't run (data-view="none") */
   still: { title: 'The Trenches', sub: (root: HTMLElement) => (root.dataset.view === 'none' ? 'Needs 3D graphics' : 'Loading the city') },
@@ -20,7 +25,14 @@ const COPY = {
 const touch = () => matchMedia('(pointer: coarse)').matches;
 const narrow = () => matchMedia('(max-width: 640px)').matches;
 
-export function createCityHead(root: HTMLElement) {
+export interface HeadHooks {
+  toast?(text: string, ms?: number): void;
+}
+
+export function createCityHead(root: HTMLElement, hooks: HeadHooks = {}) {
+  /** The vehicle line last shown (a toast when it changes), and whether the city's been up for a paint (none before) */
+  let shownRide = '';
+  let up = false;
   const head = root.querySelector<HTMLElement>('[data-city-head]')!;
   const title = head.querySelector<HTMLElement>('[data-head-title]')!;
   const sub = head.querySelector<HTMLElement>('[data-head-sub]')!;
@@ -46,6 +58,15 @@ export function createCityHead(root: HTMLElement) {
     const s = fighting ? root.dataset.fight! : karting ? root.dataset.kart! : flying ? `${root.dataset.plane ?? 'Your aircraft'}${online}` : boating ? `${root.dataset.boat}${online}` : driving ? `${root.dataset.car ?? 'Your car'}${online}` : c.sub(root);
     if (sub.textContent !== s) sub.textContent = s;
     city.setAttribute('aria-pressed', String(mode === 'explore'));
+    // The toasts the title's words became: into a vehicle (its name), and the City view's line the first time
+    const ride = fighting || karting || flying || boating || driving ? `${t} · ${s}` : '';
+    if (up && ride && ride !== shownRide) hooks.toast?.(ride, 2500);
+    shownRide = ride;
+    if (up && mode === 'explore' && !root.classList.contains('has-start') && !settings().hints.includes('city')) {
+      setSettings({ hints: [...settings().hints, 'city'] });
+      hooks.toast?.(c.sub(root), 5000);
+    }
+    up = mode !== 'still';
   }
 
   // The world map's subtitle says tap or click by the device, as the City view's line does

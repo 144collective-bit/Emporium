@@ -56,6 +56,8 @@ export interface Settings {
   /* Sound */
   /** 0 to 100 */
   volume: number;
+  /** The one-time hints already shown (docs/header-plan.md: the City view's keys); no row, and Reset all keeps it */
+  hints: string[];
 }
 
 export const FOV_BASE = 52;
@@ -79,6 +81,7 @@ export const DEFAULTS: Readonly<Settings> = {
   holds: {},
   touch: DEFAULT_TOUCH,
   volume: 100,
+  hints: [],
 };
 
 const TIMES: TimeMode[] = ['live', 'day', 'sunset', 'night'];
@@ -124,6 +127,7 @@ export function cleanSettings(raw: unknown, legacy: { labels?: unknown; walk?: u
     holds: cleanHolds(from('holds')),
     touch: cleanTouch(from('touch')),
     volume: Math.round(num(o.volume, 0, 100, DEFAULTS.volume)),
+    hints: Array.isArray(o.hints) ? [...new Set(o.hints.filter((h): h is string => typeof h === 'string'))].slice(0, 16) : [],
   };
 }
 

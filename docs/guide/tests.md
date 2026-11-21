@@ -86,8 +86,19 @@ keep it up to date when what it describes changes.
   `tests/targets.test.ts` holds the desktop's render targets (by formula)
   to their ceilings on every `npm test`. `tests/gputier.test.ts` holds the
   tier each device starts on: graphics built into the processor told from
-  cards by their names as browsers give them, and the step down after a
-  lost GPU.
+  cards by their names as browsers give them, the step down after a
+  lost GPU, and a tier set in Settings (still a step under one that
+  stopped lately).
+  `tests/settings.test.ts` holds the settings record (`docs/settings-plan.md`):
+  its defaults as the city was, the first load's migration from the Labels
+  and walk keys, bad values made good, every row on a tab with a short
+  label, the pickers' steps (no float drift), the dots, the resets (Reset
+  all keeps the hints shown), what the game reads (field of view, fly
+  speed, frame cap, pixels, volume) and its key in the backup.
+  `tests/maptab.test.ts` holds the hub's Map tab (`docs/header-plan.md`):
+  every place it had in exactly one district and none added, the picker's
+  choices, "here" as the nearest place's district, what Go does from the
+  City view, on foot and at a wheel, and a place's "coming soon".
   `tests/drawrows.test.ts` holds the ?fps draw breakdown (`__draws()`,
   `?made`; `docs/phone-far-plan.md`): each draw put down to its name, pass
   and distance, the frame still drawn, a maker read from a stack, only
