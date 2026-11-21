@@ -82,8 +82,7 @@ keep it up to date when what it describes changes.
   sunyards3d.ts's `registerSprinklers()` (one instanced mesh, by day and not
   in the rain); `sunbell.ts` (the school bell, weekdays, `bellDue()`), rung
   by sound.ts; and the edges: the lawns' turf islands in their gravel
-  (sunyards.ts `islandOf()`, `Yard.islands`), the driveways' aprons to the
-  kerb (`Yard.apron`), the rolled kerbs along the streets and turning
+  (sunyards.ts `islandOf()`, `Yard.islands`), the rolled kerbs along the streets and turning
   circles (sunridge3d.ts `kerbAlong()`), the fringe's wash and path
   meandering (fringes.ts).
 - **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views

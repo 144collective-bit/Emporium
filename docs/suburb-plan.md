@@ -305,9 +305,9 @@ These are my recommendations, made so the plan is complete; any can change.
        lawn against gravel in a straight line; a sliver too narrow keeps its
        gravel. Drawn over the piece's gravel (sunyards3d.ts). The
        sprinklers stand on the turf.
-     - *The driveways:* an apron across the sidewalk to the kerb
-       (`Yard.apron`, `apronOf()`, the kerb found along the driveway's
-       line), drawn in the driveway's concrete.
+     - *The driveways* stop at the sidewalk, which runs on unbroken (the
+       owner's call: an apron across it was tried and taken out); the kerb
+       is a rolled one, driven over.
      - *The kerbs:* a rolled kerb in pale stone (`STONE.kerb`) along the
        sidewalk's edge beside every street and round every turning circle
        (sunridge3d.ts `kerbAlong()`), only where there's sidewalk

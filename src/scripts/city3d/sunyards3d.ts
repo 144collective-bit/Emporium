@@ -74,8 +74,6 @@ function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
   // The front ground: a desert front its gravel; a lawn its turf islands laid in the gravel, their edges soft (Phase 7)
   for (const g of y.ground) flat(g, 0.008, DG[y.groundTone]);
   for (const g of y.islands) flat(g, 0.0135, LAWN);
-  // The driveway's apron across the sidewalk to the kerb (the sidewalk's top is the lot's, the frame's 0)
-  if (y.apron) rect(y.apron.u0, y.apron.u1, -y.apron.depth, 0.002, 0.012, CONCRETE);
 
   // The plants: the trees at every distance, the rest near only (phones fewer)
   const big = (p: Plant) => p.kind === 'paloverde' || p.kind === 'saguaro' || p.kind === 'palm' || p.kind === 'shade';

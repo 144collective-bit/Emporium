@@ -17,7 +17,7 @@
  */
 import { HOUSES, across, depthAt, frameOf, toWorld, type House } from './sunhouses';
 import { LOTS, type Lot } from './sunridgelots';
-import { BULB, COURTS, SUN_STREETS, WALL_RUNS, distTo, type Pt } from './sunridge';
+import { WALL_RUNS, distTo, type Pt } from './sunridge';
 import { rng } from './recipes';
 
 /** The block walls: their height over the lot (about 1.8 m), their thickness */
@@ -43,8 +43,6 @@ export interface Yard {
   ground: Pt[][];
   /** A lawn's turf, an island on each piece with room for one (Phase 7: soft wandering edges, the piece's gravel round it); none for a desert front */
   islands: Pt[][];
-  /** The driveway's apron across the sidewalk to the kerb: its sides (u) and how far out (v, from the lot's front) */
-  apron: { u0: number; u1: number; depth: number } | null;
   plants: Plant[];
   bins: { u: number; v: number };
   /** The back yard: across (u0..u1) and from the house (v0) to the back wall (v1) */
@@ -138,22 +136,6 @@ function fits(isl: Pt[], piece: Pt[]) {
   // (wound the piece's way, a fair share of it, every point inside)
   return Math.sign(a) === Math.sign(b) && Math.abs(a) > 0.6 && isl.every((p) => inside(piece, p));
 }
-/** The kerb's distance out from a point, along a direction (the first step on asphalt: a street or a turning circle), or Infinity past `most` */
-function kerbOut(p: Pt, d: Pt, most: number) {
-  const onAsphalt = (x: number, z: number) =>
-    SUN_STREETS.some((st) => distTo(st.pts, [x, z]) < st.half) || COURTS.some((c) => Math.hypot(c.pts[c.pts.length - 1][0] - x, c.pts[c.pts.length - 1][1] - z) < BULB);
-  for (let t = 0; t <= most; t += 0.02) if (onAsphalt(p[0] + d[0] * t, p[1] + d[1] * t)) return t;
-  return Infinity;
-}
-/** The driveway's apron: across the sidewalk from the lot's front to the kerb (none where no street's in reach) */
-export const APRON_MOST = 1.6;
-function apronOf(h: House, d0: number, d1: number): Yard['apron'] {
-  const [x0, z0] = toWorld(h, (d0 + d1) / 2, 0);
-  const [x1, z1] = toWorld(h, (d0 + d1) / 2, -1);
-  const depth = kerbOut([x0, z0], [x1 - x0, z1 - z0], APRON_MOST);
-  return Number.isFinite(depth) && depth > 0.1 ? { u0: d0, u1: d1, depth: depth - 0.02 } : null;
-}
-
 function lay(): Yard[] {
   const out: Yard[] = [];
   const rand = rng(9431);
@@ -274,7 +256,7 @@ function lay(): Yard[] {
     }
     // (a sliver too narrow for turf stays gravel: its island would turn inside out)
     const islands = front === 'lawn' ? ground.map((g, k) => islandOf(g, out.length * 7 + k)).filter((isl, k) => fits(isl, ground[k])) : [];
-    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground, islands, apron: apronOf(h, d0, d1), plants, bins, back, patio, ramada, grill, pool, extras, gates });
+    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground, islands, plants, bins, back, patio, ramada, grill, pool, extras, gates });
   }
   return out;
 }

@@ -3,8 +3,7 @@
 // never doubled; the returns' gates; the pools and back-yard things inside the back yard; their solids.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { APRON_MOST, HEAD_CLEAR, REACH, SPRINKLE, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, sprayAt, sprinklerOn } from '../src/scripts/city3d/sunyards';
-import { BULB, COURTS } from '../src/scripts/city3d/sunridge';
+import { HEAD_CLEAR, REACH, SPRINKLE, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, sprayAt, sprinklerOn } from '../src/scripts/city3d/sunyards';
 import { HOUSES, toWorld } from '../src/scripts/city3d/sunhouses';
 import { LOTS, outline } from '../src/scripts/city3d/sunridgelots';
 import { SUN_LAMPS, SUN_STREETS, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
@@ -127,20 +126,5 @@ test('the lawns are turf islands in their gravel: inside their pieces, edges sof
     const y = YARDS.find((q) => q.house === sp.house)!;
     const h = HOUSES.find((q) => q.id === sp.house)!;
     assert.ok(y.islands.some((g) => inside(g.map(([u, v]) => toWorld(h, u, v)), [sp.x, sp.z])), `${sp.house}'s sprinkler on its turf`);
-  }
-});
-
-test("the driveways' aprons: across the sidewalk to the kerb, never onto the street", () => {
-  const onAsphalt = ([x, z]: Pt) => SUN_STREETS.some((st) => distTo(st.pts, [x, z]) < st.half - 1e-6) || COURTS.some((c) => Math.hypot(c.pts[c.pts.length - 1][0] - x, c.pts[c.pts.length - 1][1] - z) < BULB - 1e-6);
-  const withApron = YARDS.filter((y) => y.apron);
-  assert.ok(withApron.length > YARDS.length * 0.9, `${withApron.length} of ${YARDS.length} driveways reach a kerb`);
-  for (const y of withApron) {
-    const h = HOUSES.find((q) => q.id === y.house)!;
-    const { u0, u1, depth } = y.apron!;
-    assert.ok(depth > 0.1 && depth < APRON_MOST);
-    const mid = (u0 + u1) / 2;
-    // (its kerb end a hair short of the asphalt, the asphalt just past it)
-    assert.ok(!onAsphalt(toWorld(h, mid, -depth + 0.01)), `${y.house}'s apron runs onto the street`);
-    assert.ok(onAsphalt(toWorld(h, mid, -depth - 0.06)), `${y.house}'s apron stops short of the kerb`);
   }
 });
