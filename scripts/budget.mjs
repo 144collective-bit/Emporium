@@ -60,7 +60,9 @@ const BUDGETS = {
    * the boot) took it to 760.7, leaving about 4 KB for the next small feature; and from 765 to 770 on purpose (the
    * owner's call, 2026-11-20, "Raise it to 770 KB"): Crestmont's premium upgrade's Phases 4-5 (THE ASTERLY, the coral
    * pair, the cable car's stations and doors, the Belvedere and the glasshouse, their places, doors and solids, read
-   * by the boot's places, map and walk-in doors) took it to 765.0; what only the chunks read is in them
+   * by the boot's places, map and walk-in doors) took it to 765.0; what only the chunks read is in them; and Northgate Air Base's
+   * (the owner's calls, 2026-11-20, docs/military-plan.md): its lines, solids, lamps, keep, look and sound at the boot,
+   * about 4.5 KB, its drawing-only data in its chunks' airbasedress.ts
    */
   bootJs: 770,
   /** Any one piece loaded later (a feature, when it's used) */
@@ -83,8 +85,11 @@ const BUDGETS = {
    * GPU
    */
   texLow: 3450,
-  /** ... and as everyone else does */
-  texFull: 4950,
+  /**
+   * ... and as everyone else does. From 4950 to 4955 on purpose (the owner's call, 2026-11-20): main alone at 4942.9,
+   * Northgate Air Base's signs' atlas (cut to its three rows, 1024 by 192) took the merge to 4952.1
+   */
+  texFull: 4955,
   /** Their transcoder (three's Basis wasm and its script) */
   transcoder: 300,
   /**

@@ -15,6 +15,7 @@
 import type { Pt } from './streetplan';
 import { EXT, LANE, RIVER } from './layout';
 import { fromHighway } from './highway';
+import { GATE_ROAD_ENDS } from './airbase';
 
 type Rect = [number, number, number, number];
 /** A street as the plan holds it (streetplan.ts `Street`, without the import loop) */
@@ -75,6 +76,8 @@ export interface RuralRun {
    */
   stub?: { id: string; end: Pt };
   centre: Pt;
+  /** It ends at a gate, not the world's edge (Northgate Air Base's: its loop open on the gate's side too) */
+  gated?: true;
 }
 export const RURAL_RUNS: RuralRun[] = [];
 
@@ -115,9 +118,12 @@ export function ruralSplit(streets: PlanStreet[], crossings: PlanCrossing[], bes
         }
       }
       const start = stop + out * RURAL.lead;
-      const end = edge - out * (RURAL.edge + RURAL.turn * 2 + RURAL.half);
-      if ((end - start) * out < RURAL.min) continue;
       const rid = `${id}-${axis === 'x' ? (out < 0 ? 'w' : 'e') : out < 0 ? 'n' : 's'}`;
+      // (out to the world's edge, or to a gate: the two north of the stadium end at Northgate Air Base's, airbase.ts)
+      const gated = GATE_ROAD_ENDS[rid];
+      const end = gated ?? edge - out * (RURAL.edge + RURAL.turn * 2 + RURAL.half);
+      // (one to a gate however short: else the town's piece would run on to the edge past it)
+      if ((end - start) * out < (gated != null ? RURAL.lead : RURAL.min)) continue;
       streets.push({ id: rid, kind: 'rural', pts: [at(start), at(end)], half: RURAL.half, lanes: 1 });
       crossings.push({ id: `${rid}-join`, at: at(start), streets: [id, rid], lights: false });
       // Its turning loop: straight on past its end, or up a stub inland where the river runs beside it
@@ -134,7 +140,7 @@ export function ruralSplit(streets: PlanStreet[], crossings: PlanCrossing[], bes
         entry = far;
       }
       const centre: Pt = [entry[0] + dir[0] * RURAL.turn, entry[1] + dir[1] * RURAL.turn];
-      RURAL_RUNS.push({ id: rid, of: id, axis, c, from: start, to: end, out, stub, centre });
+      RURAL_RUNS.push({ id: rid, of: id, axis, c, from: start, to: end, out, stub, centre, ...(gated != null ? { gated: true } : {}) });
       // (one way round, starting where its road meets it)
       const n = 24;
       const a0 = Math.atan2(entry[1] - centre[1], entry[0] - centre[0]);

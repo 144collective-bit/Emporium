@@ -25,7 +25,7 @@ import { ESTATES, toWorld as estateAt } from './estates';
 import { MANSIONS, toWorld as mansionAt } from './mansions';
 import { ESTATE_BALCONIES, MANSION_BALCONIES, ROOF_DECKS } from './crestgrand';
 import { ASTERLY, BELVEDERE, GLASSHOUSE } from './crestsites';
-import { BELVEDERE_BENCH, BELVEDERE_BENCHES, BENCH, BENCHES, GLASS_FOUNTAIN, LOOKOUTS, WALK_L, WALK_POINTS, onSteps } from './crestwalk';
+import { BELVEDERE_BENCH, BELVEDERE_BENCHES, BENCH, BENCHES, GLASS_FOUNTAIN, LOOKOUTS, WALK_L, WALK_POINTS, stepAt, walkGround } from './crestwalk';
 import { BIKE_SEAT } from './uptownlife';
 import type { Idle } from './idle';
 import type { Moment, ParkPerson } from './parklife';
@@ -33,7 +33,7 @@ import type { Moment, ParkPerson } from './parklife';
 type Pt = [number, number];
 const facing = (dx: number, dz: number) => Math.atan2(dx, dz);
 /** The ground the walk's benches and lookouts stand on (crestwalk3d.ts's: the lower of the hills' height and the grass as drawn) */
-const ground = (x: number, z: number) => Math.min(heightAt(x, z), drawnAt(x, z));
+const ground = walkGround;
 /** A lounger's top over its deck (crestgrand3d.ts `drawDeck()`), a deck's chairs' */
 const DECK_LOUNGER = 0.29;
 const DECK_CHAIR = 0.48;
@@ -170,7 +170,9 @@ export function strollAt(u: number, out: Moment) {
   const side = STROLL.side * Math.min(1, Math.min(d, L - d) / STROLL.ease);
   out.x = cx - uz * side;
   out.z = cz + ux * side;
-  out.y = drawnAt(out.x, out.z) + DRAPE.path + (onSteps(d) ? 0.08 : 0);
+  // (on a flight, on its step's tread)
+  const st = stepAt(d);
+  out.y = st ? st.top : drawnAt(out.x, out.z) + DRAPE.path;
   out.ry = facing(ux, uz);
   out.clip = 'walk';
   out.speed = STROLL.pace;

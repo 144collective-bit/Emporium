@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { PACKED, UV, compact, dropsUv, splitByTile, tileBatch } from '../src/scripts/city3d/tilebatch';
+import { PACKED, UV, compact, dropsUv, splitByTile, tileBatch, ROOM_MAX, roomFor } from '../src/scripts/city3d/tilebatch';
 import { tileKey, tileOf } from '../src/scripts/city3d/tiles';
 
 // A plain colour and a neon, as the Batches' shared materials (kit.ts marks them `shared`)
@@ -349,4 +349,15 @@ test('the uv is left out where nothing reads it: the shared materials, the paint
   const box = compact(new THREE.BoxGeometry(1, 1, 1), false, true);
   assert.equal(box.attributes.uv, undefined);
   assert.ok(box.attributes.position && box.attributes.normal);
+});
+
+test("a mesh's room past what it holds: a quarter over, at most ROOM_MAX (a big one grows a step at a time)", () => {
+  // (a small mesh: a quarter over, as ever)
+  assert.equal(roomFor(1000, 16), 1250);
+  // (a big one: 57 MiB of 16-byte vertices holds about 3.7 million; its room is ROOM_MAX's worth, not a quarter)
+  const n = (57 * 1024 * 1024) / 16;
+  assert.equal(roomFor(n, 16), Math.ceil(n + ROOM_MAX / 16));
+  assert.ok((roomFor(n, 16) - n) * 16 <= ROOM_MAX + 16);
+  // (never less than it holds)
+  for (const [k, b] of [[0, 4], [1, 4], [5e6, 2], [12345, 40]]) assert.ok(roomFor(k, b) >= k);
 });

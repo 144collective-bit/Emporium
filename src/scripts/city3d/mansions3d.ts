@@ -331,7 +331,7 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
             // (portholes along the ground floor's front, clear of the door)
             for (const u of windowsAlong(p.u0 + R, p.u1 - R, 1.4)) {
               if (Math.abs(u - cu) < 1.4) continue;
-              add(new THREE.CircleGeometry(0.34, 16).translate(u, y + 0.75, fv + 0.012), windowOf(m.id, u, y, fv, low));
+              add(new THREE.CircleGeometry(0.34, low ? 8 : 16).translate(u, y + 0.75, fv + 0.012), windowOf(m.id, u, y, fv, low));
               b.detail(() => add(new THREE.RingGeometry(0.34, 0.42, 16).translate(u, y + 0.75, fv + 0.014), STEEL));
             }
           } else if (L > 1.2) pane(cu, fv, [0, 1], L - 0.6, y, h, windowOf(m.id, cu, y, fv, low), false, 0, 0.012);

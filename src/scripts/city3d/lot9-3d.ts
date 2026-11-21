@@ -634,11 +634,14 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
         const n = Math.max(1, Math.round(l / 3));
         const r = rng(i * 101 + k * 7);
         if (old) {
-          for (let j = 0; j <= n; j++) {
-            const [x, z] = [p[0] + ((q[0] - p[0]) * j) / n, p[1] + ((q[1] - p[1]) * j) / n];
-            const lean = (r() - 0.5) * 0.5;
-            rod(b, new THREE.Vector3(x, 0, z), new THREE.Vector3(x + Math.sin(lean) * FENCE_H, Math.cos(lean) * FENCE_H, z), 0.035, POST, low ? 4 : 6);
-          }
+          // (its posts near only, as the new line's: the mesh, in the FX layer, is what's seen from further off)
+          b.detail(() => {
+            for (let j = 0; j <= n; j++) {
+              const [x, z] = [p[0] + ((q[0] - p[0]) * j) / n, p[1] + ((q[1] - p[1]) * j) / n];
+              const lean = (r() - 0.5) * 0.5;
+              rod(b, new THREE.Vector3(x, 0, z), new THREE.Vector3(x + Math.sin(lean) * FENCE_H, Math.cos(lean) * FENCE_H, z), 0.035, POST, low ? 4 : 6);
+            }
+          });
           for (let j = 0; j < n; j++) {
             if (r() < 0.4) continue;
             const [s0, s1] = [p[1] + ((q[1] - p[1]) * j) / n, p[1] + ((q[1] - p[1]) * (j + 1)) / n];
@@ -649,8 +652,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
           buildFx(fx0, into);
           return;
         }
-        for (let j = 0; j <= n; j++) post(b, p[0] + ((q[0] - p[0]) * j) / n, p[1] + ((q[1] - p[1]) * j) / n, 0, FENCE_H, 0.035, POST, low ? 4 : 6);
-        bar(b, p, q, 0.05, FENCE_H - 0.05, FENCE_H, POST);
+        // (the posts and the top rail near only: thin, lost at a distance)
+        b.detail(() => {
+          for (let j = 0; j <= n; j++) post(b, p[0] + ((q[0] - p[0]) * j) / n, p[1] + ((q[1] - p[1]) * j) / n, 0, FENCE_H, 0.035, POST, low ? 4 : 6);
+          bar(b, p, q, 0.05, FENCE_H - 0.05, FENCE_H, POST);
+        });
         chainMesh(fx0, p, q, 0.02, FENCE_H - 0.08);
         b.build(into, { cast: true, receive: true });
         buildFx(fx0, into);

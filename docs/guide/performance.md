@@ -7,7 +7,16 @@ keep it up to date when what it describes changes.
   city stands still (no fly-in, no traffic) and CSS animations stop. It's drawn only when something changes
   (`dirty` in index.ts): what's built as you go asks for a frame at most
   once a second (`builtShows()`). Sound is always off until the visitor
-  turns it on.
+  turns it on. Its ticks run on the first frame, with the time held at 0,
+  and again once the sky has settled somewhere a step on (`stillticks.ts`, DOM-free,
+  `tests/stillticks.test.ts`; the owner's call, 2026-11-20): nothing moves,
+  but what follows the sky catches up when the time or weather changes
+  later (the menu's, the live hour's, the review shots' night): the murk
+  past the wall darkening, the districts' night lights. Before, they kept
+  the first frame's, the murk a pale day grey under a night sky. Once a
+  change, not on every step of the sky's glide to it: that ran them, and
+  drew the city, dozens of times on the way, and held the review shots'
+  software renderer from ever finishing the build.
 - Keep phones light: `src/scripts/city3d/index.ts` picks a quality tier
   (fewer cars and people, no shadows, smaller bloom on phones) by the rules
   in `gputier.ts` (DOM-free, `tests/gputier.test.ts`; the stability plan's
@@ -365,7 +374,7 @@ keep it up to date when what it describes changes.
     view nearest what it looks at (`look`, `CROWD_VIEW.focus`), walking
     round Degen, and ahead of the camera when it moves fast (`focusOf()`,
     `LOOK_AHEAD`). What's built later joins the same batched meshes
-    (`TileBatches.add()`; a mesh grows when it's full).
+    (`TileBatches.add()`; a mesh grows when it's full: `ROOM`, a quarter over what it holds, but at most `ROOM_MAX`, 4 MiB, over, so a big one grows a step at a time rather than a quarter of itself at once; `roomFor()`, docs/military-plan.md).
   - Places ask first: `flyTo()` (every panel's fly-in), walking in
     (`startWalking()`) and the intro (`works.wantView()`) build what's
     waiting where they're going, so nothing pops in on screen.
@@ -478,7 +487,9 @@ keep it up to date when what it describes changes.
   post.ts or sky.ts make goes in `pictureTargets()` too.** Lower a ceiling
   when a change cuts it; raise one only on purpose.
 - `?bench` runs the benchmark (`bench.ts`, growth plan Phase 0): straight
-  into the 3D city, clear day (`?bench=night` for night), quality held, the
+  into the 3D city's City view (the fly-in, never the wake-up at home: on
+  foot, sites past the haze wait unbuilt and it never begins; `?shots` the
+  same, `enter(false, true)` in `CityMap.astro`), clear day (`?bench=night` for night), quality held, the
   same views (`BENCH_VIEWS`: home, a downtown street, the square, the Build
   overview, the airport, the kart park, a junction on the ring highway,
   The Trenches round The Block, Degen's home in the Ends, the Neon Mile from over its boulevard and down it,

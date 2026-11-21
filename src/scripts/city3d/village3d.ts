@@ -224,18 +224,21 @@ function along(b: Batch, a: Pt, c: Pt, w: number, y0: number, y1: number, m: THR
 }
 
 const ON = 0.15 + 0.006;
-function drawGround(b: Batch, list: House[], low: boolean) {
+/** The houses' gardens: front yards, their walls (near only), rear yards and alleys (exported for tests/southnear.test.ts) */
+export function drawGround(b: Batch, list: House[], low: boolean) {
   for (const h of list) {
     const [nx, nz] = h.face;
     // The front yard: paving from the house to its wall
     const f = houseFoot({ ...h, at: [h.at[0] + nx * TERRACE.yard, h.at[1] + nz * TERRACE.yard] }, TERRACE.yard);
     flat(b, f, ON, PAVING);
-    // Its front wall, capped, a gate's gap by the door
-    for (const [a, c] of frontWalls(h)) {
-      along(b, a, c, 0.1, 0.15, 0.15 + WALL_H, FRONTS.red);
-      // (its coping stones: not on phones)
-      if (!low) along(b, a, c, 0.14, 0.15 + WALL_H, 0.15 + WALL_H + 0.04, CAP);
-    }
+    // Its front wall, capped, a gate's gap by the door (near only: a knee-high wall is lost at a distance)
+    b.detail(() => {
+      for (const [a, c] of frontWalls(h)) {
+        along(b, a, c, 0.1, 0.15, 0.15 + WALL_H, FRONTS.red);
+        // (its coping stones: not on phones)
+        if (!low) along(b, a, c, 0.14, 0.15 + WALL_H, 0.15 + WALL_H + 0.04, CAP);
+      }
+    });
     // The rear yard: grass, to the alley (or the plot's end)
     const alley = ALLEYS.find((q) => q.house === h.id);
     const rear = alley?.rear ?? TERRACE.rear;

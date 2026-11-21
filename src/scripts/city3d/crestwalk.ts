@@ -10,6 +10,8 @@
  * benches (`BENCHES`) and low lamps (`WALK_LAMPS`) along it, two lookouts off it (`LOOKOUTS`).
  */
 import { heightAt } from './terrain';
+import { drawnAt } from './drawn';
+import { DRAPE } from './crestdrape';
 import { BELVEDERE, GLASSHOUSE, OVERLOOK } from './crestsites';
 import { CABLE_STATIONS } from './cablecar';
 
@@ -108,6 +110,19 @@ export const STEPS: [number, number][] = (() => {
   return out;
 })();
 export const onSteps = (d: number) => STEPS.some(([a, b]) => d >= a && d <= b);
+/** The ground the walk's stone stands on (crestwalk3d.ts's: the lower of the hills' height and the grass as drawn) */
+export const walkGround = (x: number, z: number) => Math.min(heightAt(x, z), drawnAt(x, z));
+/**
+ * The step at `d` along the walk, if it's on a flight: its run (from, to, every flight's steps a run apart from its
+ * start), its tread's top (level, over the higher end's ground) and its foot (under the lower's)
+ */
+export function stepAt(d: number): { from: number; to: number; top: number; foot: number } | null {
+  const f = STEPS.find(([a, b]) => d >= a && d < b);
+  if (!f) return null;
+  const from = f[0] + Math.floor((d - f[0]) / STEP.run) * STEP.run;
+  const ends = [walkAt(from), walkAt(from + STEP.run)].map(([x, z]) => walkGround(x, z) + DRAPE.path);
+  return { from, to: from + STEP.run, top: Math.max(...ends) + 0.04, foot: Math.min(...ends) - 0.08 };
+}
 
 /** A point on the walk at `d` along it, `side` across it (its right +) */
 export function walkAt(d: number, side = 0): Pt {
@@ -179,3 +194,34 @@ export const BELVEDERE_BENCH = { long: 1.3, deep: 0.42, seat: 0.485 } as const;
 
 /** The glasshouse's fountain in its garden's west side, south of its path to the door: its middle and radius */
 export const GLASS_FOUNTAIN = { x: (GLASSHOUSE.rect[0] + GLASSHOUSE.house[0]) / 2, z: GLASSHOUSE.dome.z - 1.6, r: 0.8 } as const;
+
+/**
+ * Whether a point is on the walk or within `m` of it: its gravel, the branch to the glasshouse's door, the Belvedere's
+ * round, the lookouts' bays and the benches (the hills' oaks, scrub, drifts and rocks keep off: landscape.ts,
+ * crestcover.ts). By cell, as the planting asks it of thousands of points; `m` at most 3.
+ */
+const WALK_CELL = 4;
+const WALK_NEAR = new Map<number, [number, number, number][]>();
+{
+  const put = (x: number, z: number, r: number) => {
+    for (let cx = Math.floor((x - r - 3) / WALK_CELL); cx <= Math.floor((x + r + 3) / WALK_CELL); cx++)
+      for (let cz = Math.floor((z - r - 3) / WALK_CELL); cz <= Math.floor((z + r + 3) / WALK_CELL); cz++) {
+        const k = cx * 100003 + cz;
+        if (!WALK_NEAR.has(k)) WALK_NEAR.set(k, []);
+        WALK_NEAR.get(k)!.push([x, z, r]);
+      }
+  };
+  for (const p of WALK_POINTS) put(p.x, p.z, WALK.half + 0.25);
+  for (let k = 1; k < GLASS_PATH.length; k++) {
+    const [a, b] = [GLASS_PATH[k - 1], GLASS_PATH[k]];
+    const n = Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / 0.5);
+    for (let i = 0; i <= n; i++) put(a[0] + ((b[0] - a[0]) * i) / n, a[1] + ((b[1] - a[1]) * i) / n, WALK.half * 0.8 + 0.25);
+  }
+  put(BELVEDERE.x, BELVEDERE.z, BELVEDERE.r + 0.45);
+  for (const o of LOOKOUTS) put(o.x, o.z, 1.5);
+  for (const b of BENCHES) put(b.x, b.z, BENCH.long / 2);
+}
+export function onWalk(x: number, z: number, m = 0) {
+  const cell = WALK_NEAR.get(Math.floor(x / WALK_CELL) * 100003 + Math.floor(z / WALK_CELL));
+  return !!cell && cell.some(([px, pz, r]) => Math.hypot(px - x, pz - z) < r + m);
+}

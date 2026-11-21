@@ -9,12 +9,10 @@
 import * as THREE from 'three';
 import { Batch, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
-import { heightAt } from './terrain';
-import { drawnAt } from './drawn';
 import { DRAPE, discMesh, lineMesh } from './crestdrape';
 import { meshGeometry } from './mansions3d';
 import { BELVEDERE, GLASSHOUSE } from './crestsites';
-import { BELVEDERE_BENCH, BELVEDERE_BENCHES, BENCH, BENCHES, GLASS_FOUNTAIN, GLASS_PATH, LOOKOUTS, STEP, STEPS, WALK, WALK_LAMPS, WALK_POINTS, walkAt } from './crestwalk';
+import { BELVEDERE_BENCH, BELVEDERE_BENCHES, BENCH, BENCHES, GLASS_FOUNTAIN, GLASS_PATH, LOOKOUTS, STEP, STEPS, WALK, WALK_LAMPS, WALK_POINTS, stepAt, walkAt, walkGround } from './crestwalk';
 import { COVER } from './palette';
 
 const GRAVEL = toon('#d8cfbd');
@@ -34,9 +32,12 @@ const UPLIGHT = neon('#fff0d0', 0.1, 1.5);
 const GLASS = siteMat('glasshouse-glass', lit(new THREE.MeshToonMaterial({ color: '#cfeedd', transparent: true, opacity: 0.32, depthWrite: false, emissive: '#ffe9c0' }), 0, 0.35));
 const WATER = toon('#5aa3c4');
 
-const ground = (x: number, z: number) => Math.min(heightAt(x, z), drawnAt(x, z));
+const ground = walkGround;
 const box = (b: Batch, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, m: THREE.Material) => b.box(Math.min(x0, x1), y0, Math.min(z0, z1), Math.abs(x1 - x0), y1 - y0, Math.abs(z1 - z0), m);
 const cyl = (b: Batch, r: number, h: number, x: number, y: number, z: number, m: THREE.Material, seg = 10, r0 = r) => b.add(new THREE.CylinderGeometry(r, r0, h, seg).translate(x, y + h / 2, z), m);
+
+/** On the Belvedere's paved round (its kerb and a little past) */
+const inBelvedere = (x: number, z: number) => Math.hypot(x - BELVEDERE.x, z - BELVEDERE.z) < BELVEDERE.r + 0.8;
 
 export function registerWalk(low: boolean) {
   /* ---------- The walk, a piece every 30 along it ---------- */
@@ -56,29 +57,44 @@ export function registerWalk(low: boolean) {
       for (const [a, c] of STEPS) {
         const [s0, s1] = [Math.max(a, d0), Math.min(c, d1)];
         if (s1 <= s0) continue;
-        for (let d = s0; d < s1; d += STEP.run) {
-          const p = WALK_POINTS.find((q) => q.d >= d) ?? pts[pts.length - 1];
-          const [x, z] = walkAt(d);
-          const y = ground(x, z) + DRAPE.path;
-          const turn = Math.atan2(p.u[0], p.u[1]);
-          b.add(new THREE.BoxGeometry(2 * WALK.half + 0.1, 0.12, STEP.run * 0.55).rotateY(turn).translate(x, y + 0.04, z), STONE);
-        }
+        // (each step a solid block a run deep, its tread level at the higher end's ground and its foot in the lower's,
+        // so a flight reads as a stair and not as slabs laid on the slope: crestwalk.ts `stepAt()`, the walkers' too)
+        // (phones draw them near only: from further off a flight reads as the gravel it climbs)
+        const steps = () => {
+          for (let d = a; d < c; d += STEP.run) {
+            if (d < d0 || d >= d0 + PIECE) continue;
+            const st = stepAt(d + 1e-6);
+            if (!st) continue;
+            const mid = (st.from + st.to) / 2;
+            const p = WALK_POINTS.find((q) => q.d >= mid) ?? pts[pts.length - 1];
+            const [x, z] = walkAt(mid);
+            b.add(new THREE.BoxGeometry(2 * WALK.half + 0.1, st.top - st.foot, STEP.run).rotateY(Math.atan2(p.u[0], p.u[1])).translate(x, (st.top + st.foot) / 2, z), STONE);
+          }
+        };
+        if (low) b.detail(steps);
+        else steps();
         b.detail(() => {
           for (let d = s0; d <= s1 + 0.01; d += 2) {
             const [x, z] = walkAt(d, WALK.half + 0.12);
-            cyl(b, 0.03, 0.95, x, ground(x, z), z, IRON, 5);
+            if (!inBelvedere(x, z)) cyl(b, 0.03, 0.95, x, ground(x, z), z, IRON, 5);
           }
-          const rail: THREE.Vector3[] = [];
+          // (the rail in runs: none across the Belvedere's paving, where its benches are)
+          let rail: THREE.Vector3[] = [];
+          const run = () => {
+            if (rail.length > 1) b.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rail), rail.length, 0.025, 4, false), IRON);
+            rail = [];
+          };
           for (let d = s0; d <= s1 + 0.01; d += 1) {
             const [x, z] = walkAt(d, WALK.half + 0.12);
-            rail.push(new THREE.Vector3(x, ground(x, z) + 0.95, z));
+            if (inBelvedere(x, z)) run();
+            else rail.push(new THREE.Vector3(x, ground(x, z) + 0.95, z));
           }
-          if (rail.length > 1) b.add(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(rail), rail.length, 0.025, 4, false), IRON);
+          run();
         });
       }
-      // The lamps along its right, the benches along its left
-      for (const [x, z] of WALK_LAMPS) {
-        if (!pts.some((p) => Math.hypot(p.x - x, p.z - z) < 1.5)) continue;
+      // The lamps along its right (phones every other), the benches along its left
+      for (const [i, [x, z]] of WALK_LAMPS.entries()) {
+        if ((low && i % 2) || !pts.some((p) => Math.hypot(p.x - x, p.z - z) < 1.5)) continue;
         const g = ground(x, z);
         cyl(b, 0.07, 0.7, x, g, z, IRON, 6);
         b.add(new THREE.SphereGeometry(0.09, 6, 4).translate(x, g + 0.76, z), LAMP);
@@ -112,11 +128,15 @@ export function registerWalk(low: boolean) {
       const b = new Batch();
       const g = ground(o.x, o.z);
       b.add(new THREE.CylinderGeometry(1.4, 1.5, 0.25, 16).translate(o.x, g + 0.02, o.z), STONE);
-      // (a rail round its far half, a coin viewer at the front)
-      for (let i = 0; i <= 6; i++) {
-        const a = Math.atan2(o.look[1], o.look[0]) - Math.PI / 2 + (i / 6) * Math.PI;
-        cyl(b, 0.04, 0.95, o.x + Math.cos(a) * 1.35, g + 0.15, o.z + Math.sin(a) * 1.35, IRON, 5);
-      }
+      // (a rail round its far half, near only on phones; a coin viewer at the front)
+      const rail = () => {
+        for (let i = 0; i <= 6; i++) {
+          const a = Math.atan2(o.look[1], o.look[0]) - Math.PI / 2 + (i / 6) * Math.PI;
+          cyl(b, 0.04, 0.95, o.x + Math.cos(a) * 1.35, g + 0.15, o.z + Math.sin(a) * 1.35, IRON, 5);
+        }
+      };
+      if (low) b.detail(rail);
+      else rail();
       cyl(b, 0.08, 1.0, o.x + o.look[0] * 0.8, g + 0.15, o.z + o.look[1] * 0.8, IRON, 8);
       box(b, o.x + o.look[0] * 0.8 - 0.14, g + 1.15, o.z + o.look[1] * 0.8 - 0.14, o.x + o.look[0] * 0.8 + 0.14, g + 1.42, o.z + o.look[1] * 0.8 + 0.14, GOLD);
       b.build(into, { cast: true, receive: true });
