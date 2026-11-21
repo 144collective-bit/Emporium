@@ -3,10 +3,10 @@
 // never doubled; the returns' gates; the pools and back-yard things inside the back yard; their solids.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { HEAD_CLEAR, REACH, SPRINKLE, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, sprayAt, sprinklerOn } from '../src/scripts/city3d/sunyards';
+import { FLARE, HEAD_CLEAR, REACH, SPRINKLE, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, sprayAt, sprinklerOn } from '../src/scripts/city3d/sunyards';
 import { HOUSES, toWorld } from '../src/scripts/city3d/sunhouses';
 import { LOTS, outline } from '../src/scripts/city3d/sunridgelots';
-import { SUN_LAMPS, SUN_STREETS, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
+import { SUN_BLOCKS, SUN_LAMPS, SUN_STREETS, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
 import { WALK_W } from '../src/scripts/city3d/layout';
 
 const houses = new Map(HOUSES.map((h) => [h.id, h]));
@@ -32,7 +32,9 @@ test('a yard a house, desert and lawn about half each, the plants on their lot c
       assert.ok(!(p.u > h.drive[0] && p.u < h.drive[1] && p.v < h.garageDoor.v), `${y.house}'s ${p.kind} on the driveway`);
       assert.ok(!inPart(h, w, -0.1), `${y.house}'s ${p.kind} in the house`);
     }
-    for (const g of y.ground) for (const [u, v] of g) assert.ok(inside(lot, toWorld(h, u, v)) || distTo(lot, toWorld(h, u, v), true) < 0.05, `${y.house}'s ground off its lot`);
+    // (on its lot, or out in front of it to the sidewalk's edge: Phase 7, the front carried to the sidewalk)
+    const block = SUN_BLOCKS.find((b) => b.id === lots.get(h.lot)!.block)!.poly;
+    for (const g of y.ground) for (const [u, v] of g) assert.ok(inside(lot, toWorld(h, u, v)) || distTo(lot, toWorld(h, u, v), true) < 0.05 || (v <= 0 && (inside(block, toWorld(h, u, v)) || distTo(block, toWorld(h, u, v), true) < 0.03)), `${y.house}'s ground off its lot`);
   }
 });
 
@@ -126,5 +128,40 @@ test('the lawns are turf islands in their gravel: inside their pieces, edges sof
     const y = YARDS.find((q) => q.house === sp.house)!;
     const h = HOUSES.find((q) => q.id === sp.house)!;
     assert.ok(y.islands.some((g) => inside(g.map(([u, v]) => toWorld(h, u, v)), [sp.x, sp.z])), `${sp.house}'s sprinkler on its turf`);
+  }
+});
+
+test('the driveways: from the garage to the sidewalk\'s edge, flared and rounded there, no bare ground before it and nothing on it', () => {
+  const blocks = new Map(SUN_BLOCKS.map((b) => [b.id, b.poly]));
+  for (const y of YARDS) {
+    const h = HOUSES.find((q) => q.id === y.house)!;
+    const lot = LOTS.find((l) => l.id === h.lot)!;
+    const block = blocks.get(lot.block)!;
+    const W = y.drive.map(([u, v]) => toWorld(h, u, v));
+    // (every point on the block's ground, or on its edge: never out on the sidewalk)
+    for (const p of W) assert.ok(inside(block, p) || distTo(block, p, true) < 0.03, `${y.house}'s driveway on the sidewalk at ${p.map((c) => c.toFixed(2))}`);
+    // Its street end on the sidewalk's edge, all the way across (the points at its least v, a few each side of the middle)
+    const [d0, d1] = h.drive;
+    const end = y.drive.filter(([u]) => u > d0 + 0.05 && u < d1 - 0.05 && u !== undefined).filter(([, v]) => v < 0.05 + Math.max(0, ...y.drive.filter(([u2]) => u2 > d0 && u2 < d1).map(([, v2]) => v2 <= 0.3 ? v2 : -Infinity)));
+    assert.ok(end.length >= 2, `${y.house}'s driveway has a street end`);
+    for (const [u, v] of end) assert.ok(distTo(block, toWorld(h, u, v), true) < 0.03, `${y.house}'s driveway stops short of the sidewalk at u ${u.toFixed(2)}`);
+    // Flared both sides (where the lot has room), and never past the lot's sides
+    const us = y.drive.map(([u]) => u);
+    assert.ok(Math.min(...us) <= d0 && Math.max(...us) >= d1 && Math.min(...us) >= d0 - FLARE - 1e-9 && Math.max(...us) <= d1 + FLARE + 1e-9);
+    const out = outline(lot);
+    for (const [u, v] of y.drive) if (v > 0.05) assert.ok(inside(out, toWorld(h, u, v)) || distTo(out, toWorld(h, u, v), true) < 0.05, `${y.house}'s driveway out of its lot`);
+  }
+});
+
+test('the front yards reach the sidewalk\'s edge too: no sliver of bare ground between', () => {
+  const blocks = new Map(SUN_BLOCKS.map((b) => [b.id, b.poly]));
+  for (const y of YARDS) {
+    const h = HOUSES.find((q) => q.id === y.house)!;
+    const block = blocks.get(LOTS.find((l) => l.id === h.lot)!.block)!;
+    for (const g of y.ground) {
+      if (g[0][1] > 0.5) continue; // (the side yards in front of the return walls start back from the street)
+      const front = g.filter(([, v]) => v < 0.6);
+      for (const [u, v] of front.slice(1, -1)) assert.ok(distTo(block, toWorld(h, u, v), true) < 0.03, `${y.house}'s front ground stops short of the sidewalk at u ${u.toFixed(2)}`);
+    }
   }
 });

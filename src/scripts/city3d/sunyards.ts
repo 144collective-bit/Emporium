@@ -17,7 +17,7 @@
  */
 import { HOUSES, across, depthAt, frameOf, toWorld, type House } from './sunhouses';
 import { LOTS, type Lot } from './sunridgelots';
-import { WALL_RUNS, distTo, type Pt } from './sunridge';
+import { SUN_BLOCKS, WALL_RUNS, distTo, inside as inBlock, type Pt } from './sunridge';
 import { rng } from './recipes';
 
 /** The block walls: their height over the lot (about 1.8 m), their thickness */
@@ -41,6 +41,10 @@ export interface Yard {
   groundTone: number;
   /** The front ground's pieces: quads in the frame (u, v) */
   ground: Pt[][];
+  /** The driveway: its outline in the frame (u, v), from the garage door to the sidewalk, its street end following
+   * the sidewalk's edge and flared out to it with rounded corners (Phase 7: no gap of bare ground, nothing on the
+   * sidewalk) */
+  drive: Pt[];
   /** A lawn's turf, an island on each piece with room for one (Phase 7: soft wandering edges, the piece's gravel round it); none for a desert front */
   islands: Pt[][];
   plants: Plant[];
@@ -136,6 +140,58 @@ function fits(isl: Pt[], piece: Pt[]) {
   // (wound the piece's way, a fair share of it, every point inside)
   return Math.sign(a) === Math.sign(b) && Math.abs(a) > 0.6 && isl.every((p) => inside(piece, p));
 }
+/* ---------- The driveway and the front out to the sidewalk (Phase 7) ---------- */
+
+const blockOf = new Map(SUN_BLOCKS.map((b) => [b.id, b.poly]));
+/** How far out the driveway flares at the sidewalk, each side, its corners rounded (at most: never past the lot's sides) */
+export const FLARE = 0.32;
+/**
+ * Where the sidewalk's edge is across a lot's front at u, as v (0 on the front; less where the edge bows out past it,
+ * round a turning circle; more where it bows in): along the frame's v from the front to where the block's own ground
+ * (its outline, the sidewalk's inner edge) ends
+ */
+export function streetV(h: House, block: Pt[], u: number): number {
+  const [px, pz] = toWorld(h, u, 0);
+  const [qx, qz] = toWorld(h, u, -1);
+  const [dx, dz] = [qx - px, qz - pz];
+  const at = (t: number): Pt => [px + dx * t, pz + dz * t];
+  if (inBlock(block, at(0))) {
+    let t = 0;
+    while (t < 2 && inBlock(block, at(t + 0.01))) t += 0.01;
+    return -t;
+  }
+  let t = 0;
+  while (t < 2 && !inBlock(block, at(-t - 0.01))) t += 0.01;
+  return t + 0.01;
+}
+/** Points along the street edge from u0 to u1 (v at each from `edge`), a step about a fifth of a tile */
+function along(u0: number, u1: number, edge: (u: number) => number): Pt[] {
+  const n = Math.max(1, Math.ceil(Math.abs(u1 - u0) / 0.2));
+  return Array.from({ length: n + 1 }, (_, k) => {
+    const u = u0 + ((u1 - u0) * k) / n;
+    return [u, edge(u)] as Pt;
+  });
+}
+/**
+ * The driveway's outline: up its sides from the garage door, each flaring out at the sidewalk in a quarter round
+ * (`fl`, `fr`: its reach each side), along the sidewalk's edge between
+ */
+function driveOf(h: House, d0: number, d1: number, fl: number, fr: number, edge: (u: number) => number): Pt[] {
+  const top = h.garageDoor.v;
+  const N = 6;
+  // (a quarter round from the side down to the sidewalk's edge, set off from the edge where it is)
+  const flare = (side: number, x: number, r: number): Pt[] =>
+    r < 1e-6
+      ? [[x, edge(x)]]
+      : Array.from({ length: N + 1 }, (_, k) => {
+      const a = ((side < 0 ? k : N - k) / N) * (Math.PI / 2);
+      const u = x + side * (r - r * Math.cos(a));
+      const v = r - r * Math.sin(a);
+          return [u, v + edge(u)] as Pt;
+        });
+  return [[d0, top], ...flare(-1, d0, fl), ...along(d0 - fl, d1 + fr, edge).slice(1, -1), ...flare(1, d1, fr), [d1, top]];
+}
+
 function lay(): Yard[] {
   const out: Yard[] = [];
   const rand = rng(9431);
@@ -255,8 +311,26 @@ function lay(): Yard[] {
       if (w > 0.45) gates.push({ u0: a + Math.max(0.05, (w - 0.75) / 2), u1: b - Math.max(0.05, (w - 0.75) / 2), v: ss });
     }
     // (a sliver too narrow for turf stays gravel: its island would turn inside out)
-    const islands = front === 'lawn' ? ground.map((g, k) => islandOf(g, out.length * 7 + k)).filter((isl, k) => fits(isl, ground[k])) : [];
-    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground, islands, plants, bins, back, patio, ramada, grill, pool, extras, gates });
+    // The front's street edge out to the sidewalk's (Phase 7): round a turning circle or a bend the lot's front is a
+    // chord and the sidewalk's edge an arc, so the ground and the driveway are carried to it
+    const block = blockOf.get(lotOf.get(h.lot)!.block)!;
+    const edge = (u: number) => streetV(h, block, u);
+    const toEdge = (g: Pt[]) => (g[0][1] === 0 && g[1][1] === 0 ? [...along(g[0][0], g[1][0], edge), ...g.slice(2)] : g);
+    // (the turf on a piece's quad, its street side moved in past where the sidewalk's edge bows into the lot)
+    const inFrom = (g: Pt[]): Pt[] => {
+      if (g[0][1] !== 0 || g[1][1] !== 0) return g;
+      const v = Math.max(0, ...along(g[0][0], g[1][0], edge).map((p) => p[1]));
+      return [[g[0][0], v], [g[1][0], v], g[2], g[3]];
+    };
+    const islands =
+      front === 'lawn'
+        ? ground
+            .map(inFrom)
+            .map((g, k) => islandOf(g, out.length * 7 + k))
+            .filter((isl, k) => fits(isl, inFrom(ground[k])))
+        : [];
+    const drive = driveOf(h, d0, d1, Math.max(0, Math.min(FLARE, d0 - L(0) - 0.05)), Math.max(0, Math.min(FLARE, R(0) - d1 - 0.05)), edge);
+    out.push({ house: h.id, front, groundTone: Math.floor(rand() * GROUNDS.length), ground: ground.map(toEdge), drive, islands, plants, bins, back, patio, ramada, grill, pool, extras, gates });
   }
   return out;
 }

@@ -307,7 +307,17 @@ These are my recommendations, made so the plan is complete; any can change.
        sprinklers stand on the turf.
      - *The driveways* stop at the sidewalk, which runs on unbroken (the
        owner's call: an apron across it was tried and taken out); the kerb
-       is a rolled one, driven over.
+       is a rolled one, driven over. Their ends finished (the owner: "please
+       ensure all driveway ends are clean"): each driveway is the yard's
+       (sunyards.ts `drive`, `driveOf()`, drawn by sunyards3d.ts), from the
+       garage door to the sidewalk's edge exactly (`streetV()`: round a
+       turning circle the lot's front is a chord and the sidewalk's edge an
+       arc, so a gap of bare ground showed), flared out to it each side in
+       a quarter round (`FLARE`, never past the lot's sides). The front
+       yards' pieces are carried to the same edge, and their turf moved in
+       where the edge bows into the lot. Tested: every driveway's end on
+       the sidewalk's edge, nothing on the sidewalk, the flares inside the
+       lot; the fronts to the edge with no sliver.
      - *The kerbs:* a rolled kerb in pale stone (`STONE.kerb`) along the
        sidewalk's edge beside every street and round every turning circle
        (sunridge3d.ts `kerbAlong()`), only where there's sidewalk

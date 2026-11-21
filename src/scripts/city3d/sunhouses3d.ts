@@ -374,9 +374,8 @@ function drawHouse(b: Batch, h: House, low: boolean) {
     box(cu - 0.36, cu + 0.36, cv - 0.36, cv + 0.36, main.top + roofRise(main) * 0.75 + 0.35, main.top + roofRise(main) * 0.75 + 0.45, trim);
   }
 
-  // The driveway out to the sidewalk, the walk from the door to it
+  // The walk from the door to the driveway (the driveway itself is the yard's: sunyards.ts `drive`, out to the sidewalk)
   const [d0, d1] = h.drive;
-  flat(d0, d1, 0, h.garageDoor.v, 0.012, CONCRETE);
   const [, , wv0, wv1] = h.walk;
   flat(h.door.u - 0.35, h.door.u + 0.35, wv0, wv1 - 0.35, 0.018, CONCRETE);
   const toDrive = h.door.u < (d0 + d1) / 2 ? [h.door.u, d0] : [d1, h.door.u];
