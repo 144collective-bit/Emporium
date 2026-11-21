@@ -14,7 +14,7 @@ import { hip } from './roofs3d';
 import { addSolids } from './solids';
 import { TILE, tileOf } from './tiles';
 import { HOUSES, SCHEMES, type House } from './sunhouses';
-import { BLOCK, GROUNDS, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, sprayAt, sprinklerOn, type Plant, type Yard } from './sunyards';
+import { BLOCK, GROUNDS, SPRINKLERS, WALLS, YARDS, YARD_SOLIDS, islandOf, sprayAt, sprinklerOn, type Plant, type Yard } from './sunyards';
 import { SUNRIDGE_RECT } from './sunridge';
 import { CROWD_VIEW } from './character';
 import { LOTS } from './sunridgelots';
@@ -183,7 +183,11 @@ function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
   {
     const [u0, v0, u1, v1] = y.back;
     rect(u0, u1, v0, v1, 0.006, DG[(y.groundTone + 1) % DG.length]);
-    if (!y.pool && v1 - v0 > 2) rect(u0 + 0.5, u1 - 0.5, y.patio[3] + 0.35, v1 - 0.45, 0.011, LAWN);
+    // (its edges soft, as the front's turf: sunyards.ts `islandOf()`, Phase 7)
+    if (!y.pool && v1 - v0 > 2) {
+      const [a0, a1, b0, b1] = [u0 + 0.3, u1 - 0.3, y.patio[3] + 0.2, v1 - 0.3];
+      flat(islandOf([[a0, b0], [a1, b0], [a1, b1], [a0, b1]], y.house.length * 13 + Math.round(a0 * 7)), 0.011, LAWN);
+    }
   }
   // The back yard: its patio, the ramada over it, the grill
   const [pu0, pv0, pu1, pv1] = y.patio;
