@@ -72,6 +72,7 @@ import { YARDS_RECT, inYards } from './southfield';
 import { ENDSWOOD_RECT, inEndswood } from './endswood';
 import { FOUNTAIN as CIVIC_FOUNTAIN, FOUNTAINS as CIVIC_FOUNTAINS, HALL_BELL, SQUARE as CIVIC_SQUARE } from './civic';
 import { fromWall } from './wall';
+import { fromFence, inAirbase } from './airbase';
 import { ENDS_DOORS } from './endsplaces';
 import { TOWER as ALDWYNS_TOWER } from './aldwyns';
 import { zoneAt } from './south';
@@ -126,6 +127,9 @@ export interface Ambience {
   yards: number;
   /** The kart park: engines idling, a tannoy's murmur, 0-1 */
   karts: number;
+  /** Northgate Air Base (docs/military-plan.md Phase 4): far engines across the field, 0-1 (all of it inside its fence,
+   * fading over 80 past it) */
+  airbase: number;
   /** The stadium on a match night (stadium.ts `matchOn()`): the crowd's roar swelling now and then, 0-1; 0 any other time */
   stadium: number;
   /** Endswood Estate: pigeons, mopeds, the two-tone siren far off, the ice-cream van, 0-1 */
@@ -343,6 +347,7 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   // Inside Degen's house (walking: the City view over its roof hears the street)
   const home = inHouse(x, z) && lift < 3 ? 1 : 0;
   const karts = near(KART_RECT, x, z, 0, 40);
+  const airbase = inAirbase(x, z) ? 1 : 1 - smooth(0, 80, fromFence(x, z));
   // The stadium's crowd on a match night (the polish plan's Phase 7): round the ground, carrying well past its block
   const stadium = matchOn(t * 1000) ? near(STADIUM_BLOCK, x, z, 0, 90) : 0;
   // Endswood: all of it on its land, fading over 25 past it. Bunker Sound's beat and St Aldwyn's bell come back with
@@ -388,6 +393,7 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     home,
     yards: yards * k,
     karts: karts * k,
+    airbase: airbase * k,
     stadium: stadium * k,
     ends: ends * k,
     studio,

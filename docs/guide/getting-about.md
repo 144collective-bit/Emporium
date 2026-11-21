@@ -160,7 +160,8 @@ keep it up to date when what it describes changes.
     and the clock, `ambienceAt(x, z, lift, t)`), `indoor` (inside the mall's
     hall; sound.ts damps the outdoor layers by it), `home` (in Degen's
     house on foot, home.ts `inHouse()`: damped further, a faint hum), `karts` (the kart
-    park: engines idling, a tannoy) and `stadium` (a match night's crowd
+    park: engines idling, a tannoy), `airbase` (Northgate Air Base: far engines across the field, all of it inside
+    its fence and fading over 80 past it, airbase.ts `inAirbase()` / `fromFence()`) and `stadium` (a match night's crowd
     round the ground, stadium.ts `matchOn()`: a murmur, a roar swelling now
     and then); `sound.update()` mixes its layers
     from it (and the el's rumble from `metro.rumbleAt()`), where you walk

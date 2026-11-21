@@ -87,12 +87,13 @@ const spots: Record<SpotId, Spot> = {
   kestrel: { title: 'Kestrel Fuel', sub: 'Petrol station' },
   busgarage: { title: "Aldwyn's Green Bus Garage", sub: 'Bus garage' },
   rec: { title: "Aldwyn's Green Rec", sub: 'Rec ground' },
+  northgate: { title: 'Northgate Air Base', sub: "Visitors' centre" },
   cityhall: { title: 'City Hall', sub: 'Sector 7' },
   police: { title: 'Sector 7 Police', sub: 'Headquarters' },
   courthouse: { title: 'The Courthouse', sub: 'Sector 7' },
   home: { title: 'Home', sub: "Degen's place" },
 };
-const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse', 'vellano', 'solenne', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec'];
+const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse', 'vellano', 'solenne', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec', 'northgate'];
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -1447,6 +1448,13 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     <h2 id="city-panel-title" class="city-panel-title">Aldwyn's Green Rec</h2>
     <p class="city-panel-text">A pitch, a pavilion and a skate park on the brook. Coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-ends-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="northgate" data-marquee="Seen through the wire">
+    <p class="kicker"><span class="kicker-num">51</span> North of the stadium</p>
+    <h2 id="city-panel-title" class="city-panel-title">Northgate Air Base</h2>
+    <p class="city-panel-text">A base and airfield across the north, its gates shut. The visitors' centre: coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-northgate-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="cityhall" data-marquee="The city keeps its records">

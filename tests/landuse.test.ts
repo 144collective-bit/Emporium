@@ -64,10 +64,11 @@ test('the districts that used to clear their own land by hand are still clear', 
 test('a tree line along a street is ragged, not ruled', () => {
   // The east ring avenue north past the highway, a country road through open land (rural.ts, docs/highway-plan.md
   // Phase 7): how far past its fences the first free spot is, all along it, varies by more than half the wobble
+  // (between the highway and Northgate Air Base's service gate, where it ends since the base's Phase 1)
   const road = NS_ROADS[NS_ROADS.length - 1];
   const reach = RURAL.fence + 1;
   const gaps: number[] = [];
-  for (let z = -400; z < -320; z += 2) {
+  for (let z = -282; z < -222; z += 2) {
     let d = reach;
     while (d < reach + WOBBLE + 2 && !treeSpot(road.c + d, z)) d += 0.1;
     gaps.push(d - reach);

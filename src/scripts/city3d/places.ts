@@ -34,6 +34,7 @@ import { CITYHALL_SPAWN, COURTHOUSE_SPAWN, POLICE_SPAWN } from './civic';
 import { RESORTS } from './resorts';
 import { SPHERE_SPAWN } from './stripmarks';
 import { MONO_STATIONS } from './monorail';
+import { VISITOR_SPAWN } from './airbase';
 import { CABLE_STATIONS } from './cablecar';
 
 export type PlaceKind = 'spot' | 'lot' | 'metro' | 'riverbus' | 'mono' | 'tube' | 'cable';
@@ -101,6 +102,9 @@ export const PLACES: Place[] = [
   { id: 'sphere', kind: 'spot', spot: 'sphere', at: SPHERE_SPAWN },
   // Lot 9, the trailer park south of the highway (lot9.ts): on the lane outside its gate, facing in
   { id: 'lot9', kind: 'spot', spot: 'lot9', at: LOT9_SPAWN },
+  // Northgate Air Base's visitors' centre outside its main gate (airbase.ts, docs/military-plan.md): in its car park,
+  // facing its door
+  { id: 'northgate', kind: 'spot', spot: 'northgate', at: VISITOR_SPAWN },
   // Endswood Estate's (endsplaces.ts): in front of the tenants' hall, St Aldwyn's west door and Bunker Sound's
   ...ENDS_PLACE_IDS.map((id): Place => ({ id, kind: 'spot', spot: id, at: ENDS_SPAWNS[id] })),
   // City Hall (civic.ts): on the civic square at its steps' foot, facing them

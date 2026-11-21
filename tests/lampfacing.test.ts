@@ -32,7 +32,8 @@ import { KART_LAMPS } from '../src/scripts/city3d/kartfacility';
 import { RING_LAMPS, PARK_SIDE_LAMPS, MALL_SIDE_LAMPS } from '../src/scripts/city3d/ringstreet';
 import { UPTOWN_LAMPS } from '../src/scripts/city3d/uptown';
 import { DIAGONAL_LAMPS } from '../src/scripts/city3d/downtown';
-const lists: Record<string, readonly (readonly unknown[])[]> = { PARK_LAMPS, SQUARE_LAMPS, CREST_LAMPS, SUN_LAMPS, SUN_PLACE_LAMPS, DOCK_LAMPS, STRIP_LAMPS, VIA_DECK, RAMP_LAMPS, SWING_LAMPS, ENDS_LAMPS, RURAL_LAMPS, LOT9_LAMPS, SF_PARK, SF_LAMPS, GARDEN_LAMPS, PLAZA_LAMPS, TERRACE_LAMPS, EDGE_LAMPS, MALL_LAMPS, NORTH_LAMPS, PARK_EDGE, STADIUM_LAMPS, AIRPORT_LAMPS, AIR_DECK, KART_LAMPS, RING_LAMPS, PARK_SIDE_LAMPS, MALL_SIDE_LAMPS, UPTOWN_LAMPS, DIAGONAL: DIAGONAL_LAMPS.map((l) => [l.at[0], l.at[1], l.ry]) };
+import { AIRBASE_LAMPS } from '../src/scripts/city3d/airbase';
+const lists: Record<string, readonly (readonly unknown[])[]> = { PARK_LAMPS, SQUARE_LAMPS, CREST_LAMPS, SUN_LAMPS, SUN_PLACE_LAMPS, DOCK_LAMPS, STRIP_LAMPS, VIA_DECK, RAMP_LAMPS, SWING_LAMPS, ENDS_LAMPS, RURAL_LAMPS, AIRBASE_LAMPS, LOT9_LAMPS, SF_PARK, SF_LAMPS, GARDEN_LAMPS, PLAZA_LAMPS, TERRACE_LAMPS, EDGE_LAMPS, MALL_LAMPS, NORTH_LAMPS, PARK_EDGE, STADIUM_LAMPS, AIRPORT_LAMPS, AIR_DECK, KART_LAMPS, RING_LAMPS, PARK_SIDE_LAMPS, MALL_SIDE_LAMPS, UPTOWN_LAMPS, DIAGONAL: DIAGONAL_LAMPS.map((l) => [l.at[0], l.at[1], l.ry]) };
 const NEAR = 3;
 const streets = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp');
 
