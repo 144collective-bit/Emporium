@@ -502,7 +502,8 @@ keep it up to date when what it describes changes.
 - `?fps` in the address (`.city-stats`, built in
   `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory
-  (`sceneMemory()` in `perf.ts`), how many tile pieces were drawn and
+  (`sceneMemory()` in `perf.ts`, its own chunk since 2026-11-21, loaded only
+  with the readout, `?bench` and `__mem()`, which reads null until it's in), how many tile pieces were drawn and
   tiles are near, how many far forms are showing, how long the boot took (art, build and its own work less the waits, tiles, shaders), the sites built (at the boot, after, the slowest, waiting) and the near forms held against the budget, quality tier, pixel ratio and any
   quality stepped down. Use it on
   real devices before and after changes; it's invisible without the

@@ -150,7 +150,6 @@ import type { Outfit } from './wardrobe';
 import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
-import { mb, memoryRows, sceneMemory, targetMemory } from './perf';
 import { antialias } from './targets';
 import { PACKED, UV, tileBatch } from './tilebatch';
 import { hazeHorizon } from './tileplan';
@@ -1979,7 +1978,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (the benchmark is a chunk of its own, loaded only when asked for; it starts once every site is built)
   let bench: Bench | null = null;
   if (query.has('bench'))
-    void import('./bench').then(({ createBench }) => {
+    void Promise.all([import('./bench'), import('./perf')]).then(([{ createBench }, { targetMemory }]) => {
       bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), targets: () => targetMemory(post.targets(), scene), home, conditions: benchSky, boot: bootTimes, textures: texSources, extra: [] }, query.get('bench') === 'night');
     });
   // ?shots: the blending plan's review shots (shots.ts, docs/blend-plan.md), a chunk of its own too
@@ -1997,6 +1996,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       );
     });
   const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
+  // (the memory measures are a chunk of their own too, loaded only with the readout: perf.ts)
+  let perf: typeof import('./perf') | null = null;
+  if (statsEl) void import('./perf').then((m) => (perf = m));
+  const mb = (bytes: number) => perf?.mb(bytes) ?? '…';
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
   /** (the camera's look, for the readout) */
   const statLook = new THREE.Vector3();
@@ -2042,7 +2045,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           Q.far
         )
       );
-    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() });
+    (window as unknown as { __mem?: () => unknown }).__mem = () => perf && (({ sceneMemory, targetMemory, memoryRows }) => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() }))(perf);
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -2382,7 +2385,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         const n = Math.max(1, stat.frames);
         const lost = Object.entries(lowered).filter(([, v]) => v).map(([k]) => k);
         // Memory every few seconds (it walks the whole scene)
-        if (now - stat.memAt > 5000) {
+        if (perf && now - stat.memAt > 5000) {
+          const { sceneMemory, targetMemory } = perf;
           const m = sceneMemory(scene);
           stat.mem = `geometry ${mb(m.geometry)} · textures ${mb(m.textures)} · targets ${mb(targetMemory(post.targets(), scene))}${aa.msaa ? ` (MSAA ${aa.msaa}x)` : aa.smaa ? ' (SMAA)' : ''}`;
           stat.memAt = now;

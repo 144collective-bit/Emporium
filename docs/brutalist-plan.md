@@ -116,6 +116,9 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
   on the slab and tower roofs; a sodium lamp over each tower's door, a puddle and a tag at its foot; one link in four
   tired (`STRIP_TIRED`), one in seven dark. All the small mess near only and off on phones.
 
+- **The boot:** merging main took it to 775.6 KB; trimmed, not raised (the owner's call): the memory measures
+  (`perf.ts`) load only with `?fps`, `?bench` and `__mem()`. 774.6 KB after.
+
 ## The owner's decisions (2026-11-21)
 
 - **The concrete:** a cool grey, each block's own accent kept bold as a stripe on its end; after the first look, darker
