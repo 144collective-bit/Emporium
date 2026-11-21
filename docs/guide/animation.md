@@ -236,7 +236,7 @@ keep it up to date when what it describes changes.
   (`tests/mocapdata.ts`), and `tests/mocap.test.ts` holds every pack's
   file to what the pipeline makes:
   - **The data** is CMU's motion capture (free for commercial use; the
-    acknowledgment is in the start menu's Options > Credits, named, never
+    acknowledgment is in the hub's Settings > Game > Credits, named, never
     linked): mostly subject 143's and 127's takes (137's idles, 132's fast walk, 122's climb, 136's crouched walks, 141's strafes), in `assets/mocap/cmu/`
     (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
     `loopClip()`, `cycle` its length where it's longer than a step; `fps` where the file's frame rate is wrong: subject 143's

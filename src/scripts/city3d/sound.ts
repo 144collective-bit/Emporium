@@ -177,6 +177,9 @@ export function createSound(given?: AudioContext) {
     return g;
   }
 
+  /** The master level while it's on (Settings > Sound > Volume) */
+  let level = 0.55;
+
   function init() {
     ctx = given ?? new AudioContext();
     master = ctx.createGain();
@@ -826,6 +829,11 @@ export function createSound(given?: AudioContext) {
     get on() {
       return on;
     },
+    /** Settings > Sound > Volume: the master level while it's on (settings.ts `masterGain()`) */
+    setVolume(v: number) {
+      level = v;
+      if (on && ctx) master.gain.setTargetAtTime(level, ctx.currentTime, 0.1);
+    },
     async toggle() {
       if (!ctx) init();
       on = !on;
@@ -839,7 +847,7 @@ export function createSound(given?: AudioContext) {
         nextClub = ctx!.currentTime + 0.1;
         nextStudio = ctx!.currentTime + 0.1;
         timer = window.setInterval(schedule, 50);
-        master.gain.setTargetAtTime(0.55, ctx!.currentTime, 0.4);
+        master.gain.setTargetAtTime(level, ctx!.currentTime, 0.4);
       } else {
         window.clearInterval(timer);
         master.gain.setTargetAtTime(0, ctx!.currentTime, 0.15);

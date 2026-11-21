@@ -9,8 +9,9 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
-import { bottomsFor, coversEyes, shoesFor, type Bottoms, type EyeStyle, type FaceGear, type HeadShape, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
+import { bottomsFor, coversEyes, shoesFor, type Bottoms, type CharacterId, type EyeStyle, type FaceGear, type HeadShape, type Look, type MarkId, type MarkSlot, type PatternId, type ShoeStyle } from '../net/profile-data';
 import { EYE_Y as HERO_EYE_Y, HEAD_TOP as HERO_HEAD_TOP, handParts, headFront, headGeometry, headRow, inHead } from './body';
+import type { HeadPart } from './heads';
 import { HEAD_Y, HIP_Y, LEG_X, THIGH, WRIST_Y, WRIST_Z, weigh, type BoneName, type Influence, type Joint, type Region } from './skeleton';
 
 /* ---------- Outfits ---------- */
@@ -89,6 +90,11 @@ export interface Outfit {
   shades?: boolean;
   /** The head's proportions, unmasked (the standard if not said) */
   headShape?: HeadShape;
+  /**
+   * A character's head instead of Degen's (docs/characters-plan.md; single figures only): nothing is worn over it, so
+   * his head, face, hair, hats, eyewear, face gear, the shades' chain and the hood up are left off while it's on
+   */
+  character?: CharacterId;
   /** Hoodie with the hood up (no cap) */
   hood?: boolean;
   backpack?: string;
@@ -231,10 +237,12 @@ export function lookOutfit(l: Look): Outfit {
     pattern: l.pattern,
     face: l.face || undefined,
     skin: l.tone,
-    hair: l.face && l.cut !== 'bald' ? l.hair : undefined,
+    // (a character's head has hair of its own: SlimeWhale's buzz, in the look's hair colour)
+    hair: l.character || (l.face && l.cut !== 'bald') ? l.hair : undefined,
     cut: l.cut === 'bald' ? undefined : l.cut,
     shades: l.face && l.shades ? true : undefined,
     headShape: l.face && l.shape !== 'standard' ? l.shape : undefined,
+    character: l.character ?? undefined,
   };
 }
 
@@ -1186,6 +1194,32 @@ export function items(q: Detail, hero = false): Item[] {
   const fingers = (color: string): Piece[] =>
     far ? both('wrist', one(hand), color) : ([-1, 1] as const).flatMap((s) => handParts(s, R(9)).map(({ geo, skin }) => P(s < 0 ? 'handL' : 'handR', geo, color, { skin })));
 
+  /** A character's own pendant on the necklace in the diamond's place (single figures, once the heads' chunk is in) */
+  const pendantOf = (o: Outfit) => q >= 2 && !!(o.character && heads?.pendant(o.character, q as 2 | 3));
+  /** Gloves on (a character's: docs/characters-plan.md) */
+  const glovesOf = (o: Outfit) => !!(o.character && heads?.gloves(o.character));
+  /** A glove's rolled cuff round each wrist, weighted as the wrist is (the hand, and the forearm towards the sleeve) */
+  const cuffs = (color: string): Piece[] =>
+    ([-1, 1] as const).map((s) => {
+      const S = s < 0 ? 'L' : 'R';
+      const geo = new THREE.TorusGeometry(0.029, 0.0085, R(6), R(14)).rotateX(Math.PI / 2).translate(0, 0.047, -0.002).toNonIndexed();
+      const p = geo.attributes.position as THREE.BufferAttribute;
+      const skin: Influence[] = [];
+      for (let i = 0; i < p.count; i++) {
+        const f = 0.5 * THREE.MathUtils.smoothstep(p.getY(i), 0.035, 0.065);
+        skin.push(f > 1e-4 ? [[`hand${S}` as BoneName, 1 - f], [`fore${S}` as BoneName, f]] : [[`hand${S}` as BoneName, 1]]);
+      }
+      return P(s < 0 ? 'handL' : 'handR', geo, color, { skin });
+    });
+  /** A cartoon glove's three stitch lines down the back of each hand, towards the knuckles (the palm is the hand's -x side on the +x hand) */
+  const stitchLines = (): Piece[] =>
+    ([-1, 1] as const).map((s) => {
+      const S = s < 0 ? 'L' : 'R';
+      const merged = one([-0.014, 0, 0.014].map((z) => new THREE.BoxGeometry(0.0014, 0.026, 0.0026).translate(s * 0.0165, 0.013, z)));
+      const geo = merged.index ? merged.toNonIndexed() : merged;
+      const skin: Influence[] = Array.from({ length: geo.attributes.position.count }, () => [[`hand${S}` as BoneName, 1]]);
+      return P(s < 0 ? 'handL' : 'handR', geo, BLACK, { skin, detail: true });
+    });
   const suit = (o: Outfit) => o.kind === 'suit';
   const hoodie = (o: Outfit) => o.kind === 'hoodie';
   const track = (o: Outfit) => o.kind === 'track';
@@ -4307,7 +4341,30 @@ export function items(q: Detail, hero = false): Item[] {
             },
           ]
         : []),
-      ...(k === 'puffer' || k === 'vest' || k === 'shell' ? [] : [{ id: `necklace-${k}`, when: (o: Outfit) => !!o.necklace && is(o), pieces: [P('torso', one(necklace), GOLD), P('torso', pendant, '#9ff8ff')] }]),
+      ...(k === 'puffer' || k === 'vest' || k === 'shell'
+        ? []
+        : [
+            { id: `necklace-${k}`, when: (o: Outfit) => !!o.necklace && is(o) && !pendantOf(o), pieces: [P('torso', one(necklace), GOLD), P('torso', pendant, '#9ff8ff')] },
+            // A character's own pendant on the chain in the diamond's place (docs/characters-plan.md: Smilex's PulseChain symbol)
+            ...(heads && q >= 2
+              ? heads.ids.flatMap((id): Item[] => {
+                  const parts = heads!.pendant(id, q as 2 | 3);
+                  if (!parts) return [];
+                  const at = new THREE.Matrix4().makeTranslation(0, 0.258, o.front(0, 0.258) + t.over + 0.012);
+                  return [
+                    {
+                      id: `necklace-${id}-${k}`,
+                      when: (o: Outfit) => !!o.necklace && is(o) && o.character === id,
+                      // (his own chain where he has one: Smilex's chunky curb links, along the cord's own path)
+                      pieces: [
+                        P('torso', one(heads!.chain(id, q as 2 | 3, (necklace[0] as THREE.TubeGeometry).parameters.path) ?? necklace), GOLD),
+                        ...parts.map((h) => P('torso', one(h.geos.map((g) => g.clone().applyMatrix4(at))), h.color)),
+                      ],
+                    },
+                  ];
+                })
+              : []),
+          ]),
       {
         id: `backpack-${k}`,
         when: (o) => !!o.backpack && is(o),
@@ -4756,7 +4813,15 @@ export function items(q: Detail, hero = false): Item[] {
     ...(hero
       ? [
           // The skinned body's hands have fingers: a fist is the same hand, closed (`grip`)
-          { id: 'fingers', when: (o: Outfit) => !soldier(o), pieces: fingers('skin') },
+          { id: 'fingers', when: (o: Outfit) => !soldier(o) && !glovesOf(o), pieces: fingers('skin') },
+          // A character's gloves (docs/characters-plan.md: Smilex's white cartoon gloves): the hands in the glove's
+          // colour, a rolled cuff round each wrist
+          ...(heads
+            ? heads.ids.flatMap((id): Item[] => {
+                const c = heads!.gloves(id);
+                return c ? [{ id: `gloves-${id}`, when: (o: Outfit) => !soldier(o) && o.character === id, pieces: [...fingers(c), ...cuffs(c), ...stitchLines()] }] : [];
+              })
+            : []),
         ]
       : [
           {
@@ -5123,9 +5188,54 @@ export function items(q: Detail, hero = false): Item[] {
       pieces: [P('handR', bagBody, '#f0e9dc'), P('handR', bagCord, '#1b1830'), P('handR', bagBand, GOLD, { detail: true })],
     },
     ...(hero ? merch : []),
+    // The characters' heads (docs/characters-plan.md): single figures only, once their chunk is in
+    ...(hero && q >= 2 && heads
+      ? heads.ids.map(
+          (id): Item => ({
+            id: `character-${id}`,
+            when: (o) => o.character === id,
+            pieces: heads!.parts(id, q as 2 | 3).map((h) => P('head', one(h.geos), h.color, { ...(h.shade ? { shade: h.shade } : {}), ...(h.detail ? { detail: true } : {}), ...(h.rigid ? { bone: 'head' as BoneName } : {}) })),
+          })
+        )
+      : []),
   ];
-  itemsCache[key] = all;
-  return all;
+  // With a character's head on, Degen's own head and everything worn over a head is off, whatever the outfit says
+  const out = all.map((it): Item => {
+    const own = DEGEN_HEAD_ITEMS(it.id);
+    // (until the heads' chunk is in, he's Degen as he is: never a figure with no head)
+    return { ...it, when: (o) => (o.character && heads ? !own && it.when(headless(o)) : it.when(o)) };
+  });
+  itemsCache[key] = out;
+  return out;
+}
+
+/** The characters' heads, once their chunk is in (heads.ts; `loadHeads()` in character.ts) */
+let heads: {
+  ids: readonly CharacterId[];
+  parts: (id: CharacterId, q: 2 | 3) => HeadPart[];
+  /** What hangs on a character's chain in place of the diamond (null: the diamond) */
+  pendant: (id: CharacterId, q: 2 | 3) => HeadPart[] | null;
+  /** A character's own chain along the necklace's path (null: the smooth cord) */
+  chain: (id: CharacterId, q: 2 | 3, path: THREE.Curve<THREE.Vector3>) => THREE.BufferGeometry[] | null;
+  /** A character's gloves' colour (null: bare hands) */
+  gloves: (id: CharacterId) => string | null;
+} | null = null;
+/** Hand the wardrobe the characters' heads (their chunk is in): the single figures' items are made again with them */
+export function useHeads(h: NonNullable<typeof heads>) {
+  heads = h;
+  delete itemsCache['2h'];
+  delete itemsCache['3h'];
+}
+/** A character's gloves' colour on this outfit (null: bare hands): the first-person hands and fists wear it too */
+export const gloveColour = (o: Outfit): string | null => (o.character && heads?.gloves(o.character)) || null;
+/** Degen's own head: the head and its balaclava, the face's ink, the hair (docs/characters-plan.md) */
+const DEGEN_HEAD_ITEMS = (id: string) => id === 'head' || id === 'mask' || id === 'features' || id.startsWith('hair-');
+/**
+ * An outfit as a character's head wears it: no hat, helmet, face gear, shades or chain, the hood down (nothing is
+ * worn over it: the owner's call), and unmasked, so the balaclava's pieces are off too. The outfit itself is untouched.
+ */
+export function headless(o: Outfit): Outfit {
+  return { ...o, cap: undefined, beanie: undefined, bucket: undefined, hardhat: undefined, helmet: undefined, faceGear: undefined, hood: undefined, chain: undefined, face: true, shades: undefined, headShape: undefined };
 }
 
 /**

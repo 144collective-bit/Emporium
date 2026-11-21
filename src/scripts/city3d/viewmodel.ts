@@ -21,7 +21,7 @@ import { newReloadFrame, reloadAt } from './gunfit';
 import type { WeaponId } from './combat-sim';
 import { PLAYER, type Outfit } from './character';
 import { bakedHand } from './body';
-import { shadeRGB } from './wardrobe';
+import { gloveColour, shadeRGB } from './wardrobe';
 
 const K = 8;
 /** The gun and hands are drawn a little smaller than life, so they don't swamp the screen */
@@ -113,7 +113,7 @@ function arm(dir: THREE.Vector3, hand: THREE.BufferGeometry) {
     g,
     dress(o: Outfit) {
       // (the hand in the player's skin tone: one of the cached flat materials, never a colour changed in place)
-      skin.material = shared(o.skin ?? SKIN);
+      skin.material = shared(gloveColour(o) ?? o.skin ?? SKIN);
       clothes.traverse((m) => (m as THREE.Mesh).geometry?.dispose());
       clothes.clear();
       const top = o.top;

@@ -7,7 +7,7 @@
  *
  * - Only the city's own saves go in. The guest and wallet login tokens stay
  *   out (they're keys to a profile on the game server, not progress), and so
- *   do screen preferences.
+ *   do screen preferences (the settings record, which the owner asked for in it, is the one kept).
  * - A file is checked before anything is written: it has to be a Sector 7
  *   backup with the city's game in it, every value has to be readable, and
  *   the city's game goes through `cleanSave()` like any save loaded.
@@ -28,6 +28,8 @@ export const BACKUP_KEYS = [
   'degen-city-combat-v1',
   'degen-city-walk-v1',
   'degen-city-ghosts-v2',
+  // (the settings, docs/settings-plan.md: the owner's pick, in the backup)
+  'degen-city-settings-v1',
 ] as const;
 export type BackupKey = (typeof BACKUP_KEYS)[number];
 export const BACKUP_KIND = 'sector7-save';

@@ -145,7 +145,8 @@ import { kartRecordsHtml } from './kart-records';
 import { count, destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
-import { CROWD_VIEW, figureDetail } from './character';
+import { CROWD_VIEW, figureDetail, headsReady, loadHeads } from './character';
+import type { Outfit } from './wardrobe';
 import { repaint, type GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
@@ -163,6 +164,8 @@ import { FAR_PHONE, farForm, farLods, freedNear, primeAverages, updateLods } fro
 import { live } from './live-client';
 import { closedLine } from './live';
 import { createQuality, type QualityStep } from './quality';
+import { flyScale, fpsCap, masterGain, pixelRatio } from './settings';
+import { actions, acted, boot, onSettings, settings } from './settings-store';
 import { GPU_KEY, RELOAD_KEY, pickTier, reloadOnRestore, type Device, type Lost, type Picked } from './gputier';
 
 // The south's rolling ground under everything drawn there (docs/south-plan.md Phase 1c): set as this module loads, so
@@ -228,9 +231,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return null;
   }
   // The tier (gputier.ts): the screen, memory and cores as before, graphics built into the processor a step down, and
-  // a step down after the 3D graphics stopped here lately. `data-tier` on the page overrides it.
+  // a step down after the 3D graphics stopped here lately; or Settings > Graphics > Quality (docs/settings-plan.md:
+  // a change takes a reload, which the tab offers). `data-tier` on the page overrides both.
   const gpu = gpuName(renderer);
-  const picked: Picked = root.dataset.tier ? { tier: root.dataset.tier as Tier, why: 'set by the page' } : pickTier(device(gpu));
+  const quality0 = settings().quality;
+  boot.quality = quality0;
+  const picked: Picked = root.dataset.tier ? { tier: root.dataset.tier as Tier, why: 'set by the page' } : pickTier(device(gpu), quality0 === 'auto' ? undefined : quality0);
   const tier = picked.tier;
   const Q = TIERS[tier];
   // Phones draw the far city in fewer pieces: the far forms, aircraft, small signs (lod.ts, docs/phone-far-plan.md)
@@ -242,7 +248,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   loader.hidden = false;
   progress(0.05);
 
-  renderer.setPixelRatio(Math.min(devicePixelRatio, Q.dpr));
+  // (the screen's pixels up to the tier's, at Settings > Graphics > Resolution's share)
+  renderer.setPixelRatio(pixelRatio(devicePixelRatio, Q.dpr, settings(), false));
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1;
   renderer.shadowMap.enabled = Q.shadows > 0;
@@ -711,14 +718,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const pins = new Map<string, HTMLElement>();
   root.querySelectorAll<HTMLElement>('[data-pin]').forEach((el) => pins.set(el.dataset.pin!, el));
   // The pins are off by default (the owner's call, 2026-11: places are found on the world map and the hub's Map
-  // tab); Settings > Labels turns them on, remembered in this browser (a screen preference, not in the backup)
-  const LABELS_KEY = 'degen-city-labels-v1';
-  let pinsOn = false;
-  try {
-    pinsOn = localStorage.getItem(LABELS_KEY) === 'on';
-  } catch {
-    /* no storage: off */
-  }
+  // tab); Settings > Game > Labels turns them on (the settings record, settings-store.ts)
+  let pinsOn = settings().labels;
   root.classList.toggle('has-pins', pinsOn);
   const raycaster = new THREE.Raycaster();
   // (and the shapes drawn nowhere that stand for a place drawn as a site: Sector 7 Tower)
@@ -1470,8 +1471,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   }
 
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
+  let wantLook: Outfit | null = null;
   const profileUI = createProfileUI(root, {
-    setLook: (o) => walk.setLook(o),
+    // (a character's head, docs/characters-plan.md: its chunk first, so he doesn't come up as Degen and change; Degen if
+    // it won't load)
+    setLook: (o) => {
+      wantLook = o;
+      if (headsReady(o)) return walk.setLook(o);
+      const then = () => void (wantLook === o && walk.setLook(o));
+      loadHeads().then(then, then);
+    },
     onLifetime: (fn) => walk.combat.onLifetime(fn),
     openFitting: () => open('shop', true),
     // (the character screen comes in its own chunk the first time it's opened: lazy())
@@ -1674,7 +1683,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       return false;
     }
     camera.getWorldDirection(flyLook);
-    flyVel = easeVel(flyVel, wish(flyKeys, [flyLook.x, flyLook.y, flyLook.z], camera.position.y), dt, reduced);
+    // (Settings > Camera > Fly speed scales it)
+    const [wx, wy, wz] = wish(flyKeys, [flyLook.x, flyLook.y, flyLook.z], camera.position.y);
+    const k = flyScale(settings());
+    flyVel = easeVel(flyVel, [wx * k, wy * k, wz * k], dt, reduced);
     if (!flyVel.some((v) => v)) return false;
     const p = camera.position;
     const from: V3 = [p.x, p.y, p.z];
@@ -1711,7 +1723,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const p = camera.position;
     flyLook.subVectors(controls.target, p);
     const d = flyLook.length() || 1;
-    const [lx, ly, lz] = turn([flyLook.x / d, flyLook.y / d, flyLook.z / d], e.movementX, e.movementY);
+    // (Settings > Camera's look speed and invert, as on foot)
+    const look = settings();
+    const [lx, ly, lz] = turn([flyLook.x / d, flyLook.y / d, flyLook.z / d], e.movementX * look.sens, e.movementY * look.sens * (look.invert ? -1 : 1));
     controls.target.set(p.x + lx * d, p.y + ly * d, p.z + lz * d);
     keepPivot();
     camera.lookAt(controls.target);
@@ -1849,7 +1863,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     'the metro'
   );
 
-  /* ---------- Controls: time, weather, sound, view ---------- */
+  /* ---------- Controls: time, weather, sound (Settings) ---------- */
   const sound = createSound();
   lifeSfx = (k, g) => sound.sfx(k, g);
   // The sound by district (ambience.ts): fetched after the boot (docs/south-plan.md 6a; nothing's heard till Sound is
@@ -1858,50 +1872,36 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   void import('./ambience').then((m) => (ambienceAt = m.ambienceAt)).catch(() => {});
   let amb: Ambience | null = null;
   let ambT = 0;
-  const group = (name: string, apply: (v: string) => void) => {
-    const btns = root.querySelectorAll<HTMLButtonElement>(`[data-${name}]`);
-    btns.forEach((b) =>
-      b.addEventListener('click', () => {
-        btns.forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
-        apply(b.getAttribute(`data-${name}`)!);
-        dirty = true;
-      })
-    );
-  };
-  group('time', (v) => sky.setTime(v as TimeMode));
-  group('weather', (v) => sky.setWeather(v as WeatherMode));
-  const soundBtn = root.querySelector<HTMLButtonElement>('[data-sound]')!;
-  soundBtn.addEventListener('click', async () => {
-    const on = await sound.toggle();
-    soundBtn.setAttribute('aria-pressed', String(on));
-    soundBtn.querySelector('[data-sound-label]')!.textContent = on ? 'Sound on' : 'Sound off';
-  });
-  const labelsBtn = root.querySelector<HTMLButtonElement>('[data-labels]')!;
+  // Settings (docs/settings-plan.md, the record in settings-store.ts): Game's time, sky and labels, Sound's volume
+  // (Graphics' resolution and bloom are the step-down's, below; shadows and the frame rate the frame's; Quality waits
+  // for a reload)
+  sky.setTime(settings().time);
+  sky.setWeather(settings().sky);
   const showLabels = (on: boolean) => {
     pinsOn = on;
     root.classList.toggle('has-pins', on);
-    labelsBtn.setAttribute('aria-pressed', String(on));
-    labelsBtn.querySelector('[data-labels-label]')!.textContent = on ? 'Labels on' : 'Labels off';
     // (hidden, the labels measure nothing: measured again once they show)
     if (on) measurePins();
     dirty = true;
   };
-  labelsBtn.setAttribute('aria-pressed', String(pinsOn));
-  labelsBtn.querySelector('[data-labels-label]')!.textContent = pinsOn ? 'Labels on' : 'Labels off';
-  labelsBtn.addEventListener('click', () => {
-    showLabels(!pinsOn);
-    try {
-      localStorage.setItem(LABELS_KEY, pinsOn ? 'on' : 'off');
-    } catch {
-      /* not remembered */
-    }
+  sound.setVolume(masterGain(settings()));
+  onSettings((s, keys) => {
+    if (keys.includes('time')) sky.setTime(s.time);
+    if (keys.includes('sky')) sky.setWeather(s.sky);
+    if (keys.includes('labels')) showLabels(s.labels);
+    if (keys.includes('volume')) sound.setVolume(masterGain(s));
+    dirty = true;
   });
-  root.querySelector('[data-reset]')!.addEventListener('click', () => {
-    stopWalking(false);
-    close();
-    const hv = home();
-    flyTo(hv.pos, hv.target, 1.4);
-  });
+  // Sound: never on by itself (it waits for the visitor), so it's not kept; turned on before the city was up, it's on now
+  actions.sound = {
+    on: () => sound.on,
+    set: async (on: boolean) => {
+      if (sound.on !== on) await sound.toggle();
+      acted();
+    },
+  };
+  if (actions.soundWanted && !sound.on) void sound.toggle().then(acted);
+  actions.soundWanted = false;
 
   /* ---------- Loop ---------- */
   const timer = new THREE.Timer();
@@ -2133,7 +2133,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (bench && !bench.active && !bench.done && !walking && !startUp() && !works.stats().waiting && !districts.pending()) bench.begin(t);
     const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
     // (a phone resting at 30fps: the frames in between draw nothing, so they build what's waiting)
-    if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return spare(6);
+    // (and Settings > Graphics > Frame rate: 60 or 30 caps every frame)
+    const cap = fpsCap(settings());
+    const rate = Math.min(cap || Infinity, idleFps && !busy ? idleFps : Infinity);
+    if (rate < Infinity && t - lastT < 1 / rate - 0.004) return spare(6);
     const dt = Math.min(t - lastT, 0.1);
     lastT = t;
 
@@ -2206,7 +2209,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Shadows only while walking or driving, never in the City view or up in an aircraft (shadows.ts, the owner's call),
     // their box ahead of where the camera looks
     camera.getWorldDirection(look);
-    sky.setShadows(walking && !walk.airborne && !lowered.shadows);
+    // (Settings > Graphics > Shadows off holds them off; on, the step-down can still lower them)
+    sky.setShadows(walking && !walk.airborne && !lowered.shadows && settings().shadows);
     // (in Degen's house, home.ts: no rain indoors)
     sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z, walk.position.y));
     // (waking at home: the street's readiness asked every frame too, so the curtains open even standing still)
@@ -2415,8 +2419,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Quality is held where it is while the benchmark runs
     if (t > 4 && !bench?.active) {
       windowFrames++;
-      // "Slow" is relative to the rate we're aiming for (30fps on phones when idle)
-      const budget = idleFps && !busy ? 1 / idleFps : 1 / 60;
+      // "Slow" is relative to the rate we're aiming for (30fps on phones when idle, or the cap)
+      const budget = 1 / Math.min(60, rate);
       if (dt > budget * 1.7) windowSlow++;
       if (windowFrames === 90) {
         if (windowSlow > 45 && canDegrade()) {
@@ -2437,20 +2441,26 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Too slow: fewer pixels, then no shadows, then no bloom; fast again for a while, they come back (quality.ts: the
   // order, each step back once). The ink outlines always stay. Shadows go by their intensity (sky.setShadows(), above),
   // never the shadow map or castShadow, which recompiled every material in one frame (the stability plan's 6.1)
-  const fullPixels = renderer.getPixelRatio();
   const quality = createQuality();
   const lowered = quality.lowered;
   const canDegrade = () => quality.canDegrade();
   let fastWindows = 0;
   function apply(step: QualityStep | null) {
     if (step === 'pixels') {
-      renderer.setPixelRatio(lowered.pixels ? Math.max(1, fullPixels - 0.5) : fullPixels);
+      renderer.setPixelRatio(pixelRatio(devicePixelRatio, Q.dpr, settings(), lowered.pixels));
       resize();
-    } else if (step === 'bloom') post.bloom.enabled = !lowered.bloom;
+    } else if (step === 'bloom') post.bloom.enabled = !lowered.bloom && settings().bloom;
     // ('shadows': the frame asks sky.setShadows() with `lowered.shadows`, and they ease out or in)
   }
   const degrade = () => apply(quality.degrade());
   const restore = () => apply(quality.restore());
+  // (Settings > Graphics > Bloom off from the start; Resolution and Bloom changed later, heard once the step-down is
+  // here: the title screen's Settings can change them while the city is still being built)
+  apply('bloom');
+  onSettings((_, keys) => {
+    if (keys.includes('res')) apply('pixels');
+    if (keys.includes('bloom')) apply('bloom');
+  });
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {

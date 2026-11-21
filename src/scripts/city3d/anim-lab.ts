@@ -36,7 +36,8 @@
  */
 import * as THREE from 'three';
 import { FIGURE_SCALE } from './skeleton';
-import { PLAYER, SOLDIER, createDegen, type Degen } from './character';
+import { PLAYER, SOLDIER, createDegen, loadHeads, type Degen } from './character';
+import type { Outfit } from './wardrobe';
 import { addLean, addLook, applyTo, chestYaw, createAnimator, type Animator } from './animator';
 import { createFollow } from './follow';
 import { ADULT_SCALE, createRubric, type Row } from './human';
@@ -552,6 +553,8 @@ export async function openLab(root: HTMLElement, d: { reduced: boolean; low: boo
   }
   const outfit = { ...(kind === 'soldier' ? SOLDIER : kind ? { ...PLAYER, kind } : PLAYER), ...(wear as {}), ...clip };
   const detail = q.get('detail') === '2' ? 2 : 3;
+  // (`wear=character:slimewhale`: a character's head, docs/characters-plan.md; its chunk in before he's built)
+  if ((outfit as Outfit).character) await loadHeads();
   const hero: Degen = createDegen(outfit, detail);
   const old: Degen = createDegen(outfit, detail);
   scene.add(hero.g, old.g);

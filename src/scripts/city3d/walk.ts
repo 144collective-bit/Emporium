@@ -98,6 +98,7 @@ import { MALL_CAMERA, mallWall } from './mallinside';
 import { LINK_CAMERA, linkUp, linkWall } from './malllink';
 import { COURT_CAMERA, courtWall } from './courtinside';
 import { skyUp, skyWall } from './southsky';
+import { visitorsUp, visitorsWall } from './airbase';
 import { WORLD_BOUNDS, design } from './layout';
 import { WATER_Y, inChannel, inWater } from './river';
 import { inBasin } from './docks';
@@ -126,12 +127,14 @@ import { vehFace, type Mode, type Vehicle as NetVehicle } from '../net/protocol'
 import { live } from './live-client';
 import type { FeatureId } from './live';
 import { layoutControls } from './controls';
-import { cleanTouch, type TouchPrefs, type TouchSize } from './touchlayout';
+import { cleanTouch, type TouchPrefs } from './touchlayout';
 import { UNDER, createGroundHeight } from './groundheight';
 import { RIDE_CAM, WALK_ZOOM, nextView, rideLook, startRide, viewName, type RideKind, type ViewId, type ViewKind } from './views';
 import type { ModeId } from './keymap';
 import { inPedalZone, inSteerZone, type Screen } from './touchdrive';
-import { cleanHolds, HOLD_JOBS, holdMode, press, type HoldInput, type HoldJob, type HoldMode, type Holds } from './comfort';
+import { holdMode, press, type HoldInput, type HoldJob, type Holds } from './comfort';
+import { fovShift, type AutoAds } from './settings';
+import { actions, acted, onSettings, setSettings, settings as storedSettings } from './settings-store';
 import type { CardInput } from './ctrlcard';
 import { LENS, nearFor } from './lens';
 
@@ -253,9 +256,11 @@ const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const damp = (k: number, dt: number) => 1 - Math.exp(-k * dt);
 
 const SETTINGS_KEY = 'degen-city-walk-v1';
-/** Aim when firing: never, only with the on-screen Fire button, or with any fire (mouse, keys, gamepad, touch) */
-type AutoAds = 'off' | 'touch' | 'always';
-const AUTO_ADS: AutoAds[] = ['off', 'touch', 'always'];
+/**
+ * The walk's settings: look speed, invert, aim when firing, the touch buttons and hold or toggle are the settings
+ * record's now (settings-store.ts, docs/settings-plan.md: the hub's Settings sets them, the walk follows); the walk
+ * keeps only what it remembers itself in its own key, the control cards seen
+ */
 interface Settings {
   sens: number;
   invert: boolean;
@@ -268,13 +273,15 @@ interface Settings {
   holds: Holds;
 }
 function loadSettings(): Settings {
+  const s = storedSettings();
+  let seen: string[] = [];
   try {
-    const s = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
-    const seen = Array.isArray(s.seen) ? s.seen.filter((m: unknown) => typeof m === 'string').slice(0, 16) : [];
-    return { sens: typeof s.sens === 'number' ? s.sens : 1, invert: !!s.invert, autoAds: AUTO_ADS.includes(s.autoAds) ? s.autoAds : 'off', touch: cleanTouch(s.touch), seen, holds: cleanHolds(s.holds) };
+    const w = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
+    seen = Array.isArray(w.seen) ? w.seen.filter((m: unknown) => typeof m === 'string').slice(0, 16) : [];
   } catch {
-    return { sens: 1, invert: false, autoAds: 'off', touch: cleanTouch(undefined), seen: [], holds: {} };
+    /* none seen */
   }
+  return { sens: s.sens, invert: s.invert, autoAds: s.autoAds, touch: s.touch, seen, holds: s.holds };
 }
 /** How long the sight stays up after the trigger is let go (so single shots don't flicker in and out) */
 const AUTO_ADS_HOLD = 0.35;
@@ -455,78 +462,46 @@ export function createWalk(d: WalkDeps) {
   const knob = stick.querySelector<HTMLElement>('span')!;
   const runBtn = $<HTMLButtonElement>('[data-walk-run]');
   const crouchBtn = $<HTMLButtonElement>('[data-walk-crouch]');
-  const sensInput = $<HTMLInputElement>('[data-walk-sens]');
-  const invertInput = $<HTMLInputElement>('[data-walk-invert]');
-  const fpBtn = $<HTMLButtonElement>('[data-walk-fp]');
   /** The camera's touch buttons: on foot (up top, lit in first person) and in each ride's bar (shown while riding) */
   const viewBtn = $<HTMLButtonElement>('[data-walk-view]');
   const rideViewBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-ride-view]')];
 
   const settings = loadSettings();
+  /** (the walk's own key keeps only the control cards seen; the rest is the settings record's) */
   const saveSettings = () => {
     try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify({ seen: settings.seen }));
     } catch {
-      /* fine: settings just won't stick */
+      /* fine: they just won't stick */
     }
   };
-  sensInput.value = String(settings.sens);
-  invertInput.checked = settings.invert;
-  // Controls > Shooting: aim when firing
-  const autoAdsBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-auto-ads]')];
-  const paintAutoAds = () => autoAdsBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.autoAds === settings.autoAds)));
-  // Hold or toggle (comfort.ts): each job's two buttons, lit as it works on this device until one is picked
-  const holdBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-hold]')];
-  const DEVICE: HoldInput = matchMedia('(hover: none) and (pointer: coarse)').matches ? 'touch' : 'keys';
+  // Hold or toggle (comfort.ts): as it works on each input until one is picked in Settings > Controls
   const hm = (job: HoldJob, input: HoldInput) => holdMode(settings.holds, job, input);
-  const paintHolds = () =>
-    holdBtns.forEach((b) => {
-      const [job, mode] = (b.dataset.hold ?? '').split(':') as [HoldJob, HoldMode];
-      b.setAttribute('aria-pressed', String(hm(job, DEVICE) === mode));
-    });
-  for (const b of holdBtns)
-    b.addEventListener('click', () => {
-      const [job, mode] = (b.dataset.hold ?? '').split(':') as [HoldJob, HoldMode];
-      if (!HOLD_JOBS.includes(job)) return;
-      settings.holds[job] = mode;
-      saveSettings();
-      paintHolds();
+  // The touch controls' places: the same slots in every mode, at the player's size, opacity and hand
+  // (touchlayout.ts, docs/controls-plan.md); Settings > Touch sets them, and Arrange buttons moves them
+  const controls = layoutControls(root, () => settings.touch);
+  const setTouch = (next: Partial<TouchPrefs>) => setSettings({ touch: cleanTouch({ ...settings.touch, ...next }) });
+  // The hub's Settings changed something (settings-ui.ts): the walk follows
+  onSettings((s, keys) => {
+    settings.sens = s.sens;
+    settings.invert = s.invert;
+    settings.autoAds = s.autoAds;
+    if (keys.includes('holds')) {
+      settings.holds = s.holds;
       // (a change lets go of whatever was held or toggled on)
       letGoHolds();
-    });
-  paintHolds();
-  for (const b of autoAdsBtns)
-    b.addEventListener('click', () => {
-      settings.autoAds = b.dataset.autoAds as AutoAds;
-      paintAutoAds();
-      saveSettings();
-    });
-  paintAutoAds();
-  // The touch controls' places: the same slots in every mode, at the player's size, opacity and hand
-  // (touchlayout.ts, docs/controls-plan.md); Settings > On foot > Touch buttons sets them, and Arrange buttons moves them
-  const controls = layoutControls(root, () => settings.touch);
-  const sizeBtns = [...root.querySelectorAll<HTMLButtonElement>('[data-tc-size]')];
-  const alphaInput = root.querySelector<HTMLInputElement>('[data-tc-alpha]');
-  const leftInput = root.querySelector<HTMLInputElement>('[data-tc-left]');
-  const paintTouch = () => {
-    sizeBtns.forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.tcSize === settings.touch.size)));
-    if (alphaInput) alphaInput.value = String(settings.touch.alpha);
-    if (leftInput) leftInput.checked = settings.touch.left;
-  };
-  const setTouch = (next: Partial<TouchPrefs>) => {
-    settings.touch = cleanTouch({ ...settings.touch, ...next });
-    paintTouch();
-    saveSettings();
-    controls.refresh();
-  };
-  for (const b of sizeBtns) b.addEventListener('click', () => setTouch({ size: b.dataset.tcSize as TouchSize }));
-  alphaInput?.addEventListener('input', () => setTouch({ alpha: Number(alphaInput.value) }));
-  leftInput?.addEventListener('change', () => setTouch({ left: leftInput.checked }));
+    }
+    if (keys.includes('touch')) {
+      settings.touch = s.touch;
+      controls.refresh();
+    }
+  });
   // Arrange buttons (Phase 6): its own chunk, loaded the first time it's opened
   root.querySelector('[data-tc-arrange]')?.addEventListener('click', () => {
     void lazy(() => import('./arrange-ui'), 'the button layout')().then(({ openArrange }) => openArrange({ root, prefs: () => settings.touch, save: (arrange) => setTouch({ arrange }) }));
   });
-  paintTouch();
+  // Settings > Camera > On foot (walking): first person, not kept
+  actions.fp = { on: () => firstPerson, set: (on) => setFirstPerson(on) };
 
   const SPAWN = new THREE.Vector3(WALK_SPAWN.x, SLAB, WALK_SPAWN.z);
   let active = false;
@@ -786,6 +761,8 @@ export function createWalk(d: WalkDeps) {
     if (upOnDeck(x, z, y - SLAB)) return skyDeckWall(x, z, RADIUS);
     // Up in Endswood's sky network (southsky.ts): only its railings stop you (off its galleries, bridges and decks)
     if (skyUp(x, z, y)) return skyWall(x, z, y, RADIUS);
+    // On the air base's visitors' centre's stair or up on its terrace (airbase.ts): only their rails stop you
+    if (visitorsUp(x, z, y)) return visitorsWall(x, z, y, RADIUS);
     // Up in Starlight Mall's Skywalk (malllink.ts): only its edges and what stands on your floor stop you
     if (linkUp(x, z, y)) return linkWall(x, z, y, RADIUS);
     // Inside Starlight Mall (mallinside.ts): the upper floor's edges and what stands on your floor; in the Skywalk's
@@ -1677,7 +1654,8 @@ export function createWalk(d: WalkDeps) {
     firstPerson = on;
     root.classList.toggle('is-fp', on);
     if (!on && zoom < 1.5) zoom = homeZoom();
-    fpBtn.setAttribute('aria-pressed', String(on));
+    // (the Settings tab's On foot row follows)
+    acted();
     viewBtn.setAttribute('aria-pressed', String(on));
     viewBtn.setAttribute('aria-label', on ? 'Camera view: over the shoulder' : 'Camera view: first person');
     if (on) pitch = THREE.MathUtils.clamp(pitch, -1.35, 1.35);
@@ -2005,15 +1983,13 @@ export function createWalk(d: WalkDeps) {
     setBlock,
     setGuard,
     quitFight,
-    setFirstPerson,
-    saveSettings,
     act,
     look,
     stepSlot,
   };
   const { startJoy, endJoy, pressPedal, clearPedals, rectOf, setAim } = wireTouch(
-    { window, document, Element, root, $, stick, knob, runBtn, crouchBtn, pedalBtns, rideViewBtns, blockBtnEl, fpBtn, sensInput, invertInput, prompt },
-    { joy, pedals, kartBtns, fightBtns, settings },
+    { window, document, Element, root, $, stick, knob, runBtn, crouchBtn, pedalBtns, rideViewBtns, blockBtnEl, prompt },
+    { joy, pedals, kartBtns, fightBtns },
     touchHost
   );
 
@@ -2956,7 +2932,8 @@ export function createWalk(d: WalkDeps) {
     camera.position.copy(pivot).addScaledVector(offset, camDist);
     if (shakeT > 0) {
       shakeT = Math.max(0, shakeT - dt);
-      const k = shakeK * (shakeT / LAND_SHAKE) ** 2;
+      // (Settings > Camera > Camera shake off: none)
+      const k = storedSettings().shake ? shakeK * (shakeT / LAND_SHAKE) ** 2 : 0;
       camera.position.x += Math.sin(shakeT * 71) * k * Math.cos(yaw);
       camera.position.z -= Math.sin(shakeT * 71) * k * Math.sin(yaw);
       camera.position.y += Math.sin(shakeT * 53 + 1) * k;
@@ -3026,6 +3003,7 @@ export function createWalk(d: WalkDeps) {
     // owner's call, 2026-11: the fight in focus)
     const wantFov =
       (firstPerson ? 70 : 52) +
+      fovShift(storedSettings()) +
       (d.reduced ? 0 : 2 * Math.min(1, speed / RUN) + 6 * runAmt - (firstPerson ? GUARD_ZOOM * guardAmt : 0)) -
       (aimNow ? (firstPerson && combat.armed ? combat.adsZoom : 10) : 0);
     fov += (wantFov - fov) * damp(6, dt);
