@@ -121,7 +121,12 @@ export const tabChanged = (s: Settings, tab: TabId, input: HoldInput) =>
 
 /** What puts a tab back as it was (Touch: the buttons' places too); no tab, everything */
 export function resetPatch(tab?: TabId): Partial<Settings> {
-  if (!tab) return { ...DEFAULTS, holds: {}, touch: cleanTouch(undefined) };
+  if (!tab) {
+    // (everything but the hints already shown)
+    const { hints: _hints, ...rest } = DEFAULTS;
+    void _hints;
+    return { ...rest, holds: {}, touch: cleanTouch(undefined) };
+  }
   const p: Partial<Settings> = {};
   for (const r of rowsOf(tab)) {
     if (r.act) continue;

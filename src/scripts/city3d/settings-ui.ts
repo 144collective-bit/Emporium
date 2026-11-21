@@ -13,13 +13,10 @@
  * - the keys a mode at a time (`[data-km]`), for the input in use.
  */
 import { confirm } from './menukit';
+import { bindPicker, paintChoice } from './pickerkit';
 import { actions, boot, onActed, onSettings, setSettings, settings } from './settings-store';
 import { changed, label, patchFor, resetPatch, row as rowOf, share, stepValue, tabChanged, TABS, valueAt, valueOf, type Row, type TabId, type Value } from './settings-rows';
 import type { HoldInput } from './comfort';
-
-/** A ◀ ▶ held: how long before it repeats, then how often (ms) */
-const REPEAT_FIRST = 380;
-const REPEAT_EVERY = 90;
 
 export function createSettingsUI(root: HTMLElement, hub: HTMLElement) {
   const box = hub.querySelector<HTMLElement>('[data-settings]')!;
@@ -113,62 +110,14 @@ export function createSettingsUI(root: HTMLElement, hub: HTMLElement) {
 
   for (const p of pickers) {
     const id = p.dataset.pick!;
-    const val = p.querySelector<HTMLButtonElement>('[data-pick-val]')!;
-    const bar = p.querySelector<HTMLElement>('[data-pick-bar]');
-    // The arrow keys and the d-pad (menukit.ts `move()`)
-    val.addEventListener('mk-step', (e) => step(id, (e as CustomEvent<1 | -1>).detail));
-    // A press on the value: a choice steps on, round to the first (a range's bar is its own, below)
-    val.addEventListener('click', () => {
-      if (rowFor(id)?.opts) step(id, 1, true);
+    bindPicker(p, {
+      step: (dir, wrap) => step(id, dir, wrap),
+      choice: () => !!rowFor(id)?.opts,
+      at: (share) => {
+        const r = rowFor(id);
+        if (r && !r.opts) set(id, valueAt(r, share));
+      },
     });
-    // ◀ ▶: a step, and held, more
-    for (const arr of p.querySelectorAll<HTMLElement>('[data-pick-step]')) {
-      const dir = Number(arr.dataset.pickStep) as 1 | -1;
-      let timer = 0;
-      const stop = () => {
-        clearTimeout(timer);
-        timer = 0;
-      };
-      arr.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        val.focus({ preventScroll: true });
-        step(id, dir);
-        const again = (wait: number) => (timer = window.setTimeout(() => (step(id, dir), again(REPEAT_EVERY)), wait));
-        again(REPEAT_FIRST);
-        arr.setPointerCapture?.(e.pointerId);
-      });
-      arr.addEventListener('pointerup', stop);
-      arr.addEventListener('pointercancel', stop);
-      arr.addEventListener('lostpointercapture', stop);
-      // (a click with no pointer: a screen reader's)
-      arr.addEventListener('click', (e) => {
-        if (e.detail === 0) step(id, dir);
-      });
-    }
-    // A range's bar: tapped or dragged to a value
-    if (bar) {
-      const r = rowFor(id)!;
-      const at = (e: PointerEvent) => {
-        const b = bar.getBoundingClientRect();
-        set(id, valueAt(r, (e.clientX - b.left) / b.width));
-      };
-      bar.addEventListener('pointerdown', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        val.focus({ preventScroll: true });
-        bar.setPointerCapture?.(e.pointerId);
-        at(e);
-        const move = (m: PointerEvent) => at(m);
-        const up = () => {
-          bar.removeEventListener('pointermove', move);
-          bar.removeEventListener('pointerup', up);
-          bar.removeEventListener('pointercancel', up);
-        };
-        bar.addEventListener('pointermove', move);
-        bar.addEventListener('pointerup', up);
-        bar.addEventListener('pointercancel', up);
-      });
-    }
   }
 
   /* ---------- Resets and the reload ---------- */
@@ -202,13 +151,8 @@ export function createSettingsUI(root: HTMLElement, hub: HTMLElement) {
       const text = label(r, v);
       p.querySelector('[data-pick-text]')!.textContent = text;
       val.setAttribute('aria-valuetext', text);
-      if (r.opts) {
-        const i = r.opts.findIndex((o) => o.v === v);
-        val.setAttribute('aria-valuemin', '0');
-        val.setAttribute('aria-valuemax', String(r.opts.length - 1));
-        val.setAttribute('aria-valuenow', String(Math.max(0, i)));
-        p.dataset.end = i <= 0 ? 'min' : i >= r.opts.length - 1 ? 'max' : '';
-      } else {
+      if (r.opts) paintChoice(p, text, r.opts.findIndex((o) => o.v === v), r.opts.length);
+      else {
         const n = v as number;
         val.setAttribute('aria-valuemin', String(r.min));
         val.setAttribute('aria-valuemax', String(r.max));
