@@ -57,14 +57,16 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
   tested in `tests/airbase3d.test.ts`), as sites:
   - the wall (Phase 6; the sites `airbase wall <run> <piece>`), 30 a site: the precast slab, its darker footing and its
     capping, a post at each end; near only (not on phones) the panels' posts every `WALL_PANEL`, the coiled razor wire
-    along the capping and the lights on its top facing out (airbasedress.ts `WALL_LIGHTS`, every `WALL_LIGHT_GAP`);
-    their washes down its outer face at night are one additive mesh in the FX layer (`wallWash()`, on the main thread,
-    not on phones; the city's wall's floodlights' way);
-  - each gate: its piers, its shut steel sliding gate on its track (near only its ribs), the barrier in red and white,
+    along the capping and the lights on its top facing out (airbasedress.ts `WALL_LIGHTS`, every `WALL_LIGHT_GAP`,
+    each in the middle of its panel, clear of the joints); their washes down its outer face and a pool on the grass at
+    its foot at night are one additive mesh in the FX layer (`wallWash()`, on the main thread, not on phones; the
+    city's wall's floodlights' way), the gates' piers' lamps' (`PIER_LIGHTS`) in it too;
+  - each gate: its piers (near only a lamp on each facing out), its shut steel sliding gate on its track (near only its
+    ribs), the barrier in red and white,
     the guardhouse (a band of windows, a door to the road, its roof), the apron from the loop to the barrier and on in;
   - the parade avenue's asphalt, its edges lined, 40 a site (no traffic till Phase 4: it isn't in the street plan);
   - the visitors' car park, its kerb, bays and drive, and the centre (concrete, glass to the car park on two floors,
-    its name over the upper band, the terrace's rail near only), its stair (a step a box from the ground, the flight's
+    its name over the upper band, the terrace's rail near only, but on phones, which draw no near detail, always), its stair (a step a box from the ground, the flight's
     rail always) and its landing on a column;
   - the base's name on its wall, and the service gate's board. The signs are one atlas (`canvasTex()`, baked).
 - **The place**: `northgate` (src/lib/city.ts `SpotId`, places.ts `PLACES`, live.ts `LIVE_PLACES`, livelines.ts), its
