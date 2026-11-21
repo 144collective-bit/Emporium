@@ -71,6 +71,94 @@ asking, as long as everything in **The rules** below holds:
 
 RUNNING
 
+## Track A: the pro standard (model repairs)
+
+The owner's focus (2026-11-21): bring every part of the map already built up
+to a professional standard. For now that means only repairing what's there:
+nothing moves, nothing new is added, and nothing is redesigned (changes come
+later). The owner sends one screenshot at a time. Each becomes:
+
+- **a job**: the fix at that spot (where, what's wrong, the fix, before and
+  after shots from the same angle);
+- **a model repair**: the kind of fault and how to fix it anywhere. Every run
+  that does a model repair fixes it the same way, then **sweeps** the rest of
+  the map for the same fault, a district at a time, and ticks each one off
+  below.
+
+Order: a model repair's own job first, then its sweep. Then the next model
+repair.
+
+### Model repairs
+
+#### R1. Bare slab
+
+- **The fault:** a surface the player walks on or stands close to (a deck,
+  gallery, landing, upstand, parapet, soffit) drawn as a bare `toon()` colour.
+  It's one flat value with no grain, while the walls beside it carry the
+  atlas's board-marked concrete or brick. Up close it reads as a placeholder:
+  a grey void, the floor indistinguishable from the walls rising off it, the
+  ends of slabs cut off sharp with no cap, so the eye can't tell what it's
+  looking at.
+- **How to spot it:** in the code, a `flat()`, `quad()`, `upstand()` or
+  `parapet()` with a plain material (`CONC`, `PAVING`, `STONE`...) on a
+  surface reachable on foot. In a shot, a large single-value patch near the
+  camera.
+- **The fix, the standard:**
+  1. **A surface, not a colour.** Floors take a paving or concrete grain from
+     the existing atlases, with joints at a believable module (slabs about
+     0.6-1.2 m); walls and upstands take the same board-marked concrete as
+     the block's walls. No new texture if an atlas cell already fits; no new
+     draws (the atlas, not new materials).
+  2. **Floor and wall told apart.** A floor is a step darker or lighter than
+     the walls rising from it, and a thin skirting or shadow strip runs where
+     they meet (about 5 mm off both faces: nothing flush).
+  3. **Every edge finished.** Coping on top of upstands and parapets (a
+     slightly wider cap, a different tone), a drip edge under deck fronts,
+     ends of walls and slabs capped, never sliced open.
+  4. **Every form reads as what it is.** Wherever two slabs meet at a point or
+     a shape doesn't explain itself (a core, a bridge or a stair meeting the
+     gallery), it's rebuilt so it reads: a stair shows steps, an opening has
+     a lintel and jambs, a junction has a landing.
+  5. **Ink.** The outline pass catches every structural edge (thin dark line
+     on each fold), as the rest of the city.
+  6. **Phones:** the same at every tier (grain is the atlas, free); fine trims
+     (skirting, drips) near only.
+  7. **Checked:** the same angle before and after, by day and night; `?fps`
+     draws in the view the same or lower.
+- **The sweep:** every walkable deck in the city. Start with Endswood's blocks
+  (galleries, balconies, bridges, the podium deck, the cores' landings), then
+  The Trenches' projects (decks and walkways), Uptown's plaza decks, the
+  stadium's concourse, the mall's upper floors, the Docks' quays and
+  walkways, the airport's terminal decks, the Neon Mile's resort terraces,
+  Crestmont's terraces and pool decks, Lot 9.
+  - [ ] Endswood's blocks
+  - [ ] The Trenches
+  - [ ] Uptown and Uptown North
+  - [ ] Westlake and the civic quarter
+  - [ ] Starlight Mall and Palm Court
+  - [ ] The Docks
+  - [ ] The airport
+  - [ ] The Neon Mile
+  - [ ] Crestmont
+  - [ ] Sunridge
+  - [ ] Lot 9
+  - [ ] Northgate Air Base
+  - [ ] Downtown and the landmarks
+
+### Jobs
+
+- [ ] **J1 (R1): a gallery walkway on Endswood's flats** (the owner's
+      screenshot, 2026-11-21: looking down a gallery towards the highway).
+      The deck, its upstands and the slabs either side are plain `CONC`
+      (`southblocks3d.ts`, `drawStep()`'s galleries: `flat(b, deck, y,
+      CONC)` and `upstand(..., acc)`; `parapet()`); in the middle, where the
+      gallery meets something (a core, bridge or stair: check
+      `openRuns()` / `CORE_GAP`), slabs meet at a point and read as a broken
+      shape. The fix: R1 in full on every gallery, balcony, bridge deck and
+      the podium deck of the estate; the junction rebuilt to read. Find the
+      exact spot first (the shot's angle: the highway's lanes below to the
+      right, the deck running towards them) and take the before shot there.
+
 ## Level 1: the safety net (bugs and tests)
 
 Most of these are from the polish plan's §8 and §11 (2026-11-05). Check each
