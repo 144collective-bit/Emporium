@@ -118,6 +118,8 @@ keep it up to date when what it describes changes.
   folds away, decal, spinning props and rotors with blur discs);
   `createFleet()` makes one instanced mesh per part for each kind, culled
   as a fleet. Under reduced motion every aircraft stands parked.
+  On phones the fleet's far ones are one piece each, one draw for the
+  fleet (`farGeometry()`, `FAR_PHONE` in `lod.ts`; `performance.md`, Near and far).
 - The outskirts' trees keep off the airport's land and the low end of the
   approach, and the woods keep clear of it (`WOODS_OFF` in outskirts.ts).
 - **Flying it yourself** (Phase 2): the airport is a place (spot

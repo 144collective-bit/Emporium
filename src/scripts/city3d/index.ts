@@ -159,7 +159,7 @@ import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
-import { farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
+import { FAR_PHONE, farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
 import { createQuality, type QualityStep } from './quality';
@@ -208,6 +208,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     await (await import('./anim-lab')).openLab(root, { reduced, low: ((root.dataset.tier as Tier) || pickTier(device()).tier) === 'low' });
     return null;
   }
+  // ?made (with ?fps): each unnamed thing added to the scene tagged with the code that added it (drawrows.ts)
+  if (new URLSearchParams(location.search).has('made')) (await import('./drawrows')).tagMakers();
   // When each part of the boot finished (the ?fps readout and the benchmark)
   const bootAt = { start: performance.now(), art: 0, scene: 0, tiled: 0, built: 0, compiled: 0, first: 0, waits: 0 };
   // Building, apart from waiting on the browser (a frame drawn between steps, the canvas sized): the city's own work
@@ -231,6 +233,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const picked: Picked = root.dataset.tier ? { tier: root.dataset.tier as Tier, why: 'set by the page' } : pickTier(device(gpu));
   const tier = picked.tier;
   const Q = TIERS[tier];
+  // Phones draw the far city in fewer pieces: the far forms, aircraft, small signs (lod.ts, docs/phone-far-plan.md)
+  FAR_PHONE.on = tier === 'low';
   // Phones' trees don't sway (`low ? 0 : SWAY`): their tile pieces in the shared paint carry no uv (tilebatch.ts)
   UV.sway = tier !== 'low';
   // (single figures: the desktop's finer clothes, docs/clothing-plan.md; phones as they were)
@@ -2023,6 +2027,21 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // (the texture breakdown is its own chunk: only ?fps and ?bench load it, texrows.ts)
     let texRows: ((s: THREE.Object3D) => unknown) | null = null;
     void import('./texrows').then((m) => (texRows = m.textureRows));
+    // (what one frame draws, draw by draw: its own chunk too, drawrows.ts, docs/phone-far-plan.md)
+    // (`aim` turns the camera just before the frame's drawn, after anything the loop did to it)
+    (window as unknown as { __draws?: (aim?: (c: THREE.Camera) => void) => Promise<unknown> }).__draws = (aim) =>
+      import('./drawrows').then((m) =>
+        m.captureDraws(
+          renderer as never,
+          scene,
+          camera,
+          () => {
+            aim?.(camera);
+            post.render();
+          },
+          Q.far
+        )
+      );
     (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() });
     renderer.info.autoReset = false;
   }
