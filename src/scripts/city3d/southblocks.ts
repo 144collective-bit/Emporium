@@ -325,8 +325,9 @@ export interface Core {
 }
 /** A service tower's distance off its block: a bridge's length (docs/brutalist-plan.md Phase 2) */
 export const SERVICE_GAP = 3;
-/** The towers with less room than that (measured: a street or a parking court near; 0: still against its block) */
-const CORE_GAPS: Record<string, number> = { 'rampart-2': 0, 'rampart-3': 1, 'sorrel-b': 1.5, 'fennel-a': 1 };
+/** The towers with less room than that (measured: a street, a parking court or the underpass's ramp near; 0: still
+ * against its block) */
+const CORE_GAPS: Record<string, number> = { 'rampart-2': 0, 'rampart-3': 1, 'sorrel-b': 1.5, 'fennel-a': 1, 'linnet-b': 0 };
 const rotOf = (dir: Pt) => Math.atan2(dir[1], dir[0]);
 function coreAt(b: Block, id: string, at: Pt, dir: Pt, storeys: number, gap: number, link: [Pt, Pt] | null): Core {
   const rot = rotOf(dir);
