@@ -62,9 +62,12 @@ const BUDGETS = {
    * pair, the cable car's stations and doors, the Belvedere and the glasshouse, their places, doors and solids, read
    * by the boot's places, map and walk-in doors) took it to 765.0; what only the chunks read is in them; and Northgate Air Base's
    * (the owner's calls, 2026-11-20, docs/military-plan.md): its lines, solids, lamps, keep, look and sound at the boot,
-   * about 4.5 KB, its drawing-only data in its chunks' airbasedress.ts
+   * about 4.5 KB, its drawing-only data in its chunks' airbasedress.ts; and from 770 to 771 on purpose (the owner's
+   * call, 2026-11-21, "Raise boot to 771"): with the phone far plan merged the boot stood at 769.8, and the base's
+   * visitors' stair (Phase 6: its floor in the ground's layers and its rails in walk.ts, both at the boot) took it to
+   * 770.3
    */
-  bootJs: 770,
+  bootJs: 771,
   /** Any one piece loaded later (a feature, when it's used) */
   lazyJs: 60,
   /**
