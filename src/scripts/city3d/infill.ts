@@ -70,8 +70,8 @@ const WALL_COLOR: Record<WallKind, { wall: string; trim: string }> = {
   brickPainted: { wall: '#b3ab98', trim: '#76726a' },
   brickGlazed: { wall: '#d6cba6', trim: '#8c8678' },
   panel: { wall: '#8f8c86', trim: '#6e6b66' },
-  // Endswood's blocks (docs/brutalist-plan.md): raw concrete, a cool grey
-  brutal: { wall: '#8b8e93', trim: '#64676c' },
+  // Endswood's blocks (docs/brutalist-plan.md): raw concrete, a cool grey, dark and weathered (the owner's pick, 2026-11-21)
+  brutal: { wall: '#6f7277', trim: '#4f5257' },
 };
 
 interface Band {
@@ -214,7 +214,7 @@ function recessRow(c: CanvasRenderingContext2D, wall: string, y: number, seed: n
       }
     }
     // The fin, lit on its face, its side in shadow
-    c.fillStyle = shadeHex(wall, 0.12);
+    c.fillStyle = shadeHex(wall, 0.07);
     c.fillRect(x, y, fin, PX_H);
     c.fillStyle = shadeHex(wall, -0.32);
     c.fillRect(x + fin, y + slab, 3, PX_H - slab);
@@ -261,13 +261,21 @@ function recessRow(c: CanvasRenderingContext2D, wall: string, y: number, seed: n
     c.fillRect(x, y + slab - 2, PX_W * 2, 2);
   }
   if (glow) return;
-  // Rain streaks: down from each slab's edge and each front's top, some long, most short
-  for (let k = 0; k < 40; k++) {
+  // Soot under each slab's edge, darkest at the top of the fins, where the rain runs off
+  for (let i = 0; i < pairs; i++) {
+    const g = c.createLinearGradient(0, y + slab, 0, y + slab + 18);
+    g.addColorStop(0, 'rgba(20, 22, 26, 0.32)');
+    g.addColorStop(1, 'rgba(20, 22, 26, 0)');
+    c.fillStyle = g;
+    c.fillRect(i * PX_W * 2, y + slab, fin + 2, 18);
+  }
+  // Rain streaks: down from each slab's edge and each front's top, heavy, some long, most short
+  for (let k = 0; k < 72; k++) {
     const x = wr() * W;
     const top = wr() < 0.5 ? y + slab : y + front + 2;
-    const len = 4 + wr() * wr() * 22;
-    c.fillStyle = `rgba(28, 30, 34, ${0.1 + wr() * 0.14})`;
-    c.fillRect(x, top, 1 + wr() * 2, len);
+    const len = 6 + wr() * wr() * 34;
+    c.fillStyle = `rgba(20, 22, 26, ${0.16 + wr() * 0.2})`;
+    c.fillRect(x, top, 1.5 + wr() * 2.5, len);
   }
 }
 

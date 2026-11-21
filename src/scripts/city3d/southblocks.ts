@@ -64,8 +64,8 @@ export const roofY = (base: number, storeys: number) => floorY(base, storeys);
 
 export type Accent = 'orange' | 'teal' | 'mustard';
 export const ACCENTS: Record<Accent, number> = { orange: 0xd9692e, teal: 0x2c9a92, mustard: 0xd6a12a };
-/** The concrete: a cool grey, board-marked (the wall atlas's `brutal` band) */
-export const CONCRETE = 0x9b9ea3;
+/** The concrete: a cool grey, dark and weathered (the wall atlas's `brutal` band; the owner's pick, 2026-11-21) */
+export const CONCRETE = 0x7d8085;
 
 /* ---------- Lines and shapes ---------- */
 

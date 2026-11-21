@@ -47,9 +47,9 @@ const WORLD: Frame = { M: new THREE.Matrix4(), w: 0, d: 0, L: [0, 0], t: [1, 0],
 /* ---------- Materials ---------- */
 
 const CONC = toon(CONCRETE);
-const CONC_DARK = toon('#6c6f74');
-const ROOF = toon('#56585c');
-const PAVING = toon('#8f9196');
+const CONC_DARK = toon('#54575c');
+const ROOF = toon('#424448');
+const PAVING = toon('#7e8085');
 const PLY = toon('#a3804f');
 const HOARDING = toon('#55697f');
 const DOOR = toon('#1b1820');
