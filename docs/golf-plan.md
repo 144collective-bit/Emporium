@@ -200,6 +200,7 @@ and the new one is small (golflift.ts `GOLF_CLUBHOUSE`), so the boot stays under
 - The tests: `tests/golflift.test.ts` (the clubhouse, its door, Walk in, the place moved); solids.test.ts, terrain.test.ts
   and travel.test.ts take the club as they take Crestmont's landmarks up the hills (its solids and its arrival on the
   course's ground; a taxi's ride to it, which stops at Ridge Road's top: the open question below).
+- The shots: `docs/golf-shots/phase-4-*.webp` (the clubhouse from over the putting green, its porch and name, the phone tier).
 - **Crestmont Hills Club retired**: its six holes, clubhouse, carts, terrace, garden, bank, people and level pad gone
   from crestsites.ts, crestbanks.ts, crestgardens.ts, crestlife.ts, crestsites3d.ts and their tests; the land back to
   the hills' own cover (the drifts, oaks and scrub now reach it; a drift the paths cut down to under three clumps is
