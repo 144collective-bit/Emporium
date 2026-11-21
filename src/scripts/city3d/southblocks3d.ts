@@ -28,11 +28,11 @@ import { site } from './tilework';
 import { PLANT } from './palette';
 import { shift } from './streetfaces';
 import {
-  ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CONCRETE, CORES, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
+  ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
   SKY_FLOORS, TOWER_HALF, blockById, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
-  type Block, type Core, type Pt,
+  type Block, type Cage, type Core, type Pt,
 } from './southblocks';
-import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, coreFloors } from './southsky';
+import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors } from './southsky';
 import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, COLUMN_R, DECK_COLUMNS, DECK_PROPS, FRAME, SANDPIT, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
 import { COURTS, DESIRE_LINES, GRASS, PLAY } from './southblocks';
 import { BANK, COVER, ROAD, STONE } from './palette';
@@ -468,6 +468,110 @@ function drawBoilerHouse(b: Batch, c: Core, near: Pt) {
   });
 }
 
+/* ---------- The towers' stair cages (docs/brutalist-plan.md, the owner's pick: caged, walked) ---------- */
+
+/** The cages' anti-climb mesh: dark, seen through (the frame's rails over it) */
+const MESH = new THREE.MeshBasicMaterial({ color: '#23262b', transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide });
+
+/** A sloped slab: from (a0, y0) to (a1, y1) along the cage, b0 to b1 across, its top and underside, `t` thick */
+function slope(b: Batch, g: Cage, a0: number, a1: number, b0: number, b1: number, y0: number, y1: number, t: number, m: THREE.Material) {
+  const P = (a: number, bb: number, y: number) => {
+    const p = g.at(a, bb);
+    return [p[0], y, p[1]];
+  };
+  const pos = [
+    // top (facing up and back along the rise)
+    ...P(a0, b0, y0), ...P(a1, b0, y1), ...P(a1, b1, y1), ...P(a0, b1, y0),
+    // underside
+    ...P(a0, b0, y0 - t), ...P(a0, b1, y0 - t), ...P(a1, b1, y1 - t), ...P(a1, b0, y1 - t),
+  ];
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  // (wound so the top faces up whichever way the cage turns)
+  const [p0, p1, p2] = [g.at(a0, b0), g.at(a1, b0), g.at(a1, b1)];
+  const upCCW = (p1[0] - p0[0]) * (p2[1] - p0[1]) - (p1[1] - p0[1]) * (p2[0] - p0[0]) < 0;
+  geo.setIndex(upCCW ? [0, 1, 2, 0, 2, 3, 4, 5, 6, 4, 6, 7] : [0, 2, 1, 0, 3, 2, 4, 6, 5, 4, 7, 6]);
+  geo.computeVertexNormals();
+  b.add(geo, m);
+}
+/** A landing's slab in the cage: a0 to a1 out, b0 to b1 across, at y */
+function cageSlab(b: Batch, g: Cage, a0: number, a1: number, b0: number, b1: number, y: number, m: THREE.Material) {
+  const ring = [g.at(a0, b0), g.at(a1, b0), g.at(a1, b1), g.at(a0, b1)];
+  flat(b, ring, y, m);
+  flat(b, ring, y - 0.15, CONC_DARK, false);
+}
+/**
+ * A tower's stair cage: concrete posts at its corners and halfway along, a ring beam at each landing, its roof; a
+ * concrete spine wall between its two lanes; its flights (treads near only, not on phones), its landings with a strip
+ * light under each (the odd one tired); anti-climb mesh round its open sides, left open at the foot by the tower: the
+ * way in from the street
+ */
+function drawCage(b: Batch, g: Cage, low: boolean, tired: boolean) {
+  const k = kit(b, WORLD);
+  const { len, half, land, gap } = CAGE;
+  const w = half - 0.12;
+  const ys = cageLevels(g.id);
+  const top = Math.max(g.top, ys[ys.length - 1] + 1.9);
+  const corners: [number, number][] = [[0, -half], [len / 2, -half], [len, -half], [len, half], [len / 2, half], [0, half]];
+  k.all(() => {
+    // The frame
+    for (const [a, bb] of corners) {
+      const p = g.at(a, bb);
+      b.add(plain(new THREE.BoxGeometry(0.24, top - g.base, 0.24).rotateY(-Math.atan2(g.out[1], g.out[0])).translate(p[0], (g.base + top) / 2, p[1])), CONC);
+    }
+    const beams = [...ys.slice(1), ...ys.slice(1).map((y, i) => (ys[i] + y) / 2), top];
+    for (const y of beams) {
+      along(b, g.at(0, -half), g.at(len, -half), 0.2, y - 0.2, y + 0.05, CONC);
+      along(b, g.at(0, half), g.at(len, half), 0.2, y - 0.2, y + 0.05, CONC);
+      along(b, g.at(len, -half), g.at(len, half), 0.2, y - 0.2, y + 0.05, CONC);
+    }
+    flat(b, [g.at(0, -half), g.at(len, -half), g.at(len, half), g.at(0, half)], top + 0.05, ROOF);
+    // The spine wall between the lanes, from the street to the roof
+    along(b, g.at(land, 0), g.at(len - land, 0), gap * 2, g.base, top, CONC);
+    // The flights and the landings
+    for (let i = 0; i + 1 < ys.length; i++) {
+      const [y0, y1] = [ys[i], ys[i + 1]];
+      const mid = (y0 + y1) / 2;
+      slope(b, g, land, len - land, gap, w, y0, mid, 0.18, CONC);
+      slope(b, g, len - land, land, -w, -gap, mid, y1, 0.18, CONC);
+      cageSlab(b, g, len - land, len - 0.12, -w, w, mid, PAVING);
+      cageSlab(b, g, 0.02, land, -w, w, y1, PAVING);
+    }
+  });
+  // The landings' lights, under each (the odd cage's tired, stuttering)
+  for (let i = 1; i < ys.length; i++) {
+    const mid = (ys[i - 1] + ys[i]) / 2;
+    along(b, g.at(len - land / 2, -w + 0.2), g.at(len - land / 2, w - 0.2), 0.08, mid - 0.2, mid - 0.16, tired ? STRIP_TIRED : STRIP);
+  }
+  // The treads: near only, not on phones
+  if (!low)
+    b.detail(() => {
+      for (let i = 0; i + 1 < ys.length; i++) {
+        const [y0, y1] = [ys[i], ys[i + 1]];
+        const mid = (y0 + y1) / 2;
+        const n = Math.round((len - 2 * land) / 0.27);
+        for (let s = 0; s < n; s++) {
+          const f = (s + 0.5) / n;
+          for (const [b0, b1, ya, yb, dir] of [[gap, w, y0, mid, 1], [-w, -gap, mid, y1, -1]] as const) {
+            const a = dir > 0 ? land + (len - 2 * land) * f : len - land - (len - 2 * land) * f;
+            const y = ya + (yb - ya) * f;
+            const p = g.at(a, (b0 + b1) / 2);
+            b.add(plain(new THREE.BoxGeometry(0.06, 0.05, b1 - b0).rotateY(-Math.atan2(g.out[1], g.out[0])).translate(p[0], y + 0.03, p[1])), CONC_DARK);
+          }
+        }
+      }
+    });
+  // The mesh: the far end and both long sides, from a head's height over the street at the way in, the rest from the foot
+  const meshSide = (a0: number, a1: number, bb: number, y0: number, y1: number) => {
+    const n: Pt = [g.side[0] * Math.sign(bb), g.side[1] * Math.sign(bb)];
+    quad(b, g.at(a0, bb), g.at(a1, bb), y0, y1, n, MESH);
+  };
+  meshSide(land + 0.3, len, half, g.base, top);
+  meshSide(0, land + 0.3, half, g.base + 1.7, top);
+  meshSide(0, len, -half, g.base, top);
+  quad(b, g.at(len, -half), g.at(len, half), g.base, top, g.out, MESH);
+}
+
 /** A rounded square's four corners, a little in: the ring's points furthest out each way round its middle */
 function cornersOf(ring: Pt[]): Pt[] {
   const c = centre(ring);
@@ -824,6 +928,14 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
           drawPortal(b, c.link[0], c.link[1], y);
         }
       drawBoilerHouse(b, c, near);
+      b.build(into, opts);
+    })
+  );
+  // The towers' stair cages (one site each)
+  CAGES.forEach((g, i) =>
+    site(`south-blocks cage ${g.id}`, rectOf([g.at(0, -CAGE.half), g.at(CAGE.len, -CAGE.half), g.at(CAGE.len, CAGE.half), g.at(0, CAGE.half)], 1), (into) => {
+      const b = new Batch();
+      drawCage(b, g, low, i % 3 === 2);
       b.build(into, opts);
     })
   );
