@@ -193,6 +193,8 @@ function recessRow(c: CanvasRenderingContext2D, wall: string, y: number, seed: n
     // The window and the door at the back of the recess (lit or not, as any window)
     const p = paneAt(seed, row, i * 2);
     if (glow) {
+      // (a boarded or burnt-out flat: dark at night)
+      if (life === 'boarded' || life === 'burnt') continue;
       glazed(c, x + pane.x, y + pane.y, pane.w, pane.h, '#2a2c31', p, true, 2, false);
       glazed(c, x + door.x, y + door.y, door.w, PX_H - door.y - 4, '#2a2c31', paneAt(seed, row, i * 2 + 1), true, 0, false);
       continue;
@@ -205,6 +207,24 @@ function recessRow(c: CanvasRenderingContext2D, wall: string, y: number, seed: n
     c.fillRect(x + fin, y + slab, PX_W * 2 - fin, PX_H - slab);
     glazed(c, x + pane.x, y + pane.y, pane.w, pane.h, '#2a2c31', p, false, 2, false);
     glazed(c, x + door.x, y + door.y, door.w, PX_H - door.y - 4, '#2a2c31', paneAt(seed, row, i * 2 + 1), false, 0, false);
+    if (life === 'boarded') {
+      // A flat boarded up: plywood over its window and its door, screwed on
+      c.fillStyle = '#9c7b4a';
+      c.fillRect(x + pane.x - 3, y + pane.y - 3, pane.w + 6, pane.h + 6);
+      c.fillRect(x + door.x - 2, y + door.y - 2, door.w + 4, PX_H - door.y - 2);
+      c.fillStyle = '#7a5f37';
+      for (const k of [6, 14, 22]) c.fillRect(x + pane.x - 3, y + pane.y + k, pane.w + 6, 1);
+    } else if (life === 'burnt') {
+      // One burnt out: its glass gone black, soot licked up the wall over it
+      c.fillStyle = '#0d0d0f';
+      c.fillRect(x + pane.x, y + pane.y, pane.w, pane.h);
+      c.fillRect(x + door.x, y + door.y, door.w, PX_H - door.y - 4);
+      const g2 = c.createLinearGradient(0, y + pane.y, 0, y - 6);
+      g2.addColorStop(0, 'rgba(12, 12, 14, 0.75)');
+      g2.addColorStop(1, 'rgba(12, 12, 14, 0)');
+      c.fillStyle = g2;
+      c.fillRect(x + pane.x - 4, y - 6, pane.w + 8, pane.y + 6);
+    }
     // Washing on a line across the recess's top, behind the front
     if (life === 'washing') {
       c.fillStyle = '#c9c6bc';

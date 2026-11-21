@@ -71,9 +71,9 @@ export const deckLife = (seed: number, row: number, i: number): DeckLife => DECK
 export const DOOR_PAINTS = ['#7a2b2b', '#2d4f3a', '#2b3e66', '#6b5a2a', '#4a4a52', '#5a2d4f'];
 export const RECESS = { fin: 10, slab: 9, front: 42, door: { x: 76, w: 12, y: 14 } };
 /** What lives in a brutalist recess (by a hash of where it is): a plant, a dish, an air-con unit, a bike, washing out,
- * a front painted in a colour (the odd one, the blocks' own accents), or nothing; mostly plain, so a long front reads
- * calm, washing only now and then */
-export const RECESS_LIFE = ['plant', 'none', 'dish', 'ac', 'none', 'bike', 'plant', 'none', 'washing', 'none', 'panel', 'ac', 'none', 'dish'] as const;
+ * a front painted in a colour (the odd one, the blocks' own accents), a flat boarded up, one burnt out (soot over it),
+ * or nothing; mostly plain, so a long front reads calm, washing only now and then */
+export const RECESS_LIFE = ['plant', 'none', 'dish', 'ac', 'none', 'bike', 'plant', 'none', 'washing', 'none', 'panel', 'ac', 'none', 'dish', 'boarded', 'burnt'] as const;
 export type RecessLife = (typeof RECESS_LIFE)[number];
 /** What's in a recess: `seed` the band's, `row` its floor in the band, `i` the recess along it */
 export const recessLife = (seed: number, row: number, i: number): RecessLife => RECESS_LIFE[(seed * 131 + row * 17 + i * 7) % RECESS_LIFE.length];

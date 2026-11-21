@@ -332,6 +332,17 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
         }
       });
     });
+  // Satellite dishes clustered on its roof's edge, the side away from the galleries (the brutalist plan's grit)
+  if (!low)
+    b.detail(() => {
+      const edge = shift(part, -s * (blk.depth! / 2 - 0.5));
+      for (let q = 2; q < edge.length - 1; q += 5)
+        for (let j = 0; j < 3; j++) {
+          const p0 = edge[q];
+          const off: Pt = [p0[0] + (j - 1) * 0.55, p0[1] + ((q + j) % 2) * 0.3];
+          dish(b, off, top + PARAPET, (q * 7 + j * 3) % 6);
+        }
+    });
   // Sky gardens: planters along its roof, by the galleried side
   if (!low)
     b.detail(() => {
@@ -385,6 +396,15 @@ function drawTower(b: Batch, t: Block, low: boolean) {
     }
     // The plant room: a plain concrete box set back on the roof, its corners cut as the tower's, and its beacon
     prism(b, grow(ring, -TOWER_HALF * 0.3), top, top + PLANT_H, CONC, ROOF);
+    // (a cluster of dishes round the plant room's foot, near only, not on phones)
+    if (!low)
+      b.detail(() => {
+        ring.forEach((p, j) => {
+          if (j % 2) return;
+          const at: Pt = [c[0] + (p[0] - c[0]) * 0.82, c[1] + (p[1] - c[1]) * 0.82];
+          dish(b, at, top, j % 6);
+        });
+      });
     b.add(plain(new THREE.CylinderGeometry(0.05, 0.05, BEACON_H, 6).translate(c[0], top + PLANT_H + BEACON_H / 2, c[1])), CONC_DARK);
     b.add(plain(new THREE.SphereGeometry(0.13, 8, 6).translate(c[0], top + PLANT_H + BEACON_H, c[1])), BEACON);
   });
@@ -439,6 +459,26 @@ function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from:
       const p = (s: number): Pt => [f[0] + t[0] * s, f[1] + t[1] * s];
       quad(b, p(-0.5), p(0.5), base, base + 1.25, n, DOOR);
       quad(b, p(-0.55), p(0.55), base + 1.3, base + 1.36, n, STRIP);
+      // A sodium lamp over it on a bracket, orange at night (the brutalist plan's grit)
+      const lamp: Pt = [f[0] + n[0] * 0.25, f[1] + n[1] * 0.25];
+      b.add(plain(new THREE.BoxGeometry(0.3, 0.1, 0.18).translate(lamp[0], base + 1.62, lamp[1])), SODIUM);
+      // ...near only: a puddle at its foot, a tag scrawled low on the wall by it
+      b.detail(() => {
+        const h = Math.abs(Math.round(door.x * 13 + door.z * 7));
+        const c0: Pt = [f[0] + n[0] * (0.9 + (h % 3) * 0.2) + t[0] * (((h % 5) - 2) * 0.3), f[1] + n[1] * (0.9 + (h % 3) * 0.2) + t[1] * (((h % 5) - 2) * 0.3)];
+        flat(b, Array.from({ length: 10 }, (_, i): Pt => {
+          const q = (i / 10) * Math.PI * 2;
+          return [c0[0] + Math.cos(q) * 0.55, c0[1] + Math.sin(q) * 0.3];
+        }), base + 0.012, PUDDLE);
+        if (h % 3 !== 2) {
+          const paint = TAG_PAINT[h % TAG_PAINT.length];
+          const s0 = 0.7 + (h % 4) * 0.08;
+          for (let i = 0; i < 6; i++) {
+            const [v0, v1] = [0.25 + ((h + i * 3) % 4) * 0.09, 0.3 + ((h + i * 5) % 4) * 0.09];
+            quad(b, p(s0 + i * 0.13), p(s0 + i * 0.13 + 0.11), base + Math.min(v0, v1), base + Math.max(v0, v1) + 0.06, n, paint);
+          }
+        }
+      });
     }
   });
 }
@@ -466,6 +506,14 @@ function drawBoilerHouse(b: Batch, c: Core, near: Pt) {
     b.add(plain(new THREE.CylinderGeometry(0.13, 0.15, 1.8, 8).translate(f[0], c.top + 0.9, f[1])), CONC_DARK);
     b.add(plain(new THREE.CylinderGeometry(0.17, 0.17, 0.1, 8).translate(f[0], c.top + 1.82, f[1])), CONC_DARK);
   });
+}
+
+/** A satellite dish on a short stand, turned `k` sixths of the way round, at its foot's place */
+const DISH = toon('#d6d3cc');
+function dish(b: Batch, at: Pt, y: number, k: number) {
+  const a = (k / 6) * Math.PI * 2;
+  b.add(plain(new THREE.CylinderGeometry(0.03, 0.03, 0.35, 4).translate(at[0], y + 0.17, at[1])), RAIL);
+  b.add(plain(new THREE.SphereGeometry(0.26, 8, 4, 0, Math.PI * 2, 0, 0.9).rotateX(-Math.PI / 2 + 0.5).rotateY(a).translate(at[0], y + 0.42, at[1])), DISH);
 }
 
 /* ---------- The towers' stair cages (docs/brutalist-plan.md, the owner's pick: caged, walked) ---------- */
@@ -598,8 +646,10 @@ const centre = (ring: Pt[]): Pt => [ring.reduce((s, p) => s + p[0], 0) / ring.le
 /* ---------- The bridges, the podium deck, Bunker Sound's door ---------- */
 
 const PUDDLE = toon('#1b2230');
+/** The towers' door lamps: sodium orange, off by day */
+const SODIUM = neon('#ff9a3c', 0.08, 1.7);
 const TAG_PAINT = ['#d94fb0', '#38c6d9', '#e6c13a', '#e0e0e0'].map((c) => toon(c));
-function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material = STRIP) {
+function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | null = STRIP) {
   const k = kit(b, WORLD);
   const w = BRIDGE_HALF * 2;
   const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
@@ -611,9 +661,11 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material = S
     }
     along(b, a, c, w + 0.12, y + 1.5, y + 1.68, CONC);
   });
-  along(b, a, c, 0.1, y - 0.24, y - 0.2, strip);
-  // Inside (the brutalist plan's polish): a strip light down its ceiling
-  along(b, a, c, 0.1, y + 1.44, y + 1.48, strip);
+  // (its lights under it and inside, down its ceiling; a dead one none)
+  if (strip) {
+    along(b, a, c, 0.1, y - 0.24, y - 0.2, strip);
+    along(b, a, c, 0.1, y + 1.44, y + 1.48, strip);
+  }
   if (l < 1.5) return;
   // ...near only: the glass's concrete mullions (wired glass, a pane each 1.2), a puddle or two, the odd tag
   b.detail(() => {
@@ -836,6 +888,11 @@ const PLAY_FLOOR = toon(STONE.edge);
 const SAND = toon(BANK.sand);
 const BIN_COLOURS = ['#2f6a3c', '#2b2d3a', '#55697f', '#8b5a2b'].map((c) => toon(c));
 const RAIL = toon('#3b3846');
+/** The grit by the bins (the brutalist plan): bin bags, a dumped mattress and sofa, a trolley's wire basket */
+const BAG = toon('#17181c');
+const MATTRESS = toon('#b9ab8e');
+const SOFA = toon('#5a3b34');
+const TROLLEY = new THREE.MeshBasicMaterial({ color: '#8e949c', transparent: true, opacity: 0.55, depthWrite: false });
 
 /** A thing's box (its corners, `y0` to `y1`) */
 function thingBox(b: Batch, t: Thing, y0: number, y1: number, m: THREE.Material, shrink = 0) {
@@ -869,6 +926,30 @@ function drawBins(b: Batch, t: Thing, low: boolean) {
       const at = longU ? inThing(t, s, 0) : inThing(t, 0, s);
       b.add(plain(new THREE.BoxGeometry(0.5, 0.85, 0.55).rotateY(-t.rot).translate(at[0], ON + 0.425, at[1])), BIN_COLOURS[i % BIN_COLOURS.length]);
     }
+    // The mess round it (the brutalist plan's grit): bin bags at its open front, and, by a hash of its place, a
+    // mattress leant on its back wall, a sofa dumped by it, a shopping trolley
+    const h = Math.abs(Math.round(t.at[0] * 11 + t.at[1] * 7));
+    const front = (u: number, v: number) => inThing(t, u, v);
+    for (let k = 0; k < 3 + (h % 3); k++) {
+      const p = front(-t.w / 2 + 0.3 + ((k * 0.55 + (h % 5) * 0.1) % Math.max(0.6, t.w - 0.6)), t.d / 2 + 0.35 + (k % 2) * 0.2);
+      b.add(plain(new THREE.IcosahedronGeometry(0.2 + (k % 2) * 0.05, 0).scale(1, 0.8, 1).translate(p[0], ON + 0.16, p[1])), BAG);
+    }
+    if (h % 3 === 0) {
+      const p = front(t.w / 2 + 0.25, 0);
+      b.add(plain(new THREE.BoxGeometry(0.12, 1.2, 0.9).rotateZ(0.25).rotateY(-t.rot).translate(p[0], ON + 0.58, p[1])), MATTRESS);
+    }
+    if (h % 4 === 1) {
+      const p = front(-t.w / 2 - 0.7, t.d / 2 + 0.3);
+      b.add(plain(new THREE.BoxGeometry(1.1, 0.25, 0.5).rotateY(-t.rot + 0.4).translate(p[0], ON + 0.2, p[1])), SOFA);
+      const q = front(-t.w / 2 - 0.7 - 0.05, t.d / 2 + 0.1);
+      b.add(plain(new THREE.BoxGeometry(1.1, 0.35, 0.15).rotateY(-t.rot + 0.4).translate(q[0], ON + 0.4, q[1])), SOFA);
+    }
+    if (h % 3 === 1) {
+      const p = front(t.w / 2 + 0.6, t.d / 2 + 0.5);
+      // (a trolley: its basket's wires, its handle, its wheels)
+      b.add(plain(new THREE.BoxGeometry(0.55, 0.4, 0.38).rotateY(-t.rot - 0.6).translate(p[0], ON + 0.55, p[1])), TROLLEY);
+      b.add(plain(new THREE.BoxGeometry(0.04, 0.6, 0.38).rotateY(-t.rot - 0.6).translate(p[0], ON + 0.3, p[1])), RAIL);
+    }
   });
 }
 function drawShed(b: Batch, t: Thing) {
@@ -883,6 +964,12 @@ function drawShed(b: Batch, t: Thing) {
     for (let i = 0; i < 4; i++) {
       const p = inThing(t, -t.w / 2 + 0.5 + i * 0.75, 0);
       b.add(plain(new THREE.TorusGeometry(0.28, 0.025, 4, 10, Math.PI).rotateY(-t.rot + Math.PI / 2).translate(p[0], ON, p[1])), RAIL);
+      // (a bike chained to every other stand: its wheels and its frame)
+      if (i % 2 === 0)
+        for (const du of [-0.38, 0.38]) {
+          const w = inThing(t, -t.w / 2 + 0.5 + i * 0.75 + 0.15, du);
+          b.add(plain(new THREE.TorusGeometry(0.3, 0.03, 4, 12).rotateY(-t.rot).translate(w[0], ON + 0.3, w[1])), RAIL);
+        }
     }
   });
 }
@@ -1027,11 +1114,21 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       drawCore(b, c.foot, blk.base, c.top, c.at, [near], landings, lift.door);
       // A service tower standing off its block: a covered link from the gallery to it at each landing
       // (its portal at the gallery; every fourth tower's link lights tired, stuttering)
-      const tired = CORES.indexOf(c) % 4 === 3;
+      // (and every seventh's dead: no light at all)
+      const i = CORES.indexOf(c);
+      const light = i % 7 === 5 ? null : i % 4 === 3 ? STRIP_TIRED : STRIP;
       if (c.link)
         for (const y of landings) {
-          drawBridge(b, c.link[0], c.link[1], y, tired ? STRIP_TIRED : STRIP);
+          drawBridge(b, c.link[0], c.link[1], y, light);
           drawPortal(b, c.link[0], c.link[1], y);
+          // Pigeon netting slung under it, near only, not on phones
+          if (!low)
+            b.detail(() => {
+              const [a, e] = c.link!;
+              const l = Math.hypot(e[0] - a[0], e[1] - a[1]) || 1;
+              const r: Pt = [(-(e[1] - a[1]) / l) * BRIDGE_HALF, ((e[0] - a[0]) / l) * BRIDGE_HALF];
+              flat(b, [[a[0] + r[0], a[1] + r[1]], [e[0] + r[0], e[1] + r[1]], [e[0] - r[0], e[1] - r[1]], [a[0] - r[0], a[1] - r[1]]], y - 0.5, MESH, false);
+            });
         }
       drawBoilerHouse(b, c, near);
       b.build(into, opts);
