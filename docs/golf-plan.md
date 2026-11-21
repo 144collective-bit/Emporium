@@ -125,8 +125,14 @@ comes home to it.
   stripes, the bunkers' sand with its lip; clear over the water and everywhere else), 2 pixels a tile (phones half), made
   at build time; laid on the grass's own triangles a hair over it (`turfMesh()`: only where it shows, `mownNear()`, near
   and far as the grass), a site a tile, alpha-tested so its edges are the texture's,
-  one draw. Each lake's water at its level (`shoreOf()`, the city's water shader), on the main thread.
+  one draw. The lakes' water at their levels (`shoreOf()`, the city's water shader) in one mesh, one draw, on the main thread.
 - The shots: `docs/golf-shots/phase-2-*.webp` (desktop and phone, by day; taken before the bunkers were made shallower and the turf laid at one height near and far, the last two fixes for ink lines). Measured with `?bench`: the views `golf` and `golf-green` (bench.ts).
+- **What it costs** (counted from the same meshes, `golfMesh()` and `turfMesh()`, over the 307 tiles the course comes
+  into: the headless `?bench` takes over an hour a tier, longer than the run allowed): 558 triangles a tile drawn near
+  (the grass and the turf), 120 drawn far; the whole course far about 37k, a view of it with the tiles round the camera
+  near about 50k (Crestmont's hills' grass is about 47k). Two draws more where it's in view (the turf, the water). The
+  boot 1.5 KB more (772.5 of 775), its chunk about 10 KB, the baked data 29 KB more (gzipped). The turf's texture 968 x
+  1428 (phones half), made at build time with the rest.
 - Not yet: the drive, paths, woods planted between the holes, the clubhouse, flags (Phases 3 to 5).
 
 ### Phase 3: the drive, the paths and the woods

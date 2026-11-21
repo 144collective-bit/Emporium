@@ -13,6 +13,7 @@
  * before this chunk comes; the woods between the holes are the outskirts' trees (landuse.ts keeps them off the play).
  */
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Batch, canvasTex, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { COVER } from './palette';
@@ -280,14 +281,16 @@ export function register({ scene }: { low: boolean; scene: THREE.Scene | null })
         b.build(into, { cast: false, receive: true });
       });
     }
-  // The lakes' water, on the main thread (the city's water shader)
-  if (scene)
-    LAKES.forEach((l, i) => {
+  // The lakes' water, on the main thread (the city's water shader), all in one mesh: one draw
+  if (scene) {
+    const lakes = LAKES.map((l, i) => {
       const shape = new THREE.Shape(shoreOf(l, 96).map(([x, z]) => new THREE.Vector2(x, -z)));
-      const water = new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, golfWater(i), 0), waterMat);
-      water.name = `golf ${l.id} water`;
-      water.matrixAutoUpdate = false;
-      water.updateMatrix();
-      scene.add(water);
+      return new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, golfWater(i), 0);
     });
+    const water = new THREE.Mesh(mergeGeometries(lakes, false)!, waterMat);
+    water.name = 'golf lakes water';
+    water.matrixAutoUpdate = false;
+    water.updateMatrix();
+    scene.add(water);
+  }
 }
