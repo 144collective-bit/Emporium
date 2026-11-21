@@ -28,6 +28,7 @@ import { fx, glowMat, glowTex } from './kit';
 import type { Sfx } from './combat';
 import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
 import type { Voice } from './vehicleids';
+import { settings as storedSettings } from './settings-store';
 
 export interface BoatDeps {
   scene: THREE.Scene;
@@ -290,7 +291,8 @@ export function createBoat(d: BoatDeps) {
       camYaw = s.yaw;
       lookYaw = lookPitch = 0;
       camReady = false;
-      view = START_VIEW;
+      // (Settings > Camera > Vehicle view: where every trip starts)
+      view = storedSettings().carView;
       if (driver) driver.g.visible = true;
       setHud(true);
       place();
@@ -380,6 +382,8 @@ export function createBoat(d: BoatDeps) {
       camReady = true;
       camera.up.set(0, 1, 0);
       camera.lookAt(at);
+      // (Settings > Camera > Camera shake off: none)
+      if (!storedSettings().shake) shake = 0;
       if (shake > 0) {
         camera.position.x += (Math.random() - 0.5) * shake;
         camera.position.y += (Math.random() - 0.5) * shake;

@@ -18,6 +18,8 @@ import flame from '../assets/liberty-flame.png';
 import trenches from '../assets/trenches-logo.png';
 import { TC_ICONS, tcIconPath } from '../data/tcicons';
 import { FLY_KEYS, KEYMAP, MODE_IDS } from '../scripts/city3d/keymap';
+import { DEFAULTS as SET_DEFAULTS } from '../scripts/city3d/settings';
+import { label as setLabel, rowsOf, TABS, valueOf as setValue, type Row as SetRow } from '../scripts/city3d/settings-rows';
 import { FREE_PLAY } from '../scripts/city3d/freeplay';
 import type { Spot, SpotId } from '../lib/city';
 import { X_URL, X_HANDLE, TELEGRAM_URL, SHOP_URL, SHOP_OPEN } from '../data/site';
@@ -102,6 +104,9 @@ const server = !!import.meta.env.PUBLIC_GAME_SERVER;
 const build = (import.meta.env.PUBLIC_BUILD as string | undefined)?.slice(0, 7) ?? '';
 // The touch controls' pixel icons as one sprite (docs/controls-plan.md): `<use href="#tc-<name>">` in each button
 const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`, d: tcIconPath(rows) }));
+// The settings' rows (docs/settings-plan.md): an id for each row's label, and what it reads before the record's painted
+const slug = (id: string) => id.replace(/[^a-z0-9]/gi, '-');
+const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_DEFAULTS }, r.id, 'keys'));
 ---
 
 <section class="city has-start" aria-labelledby="city-title" data-city-root data-view="loading" data-mode="explore" data-degen={degenBig.src} data-logo={logoBig.src} data-flame={flameImg.src}>
@@ -191,43 +196,12 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           <span class="city-start-btn-name">Multiplayer</span>
           <span class="city-start-btn-sub">{server ? 'Play with others' : 'Coming soon'}</span>
         </button>
-        <button type="button" class="city-start-btn" data-start-options aria-expanded="false">
-          <span class="city-start-btn-name">Options</span>
-          <span class="city-start-btn-sub">Time, weather, sound</span>
+        {/* The hub's own Settings over the title screen (docs/settings-plan.md: one copy of every setting) */}
+        <button type="button" class="city-start-btn" data-start-settings aria-haspopup="dialog">
+          <span class="city-start-btn-name">Settings</span>
+          <span class="city-start-btn-sub">Graphics, sound, controls</span>
         </button>
         <p class="city-start-who">Playing as guest</p>
-      </div>
-      <div class="city-start-options" data-start-pane hidden>
-        <div class="city-start-row">
-          <span class="city-start-label">Time</span>
-          <div class="city-start-seg" role="group" aria-label="Time of day">
-            <button type="button" data-opt="time" data-val="live" aria-pressed="false">Live</button>
-            <button type="button" data-opt="time" data-val="day" aria-pressed="true">Day</button>
-            <button type="button" data-opt="time" data-val="sunset" aria-pressed="false">Sunset</button>
-            <button type="button" data-opt="time" data-val="night" aria-pressed="false">Night</button>
-          </div>
-        </div>
-        <div class="city-start-row">
-          <span class="city-start-label">Weather</span>
-          <div class="city-start-seg" role="group" aria-label="Weather">
-            <button type="button" data-opt="weather" data-val="auto" aria-pressed="false">Auto</button>
-            <button type="button" data-opt="weather" data-val="clear" aria-pressed="true">Clear</button>
-            <button type="button" data-opt="weather" data-val="rain" aria-pressed="false">Rain</button>
-          </div>
-        </div>
-        <div class="city-start-row">
-          <span class="city-start-label">Sound</span>
-          <div class="city-start-seg" role="group" aria-label="Sound">
-            <button type="button" data-opt="sound" data-val="off" aria-pressed="true">Off</button>
-            <button type="button" data-opt="sound" data-val="on" aria-pressed="false">On</button>
-          </div>
-        </div>
-        {/* The credits the city's borrowed work asks for (docs/animation-plan.md): named, never linked */}
-        <details class="city-start-credits">
-          <summary><span class="city-start-label">Credits</span></summary>
-          <p>Degen's movement is motion capture from the CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), created with funding from NSF EIA-0196217, in Bruce Hahne's BVH conversion.</p>
-        </details>
-        <button type="button" class="mk-btn is-small city-start-back" data-start-back>Back</button>
       </div>
       <p class="city-start-status" aria-live="polite"><span data-start-status>Loading the city…</span></p>
       <div class="city-start-bar" data-start-bar><span></span></div>
@@ -333,7 +307,7 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       <button type="button" role="tab" data-tab="business" aria-selected="false" class="hub-3d">Business</button>
       <button type="button" role="tab" data-tab="missions" aria-selected="false" class="hub-3d">Missions</button>
       <button type="button" role="tab" data-tab="profile" aria-selected="false" class="hub-3d">Profile</button>
-      <button type="button" role="tab" data-tab="settings" aria-selected="false" class="hub-3d">Settings</button>
+      <button type="button" role="tab" data-tab="settings" aria-selected="false" class="hub-set">Settings</button>
       <button type="button" role="tab" data-tab="online" aria-selected="false" class="hub-3d" data-mp hidden><i class="mp-dot" data-mp-dot data-state="off" aria-hidden="true"></i>Online</button>
     </nav>
     <div class="mk-body" data-mk-swipe>
@@ -433,156 +407,100 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
           </div>
       </div>
       <div class="mk-page hub-page hub-settings" data-page="settings" role="tabpanel" aria-label="Settings" hidden>
-        <p class="mk-label hub-label">The city</p>
-        {/* (index.ts and the start menu press these: keep `data-controls` on them) */}
-        <div class="hub-sets" data-controls>
-          <div class="seg" role="group" aria-label="Time of day">
-            <span class="seg-label">Time</span>
-            <button type="button" data-time="live" aria-pressed="false">Live</button>
-            <button type="button" data-time="day" aria-pressed="true">Day</button>
-            <button type="button" data-time="sunset" aria-pressed="false">Sunset</button>
-            <button type="button" data-time="night" aria-pressed="false">Night</button>
-          </div>
-          <div class="seg" role="group" aria-label="Weather">
-            <span class="seg-label">Sky</span>
-            <button type="button" data-weather="auto" aria-pressed="false">Auto</button>
-            <button type="button" data-weather="clear" aria-pressed="true">Clear</button>
-            <button type="button" data-weather="rain" aria-pressed="false">Rain</button>
-          </div>
-          <div class="seg">
-            <button type="button" class="seg-wide" data-sound aria-pressed="false">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14" /></svg>
-              <span data-sound-label>Sound off</span>
-            </button>
-            <button type="button" class="seg-wide" data-reset>Reset view</button>
-          </div>
-          {/* The place labels over the 3D city (the pins): off by default (the owner's call, 2026-11: places are found on the
-              world map); this turns them back on, remembered in this browser (index.ts, degen-city-labels-v1) */}
-          <div class="seg">
-            <button type="button" class="seg-wide" data-labels aria-pressed="false"><span data-labels-label>Labels off</span></button>
-          </div>
-        </div>
-        <p class="mk-label hub-label">On foot</p>
-        <div class="hub-walkset">
-          <label class="walk-field">
-            <span>Look speed</span>
-            <input type="range" data-walk-sens min="0.3" max="2.5" step="0.1" value="1" />
-          </label>
-          <label class="walk-check">
-            <input type="checkbox" data-walk-invert />
-            <span>Invert look</span>
-          </label>
-          <button type="button" class="walk-fp" data-walk-fp aria-pressed="true">First person</button>
-          {/* Touch screens: the buttons' size, opacity and hand (touchlayout.ts, docs/controls-plan.md Phase 4), and moving them (Phase 6, arrange-ui.ts) */}
-          <div class="hub-touchset">
-            <p class="walk-section">Touch buttons</p>
-            <div class="walk-field" role="group" aria-labelledby="tc-size-label">
-              <span id="tc-size-label">Size</span>
-              <div class="walk-seg">
-                <button type="button" data-tc-size="small" aria-pressed="false">Small</button>
-                <button type="button" data-tc-size="medium" aria-pressed="true">Medium</button>
-                <button type="button" data-tc-size="large" aria-pressed="false">Large</button>
-              </div>
-            </div>
-            <label class="walk-field">
-              <span>Opacity</span>
-              <input type="range" data-tc-alpha min="0.4" max="1" step="0.05" value="1" />
-            </label>
-            <label class="walk-check">
-              <input type="checkbox" data-tc-left />
-              <span>Left-handed</span>
-            </label>
-            <button type="button" class="walk-fp" data-tc-arrange>Arrange buttons</button>
-
-          </div>
-          {/* Hold or toggle (comfort.ts, docs/views-plan.md Phase 5): on the keyboard, the gamepad and touch alike; unpicked, each works as it always has */}
-          <p class="walk-section">Hold or toggle</p>
-          <div class="walk-field" role="group" aria-labelledby="hold-sprint-label">
-            <span id="hold-sprint-label">Sprint</span>
-            <div class="walk-seg">
-              <button type="button" data-hold="sprint:hold" aria-pressed="false">Hold</button>
-              <button type="button" data-hold="sprint:toggle" aria-pressed="false">Toggle</button>
-            </div>
-          </div>
-          <div class="walk-field" role="group" aria-labelledby="hold-aim-label">
-            <span id="hold-aim-label">Aim</span>
-            <div class="walk-seg">
-              <button type="button" data-hold="aim:hold" aria-pressed="false">Hold</button>
-              <button type="button" data-hold="aim:toggle" aria-pressed="false">Toggle</button>
-            </div>
-          </div>
-          <div class="walk-field" role="group" aria-labelledby="hold-crouch-label">
-            <span id="hold-crouch-label">Crouch</span>
-            <div class="walk-seg">
-              <button type="button" data-hold="crouch:hold" aria-pressed="false">Hold</button>
-              <button type="button" data-hold="crouch:toggle" aria-pressed="false">Toggle</button>
-            </div>
-          </div>
-          <div class="walk-field" role="group" aria-labelledby="hold-block-label">
-            <span id="hold-block-label">Ring block</span>
-            <div class="walk-seg">
-              <button type="button" data-hold="block:hold" aria-pressed="false">Hold</button>
-              <button type="button" data-hold="block:toggle" aria-pressed="false">Toggle</button>
-            </div>
-          </div>
-          <div class="walk-field" role="group" aria-labelledby="hold-guard-label">
-            <span id="hold-guard-label">Guard</span>
-            <div class="walk-seg">
-              <button type="button" data-hold="guard:hold" aria-pressed="false">Hold</button>
-              <button type="button" data-hold="guard:toggle" aria-pressed="false">Toggle</button>
-            </div>
-          </div>
-          <p class="walk-pad">Toggle: press once for on, again for off</p>
-          <p class="walk-section">Shooting</p>
-          <div class="walk-field" role="group" aria-labelledby="auto-ads-label">
-            <span id="auto-ads-label">Aim when firing</span>
-            <div class="walk-seg">
-              <button type="button" data-auto-ads="off" aria-pressed="true">Off</button>
-              <button type="button" data-auto-ads="touch" aria-pressed="false">Touch</button>
-              <button type="button" data-auto-ads="always" aria-pressed="false">Always</button>
-            </div>
-            <p class="walk-pad">Steadier shots</p>
-          </div>
-          <details class="hub-more">
-            <summary>Controls</summary>
-            {/* Made from keymap.ts when the site is built (docs/views-plan.md Phase 3: one key for one job); each row shows
-                the input in use (the hub's data-input: keys, pad or touch) */}
-            <button type="button" class="mk-btn is-small km-card" data-ctrlcard-open data-hub-walk>Controls card</button>
-            {/* City view's free camera (freecam.ts): keys and the mouse only */}
-            <details class="hub-more km km-city">
-              <summary>City view</summary>
-              <dl class="walk-keys km-list">
-                {FLY_KEYS.map((b) => (
-                  <>
-                    <dt class="km-nopad km-notouch"><span data-for="keys">{b.keys.map((k) => <kbd>{k}</kbd>)}</span><span data-for="pad">–</span><span data-for="touch">–</span></dt>
-                    <dd class="km-nopad km-notouch">{b.label}</dd>
-                  </>
-                ))}
-              </dl>
-            </details>
-            {MODE_IDS.map((id) => (
-              <details class="hub-more km" open={id === 'foot'}>
-                <summary>{KEYMAP[id].name}</summary>
-                <dl class="walk-keys km-list">
-                  {KEYMAP[id].binds.map((b) => (
-                    <>
-                      <dt class:list={[!b.keys.length && 'km-nokeys', !b.pad.length && 'km-nopad', !b.touch && 'km-notouch']}>
-                        <span data-for="keys">{b.keys.length ? b.keys.map((k) => <kbd>{k}</kbd>) : '–'}</span>
-                        <span data-for="pad">{b.pad.length ? b.pad.map((k) => <kbd>{k}</kbd>) : '–'}</span>
-                        <span data-for="touch">{b.touch ?? '–'}</span>
-                      </dt>
-                      <dd class:list={[!b.keys.length && 'km-nokeys', !b.pad.length && 'km-nopad', !b.touch && 'km-notouch']}>{b.label}</dd>
-                    </>
-                  ))}
-                </dl>
-              </details>
+        {/* The settings (docs/settings-plan.md): a sub-tab a group, every row a ‹ value › picker made here from
+            settings.ts `ROWS` and painted and worked by settings-ui.ts (its own chunk) from the one record */}
+        <div class="set" data-settings>
+          <div class="set-tabs" role="tablist" aria-label="Settings sections" data-set-tabs>
+            {TABS.map((t, i) => (
+              <button type="button" role="tab" id={`set-tab-${t.id}`} aria-controls={`set-page-${t.id}`} data-set-tab={t.id} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? '0' : '-1'} class:list={[t.only === 'touch' && 'set-touch-only']}>{t.label}</button>
             ))}
-          </details>
+          </div>
+          {TABS.map((t, i) => (
+            <section class:list={['set-page', t.only === 'touch' && 'set-touch-only']} id={`set-page-${t.id}`} role="tabpanel" aria-labelledby={`set-tab-${t.id}`} data-set-page={t.id} hidden={i !== 0}>
+              {rowsOf(t.id).map((r) => (
+                <>
+                  {r.group && <p class="set-group">{r.group}</p>}
+                  <div class="set-row" data-set-row={r.id} data-hub-walk={r.only === 'walk' ? '' : undefined} hidden={r.only === 'walk'}>
+                    <span class="set-name" id={`set-l-${slug(r.id)}`}>
+                      <span class="set-label">{r.label}<i class="set-dot" aria-hidden="true"></i></span>
+                      {r.hint && <small class="set-hint">{r.hint}</small>}
+                    </span>
+                    <div class="set-pick" data-pick={r.id} data-range={r.opts ? undefined : ''}>
+                      <button type="button" class="set-arr" data-pick-step="-1" data-mk-skip tabindex="-1" aria-hidden="true">◀</button>
+                      <button type="button" class="set-val" data-pick-val role="slider" aria-labelledby={`set-l-${slug(r.id)}`} aria-valuetext={startLabel(r)}>
+                        <span class="set-text" data-pick-text>{startLabel(r)}</span>
+                        {!r.opts && <span class="set-bar" data-pick-bar aria-hidden="true"><i></i></span>}
+                      </button>
+                      <button type="button" class="set-arr" data-pick-step="1" data-mk-skip tabindex="-1" aria-hidden="true">▶</button>
+                    </div>
+                  </div>
+                  {r.reload && (
+                    <div class="set-reload" data-set-reload hidden>
+                      <p>Reload to apply?</p>
+                      <button type="button" class="mk-btn is-small is-main" data-set-reload-now>Reload now</button>
+                      <button type="button" class="mk-btn is-small" data-set-reload-later>Later</button>
+                    </div>
+                  )}
+                </>
+              ))}
+              {t.id === 'touch' && <button type="button" class="mk-btn is-small set-wide" data-tc-arrange>Arrange buttons</button>}
+              {t.id === 'controls' && (
+                <>
+                  <p class="set-group">Keys</p>
+                  <button type="button" class="mk-btn is-small set-wide" data-ctrlcard-open data-hub-walk hidden>Controls card</button>
+                  {/* The keys, a mode at a time (made from keymap.ts when the site is built: docs/views-plan.md Phase 3),
+                      each row in the input in use (the hub's data-input); City view's free camera is the keys' and the mouse's */}
+                  <div class="set-row" data-set-row="km">
+                    <span class="set-name" id="set-l-km"><span class="set-label">Mode</span></span>
+                    <div class="set-pick" data-pick="km">
+                      <button type="button" class="set-arr" data-pick-step="-1" data-mk-skip tabindex="-1" aria-hidden="true">◀</button>
+                      <button type="button" class="set-val" data-pick-val role="slider" aria-labelledby="set-l-km" aria-valuetext={KEYMAP.foot.name}>
+                        <span class="set-text" data-pick-text>{KEYMAP.foot.name}</span>
+                      </button>
+                      <button type="button" class="set-arr" data-pick-step="1" data-mk-skip tabindex="-1" aria-hidden="true">▶</button>
+                    </div>
+                  </div>
+                  <div class="km km-city" data-km="city" data-km-name="City view" hidden>
+                    <dl class="walk-keys km-list">
+                      {FLY_KEYS.map((b) => (
+                        <>
+                          <dt class="km-nopad km-notouch"><span data-for="keys">{b.keys.map((k) => <kbd>{k}</kbd>)}</span><span data-for="pad">–</span><span data-for="touch">–</span></dt>
+                          <dd class="km-nopad km-notouch">{b.label}</dd>
+                        </>
+                      ))}
+                    </dl>
+                  </div>
+                  {MODE_IDS.map((id) => (
+                    <div class="km" data-km={id} data-km-name={KEYMAP[id].name} hidden={id !== 'foot'}>
+                      <dl class="walk-keys km-list">
+                        {KEYMAP[id].binds.map((b) => (
+                          <>
+                            <dt class:list={[!b.keys.length && 'km-nokeys', !b.pad.length && 'km-nopad', !b.touch && 'km-notouch']}>
+                              <span data-for="keys">{b.keys.length ? b.keys.map((k) => <kbd>{k}</kbd>) : '–'}</span>
+                              <span data-for="pad">{b.pad.length ? b.pad.map((k) => <kbd>{k}</kbd>) : '–'}</span>
+                              <span data-for="touch">{b.touch ?? '–'}</span>
+                            </dt>
+                            <dd class:list={[!b.keys.length && 'km-nokeys', !b.pad.length && 'km-nopad', !b.touch && 'km-notouch']}>{b.label}</dd>
+                          </>
+                        ))}
+                      </dl>
+                    </div>
+                  ))}
+                </>
+              )}
+              {t.id === 'game' && (
+                <details class="hub-more">
+                  <summary>Credits</summary>
+                  <p class="hub-text">Degen's movement is motion capture from the CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), created with funding from NSF EIA-0196217, in Bruce Hahne's BVH conversion.</p>
+                </details>
+              )}
+              <div class="set-foot">
+                <button type="button" class="mk-btn is-small" data-set-reset={t.id}>Reset</button>
+                {t.id === 'game' && <button type="button" class="mk-btn is-small" data-set-reset-all>Reset all</button>}
+              </div>
+            </section>
+          ))}
         </div>
-        <details class="hub-more">
-          <summary>Credits</summary>
-          <p class="hub-text">Degen's movement is motion capture from the CMU Graphics Lab Motion Capture Database (mocap.cs.cmu.edu), created with funding from NSF EIA-0196217, in Bruce Hahne's BVH conversion.</p>
-        </details>
       </div>
       <div class="mk-page hub-page" data-page="online" role="tabpanel" aria-label="Online" hidden>
         <p class="walk-skins-head"><span>Multiplayer (beta) · <span data-mp-label>Go online</span></span><span data-mp-ping></span></p>
@@ -1689,8 +1607,6 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       }
       booting = false;
       if (!city) return lab ? undefined : no3d();
-      // Options picked in the start menu before the city was up
-      for (const apply of pendingOpts.splice(0)) apply();
     }
 
     // Boot the 3D city straight away, behind the start menu
@@ -1700,14 +1616,10 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     /* ---------- The start menu ---------- */
     const start = root.querySelector<HTMLElement>('[data-start]')!;
     const startMain = start.querySelector<HTMLElement>('[data-start-main]')!;
-    const startPane = start.querySelector<HTMLElement>('[data-start-pane]')!;
-    const optionsBtn = start.querySelector<HTMLButtonElement>('[data-start-options]')!;
     const status = start.querySelector<HTMLElement>('[data-start-status]')!;
     const startBar = start.querySelector<HTMLElement>('[data-start-bar]')!;
     const loaderBar = root.querySelector<HTMLElement>('[data-loader-bar]')!;
     const loaderEl = root.querySelector<HTMLElement>('[data-loader]')!;
-    /** Option choices made before the 3D city was up, applied when it is (its header controls do the work) */
-    const pendingOpts: (() => void)[] = [];
     let entering = false;
     let closed = false;
 
@@ -1720,32 +1632,6 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       }
     }).observe(loaderEl, { attributes: true, attributeFilter: ['class'] });
 
-    function paintOpt(opt: string, val: string) {
-      start.querySelectorAll<HTMLButtonElement>(`[data-opt="${opt}"]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.val === val)));
-    }
-    /** An option is the header's own control, pressed now or once the city is up */
-    function applyOpt(opt: string, val: string) {
-      const run = () => {
-        if (opt === 'sound') {
-          const b = root!.querySelector<HTMLButtonElement>('[data-controls] [data-sound]');
-          if (b && b.getAttribute('aria-pressed') !== String(val === 'on')) b.click();
-        } else root!.querySelector<HTMLButtonElement>(`[data-controls] [data-${opt}="${val}"]`)?.click();
-      };
-      if (city) run();
-      else pendingOpts.push(run);
-    }
-    start.querySelectorAll<HTMLButtonElement>('[data-opt]').forEach((b) =>
-      b.addEventListener('click', () => {
-        const opt = b.dataset.opt!;
-        const val = b.dataset.val!;
-        paintOpt(opt, val);
-        applyOpt(opt, val);
-      })
-    );
-    // The header's sound button is the one that knows (it needs a tap to start): mirror it
-    const headSound = root.querySelector<HTMLButtonElement>('[data-controls] [data-sound]');
-    if (headSound) new MutationObserver(() => paintOpt('sound', headSound.getAttribute('aria-pressed') === 'true' ? 'on' : 'off')).observe(headSound, { attributes: true, attributeFilter: ['aria-pressed'] });
-
     // Play as guest comes first (no accounts yet: the log-in's fields wait hidden, and send or keep nothing), then the menu
     const login = start.querySelector<HTMLFormElement>('[data-start-login]')!;
     const loginMsg = login.querySelector<HTMLElement>('[data-start-msg]')!;
@@ -1753,8 +1639,6 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
     function showLogin(on: boolean) {
       login.hidden = !on;
       startMain.hidden = on;
-      startPane.hidden = true;
-      optionsBtn.setAttribute('aria-expanded', 'false');
       (on ? login.querySelector<HTMLButtonElement>('[data-start-guest]') : start.querySelector<HTMLButtonElement>('[data-start-single]'))!.focus({ preventScroll: true });
     }
     login.addEventListener('submit', (e) => {
@@ -1769,20 +1653,8 @@ const tcSymbols = Object.entries(TC_ICONS).map(([id, rows]) => ({ id: `tc-${id}`
       showLogin(false);
     });
 
-    function showPane(on: boolean) {
-      startPane.hidden = !on;
-      startMain.hidden = on;
-      optionsBtn.setAttribute('aria-expanded', String(on));
-      (on ? startPane.querySelector<HTMLButtonElement>('button') : optionsBtn)?.focus({ preventScroll: true });
-    }
-    optionsBtn.addEventListener('click', () => showPane(true));
-    start.querySelector('[data-start-back]')!.addEventListener('click', () => showPane(false));
-    start.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && !startPane.hidden) {
-        e.stopPropagation();
-        showPane(false);
-      }
-    });
+    // Settings: the hub's own, over the title screen (it shows only that tab there: hub.ts)
+    start.querySelector('[data-start-settings]')!.addEventListener('click', () => void hubReady.then((hub) => hub.show('settings')));
 
     function closeStart() {
       if (closed) return;
