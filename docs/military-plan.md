@@ -649,6 +649,7 @@ place stay where they stand (the snapshot holds them): only what stands on the l
 | Looking in | **The visitors' terrace raised** to about 6 with its rail, so a visitor up there sees over the wall to the parade ground and the airfield. |
 | The wall's lights | **Lights on the wall's top facing out**, on brackets, lighting its outer face and the grass at night (near only, under the bloom's threshold). The lamps inside stay. |
 | The polish | **All four**: review shots and fixes (every base view by day, night and on the phone tier); the seams at the edges (the stadium's band, the city's wall, Crestmont's hills, the woods); life and night tuned; the performance measured again. |
+| Getting up there | **A real stair to climb**: a flight up the centre's west side to a landing, onto the roof terrace; walked like Endswood's sky decks (its floor in the ground's layers, its rails off the treads). |
 | Phases | **One phase, one go**, one sign-off. |
 
 ### What it changes
@@ -659,7 +660,8 @@ place stay where they stand (the snapshot holds them): only what stands on the l
 - **Drawn** (airbase3d.ts, a stretch a site as the fence was): the panels (one box a run with its joints and capping
   near only), the razor wire (near only, not on phones), the outward lights (near only); no chain-link mesh in the FX
   layer, so the wall should cost fewer draws and less memory than the fence did. The gates: the piers and a steel leaf.
-- **The visitors' centre**: its terrace raised, `VISITOR_CENTRE_H` and its solid with it; Walk in unchanged.
+- **The visitors' centre**: its terrace raised (`VISITOR_CENTRE_H` 6.2) and its solid with it; a stair of 14 steps and
+  a landing up its west side (`VISITOR_STAIR`, `VISITOR_LANDING`, `visitorsFloorAt()`, `visitorsWall()`); Walk in unchanged.
 - **The world map** draws the wall as the fence's line, thicker.
 - **Its allowance**: nothing more than Phase 5's measure (no draws, triangles, phone memory or boot added: the wall
   replaces the fence). The boot stands at 767.8 of 770 KB: the change there is a few numbers.
