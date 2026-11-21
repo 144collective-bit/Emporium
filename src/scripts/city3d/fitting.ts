@@ -15,6 +15,7 @@
  */
 import { CHARACTERS, CHARACTER_LOOKS, CUTS, DEFAULT_LOOK, HEAD_SHAPES, MARKS, coversEyes, MARK_SLOTS, PALETTE, PATTERNS, RANGES, safeColour, type Bag, type Bottoms, type CharacterId, type Cut, type EyeStyle, type FaceGear, type Hat, type Look, type MarkId, type PatternId, type Range, type ShoeStyle } from '../net/profile-data';
 import { MARK_ART } from './marks';
+import { CHOICES, isPlaying, pickCharacter, theirOutfit, wearsTheirOutfit } from './lookrows';
 import type { Stage } from './stage';
 
 type ColorKey = 'top' | 'bottom' | 'tie' | 'shirt' | 'frame' | 'gear' | 'shoes' | 'hatColor' | 'bagColor' | 'lens' | 'headphones' | 'ink' | 'tone' | 'hair';
@@ -197,6 +198,17 @@ const faceItems: Item[] = [
 ];
 /** Whether he wears a character's whole look as it comes (its Full look chip pressed) */
 const wearsWhole = (l: Look, id: CharacterId) => Object.entries(CHARACTER_LOOKS[id]).every(([k, v]) => l[k as keyof Look] === v);
+/** The character picker's cards (docs/characters-plan.md): Degen, then each character; the head only, the clothes kept */
+const characterCards: Item[] = CHOICES.map(
+  (c): Item => ({
+    id: `pick-${c.id ?? 'degen'}`,
+    name: c.name,
+    icon: c.id ? CHARACTER_ICONS[c.id] : `${HEAD} M8.6 12h6.8v2.6H8.6z`,
+    on: (l) => isPlaying(l, c.id),
+    wear: (l) => pickCharacter(l, c.id),
+    colors: c.id && !CHARACTERS.find((x) => x.id === c.id)!.hair ? [toneColors] : [toneColors, hairColors],
+  })
+);
 /** The slots nothing goes in over a character's head (docs/characters-plan.md: the owner's call) */
 const OVER_HEAD = ['head', 'shades', 'gear'];
 
@@ -263,6 +275,8 @@ function merchNote(of: MerchFor, l: Look): string | null {
 
 /** The slots, each across every range (docs/wardrobe-plan.md Phase 2): a card shows in the ranges it's in */
 const TABS: Tab[] = [
+  // Who you play as (a row of its own over the slots): Degen, SlimeWhale or Smilex, every range
+  { id: 'characters', label: 'Characters', items: characterCards.map((it) => ({ ...it, in: ['street', 'business', 'work'] as Range[] })) },
   {
     id: 'tops',
     label: 'Tops',
@@ -469,7 +483,8 @@ const PICK_EVERY = 120;
 
 export function createFitting(d: FittingDeps) {
   let el: HTMLElement | null = null;
-  let tab = TABS[0];
+  // (it opens on the tops, as before: the Characters tab sits over them)
+  let tab = TABS[1];
   /** The range browsed (Streetwear, Business, Work): set from his top when the room opens */
   let range: Range = 'street';
   let preview: Stage | null = null;
@@ -490,6 +505,17 @@ export function createFitting(d: FittingDeps) {
     // The Face tab's rows: a character's whole look in one tap (docs/characters-plan.md), and a face's head
     // proportions (docs/faces-plan.md Phase 3; not on a character's own head)
     const faceRows = tab.id === 'face';
+    // The Characters tab's row: their own outfit, for whoever's picked (docs/characters-plan.md)
+    if (tab.id === 'characters') {
+      box.hidden = false;
+      const who = CHOICES.find((c) => isPlaying(l, c.id))!;
+      const html = chips('Outfit', 'data-char-outfit', [{ id: who.id ?? 'degen', name: who.id ? `${who.name}'s fit` : 'Classic look', on: wearsTheirOutfit(l, who.id) }]);
+      if (box.dataset.html !== html) {
+        box.dataset.html = html;
+        box.innerHTML = html;
+      }
+      return;
+    }
     box.hidden = tab.id !== 'merch' && !faceRows;
     if (box.hidden) return box.replaceChildren(), void (box.dataset.html = '');
     let html = '';
@@ -688,6 +714,13 @@ export function createFitting(d: FittingDeps) {
       el?.querySelector<HTMLButtonElement>(`[data-merch-for="${merchFor}"]`)?.focus({ preventScroll: true });
       return;
     }
+    const co = t.closest<HTMLButtonElement>('[data-char-outfit]');
+    if (co) {
+      const id = co.dataset.charOutfit === 'degen' ? null : (co.dataset.charOutfit as CharacterId);
+      wear(theirOutfit(d.look(), id));
+      el?.querySelector<HTMLButtonElement>('[data-char-outfit]')?.focus({ preventScroll: true });
+      return;
+    }
     const cl = t.closest<HTMLButtonElement>('[data-char-look]');
     if (cl) {
       const id = cl.dataset.charLook as CharacterId;
@@ -766,6 +799,8 @@ export function createFitting(d: FittingDeps) {
         b.setAttribute('role', 'tab');
         b.dataset.fitTab = t.id;
         b.textContent = t.label;
+        // (the Characters tab a row of its own over the ten slots)
+        if (t.id === 'characters') b.classList.add('is-wide');
         tabs.append(b);
       }
       el.addEventListener('click', onClick);

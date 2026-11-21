@@ -279,6 +279,27 @@ the whole scene's draws and triangles move about 10% either way from run
 to run, more than one figure could. `npm run smoke` after: walk mode is
 fine. Shots: `docs/characters-shots/smilex-phase3.png`.
 
+## The character picker
+
+The owner's call (2026-11-21): "where do I select a character to play ...
+add Degen, Smilex and SlimeWhale as characters you can select in the
+clothing and accessories menu." The owner's answers: a **Characters tab**
+of its own; picking one swaps the **head only** and keeps the clothes,
+with a button for their own outfit; the Face tab keeps its character cards
+and Full look row too.
+
+- **The tab** (`fitting.ts`, `characters` in `TABS`, first; a row of its
+  own over the ten slots, `.is-wide` in walk.css): a card each for Degen,
+  SlimeWhale and Smilex (`pick-<id>`, `pick-degen`), every range, with the
+  Skin row (and Hair where the character has hair). The room still opens
+  on Tops.
+- **Their outfit:** the tab's row under it (`data-char-outfit`): "Classic
+  look" for Degen (his look from the art, `DEFAULT_LOOK`), "<name>'s fit"
+  for a character (`CHARACTER_LOOKS`); pressed while it's worn as it comes.
+- **The rules** are DOM-free in `lookrows.ts` (`CHOICES`, `isPlaying()`,
+  `pickCharacter()`, `theirOutfit()`, `wearsTheirOutfit()`), tested in
+  `tests/heads.test.ts`.
+
 ## Adding the next character (once SlimeWhale's done)
 
 The owner posts the art; we go through it (head, face, hair, clothes,
