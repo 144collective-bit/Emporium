@@ -46,8 +46,11 @@ export const SKY_FLOORS = [3, 6, 9, 12, 15];
 export const BRIDGE_CLEAR = 3;
 /** A stair core's lift house over its block's roof (room for a landing on the top gallery's floor under it) */
 export const CORE_OVER = 1.8;
-/** How round a slab's corners are: this much of its depth */
-export const CORNER_R = 0.3;
+/** How far a slab's end corners are cut back: this much of its depth (docs/brutalist-plan.md Phase 1: chamfered, hard,
+ * where they were rounded) */
+export const CORNER_R = 0.15;
+/** The corners' cut: one straight face (a chamfer) */
+const CUT = 1;
 /** The towers' plant room over their roofs, and their beacon's height over that */
 export const PLANT_H = 1.6;
 export const BEACON_H = 0.5;
@@ -57,12 +60,12 @@ export const floorY = (base: number, n: number) => base + (n === 0 ? 0 : GROUND_
 /** A block's roof's level with `storeys` storeys (the ground floor one of them) */
 export const roofY = (base: number, storeys: number) => floorY(base, storeys);
 
-/* ---------- The accents (70s retro-future: warm board-marked concrete, each block its own colour) ---------- */
+/* ---------- The accents (brutalist, docs/brutalist-plan.md: raw grey concrete, each block's own colour a stripe on its ends) ---------- */
 
 export type Accent = 'orange' | 'teal' | 'mustard';
 export const ACCENTS: Record<Accent, number> = { orange: 0xd9692e, teal: 0x2c9a92, mustard: 0xd6a12a };
-/** The concrete: warm grey, board-marked */
-export const CONCRETE = 0xb3aa9e;
+/** The concrete: a cool grey, board-marked (the wall atlas's `brutal` band) */
+export const CONCRETE = 0x9b9ea3;
 
 /* ---------- Lines and shapes ---------- */
 
@@ -104,7 +107,7 @@ const SIDE = { right: 1, left: -1 } as const;
 export type Side = keyof typeof SIDE;
 
 /** Corners rounded: each corner at `at` replaced by a curve `r` back along each edge */
-function roundAt(poly: Pt[], at: number[], r: number, n = 5): Pt[] {
+function roundAt(poly: Pt[], at: number[], r: number, n = CUT): Pt[] {
   const out: Pt[] = [];
   poly.forEach((v, i) => {
     if (!at.includes(i)) return void out.push(v);
@@ -122,8 +125,8 @@ function roundAt(poly: Pt[], at: number[], r: number, n = 5): Pt[] {
 }
 /** A slab's footprint: its spine widened `depth`, its ends' corners rounded */
 export const slabFoot = (spine: Pt[], depth: number): Pt[] => slabRing(spine, depth, 0, lineLength(spine), true, true).ring;
-/** A rounded square, `half` each way, turned `rot` (radians, from +x towards +z) */
-export function squareFoot(c: Pt, half: number, rot: number, r = half * 0.4): Pt[] {
+/** A square, `half` each way, turned `rot` (radians, from +x towards +z), its corners cut back `r` */
+export function squareFoot(c: Pt, half: number, rot: number, r = half * 0.2): Pt[] {
   const [cs, sn] = [Math.cos(rot), Math.sin(rot)];
   const sq: Pt[] = [[half, half], [-half, half], [-half, -half], [half, -half]].map(([x, z]): Pt => [c[0] + x * cs - z * sn, c[1] + x * sn + z * cs]);
   return roundAt(sq, [0, 1, 2, 3], r);
@@ -215,7 +218,7 @@ const twin = (id: string, name: string, c: Pt, accent: Accent): Block => {
 };
 export const HARRIER = twin('harrier', 'Harrier Point', [-67, 371.5], 'orange');
 export const KITE = twin('kite', 'Kite Point', [-35, 378.5], 'teal');
-const twinCoreFoot = squareFoot([-51, 375], TWIN_CORE_HALF, TWIN_ROT, 1.2);
+const twinCoreFoot = squareFoot([-51, 375], TWIN_CORE_HALF, TWIN_ROT, 0.6);
 export const TWIN_CORE: Block = { id: 'twin-core', name: 'The Core', kind: 'core', foot: twinCoreFoot, steps: [{ from: 0, to: 0, storeys: 19 }], base: baseOf(twinCoreFoot) };
 
 // The stairwell blocks: three tall slabs between the avenues (running south: their right side west, their galleries
@@ -256,7 +259,7 @@ export function stepShape(b: Block, st: Step): StepShape {
  * A stretch `from` to `to` of a spine widened `depth`, as a ring with each edge tagged: its right side, a quarter-round
  * corner (`rs`, `re`: at its start, its end), the end across, its left side back, the start across
  */
-function slabRing(spine: Pt[], depth: number, from: number, to: number, rs: boolean, re: boolean, n = 5): { ring: Pt[]; tags: EdgeTag[] } {
+function slabRing(spine: Pt[], depth: number, from: number, to: number, rs: boolean, re: boolean, n = CUT): { ring: Pt[]; tags: EdgeTag[] } {
   const r = depth * CORNER_R;
   const h = depth / 2;
   const [a, c] = [from + (rs ? r : 0), to - (re ? r : 0)];
