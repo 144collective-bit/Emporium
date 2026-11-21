@@ -59,15 +59,20 @@ export function registerWalk(low: boolean) {
         if (s1 <= s0) continue;
         // (each step a solid block a run deep, its tread level at the higher end's ground and its foot in the lower's,
         // so a flight reads as a stair and not as slabs laid on the slope: crestwalk.ts `stepAt()`, the walkers' too)
-        for (let d = a; d < c; d += STEP.run) {
-          if (d < d0 || d >= d0 + PIECE) continue;
-          const st = stepAt(d + 1e-6);
-          if (!st) continue;
-          const mid = (st.from + st.to) / 2;
-          const p = WALK_POINTS.find((q) => q.d >= mid) ?? pts[pts.length - 1];
-          const [x, z] = walkAt(mid);
-          b.add(new THREE.BoxGeometry(2 * WALK.half + 0.1, st.top - st.foot, STEP.run).rotateY(Math.atan2(p.u[0], p.u[1])).translate(x, (st.top + st.foot) / 2, z), STONE);
-        }
+        // (phones draw them near only: from further off a flight reads as the gravel it climbs)
+        const steps = () => {
+          for (let d = a; d < c; d += STEP.run) {
+            if (d < d0 || d >= d0 + PIECE) continue;
+            const st = stepAt(d + 1e-6);
+            if (!st) continue;
+            const mid = (st.from + st.to) / 2;
+            const p = WALK_POINTS.find((q) => q.d >= mid) ?? pts[pts.length - 1];
+            const [x, z] = walkAt(mid);
+            b.add(new THREE.BoxGeometry(2 * WALK.half + 0.1, st.top - st.foot, STEP.run).rotateY(Math.atan2(p.u[0], p.u[1])).translate(x, (st.top + st.foot) / 2, z), STONE);
+          }
+        };
+        if (low) b.detail(steps);
+        else steps();
         b.detail(() => {
           for (let d = s0; d <= s1 + 0.01; d += 2) {
             const [x, z] = walkAt(d, WALK.half + 0.12);
@@ -87,9 +92,9 @@ export function registerWalk(low: boolean) {
           run();
         });
       }
-      // The lamps along its right, the benches along its left
-      for (const [x, z] of WALK_LAMPS) {
-        if (!pts.some((p) => Math.hypot(p.x - x, p.z - z) < 1.5)) continue;
+      // The lamps along its right (phones every other), the benches along its left
+      for (const [i, [x, z]] of WALK_LAMPS.entries()) {
+        if ((low && i % 2) || !pts.some((p) => Math.hypot(p.x - x, p.z - z) < 1.5)) continue;
         const g = ground(x, z);
         cyl(b, 0.07, 0.7, x, g, z, IRON, 6);
         b.add(new THREE.SphereGeometry(0.09, 6, 4).translate(x, g + 0.76, z), LAMP);
@@ -123,11 +128,15 @@ export function registerWalk(low: boolean) {
       const b = new Batch();
       const g = ground(o.x, o.z);
       b.add(new THREE.CylinderGeometry(1.4, 1.5, 0.25, 16).translate(o.x, g + 0.02, o.z), STONE);
-      // (a rail round its far half, a coin viewer at the front)
-      for (let i = 0; i <= 6; i++) {
-        const a = Math.atan2(o.look[1], o.look[0]) - Math.PI / 2 + (i / 6) * Math.PI;
-        cyl(b, 0.04, 0.95, o.x + Math.cos(a) * 1.35, g + 0.15, o.z + Math.sin(a) * 1.35, IRON, 5);
-      }
+      // (a rail round its far half, near only on phones; a coin viewer at the front)
+      const rail = () => {
+        for (let i = 0; i <= 6; i++) {
+          const a = Math.atan2(o.look[1], o.look[0]) - Math.PI / 2 + (i / 6) * Math.PI;
+          cyl(b, 0.04, 0.95, o.x + Math.cos(a) * 1.35, g + 0.15, o.z + Math.sin(a) * 1.35, IRON, 5);
+        }
+      };
+      if (low) b.detail(rail);
+      else rail();
       cyl(b, 0.08, 1.0, o.x + o.look[0] * 0.8, g + 0.15, o.z + o.look[1] * 0.8, IRON, 8);
       box(b, o.x + o.look[0] * 0.8 - 0.14, g + 1.15, o.z + o.look[1] * 0.8 - 0.14, o.x + o.look[0] * 0.8 + 0.14, g + 1.42, o.z + o.look[1] * 0.8 + 0.14, GOLD);
       b.build(into, { cast: true, receive: true });
