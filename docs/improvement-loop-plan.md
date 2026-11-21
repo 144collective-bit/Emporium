@@ -145,6 +145,54 @@ repair.
   - [ ] Northgate Air Base
   - [ ] Downtown and the landmarks
 
+#### R2. Driveway meets the street
+
+- **The fault:** a private drive (or any entrance off a street: a forecourt,
+  car park, yard or gate) drawn as its own slab and simply laid over
+  whatever is under it. It floats above the grass with a thick raw edge
+  showing, cuts the sidewalk off square on both sides, and runs past the
+  kerb into the carriageway, ending as a thin lip over the road's lane. It
+  may also meet the street at an angle that doesn't line up with the kerb.
+- **How to spot it:** from the air along any street with lots off it: a
+  break in the sidewalk, a pale slab over the road's edge, a visible step
+  where the drive leaves the ground. In the code, a drive's ring drawn from
+  the house to the street's centre or kerb without the sidewalk's and the
+  kerb's lines (`streetplan.ts`'s widths) cut into it.
+- **The fix, the standard:**
+  1. **The sidewalk is continuous.** It runs straight through the drive at
+     its own level and material; the drive stops at the sidewalk's back edge
+     and starts again past its front edge. (Where a district's style crosses
+     the sidewalk with the drive's paving, the sidewalk's line still shows,
+     as scored joints.)
+  2. **A dropped kerb.** Where the drive crosses the kerb: the kerb lowered
+     over the drive's width, with short ramps (flares) each side, and the
+     drive's apron meeting the road's edge exactly, never past it into the
+     lane.
+  3. **On the ground.** The drive follows the ground's height (`ground under
+     a point`) with no raw edge showing; where the land falls away, a
+     finished retaining edge or kerb, not a slab's side.
+  4. **Lined up.** The drive meets the street square to the kerb (or at the
+     street's own bend), centred on its gate, with its edges parallel to
+     the gate's piers.
+  5. **Finished at both ends.** A gate line (piers, threshold) at the lot
+     and an apron at the street; the paving's edges have a trim.
+  6. **Collisions and walking** unchanged (walk over the sidewalk and the
+     drive with no step); the snapshot test holds every lot, door and
+     street where it stands.
+- **The sweep:** every drive and entrance off a street. Crestmont (the
+  estates, the Drive's houses, the hills' villas), Sunridge (`sunhouses`,
+  `sunyards`, `sunridgelots`), Aldwyn's Green and Endswood (Degen's home
+  and compound, the rows), Westlake's and the civic quarter's forecourts,
+  car parks and service yards everywhere (the mall, the stadium, the
+  airport, the Docks, Lot 9, the air base's gates), petrol stations.
+  - [ ] Crestmont
+  - [ ] Sunridge
+  - [ ] Endswood and Aldwyn's Green
+  - [ ] Westlake and the civic quarter
+  - [ ] Car parks and yards (the mall, the stadium, the airport, the Docks,
+        Lot 9, the air base)
+  - [ ] Everything else (a search of every entrance off a street)
+
 ### Jobs
 
 - [ ] **J1 (R1): a gallery walkway on Endswood's flats** (the owner's
@@ -158,6 +206,16 @@ repair.
       the podium deck of the estate; the junction rebuilt to read. Find the
       exact spot first (the shot's angle: the highway's lanes below to the
       right, the deck running towards them) and take the before shot there.
+- [ ] **J2 (R2): the cypress drives in Crestmont** (the owner's screenshot,
+      2026-11-21: a drive lined with cypresses, two stone piers at its
+      gate, meeting a curving two-lane road with lamps on its far side). The
+      drive is a pale slab floating over the grass, the sidewalk is cut off
+      square on both sides of it, and its end runs past the kerb onto the
+      road. The fix: R2 in full on this drive and every drive like it in
+      Crestmont (the estates' gateways, `estates.ts` / `estates3d.ts`,
+      `crestgardens`, `crestbanks`, `coral`); then the owner's second ask:
+      **every other driveway in the city checked to line up and not cover
+      the sidewalk** (R2's sweep).
 
 ## Level 1: the safety net (bugs and tests)
 
