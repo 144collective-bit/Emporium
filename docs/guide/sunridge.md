@@ -85,6 +85,15 @@ keep it up to date when what it describes changes.
   (sunyards.ts `islandOf()`, `Yard.islands`), the rolled kerbs along the streets and turning
   circles (sunridge3d.ts `kerbAlong()`), the fringe's wash and path
   meandering (fringes.ts).
+- **The gardens and the land behind** (docs/suburb-plan.md Phase 8): the
+  blocks' street corners rounded (sunridge.ts `roundCorners()`,
+  `KERB_RETURNS`, drawn by sunridge3d.ts with the asphalt filled in and the
+  kerb round); the gravel verge outside the perimeter wall (sunridge3d.ts);
+  each lot's garden grown into the land behind (sunridgelots.ts `GARDENS`,
+  baked `sun-gardens`; the yards and walls read them through sunyards.ts
+  `gardenFrame()`, `Yard.inner`); eight late lots and houses on the field
+  east of the school and the south row's gap (sunridgelots.ts `late()`,
+  `LATE_FROM`; sunhouses.ts builds them after every other house).
 - **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views
   (`sunridge` over the loop, `sun-street`, `sun-court`, `sun-pools`). On
   phones it's about 120-190 draws and 0.27-0.53M triangles, among the city's

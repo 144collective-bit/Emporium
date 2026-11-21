@@ -344,7 +344,55 @@ These are my recommendations, made so the plan is complete; any can change.
      their garage doors, kids on bikes and scooters and hoops over the
      garages, the ice-cream van at the park, swimmers, seasonal porch
      decorations, the rest of Ocotillo Court's lots.
-8. *(Optional)* **A home of your own** for Dorras, with the owner's say.
+8. **The gardens and the land behind** (built, waiting on the owner's
+   sign-off; the owner, 2026-11-21: "do them all then lets work fixing the
+   garden fences. i want the fences to be moved to suit the existing wasted
+   space. scan the entire area of sunridge ... extend some gardens to use the
+   wasted space"):
+   - **The last rough spots of Phase 7:** the blocks' street corners rounded
+     (sunridge.ts `roundCorners()`, `KERB_RETURNS`: every junction and each
+     cul-de-sac's stem into its circle; sunridge3d.ts fills the asphalt into
+     each and lays the kerb round it; the lots, laid from the runs, don't
+     move); the strip of slab outside the perimeter wall a gravel verge
+     spilling onto the ground in a wandering line, with clumps of boulders
+     and shrubs, where the land outside is open.
+   - **The scan:** Sunridge's blocks rasterised, every bit of land on no
+     lot, amenity or footpath found: 75 patches, about 4,800 square tiles
+     (the lots: about 9,000), the biggest the band along the east and north
+     walls and round the school, the loop's middle between back-to-back
+     rows, the strip by the club, park and school, the south avenue's
+     strip, the wedges round the turning circles and the north-west and
+     south-west corners.
+   - **The gardens grown:** sunridgelots.ts `GARDENS` (baked as
+     `sun-gardens`, with the lots): each lot's garden grown from its back
+     (each back corner deeper along its side, or out along its back) and
+     along its front (each front corner along the sidewalk's edge, only
+     where the whole lot stays in it), a step at a time and every lot in
+     turn (0.4, then 0.1, then 0.03), while it stays convex, in its block,
+     back from the streets' sidewalks (`STREET_CLEAR`), off the amenities'
+     land and the footpath with a margin (`KEEP_CLEAR`, where the lot
+     wasn't laid within it), out of every other garden, and no nearer the
+     land's edge than the perimeter wall's line (a garden reaching it backs
+     onto that wall); at most `GROW`. The houses keep their lots (`LOTS`);
+     the yards read the gardens: sunyards.ts `gardenFrame()` (the house's
+     frame, the garden's corners), their walls on the gardens' edges
+     (trimmed where another wall already stands: no two along one line),
+     the whole garden behind the returns in gravel (`Yard.inner`), a pool no
+     further from the house than in a lot's own yard.
+   - **More houses** (the owner's call for the field east of the school):
+     the amenities' land is drawn as rough rectangles, and the school's
+     and the club's reached across the loop into the blocks outside it, so
+     no lots were laid there. A late pass (sunridgelots.ts `late()`,
+     `LATE_FROM`) lays lots there, kept off only the amenity land whose
+     middle is in that block: six along the loop's outer side east of the
+     school and two in the gap on the south row; their houses are built
+     after every other (sunhouses.ts, `rng(8823)`), so every house, yard
+     and resident before keeps its id.
+   - **What's left:** about 1,860 square tiles: the corner at the loop's
+     south-east bend (about 540), the pockets between the cul-de-sacs'
+     gardens where two straight-sided gardens can't close a bent gap, the
+     wedge west of the club, and the margins round the amenities.
+9. *(Optional)* **A home of your own** for Dorras, with the owner's say.
 
 ## Constraints
 
