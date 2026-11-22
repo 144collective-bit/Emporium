@@ -277,7 +277,7 @@ paints the level pill at once; the kart park's and the metro's drawing, which th
   the carts on their paths at their pace and apart, the mower on its fairway, the ducks on the water, the look, the
   swing's and the putt's shape and length, the sound).
 
-### Phase 6: the golf game (its own plan, `docs/golf-game-plan.md`, when Phase 5 is signed off)
+### Phase 6: the golf game (its own plan, `docs/golf-game-plan.md`: written 2026-11-22, the owner's "1", waiting for their answers)
 
 - Rules DOM-free and seeded (a ball's flight with the wind, its lie from `surfaceAt()`, its roll on the greens from the
   ground's slope, the clubs, strokes, the card), the view only drawing them (aim, a power swing, the camera).
