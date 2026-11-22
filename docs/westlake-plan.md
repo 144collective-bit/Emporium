@@ -92,7 +92,7 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    the baked file 147 KB (3.6 KB more). The trees, kerbs, edges, walls and
    parterres stay worked out in the browser: baked, they'd add far more to
    the baked file than they take from the boot.
-2. **The paths re-laid** (built, waiting on the owner's sign-off).
+2. **The paths re-laid** (built, signed off 2026-11-22).
    westlake.ts: the ring walk's corners rounded, each a curve about 10
    round but those by the civic quarter, and its line wandering a little
    either side where it has room, straight past the civic quarter and the
