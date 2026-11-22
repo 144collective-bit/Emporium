@@ -72,9 +72,11 @@ keep it up to date when what it describes changes.
   what's dropped settles with a bounce (`is-landed`) and the panel rises
   in, neither under reduced motion; arrows or the d-pad move round it; a card in
   the middle on desktops, a sheet over the bottom on phones upright, the
-  weapons beside the grid on their side) and `bagHtml()` for the business
-  card's Bag tab (the same grid, read-only; the Armoury and the Night
-  Market as ways in from the City view). 1 / 2 draw a weapon (again puts
+  weapons beside the grid on their side) and `bagHtml()` for the hub's
+  Bag tab (`docs/header-plan.md`: the two weapon slots, then only what's
+  in the bag, a row each with its count, Use on a snack or a boost through
+  walk.ts `useItem()`, the hotbar's own use, greyed in the City view; how
+  full it is; the Armoury and the Night Market as ways to get more). 1 / 2 draw a weapon (again puts
   it away), 3-7 the rest, X, the touch Swap button, RB and the d-pad
   step, and the wheel steps while the mouse is captured (free, it still
   sets the camera's distance); first person is the gamepad's right stick
@@ -126,7 +128,7 @@ keep it up to date when what it describes changes.
   while it's up (`.is-guard`), in Fire's, Aim's and Reload's places;
   gamepad LB held the guard, then X punch, Y kick, A dodge, the run on
   L3. Hold or toggle: the guard is its own job (comfort.ts `guard`, held
-  on the keys and the pad, toggled on touch; Settings > Guard), the
+  on the keys and the pad, toggled on touch; Settings > Controls > Guard), the
   ring's block keeps `block` ("Ring block"). A swing makes anyone near
   step aside (`swing` in life.ts, a `bump`): the crowd is never a target.
   The lab's Brawl program (`?anim&prog=brawl`) plays them.

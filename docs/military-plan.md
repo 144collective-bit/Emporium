@@ -13,7 +13,7 @@ and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 
 measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
 airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is built and signed off**
 (2026-11-19, measured below). **Phase 4 (life, night and sound) is built and
-trimmed** (2026-11-20, measured below: the owner's call). **Phase 5 (polish) is built and signed off** (2026-11-20, below).
+trimmed** (2026-11-20, measured below: the owner's call). **Phase 5 (polish) is built and signed off** (2026-11-20, below). **Phase 6 (the wall and a polish pass) is built and merged** (2026-11-21, #233, below; its draw counts and after shots the same day).
 **The plan is done.** What's next is its "Later" list, each in a plan of its own (the owner's picks below).
 
 ## The owner's answers (2026-11-18)
@@ -634,3 +634,84 @@ grey-blue (`NIGHT.hor`); the City view thins it when pulled back, but only to 55
 haze's pale colour at night (about 37% by day), so the night picture reads as a hazy day. The same holds for the whole
 city's City view at night when pulled far back: a look question for the owner (sky.ts, the whole city), not a bug.
 
+
+## Phase 6: the base's wall and a polish pass (2026-11-21, the owner's call)
+
+The owner's call: **the fence round the base becomes a large concrete wall**, and **a polish pass across the whole
+base**, built in one go and signed off once. The fence's line (`FENCE`, `FENCE_RUNS`), the gates, the lots and every
+place stay where they stand (the snapshot holds them): only what stands on the line changes.
+
+| Question | Answer |
+| --- | --- |
+| The wall's height | **4.5** (over a truck): the base hidden from the street on foot and in a car; the watchtowers' cabins (8), the hangars (11), the tower, the radar and the water tower still show over it. |
+| Its look | **Precast panels with wire**: grey concrete slabs with joints every few metres and a capping strip; coiled razor wire along the top, near only. Not the city's smooth wall. |
+| The gates | **Wall ends and steel gates**: the wall turns in at each opening on thick piers; each gate a solid steel sliding gate, shut; the barriers and guardhouses as they are. |
+| Looking in | **The visitors' terrace raised** to about 6 with its rail, so a visitor up there sees over the wall to the parade ground and the airfield. |
+| The wall's lights | **Lights on the wall's top facing out**, on brackets, lighting its outer face and the grass at night (near only, under the bloom's threshold). The lamps inside stay. |
+| The polish | **All four**: review shots and fixes (every base view by day, night and on the phone tier); the seams at the edges (the stadium's band, the city's wall, Crestmont's hills, the woods); life and night tuned; the performance measured again. |
+| Getting up there | **A real stair to climb**: a flight up the centre's west side to a landing, onto the roof terrace; walked like Endswood's sky decks (its floor in the ground's layers, its rails off the treads). |
+| Phases | **One phase, one go**, one sign-off. |
+
+### What it changes
+
+- **Its lines** (airbase.ts): `FENCE_H` 2.6 → the wall's 4.5 (`AIRBASE_WALL`: its thickness, the panels' spacing, the
+  piers), its solids from `runBoxes()` as thick as the wall; the gates' shut boxes and the piers. The base's flights, the
+  watchtowers and the patrols already keep clear of the line; their tests hold the new height.
+- **Drawn** (airbase3d.ts, a stretch a site as the fence was): the panels (one box a run with its joints and capping
+  near only), the razor wire (near only, not on phones), the outward lights (near only); no chain-link mesh in the FX
+  layer, so the wall should cost fewer draws and less memory than the fence did. The gates: the piers and a steel leaf.
+- **The visitors' centre**: its terrace raised (`VISITOR_CENTRE_H` 6.2) and its solid with it; a stair of 14 steps and
+  a landing up its west side (`VISITOR_STAIR`, `VISITOR_LANDING`, `visitorsFloorAt()`, `visitorsWall()`); Walk in unchanged.
+- **The world map** draws the wall as the fence's line, thicker.
+- **Its allowance**: nothing more than Phase 5's measure (no draws, triangles, phone memory or boot added: the wall
+  replaces the fence). The boot stands at 767.8 of 770 KB: the change there is a few numbers.
+- **Before and after**: review shots of the base's views (`docs/blend-shots/airbase-wall-before`, `-after`), by day
+  and night, desktop and phone, with six more views for the wall (outside the south side, the service gate, the
+  visitors' terrace, the west and east ends, the south side from above).
+
+### Phase 6 as built (2026-11-21)
+
+- **The wall** (4.5, precast panels, capping, footing, razor wire near only), **its gates** (piers, shut steel sliding
+  gates), **the raised visitors' terrace** (6.2) and **its stair** (14 steps and a landing, walked as Endswood's sky
+  decks are), as the table above. Its review shots: `docs/blend-shots/airbase-wall-before` (the fence, on main) and
+  `airbase-wall-after`, desktop by day and night; `airbase-wall-phone`, the phone tier.
+- **The polish, from the shots:** the wall's lights moved to the middle of their panels (they stood on joints); a lamp
+  on each gate pier facing out, its wash in the wall's; the washes carried on as a pool on the grass at the wall's
+  foot; the terrace's rail drawn on phones too (phones draw no near detail, so up there a phone showed no rail); the
+  wall two materials a stretch (the slab; the footing, capping and posts), so two draws a stretch on a phone.
+- **Night in the review shots:** some views (the base from high, the terrace) come out with a day or pink sky in the
+  night set, and not the same from one run to the next (the same view was night in one run, day-blue in another): the
+  review tool shooting before the sky has settled after the camera jumps, not the game's sky, and older than the wall
+  (Phase 5's night overview did it too). A task of its own, not this plan's.
+- **The measures** (the phone tier, against main the same day):
+
+  | | main | Phase 6 |
+  | --- | ---: | ---: |
+  | memcheck: geometry | 196.9 MiB | 196.8 MiB |
+  | memcheck: textures | 35.4 MiB | 35.4 MiB |
+  | The boot | 769.8 KB | 770.3 KB (+0.5: the stair's rules, at the boot for walking) |
+
+  memcheck passes on both (210 and 70 the ceilings). The boot's budget was raised to 771 for the stair (the owner's
+  call); main has since raised it to 775 for its own work, and the stair sits inside that. Every view's slowest CPU frame
+  passes memcheck's 250 ms.
+- **The draws, counted after the merge** (the owner's call: a small follow-up). The full `?bench` flies every view in
+  the city and outran an hour under the software renderer here, and `?fps` under the review shots averages over frames
+  it didn't draw; so every site `airbase3d.ts` makes was built in Node, as the tests do, and its meshes (a draw each
+  before the tile batches merge them further) and triangles counted, on main before the wall (c93e2b5) and after (#233):
+
+  | `airbase3d.ts`'s sites | Before: the fence | After: the wall |
+  | --- | ---: | ---: |
+  | Phone: the line's meshes (its own, and the FX layer's) | 111 and 111 | 109 and 0 |
+  | Phone: the line's triangles | 11,868 | 6,540 |
+  | Phone: the gates' meshes (and FX) | 2 and 2 | 2 and 0 |
+  | Phone: the visitors' centre's triangles (the stair, its rails) | 214 | 1,150 |
+  | Desktop: the line's meshes (all, near, FX) | 111, 111, 111 | 109, 218, 0 |
+  | Desktop: the line's near triangles (the wire, posts and lights) | 14,532 | 404,052 |
+
+  On phones the wall costs half the fence's draws (no chain-link in the FX layer) and 45% fewer triangles; the rest
+  of the base is unchanged. At night the washes are one mesh in all (`wallWash()`). On desktop the razor wire is the
+  weight: about 3,700 triangles a 30 m stretch, near only (within the tier's `far`, 120 on the high tier), so
+  about eight stretches of a straight run at once, some 30,000 (the whole line's 404,052 is never drawn together). The next thing to trim if the north grows (fewer sides a coil, or coils further
+  apart).
+- **Checks:** `npm test` and `npm run test:wide` pass; the wall's tests hold its height, thickness, gates, piers, lights
+  (on the line, facing out, clear of the joints), the piers' lamps, the stair's climb and rails, and the phone's rail.

@@ -184,6 +184,8 @@ export function createTravelUI(d: TravelDeps) {
   return {
     update,
     setWaypoint,
+    /** The world map's own actions (state, places walked to, open, walk here, fast travel, a taxi): the hub's Map tab uses them too */
+    deps: mapDeps,
     /** Open or close the map (the gamepad's View at the wheel, docs/views-plan.md) */
     toggle() {
       if (map?.isOpen) map.close();

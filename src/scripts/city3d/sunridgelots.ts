@@ -12,6 +12,8 @@ import { BUILT, baked } from './baked';
 /** A lot's width along the street (about 12.6 m), and the shallowest a lot may be */
 export const LOT_W = 6.6;
 export const MIN_D = 10.5;
+/** The second pass's depths round a turning circle (a shallow ranch's driveway, house and back yard need about 9) */
+export const SHALLOW_D = [10, 9.5, 9];
 /** How far a lot keeps from a run's ends (the corners) */
 const END = 1.2;
 
@@ -23,6 +25,8 @@ export interface Lot {
   front: [Pt, Pt];
   back: [Pt, Pt];
   depth: number;
+  /** Laid in the second pass round the turning circles (Phase 6), after every other lot */
+  late?: true;
 }
 
 const ORDER = (s: string) => (s === 'sun-court-2' ? 0 : s.startsWith('sun-court') ? 2 : s === 'sun-mesa' ? 3 : 1);
@@ -66,16 +70,24 @@ const BACK_LEAST = 4.4;
 const SKEW = 2.2;
 
 /** A lot from `s0` along a run, `w` wide (narrower if its back would fan out too wide), if one fits there */
-function fit(b: (typeof SUN_BLOCKS)[number], street: string, pts: Pt[], cum: number[], s0: number, w: number, placed: Lot[], keep: Pt[][]): Omit<Lot, 'id'> | null {
+function fit(b: (typeof SUN_BLOCKS)[number], street: string, pts: Pt[], cum: number[], s0: number, w: number, placed: Lot[], keep: Pt[][], depths = [LOT_D, 12, 11, MIN_D], square = false): Omit<Lot, 'id'> | null {
   const inner = (p: Pt) => inside(b.poly, p) && distTo(b.poly, p, true) > 0.1;
-  for (const depth of [LOT_D, 12, 11, MIN_D])
+  for (const depth of depths)
     for (let ww = w; ww >= MIN_W - 1e-9; ww -= 0.6) {
       const [A, B] = [along(pts, cum, s0), along(pts, cum, s0 + ww)];
       // (the block's inside is left of the way its edge runs)
-      const [n0, n1]: Pt[] = [
-        [A.u[1], -A.u[0]],
-        [B.u[1], -B.u[0]],
-      ];
+      // (`square`: both back corners straight in from the front's chord, its sides parallel, so a lot on a tight curve is as
+      // deep as it's laid rather than fanning out shallow)
+      const chord: Pt = [(B.p[0] - A.p[0]) / (Math.hypot(B.p[0] - A.p[0], B.p[1] - A.p[1]) || 1), (B.p[1] - A.p[1]) / (Math.hypot(B.p[0] - A.p[0], B.p[1] - A.p[1]) || 1)];
+      const [n0, n1]: Pt[] = square
+        ? [
+            [chord[1], -chord[0]],
+            [chord[1], -chord[0]],
+          ]
+        : [
+            [A.u[1], -A.u[0]],
+            [B.u[1], -B.u[0]],
+          ];
       const back: [Pt, Pt] = [
         [A.p[0] + n0[0] * depth, A.p[1] + n0[1] * depth],
         [B.p[0] + n1[0] * depth, B.p[1] + n1[1] * depth],
@@ -124,6 +136,20 @@ function lay(): Lot[] {
       } else s0 += 0.5;
     }
   }
+  // Round the turning circles again, a shallower lot (`SHALLOW_D`) wherever a gap is left (Phase 6: Ocotillo Court's
+  // circle stood in open ground), after every other lot, so none of them moves or is renumbered
+  for (const { b, r, street } of runs.filter((x) => x.street.startsWith('sun-court'))) {
+    const cum = [0];
+    for (let i = 1; i < r.pts.length; i++) cum.push(cum[i - 1] + Math.hypot(r.pts[i][0] - r.pts[i - 1][0], r.pts[i][1] - r.pts[i - 1][1]));
+    const L = cum[cum.length - 1];
+    for (let s0 = END; s0 + MIN_W < L - END; ) {
+      const lot = fit(b, street, r.pts, cum, s0, Math.min(LOT_W * 1.3, L - END - s0), out, keep, SHALLOW_D, true);
+      if (lot) {
+        out.push({ ...lot, id: `sun-lot-${out.length}`, late: true });
+        s0 += Math.hypot(lot.front[1][0] - lot.front[0][0], lot.front[1][1] - lot.front[0][1]);
+      } else s0 += 0.5;
+    }
+  }
   return out;
 }
 /** The lots, laid when the site is built (baked.ts; scripts/bake.mjs: about half a second as the chunk loaded, a freeze on
@@ -158,8 +184,8 @@ function late(placed: Lot[]): Lot[] {
   }
   return out;
 }
-/** How many lots were laid before the late ones: theirs are the ids from here on */
-export const LATE_FROM = 101;
+/** How many lots were laid before the late ones (the first pass and its round of the turning circles, Ocotillo Court's `sun-lot-101` the last): theirs are the ids from here on */
+export const LATE_FROM = 102;
 export const LOTS: Lot[] = baked('sun-lots', BUILT ? undefined : () => {
   const first = lay();
   return [...first, ...late(first)];

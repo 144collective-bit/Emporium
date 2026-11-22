@@ -81,9 +81,6 @@ function page() {
     brake: new El('.tc', { left: 220, top: 500, width: 60, height: 60 }),
     rideView: btn('rideview'),
     block: btn('block'),
-    fp: btn('fp'),
-    sens: btn('sens'),
-    invert: btn('invert'),
     prompt: btn('prompt'),
     canvas: new El('canvas'),
     byId,
@@ -100,7 +97,6 @@ function setup(over: Partial<TouchHost> & { holds?: Record<string, 'hold' | 'tog
     pedals: { gas: false, brake: false },
     kartBtns: { drift: false, item: false },
     fightBtns: { punch: false, kick: false, dodge: false, block: false, guard: false },
-    settings: { sens: 1, invert: false },
   };
   const h: TouchHost = {
     d: { touched: () => {} },
@@ -133,8 +129,6 @@ function setup(over: Partial<TouchHost> & { holds?: Record<string, 'hold' | 'tog
       log.push(`guard:${on}`);
     },
     quitFight: say('quitFight'),
-    setFirstPerson: say('firstPerson'),
-    saveSettings: say('saveSettings'),
     // (the prompt's tap hands its button along: onTap() in ui.ts)
     act: () => void log.push('act'),
     look: (dx, dy) => void log.push(`look:${dx},${dy}`),
@@ -154,9 +148,6 @@ function setup(over: Partial<TouchHost> & { holds?: Record<string, 'hold' | 'tog
     pedalBtns: [p.gas, p.brake],
     rideViewBtns: [p.rideView],
     blockBtnEl: p.block,
-    fpBtn: p.fp,
-    sensInput: p.sens,
-    invertInput: p.invert,
     prompt: p.prompt,
   } as unknown as TouchEls;
   const t = wireTouch(els, s, h);
@@ -316,14 +307,7 @@ test('on foot: jump, crouch, fire dragged to aim, reload, swap, the view, the pr
   p.byId['[data-walk-view]'].fire('pointerdown');
   p.prompt.fire('pointerdown');
   assert.deepEqual(log, ['reload', 'stepSlot:1', 'nextCam', 'act']);
-  // The first-person button and the look settings, which sit among them
-  log.length = 0;
-  p.fp.fire('click');
-  p.sens.value = '1.5';
-  p.sens.fire('input');
-  p.invert.checked = true;
-  p.invert.fire('change');
-  assert.deepEqual(log, ['firstPerson:true', 'saveSettings', 'saveSettings']);
+  // (first person and the look settings are the hub's Settings now: settings-ui.ts, docs/settings-plan.md)
 });
 
 test('at the wheel, in a kart, in the ring, on a ride', () => {

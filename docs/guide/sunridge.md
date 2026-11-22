@@ -28,7 +28,8 @@ keep it up to date when what it describes changes.
   house a lot in its frame (`toWorld()`), four plans (`Plan`), three entries
   (`Elevation`), `SCHEMES` and `ROOFS` (neighbours never the same colour),
   the garage, its driveway and the walk, solar and chimneys; a shallow
-  ranch (`lay(..., shallow)`) on Ocotillo Court's two short lots, laid last
+  ranch (`lay(..., shallow)`) on Ocotillo Court's three short lots (87, 88
+  and 101, the second pass's: sunridgelots.ts `SHALLOW_D`, `late`), laid last
   (`LAID_LAST`) so every other house keeps its id, yard and residents;
   `HOUSE_SOLIDS` join the grids when the chunk loads (`addSolids()`). Drawn by
   `sunhouses3d.ts` (a site a house: tile roofs from a texture a colour, lit
@@ -99,7 +100,8 @@ keep it up to date when what it describes changes.
   `drawDress()`; about half the fire pits' embers glowing after dark,
   `burning`, `EMBER`); eight late lots and houses on the field
   east of the school and the south row's gap (sunridgelots.ts `late()`,
-  `LATE_FROM`; sunhouses.ts builds them after every other house).
+  `LATE_FROM`, 102: after Ocotillo Court's `sun-lot-101`; sunhouses.ts
+  builds them after every other house).
 - **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views
   (`sunridge` over the loop, `sun-street`, `sun-court`, `sun-pools`). On
   phones it's about 120-190 draws and 0.27-0.53M triangles, among the city's

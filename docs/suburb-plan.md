@@ -115,7 +115,7 @@ These are my recommendations, made so the plan is complete; any can change.
    shared in `roads3d.ts`. The outskirts' trees keep off (`inSunridge()`);
    the north ring avenue's median breaks at both entrances.
 2. **The houses** (built): `sunhouses.ts` (DOM-free, the chunk's, tested in
-   `tests/sunhouses.test.ts`): a house on 99 of the 101 lots (all 101 since Phase 6) (`HOUSES`), each
+   `tests/sunhouses.test.ts`): a house on 99 of the 101 lots (since Phase 6, 102 on 102) (`HOUSES`), each
    in its lot's frame (`toWorld()`), set back until the lot is wide enough
    (pie-shaped lots widen as they go back) with side yards and a back yard;
    four plans (`Plan`: a one-storey ranch with its garage stepped forward and
@@ -272,9 +272,17 @@ These are my recommendations, made so the plan is complete; any can change.
      **shallow ranch** (`lay(..., shallow)`: the rooms flush with the garage,
      4 deep), laid after every other house from their own numbers
      (`LAID_LAST`), so the 99 houses before keep their ids, yards and
-     residents exactly. 101 houses on 101 lots; one more driveway car.
-     The circle's north end and the stem's east side still have no lots
-     (the lots round them were laid first).
+     residents exactly. One more driveway car.
+   - **Ocotillo Court's north end** (the owner's pick: a new lot with a
+     house). The lot fitter makes a second pass round the turning circles
+     after every other lot (`SHALLOW_D`: 10 to 9 deep, `late` on the lot,
+     its sides square to the front's chord rather than fanning out with the
+     kerb, so a lot on the circle is as deep as it's laid), so no lot moves
+     or is renumbered. It found one gap, Ocotillo Court's north end, and
+     laid `sun-lot-101` there; its house is a shallow ranch, laid last
+     (`LAID_LAST` takes the `late` lots too). 102 houses on 102 lots. A
+     resident at the grill is left out where a turned house's solid cells
+     reach past its back wall over a shallow back yard (sunlife.ts).
 7. **The loose ends** (built, signed off 2026-11-21; the owner's
    picks, 2026-11-21, from the audit after Phase 6):
    - **The panels:** the club's and the school's describe the place
@@ -407,7 +415,9 @@ These are my recommendations, made so the plan is complete; any can change.
      middle is in that block: six along the loop's outer side east of the
      school and two in the gap on the south row; their houses are built
      after every other (sunhouses.ts, `rng(8823)`), so every house, yard
-     and resident before keeps its id.
+     and resident before keeps its id. Their ids start after Phase 6's
+     Ocotillo Court lot (`sun-lot-101`, laid with the first lots):
+     `LATE_FROM` is 102.
    - **The big gardens dressed** (built and signed off 2026-11-21; the
      owner's call, after Phase 8's sign-off: "a varied mix of these, not in every garden"): about two in
      three gardens with 30 square tiles or more behind the house get one

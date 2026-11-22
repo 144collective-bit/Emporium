@@ -16,6 +16,7 @@ import * as THREE from 'three';
 import { Batch, FONT_DISPLAY, canvasTex, lit, moving, neon, toon } from './kit';
 import type { Tick } from './world';
 import { CROWD_VIEW } from './character';
+import { FAR_PHONE, farForm } from './lod';
 import { site } from './tilework';
 import { WATER_Y } from './river';
 import { ROAD as PAL_ROAD } from './palette';
@@ -336,6 +337,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
         root.add(l);
       }
   }
+  // Phones: far off in one piece, the turning span kept as it is (lod.ts; docs/phone-far-plan.md Phase 3)
+  if (FAR_PHONE.on) farForm(root);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let k = 0;
   let last = Date.now() / 1000;

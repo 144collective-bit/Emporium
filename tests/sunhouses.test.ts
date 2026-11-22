@@ -72,6 +72,8 @@ test("every lot round a turning circle has its house, no lot's back crossed (Pha
     assert.ok(along > 0, `${l.id}'s back corners cross`);
   }
   const built = new Set(HOUSES.map((h) => h.lot));
+  // (the second pass's lot at Ocotillo Court's north end, where its circle stood in open ground)
+  assert.ok(LOTS.some((l) => l.late && l.street === 'sun-court-1'), "no lot laid at Ocotillo Court's north end");
   for (const l of LOTS) if (l.street.startsWith('sun-court')) assert.ok(built.has(l.id), `${l.id} on ${l.street} has no house`);
   // The two laid last, after every other house of the first lots, so the houses before keep their ids (and their
   // yards and residents); the late lots' (Phase 8) after those
@@ -84,6 +86,9 @@ test("every lot round a turning circle has its house, no lot's back crossed (Pha
 
 test('the late lots (Phase 8): after every lot before, on the field east of the school and in the gap on the south row, a house on each', () => {
   assert.equal(LOTS[LATE_FROM - 1].id, `sun-lot-${LATE_FROM - 1}`);
+  // (the first pass's own late lots, round the turning circles, all before LATE_FROM: none shares an id with these)
+  assert.ok(LOTS.slice(LATE_FROM).every((l) => !l.late), 'a turning-circle lot laid after LATE_FROM');
+  assert.equal(new Set(LOTS.map((l) => l.id)).size, LOTS.length, 'two lots share an id');
   const late = LOTS.slice(LATE_FROM);
   assert.ok(late.length >= 6, `${late.length} late lots`);
   late.forEach((l, i) => assert.equal(l.id, `sun-lot-${LATE_FROM + i}`));

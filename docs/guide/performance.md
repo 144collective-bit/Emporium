@@ -26,7 +26,11 @@ keep it up to date when what it describes changes.
   name for them) take medium; and for 14 days after the 3D graphics stopped
   (`webglcontextlost`, kept in `degen-city-gpu-v1`, not in the backup) a
   start is a tier below the one that stopped. `?fps` says which and why.
-  It runs phones
+  The hub's Settings > Graphics (`docs/settings-plan.md`) can set the tier
+  by hand (`pickTier(device, want)`: still a step under one that stopped
+  lately; it takes a reload), hold shadows or bloom off (off by hand, the
+  step-down never brings them back), scale the pixels (Resolution, 50-100%
+  of the tier's) and cap the frames (60 or 30). It runs phones
   at 30fps while nobody is touching the city, and steps quality down
   (pixels, then shadows, then bloom; never the ink outlines) if frames are
   slow. When frames stay fast again, bloom, shadows and then pixels come
@@ -311,7 +315,12 @@ keep it up to date when what it describes changes.
 - **Near and far** (growth plan Phase 2): past the tier's `far` (`TIERS`:
   120 high, 110 medium, 90 low) from the camera, things are drawn in a far
   form; `isNear()` in `tiles.ts` decides, with a margin so nothing flickers
-  on the line.
+  on the line. On phones the open views (the village, the Docks, Crestmont
+  looking back at the city) draw about 400 to 530 (2026-11-21, the true
+  count), about half of it far: what `docs/phone-far-plan.md` (closed
+  2026-11-21; `__draws()` and `?made` under ?fps, drawrows.ts) brought down
+  and what's left (mostly landmarks' kept parts and things hidden behind
+  the nearest buildings).
   - A Batch's details are near only (`Batch.lod`, `Batch.detail()`; Lod
     'all' / 'near' / 'far'): `tileBatch()` keeps each tile's near and far
     pieces apart and swaps them together (`tiled.update()`). The infill's
@@ -348,6 +357,32 @@ keep it up to date when what it describes changes.
     they're next drawn; the stability plan's Phase 3, item 6); `?fps` says
     how many and how much (`freedNear()`). Code that changes a near part's
     geometry while it's far needs nothing special: it's uploaded when drawn.
+  - On phones each aircraft past `far` is drawn in one piece
+    (`farGeometry()` in `aircraft.ts`: body, livery, nav lights and beacon,
+    the control surfaces at rest and the blades; no gear or titles), a
+    fleet's far ones one instanced mesh with their livery colours
+    (`aircraft-far`: the livery's colour only where `accent` is, the
+    lights' glow following the night), each aircraft swapped by its own
+    distance from the camera (`aircraftNear()`, by `LOD_EYE`, which
+    `updateLods()` keeps), and a fleet's near parts drawn only while one's
+    near (`docs/phone-far-plan.md` Phase 2). Desktops draw them as before.
+  - Phones' far city (`FAR_PHONE` in `lod.ts`, set in `index.ts` on the low
+    tier; `docs/phone-far-plan.md`): the aircraft above; each place's far
+    form in one piece, its facades flattened to their texture's average
+    colour too (desktops keep them textured); cut-out signs (`occlude()`
+    lists them, `OCCLUDED`) smaller than `SIGN_FAR` (1.5 tiles², as small
+    as the far forms leave out) and whatever's given to `hideFar()` not
+    drawn past `far`, taken off every layer (`layers.mask` 0, the old mask
+    kept in `userData.farMask`) so code showing or hiding them still can,
+    their places worked out every couple of seconds (the target range's
+    dummies and drones, combat.ts, and the river boats' lamps and wakes,
+    life.ts, are given to it); the places' kept
+    see-through glows not drawn while they're clear (`material.visible`
+    follows `opacity`: a floodlight's glow by day); and the swing bridge,
+    a district of its own, makes its far form as it's built (its span
+    kept). A district loaded later that wants a far form on phones calls
+    `farForm()` itself: the boot's queue (`farQueue`) only takes what's
+    there at the boot.
   - Cars far away (parked and traffic) are their model's far form
     (`farCarGeometry()` in `cars.ts`: the body and cabin outlines
     extruded, block wheels, about a hundred triangles), all in one
@@ -465,9 +500,11 @@ keep it up to date when what it describes changes.
   distance on any tier while walking, `?horizon=0` turns it off. Tested in
   `tests/tileplan.test.ts` and `tests/tilebatch.test.ts`.
 - `?fps` in the address (`.city-stats`, built in
-  `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
+  `index.ts`, its text by `readout.ts`, a chunk of its own loaded only with
+  `?fps` and `?bench`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory
-  (`sceneMemory()` in `perf.ts`), how many tile pieces were drawn and
+  (`sceneMemory()` in `perf.ts`, its own chunk since 2026-11-21, loaded only
+  with the readout, `?bench` and `__mem()`, which reads null until it's in), how many tile pieces were drawn and
   tiles are near, how many far forms are showing, how long the boot took (art, build and its own work less the waits, tiles, shaders), the sites built (at the boot, after, the slowest, waiting) and the near forms held against the budget, quality tier, pixel ratio and any
   quality stepped down. Use it on
   real devices before and after changes; it's invisible without the

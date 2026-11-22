@@ -26,6 +26,7 @@ import { DRIVER_SCALE } from './carinside';
 import { riderRoot } from './acts';
 import { BAYS, BAY_DWELL, BIKE_MIX, BIKE_PAINTS, PIN_TO_MIDDLE, RIG_LEN, barLit, rigAlong, trafficLean } from './fleet';
 import { isNear, tileKey, tileOf } from './tiles';
+import { hideFar } from './lod';
 import type { Idle } from './landmarks';
 import { TRENCH_WALKS } from './projects';
 import { SOUTH_BUS_PAINT, SOUTH_WALKS } from './southpeople';
@@ -1498,6 +1499,8 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
     const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.05, 6, 6), neon(PAL.warm, 0.5, 3));
     lamp.position.set(-0.2, 0.62, 0);
     g.add(mergeMeshes([hull, bow, cabin], { cast: true, receive: true }), fx(lamp));
+    // (on phones its lamp and wake aren't drawn past the tier's far: under a pixel there; lod.ts, docs/phone-far-plan.md Phase 4)
+    hideFar(lamp);
     let wake: THREE.Mesh | null = null;
     if (withWake) {
       const wakeMat = new THREE.MeshBasicMaterial({ color: '#cfefff', transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, fog: false, map: glowTex });
@@ -1505,6 +1508,7 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
       wake.rotation.x = -Math.PI / 2;
       wake.position.set(-1.4, 0.03, 0);
       g.add(fx(wake));
+      hideFar(wake);
     }
     scene.add(g);
     return { g, wake };
@@ -1534,6 +1538,7 @@ function buildBoats(scene: THREE.Scene, opts: LifeOpts, tick: (f: Tick) => void)
         const m = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.07, 0.18), neon(c, 1.2, 2.4));
         m.position.set(-0.2, 0.6, k ? 0.11 : -0.11);
         g.add(fx(m));
+        hideFar(m);
         return m;
       });
     }
