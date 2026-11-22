@@ -3112,6 +3112,10 @@ export function createWalk(d: WalkDeps) {
   }
 
   return {
+    /** Use a snack or a boost from the hub's Bag tab (docs/header-plan.md): the hotbar's own use, where it works */
+    useItem(id: import('./catalog').ItemId) {
+      void (hotbar ? hotbar.use(id) : loadHotbar().then(() => hotbar?.use(id)));
+    },
     /** For the headless checks (index.ts `__city`, `?fps`): a race at the kart park, the kart game fetched first */
     race: (setup: RaceStart) => loadKarts().then(() => startKart(setup)),
     get active() {

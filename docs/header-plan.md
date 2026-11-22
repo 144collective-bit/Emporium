@@ -74,6 +74,21 @@ Fixed, in `maptab.ts` (`AREAS`, `AREA_OF`), checked against the guides:
 "Here" is the district of the nearest of these places to you (walking) or
 to where the City view looks.
 
+## Bag and Business (the owner's next pick, 2026-11-21)
+
+- **Business**: its Bag section gone (the hub's Bag tab is the one); Stall ·
+  Units · Workshop · Car as the settings' chips, LT / RT on a gamepad; the
+  till on top of every section, Collect the coin button while there's money
+  in it; its own Dorras chip gone (the header has it). The owner asked for
+  Car to show only once you own a car; every player owns the starter car
+  from the start (`ownsCar()`), so it always shows.
+- **Bag**: the weapon slots, then only what's in the bag (a row each: its
+  art, name and count; Use on a snack or a boost, the hotbar's own use
+  through walk.ts `useItem()`, so it works, or says why not, exactly as
+  the hotbar does; greyed in the City view with "Use things on foot"); how
+  full it is ("5 / 16"); the Armoury and the Night Market to get more; Open
+  your bag on top while walking.
+
 ## The files
 
 - `maptab.ts` (DOM-free, tested in `tests/maptab.test.ts`): `AREAS`,

@@ -35,7 +35,7 @@ const REPEAT_FIRST = 380;
 const REPEAT_EVERY = 90;
 
 /** Inside the hub, these open screens of their own: the hub closes first */
-const OWN_SCREENS = '[data-worldmap-open], [data-inv-open], [data-dir-spot], [data-map-go], [data-open-char], [data-open-fitting], [data-hub-leave], [data-account-open]';
+const OWN_SCREENS = '[data-worldmap-open], [data-inv-open], [data-dir-spot], [data-map-go], [data-bag-go], [data-open-char], [data-open-fitting], [data-hub-leave], [data-account-open]';
 
 export function createHub(root: HTMLElement) {
   const el = root.querySelector<HTMLElement>('[data-hub]')!;
