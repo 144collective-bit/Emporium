@@ -878,6 +878,9 @@ function project(p: Pt) {
     // (not a street that joins no other: nothing drives there, Crestmont's cul-de-sacs; nor the raised highway and its
     // ramps: nowhere to stop, nothing to get to there)
     if (!way.stations.some((t) => t.j) || raised(way.s)) return;
+    // (nor a turning loop with one join, the country roads' at their ends: a taxi stops on the road leading to it. Since
+    // the stadium went, 2026-11-22, Northgate's visitors' centre was nearest one)
+    if (way.s.loop && way.stations.filter((t) => t.j).length < 2) return;
     const along = alongOf(way.s, p);
     const q = between(way, along, along, 1)[0];
     const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
