@@ -36,6 +36,7 @@ import { SF_BLOCKS, SF_CROSSINGS, SF_STREETS } from './southfield';
 import { LOT9_CROSSINGS, LOT9_RECT, LOT9_STREETS, PARK as LOT9_PARK } from './lot9';
 import { NS_BENDS, SOUTH_BLOCKS, SOUTH_CROSSINGS, SOUTH_STREETS, type Zone } from './south';
 import { ruralSplit } from './rural';
+import { golfStreets } from './golflift';
 
 export type Pt = [number, number];
 
@@ -598,6 +599,11 @@ export function cityPlan(): StreetPlan {
   // avenue behind its strip, and the country road runs on past its fence as it did)
   // (the el down the Docks' line and over the river onto the north bank avenue's median counts too: docks.ts EL_X)
   ruralSplit(streets, crossings, [...blocks.map((b) => box(b.poly)), ...AIRPORT_AREAS, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1], [LOT9_RECT[0], LOT9_RECT[1], LOT9_RECT[2], LOT9_PARK[3] + 2], ...STADIUM_RECTS, [EL_X - 12, RING_HI - 8, EL_X + 12, RIVER[1] + 8]]);
+  // Clubhouse Drive off the country road east, up to Knob Hill Golf Club and round its car park (golflift.ts,
+  // docs/golf-plan.md: the owner's call, 2026-11-22)
+  const golf = golfStreets();
+  streets.push(...golf.streets);
+  crossings.push(...golf.crossings);
   return withSlabs({ streets, crossings, blocks, plazas });
 }
 

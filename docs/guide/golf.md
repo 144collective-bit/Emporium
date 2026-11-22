@@ -10,7 +10,8 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   (`ew0-e`). Built a phase at a time, each with the owner's sign-off. Phase 1 (the layout and the ground, as data) is
   built, Phase 2 (the ground in the city: its hills walked on, its turf and its lakes drawn) and Phase 3 (Clubhouse
   Drive, the cart paths and the footpath, the woods, the fence round its edge, reeds) and Phase 4 (Knob Hill Golf
-  Club's clubhouse, the place `golfclub` moved to it, Crestmont Hills Club retired).
+  Club's clubhouse, the place `golfclub` moved to it, Crestmont Hills Club retired), and Clubhouse Drive made a street
+  (taxis and a little traffic up to the club).
 - **`golf.ts`** (DOM-free, on `DOM_FREE`; tested in `tests/golf.test.ts`): the layout (its top-level values marked
   `/* @__PURE__ */` so the bundler can drop what isn't used).
   - `COURSE` (the club's land: `wander()` round `COURSE_BASE`, `EDGE_AMP`, `EDGE_STEP`, no ruler-straight edge),
@@ -59,12 +60,17 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
     (the course's woods: `WOODS_CHANCE` a grid point, seeded, none by the play or off the course, `keep` for phones;
     placed with the outskirts' trees, world.ts `scatterOutskirts()`), `DRIVE` / `DRIVE_HALF` (Clubhouse Drive: `DRIVE_CORNERS` rounded, `rounded()`),
     `FOOTPATH` / `PATH_HALF`, `CLUB_GAPS` (where they cross the country road's fence: ruralfence.ts `DRIVES`).
+  - `golfStreets()` (Clubhouse Drive a street of the plan, `docs/golf-plan.md`: `golf-drive` off `ew0-e` at
+    `golf-drive-gate`, the one-way turning loop `golf-drive-turn` by the car park, `DRIVE_TURN` round, at
+    `golf-drive-end`; pushed by streetplan.ts after the country roads' split; kind `rural` but drawn by golf3d.ts, not
+    rural3d.ts). Taxis to the club drive up it; routes.ts `project()` leaves it to the club's own (`inClub()`).
   - `golfMesh()`: the ground over a box as triangles, near the grid (each square split as `golfLift()` reads it), far a
     middle every `GOLF_FAR` with its edges still every `GOLF_STEP`, a band zipping the two (so a tile drawn far meets
     one drawn near with no gap: the near and far forms swap per tile).
   - Read by terrain.ts (`heightAt()` adds `golfLift()`, `onHills()` takes `onGolf()`, `hillsAlong()` the box), world.ts
-    (`golfPlane()`: the course's grass on `golfMesh()`, near and far; `paintGolf()`), rolls.ts (kept off the course), landuse.ts (`KEEPS` `golf`: all its land, `golf-drive`,
-    `golf-footpath`) and ground.ts (`INFLUENCES` `golf-native`, `golf`, the worn `golf-drive`, `golf-footpath`).
+    (`golfPlane()`: the course's grass on `golfMesh()`, near and far; `paintGolf()`), rolls.ts (kept off the course), landuse.ts (`KEEPS` `golf`: all its land, and
+    `golf-footpath`; the drive kept as a street) and ground.ts (`INFLUENCES` `golf-native`, `golf`, the worn
+    `golf-footpath`; the drive's verge a street's).
 - **`golf3d.ts`** (the district `golf`, `LAZY_DISTRICTS`; tested in `tests/golflift.test.ts`): the turf, one texture
   (`drawTurf()`, `TURF_SCALE` pixels a tile, the palette's golf covers, mown stripes `FAIRWAY_STRIPE` / `GREEN_STRIPE`,
   the bunkers' `LIP`, clear over the water) on a toon material, alpha-tested (`golf-turf`); laid by `turfMesh()` on

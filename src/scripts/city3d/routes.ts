@@ -23,6 +23,7 @@ import { PLAN, distToStreet, offsetLine, raised, type Street } from './streetpla
 import { cornerCurve, fromHighway } from './highway';
 import { DECK_HALF, DECK_Y, RAMPS, RAMP_HALF, ringAt, ringS } from './viaduct';
 import { BUILT, baked } from './baked';
+import { GOLF_CLUBHOUSE } from './golflift';
 
 export type Pt = [number, number];
 /** Which way traffic crosses a junction: along x, along z, or down a diagonal (each gets its own green) */
@@ -322,13 +323,27 @@ function joinLegs(list: Leg[]): Pt[] {
       out = [...A, [e[0] - uA[0] * 3, e[1] - uA[1] * 3], [s0[0] + uB[0] * 3, s0[1] + uB[1] * 3], ...B.slice(1)];
       continue;
     }
-    const a0 = A[A.length - 2];
+    // (the way in: along the last stretch of any length, so a leg ending in a point twice still has one)
+    let ka = A.length - 2;
+    while (ka > 0 && Math.hypot(A[A.length - 1][0] - A[ka][0], A[A.length - 1][1] - A[ka][1]) < 0.3) ka--;
+    const a0 = A[ka];
     const uA = dir(a0, A[A.length - 1]);
-    const uB = dir(B[0], B[1]);
+    let kb = 1;
+    while (kb < B.length - 1 && Math.hypot(B[kb][0] - B[0][0], B[kb][1] - B[0][1]) < 0.3) kb++;
+    const uB = dir(B[0], B[kb]);
     // Where the two lanes' lines meet
     const den = uA[0] * uB[1] - uA[1] * uB[0];
     const t = ((B[0][0] - a0[0]) * uB[1] - (B[0][1] - a0[1]) * uB[0]) / den;
     const P: Pt = [a0[0] + uA[0] * t, a0[1] + uA[1] * t];
+    // (two legs running on in line: a short stretch of a street that runs straight on into the next, a turn off it just
+    // ahead, so its leg is labelled for that turn: Clubhouse Drive off ew0-e a few tiles past where ew0 runs on into it,
+    // docs/golf-plan.md. Their lanes' lines never meet: ease across from one lane to the other, as straight on)
+    if (!Number.isFinite(P[0]) || !Number.isFinite(P[1]) || Math.abs(den) < 0.05) {
+      const [e, s0] = [A[A.length - 1], B[0]];
+      A.pop();
+      out = [...A, [e[0] - uA[0] * 3, e[1] - uA[1] * 3], [s0[0] + uB[0] * 3, s0[1] + uB[1] * 3], ...B.slice(1)];
+      continue;
+    }
     // Right turns (from the kerb-side lane) turn tight round the corner; left turns sweep wider
     const cut = den > 0 ? 1.4 : 2.6;
     // Round the corner: drop what's past where the curve starts coming in and short of where it ends going out (not
@@ -871,6 +886,11 @@ export const SPOTS: { r: number; p: number; x: number; z: number; y: number }[] 
 
 /* ---------- A drive from one place to another (a taxi's) ---------- */
 
+/** Is a point on the golf club's grounds (or by them) */
+function inClub([x, z]: Pt) {
+  const [x0, z0, x1, z1] = GOLF_CLUBHOUSE.grounds;
+  return x > x0 - 20 && x < x1 + 20 && z > z0 - 20 && z < z1 + 20;
+}
 /** Where a point is nearest the drivable streets: the way, how far along it, and the stretch it's on */
 function project(p: Pt) {
   let best = { w: -1, along: 0, d: Infinity };
@@ -878,6 +898,8 @@ function project(p: Pt) {
     // (not a street that joins no other: nothing drives there, Crestmont's cul-de-sacs; nor the raised highway and its
     // ramps: nowhere to stop, nothing to get to there)
     if (!way.stations.some((t) => t.j) || raised(way.s)) return;
+    // (nor Clubhouse Drive, but for the golf club's own grounds: it's the club's, golflift.ts `golfStreets()`)
+    if (way.s.id.startsWith('golf-') && !inClub(p)) return;
     const along = alongOf(way.s, p);
     const q = between(way, along, along, 1)[0];
     const d = Math.hypot(q[0] - p[0], q[1] - p[1]);

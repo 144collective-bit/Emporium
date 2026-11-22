@@ -160,7 +160,8 @@ test("the club's land is clear of everything that stands: the air base, the wall
       assert.equal(keptOff(x, z, false), null, `something stands on the course at ${x}, ${z}`);
       assert.ok(!(x > TERRAIN_RECT[0] && x < TERRAIN_RECT[2] && z > TERRAIN_RECT[1] && z < TERRAIN_RECT[3]), `on the hills' land at ${x}, ${z}`);
     }
-  for (const s of PLAN.streets) for (const p of s.pts) assert.ok(insetOf(...p) < -10, `${s.id} runs onto the course at ${p}`);
+  // (but the club's own: Clubhouse Drive and its turning loop, golflift.ts `golfStreets()`)
+  for (const s of PLAN.streets) if (!s.id.startsWith('golf-')) for (const p of s.pts) assert.ok(insetOf(...p) < -10, `${s.id} runs onto the course at ${p}`);
 });
 
 test("the club's edge wanders: no ruler-straight run", () => {

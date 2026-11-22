@@ -255,3 +255,28 @@ function nearestTo(h: (typeof HOLES)[number], x: number, z: number) {
   }
   return m;
 }
+
+test('Clubhouse Drive a street: off the country road up to the car park, a one-way loop to turn round, a taxi up it', async () => {
+  const { PLAN, distToStreet } = await import('../src/scripts/city3d/streetplan');
+  const { pathBetween } = await import('../src/scripts/city3d/routes');
+  const { GOLF_CLUBHOUSE, DRIVE_HALF } = await import('../src/scripts/city3d/golflift');
+  const drive = PLAN.streets.find((s) => s.id === 'golf-drive')!;
+  const turn = PLAN.streets.find((s) => s.id === 'golf-drive-turn')!;
+  assert.ok(drive && turn, 'the drive and its loop are streets of the plan');
+  assert.equal(drive.half, DRIVE_HALF);
+  assert.ok(turn.loop && turn.oneway, 'the loop is one way round');
+  // It starts on the country road's edge, where the gate's crossing is, and ends at the loop
+  const road = PLAN.streets.find((s) => s.id === 'ew0-e')!;
+  assert.ok(distToStreet(road, drive.pts[0]) <= road.half + 0.01, `the drive starts on ew0-e (${drive.pts[0]})`);
+  const gate = PLAN.crossings.find((c) => c.id === 'golf-drive-gate')!;
+  assert.deepEqual(gate.streets.slice().sort(), ['ew0-e', 'golf-drive']);
+  assert.ok(!gate.lights);
+  // The loop by the car park
+  const [x0, z0, x1, z1] = GOLF_CLUBHOUSE.carpark;
+  for (const p of turn.pts) assert.ok(p[0] > x0 - 12 && p[0] < x1 + 12 && p[1] > z0 - 4 && p[1] < z1 + 14, `the loop strays at ${p}`);
+  // A taxi from the city drives up it to the car park
+  const up = pathBetween([0, 0], [GOLF_CLUBHOUSE.spawn.x, GOLF_CLUBHOUSE.spawn.z])!;
+  const end = up.pts[up.pts.length - 1];
+  assert.ok(Math.hypot(end[0] - GOLF_CLUBHOUSE.spawn.x, end[1] - GOLF_CLUBHOUSE.spawn.z) < 16, `the taxi stops ${end} short of the club`);
+  assert.ok(distToStreet(drive, end) < 4 || distToStreet(turn, end) < 4, 'it stops on the club\'s own street');
+});

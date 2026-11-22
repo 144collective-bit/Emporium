@@ -36,8 +36,9 @@ test('flat everywhere but the hills: 0 outside their land, and under every stree
   ])
     assert.equal(crestAt(x, z), 0, `the ground rises at ${x}, ${z}`);
   // Every street of the plan, along its centre line and out to its edges, and every block's outline
-  // (but the hill roads, which climb the hills on their beds: crestmont.ts, tests/crestmont.test.ts)
-  for (const s of PLAN.streets.filter((s) => !HILL_ROADS.some((r) => r.id === s.id)))
+  // (but the hill roads, which climb the hills on their beds: crestmont.ts, tests/crestmont.test.ts, and Clubhouse
+  // Drive and its turning loop, on the golf course's ground: golflift.ts `golfStreets()`, tests/golflift.test.ts)
+  for (const s of PLAN.streets.filter((s) => !HILL_ROADS.some((r) => r.id === s.id) && !s.id.startsWith('golf-')))
     for (let i = 0; i + 1 < s.pts.length; i++) {
       const [a, b] = [s.pts[i], s.pts[i + 1]];
       const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1])));

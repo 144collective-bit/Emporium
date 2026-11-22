@@ -478,7 +478,7 @@ export const GOLF_CLUBHOUSE = {
   roof: 1.6,
   porch: [520, -498, 536, -495] as Rect,
   terrace: [510, -519, 546, -514] as Rect,
-  carpark: [506, -492, 548, -474] as Rect,
+  carpark: [506, -492, 548, -470] as Rect,
   shed: [552, -492, 568, -484] as Rect,
   putting: { at: [559, -505] as [number, number], r: [9, 6.5] as [number, number] },
   nets: [501, -516, 508, -494] as Rect,
@@ -509,4 +509,44 @@ export function golfSolids(): [number, number, number, number, number][] {
     [nets[0], nets[1], nets[2], nets[1] + 0.2, y + 3],
     [nets[0], nets[3] - 0.2, nets[2], nets[3], y + 3],
   ];
+}
+
+/* ---------- Clubhouse Drive as a street (the owner's call, 2026-11-22: "make Clubhouse Drive a real street") ---------- */
+
+/** The turning loop at the drive's end, in the car park: its radius (a country road's, rural.ts `RURAL.turn`, a little less) */
+export const DRIVE_TURN = 5;
+type GolfStreet = { id: string; kind: 'rural'; pts: [number, number][]; half: number; lanes: 1; oneway?: 1; loop?: true };
+type GolfCrossing = { id: string; at: [number, number]; streets: string[]; lights: boolean };
+/**
+ * Clubhouse Drive in the street plan (streetplan.ts `cityPlan()`, after the country roads are split): from the country
+ * road east's middle (ew0-e: the drive's first point is its north edge, a lane's width up) up to the grounds, and a
+ * turning loop one way round in the car park, as a country road's at its end (rural.ts), so a taxi drives up to the
+ * clubhouse and the traffic turns back. Drawn by golf3d.ts (its asphalt over the course's ground; the loop is the car
+ * park's): the country roads' drawing (rural3d.ts) draws only their runs.
+ */
+export function golfStreets(): { streets: GolfStreet[]; crossings: GolfCrossing[] } {
+  const start: [number, number] = [DRIVE[0][0], DRIVE[0][1] + DRIVE_HALF];
+  const end = DRIVE[DRIVE.length - 1];
+  const before = DRIVE[DRIVE.length - 2];
+  const l = Math.hypot(end[0] - before[0], end[1] - before[1]) || 1;
+  const dir: [number, number] = [(end[0] - before[0]) / l, (end[1] - before[1]) / l];
+  const centre: [number, number] = [end[0] + dir[0] * DRIVE_TURN, end[1] + dir[1] * DRIVE_TURN];
+  const n = 20;
+  const a0 = Math.atan2(end[1] - centre[1], end[0] - centre[0]);
+  const ring: [number, number][] = Array.from({ length: n }, (_, k): [number, number] => {
+    const t = a0 - (k / n) * Math.PI * 2;
+    return [+(centre[0] + Math.cos(t) * DRIVE_TURN).toFixed(4), +(centre[1] + Math.sin(t) * DRIVE_TURN).toFixed(4)];
+  });
+  ring[0] = end;
+  return {
+    streets: [
+      // (its first points past the junction's corner: a stretch a lane long there leaves the routes' rounding nothing to round)
+      { id: 'golf-drive', kind: 'rural', pts: [start, ...DRIVE.filter((p) => Math.hypot(p[0] - start[0], p[1] - start[1]) >= 6)], half: DRIVE_HALF, lanes: 1 },
+      { id: 'golf-drive-turn', kind: 'rural', pts: ring, half: DRIVE_HALF, lanes: 1, oneway: 1, loop: true },
+    ],
+    crossings: [
+      { id: 'golf-drive-gate', at: start, streets: ['ew0-e', 'golf-drive'], lights: false },
+      { id: 'golf-drive-end', at: end, streets: ['golf-drive', 'golf-drive-turn'], lights: false },
+    ],
+  };
 }

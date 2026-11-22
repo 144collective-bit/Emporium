@@ -199,12 +199,35 @@ and the new one is small (golflift.ts `GOLF_CLUBHOUSE`), so the boot stays under
   snapshot holds no door or spawn of it, so it needed no rewrite.
 - The tests: `tests/golflift.test.ts` (the clubhouse, its door, Walk in, the place moved); solids.test.ts, terrain.test.ts
   and travel.test.ts take the club as they take Crestmont's landmarks up the hills (its solids and its arrival on the
-  course's ground; a taxi's ride to it, which stops at Ridge Road's top: the open question below).
+  course's ground; a taxi's ride to it, which stopped at Ridge Road's top till the drive became a street: below).
 - The shots: `docs/golf-shots/phase-4-*.webp` (the clubhouse from over the putting green, its porch and name, the phone tier).
 - **Crestmont Hills Club retired**: its six holes, clubhouse, carts, terrace, garden, bank, people and level pad gone
   from crestsites.ts, crestbanks.ts, crestgardens.ts, crestlife.ts, crestsites3d.ts and their tests; the land back to
   the hills' own cover (the drifts, oaks and scrub now reach it; a drift the paths cut down to under three clumps is
   left out, crestcover.ts).
+
+### Clubhouse Drive a street (built)
+
+The owner's go: 2026-11-22 ("1": make Clubhouse Drive a real street, so taxis and a little traffic drive up to the club;
+found in Phase 4: a taxi to the club stopped at the top of Ridge Road, about 175 tiles over the hills' shoulder).
+
+- **The drive a street of the plan** (golflift.ts `golfStreets()`, pushed by streetplan.ts after the country roads are
+  split): `golf-drive` (one lane each way, `DRIVE_HALF`) off the country road east (`ew0-e`) at the crossing
+  `golf-drive-gate` (no lights; not a `-join`, which routes.ts would take as a road carrying straight on) up `DRIVE`
+  to the car park, and `golf-drive-turn` there: a one-way turning loop (`DRIVE_TURN` round, at `golf-drive-end`) so a
+  car turns round without a U-turn. The car park reaches down to it (`GOLF_CLUBHOUSE.carpark` to z -470). Its kind
+  `rural`, but not one of rural3d.ts's runs: golf3d.ts still draws it (`driveMesh()`, on its bed), and the street's own
+  keep and verge take over the old `golf-drive` ones (landuse.ts, ground.ts).
+- **Taxis** drive up it to the car park (from the emporium about 82 s; the longest, from the tube's Aldwyn's Green
+  station in the far south-west, about 143 s); every other place's taxi keeps to the streets it had (routes.ts
+  `project()` leaves the club's streets to the club: `inClub()`). **A little traffic**: the drive and its loop are
+  stretches like any other, so the traffic's routes take them.
+- Fixed on the way (routes.ts `joinLegs()`): a leg's way in and out read over a stretch long enough to have one (the
+  country road's short piece by the gate), and two legs in line with no corner between them joined straight (they
+  used to meet nowhere: a route that never ended).
+- The tests: golf.test.ts (no street on the course but the club's own), terrain.test.ts (the club's streets on the
+  course's ground), travel.test.ts (the club's rides; the nearest kerb leaves the club's streets to it); the snapshot
+  rewritten for the two new streets (the owner's call: nothing that was there moved).
 
 ### Phase 5: its life, night and sound
 
@@ -220,10 +243,5 @@ and the new one is small (golflift.ts `GOLF_CLUBHOUSE`), so the boot stays under
   key in `BACKUP_KEYS`; in through `live.closed()`; touch controls.
 
 ## Open questions (for the owner, later)
-
-- **Taxis to the club** (found in Phase 4): Clubhouse Drive is a private drive, not a street of the plan, so a taxi to
-  Knob Hill Golf Club stops at the nearest street there is, the top of Ridge Road, about 175 tiles over the hills'
-  shoulder from the clubhouse (fast travel goes straight there). Making the drive a street (the taxis and a little
-  traffic driving up it) touches the street plan, the baked routes and how streets are drawn on raised ground.
 
 - How long the golf game's rounds should be on a phone (a hole, nine, or eighteen).

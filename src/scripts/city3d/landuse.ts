@@ -49,7 +49,7 @@ import { RAMP, VERGES } from './verges';
 import { TILE, tileKey } from './tiles';
 import type { Rect } from './tiles';
 import { AIRBASE_RECT, VISITORS, airbaseKeep } from './airbase';
-import { DRIVE, DRIVE_HALF, FOOTPATH, GOLF_RECT, PATH_HALF, golfLand } from './golflift';
+import { FOOTPATH, GOLF_RECT, PATH_HALF, golfLand } from './golflift';
 
 /** How far further out a margin may wobble (tiles), and the noise's size (tiles across a swell) */
 export const WOBBLE = 3;
@@ -183,9 +183,8 @@ export const KEEPS: Keep[] = [
   { ...shaped('airbase', [AIRBASE_RECT[0], AIRBASE_RECT[1], AIRBASE_RECT[2], VISITORS[3]], 2, airbaseKeep), since: true },
   ...line('lot9-path', LOT9_PATH, 1.5, false, true),
   // The golf course (golflift.ts, docs/golf-plan.md Phases 2 and 3): all its land (its own woods stand there instead:
-  // golflift.ts `golfTrees()`), Clubhouse Drive and the footpath out to the country road
+  // golflift.ts `golfTrees()`) and the footpath out to the country road (Clubhouse Drive's a street of the plan: above)
   { id: 'golf', since: true, box: GOLF_RECT, hit: (x, z) => golfLand(x, z) > 0 },
-  ...line('golf-drive', DRIVE, DRIVE_HALF + 2, false, true),
   ...line('golf-footpath', FOOTPATH, PATH_HALF + 1.5, false, true),
   // The slivers by the highway (fringes.ts, docs/blend-plan.md Phase 5c): the Kiln Lane substation and its drive, the
   // billboards, Sunridge's wash and the path beside it

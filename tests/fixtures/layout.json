@@ -29545,6 +29545,26 @@
    "half": 1.7,
    "lanes": 1,
    "pts": "edge"
+  },
+  {
+   "id": "golf-drive",
+   "kind": "rural",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": [
+    [
+     502,
+     -4.5
+    ],
+    "edge"
+   ]
+  },
+  {
+   "id": "golf-drive-turn",
+   "kind": "rural",
+   "half": 1.7,
+   "lanes": 1,
+   "pts": "edge"
   }
  ]
 }
