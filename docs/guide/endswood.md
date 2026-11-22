@@ -78,7 +78,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   (southblocks.ts `CUT`, `CORNER_R`); the Rampart's arch (soffit, piers' faces); galleries at every third floor (deck,
   concrete upstand, warm strip light under it); balconies with concrete fronts on the slabs' other sides, Teasel's
   boarded windows and hoarding, sky garden planters on the roofs (near only, not on phones); the towers' ledge rings, a
-  concrete plant room box and beacon; the cores' stair slots, each core a service tower standing off its block (its
+  concrete plant room box and beacon; The Perch round The Core's top two floors (`PERCH`, `TOP_FLOOR`, `drawPerch()`: a
+  hexagonal drum, its glass band, its name, a glass lift inside; brutalist plan Phase 3) and the top floor's bridges to
+  the twins through doorways in its glass; the cores' stair slots, each core a service tower standing off its block (its
   link from the gallery at each landing drawn as a bridge, a boiler house and flue on its top: brutalist plan Phase 2;
   its caged stair outside, `CAGES`, `drawCage()`, and its door's sodium lamp); the bridges (concrete, a glass band each
   side, inside a ceiling strip, mullions, puddles and tags near only; `drawPortal()` at each link's gallery end; piers
@@ -92,7 +94,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `south-rampart`.
 - **The sky network walked** (`southsky.ts`, DOM-free, tested in `tests/southsky.test.ts`, docs/south-plan.md 2c):
   `SKY_SHAPES` (the galleries, the bridges, the podium deck, the cores' open landings, the towers' links
-  (`linkShapes()`) and caged stairs (`cageShapes()`: level, flight, turn, flight, landing up each storey pair), the ways through the Rampart's
+  (`linkShapes()`) and caged stairs (`cageShapes()`: level, flight, turn, flight, landing up each storey pair), The
+  Perch's floor (`PERCH_IN`; The Core's lift names it, `liftFloorName()`), the ways through the Rampart's
   gallery fronts, The Core's stair and landing), `skyFloorAt()` (groundheight.ts's `sky` layer, before `south`),
   `skyUp()` / `skyWall()` (walk.ts's `blocked()`: up there only the railings stop you, the solids don't); the lifts
   (`SKY_LIFTS`, `skyLiftDoors()`, `liftArrival()`, `floorName()`) and their floor picker (`skylift-ui.ts`: the metro's

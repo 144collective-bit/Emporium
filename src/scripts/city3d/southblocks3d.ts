@@ -29,7 +29,7 @@ import { PLANT } from './palette';
 import { shift } from './streetfaces';
 import {
   ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
-  SKY_FLOORS, TOWER_HALF, blockById, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
+  PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
 import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors } from './southsky';
@@ -702,27 +702,33 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | n
 /* ---------- The blocks' names on their bridges (the brutalist plan's polish: painted, stencilled, worn) ---------- */
 
 /** The names a bridge's end can lead to: the blocks' own (made up), each a row of one painted texture */
-const SIGN_NAMES = BLOCKS.map((q) => q.name.toUpperCase());
-const SIGN_ROW = 64;
-const SIGN_TEX = canvasTex(512, SIGN_ROW * SIGN_NAMES.length, (c) => {
-  c.clearRect(0, 0, 512, SIGN_ROW * SIGN_NAMES.length);
+const SIGN_NAMES = [...BLOCKS.map((q) => q.name.toUpperCase()), PERCH.name.toUpperCase()];
+/**
+ * (half-size and opaque, on the concrete's own colour: the names are small, and a sheet with no see-through parts bakes
+ * to the lighter texture format; it stood the full-tier texture budget over at first: docs/brutalist-plan.md)
+ */
+const SIGN_ROW = 32;
+const SIGN_W = 256;
+const SIGN_BG = `#${CONCRETE.toString(16).padStart(6, '0')}`;
+const SIGN_TEX = canvasTex(SIGN_W, SIGN_ROW * SIGN_NAMES.length, (c) => {
+  c.fillStyle = SIGN_BG;
+  c.fillRect(0, 0, SIGN_W, SIGN_ROW * SIGN_NAMES.length);
   SIGN_NAMES.forEach((name, i) => {
     const y = i * SIGN_ROW + SIGN_ROW / 2;
-    c.font = `800 40px ${FONT_DISPLAY}`;
+    c.font = `800 20px ${FONT_DISPLAY}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.fillStyle = '#e8e4d8';
-    c.fillText(name, 256, y, 496);
-    // (stencil breaks across the letters, a drip or two under them, worn through here and there)
-    c.globalCompositeOperation = 'destination-out';
-    for (let x = 18; x < 500; x += 23) c.fillRect(x, y - 2, 3, 4);
-    for (let k = 0; k < 40; k++) c.fillRect((k * 97 + i * 31) % 512, y - 20 + ((k * 53) % 40), 4, 3);
-    c.globalCompositeOperation = 'source-over';
+    c.fillText(name, SIGN_W / 2, y, SIGN_W - 8);
+    // (stencil breaks across the letters, a drip or two under them, worn through here and there: the concrete showing)
+    c.fillStyle = SIGN_BG;
+    for (let x = 9; x < SIGN_W - 6; x += 12) c.fillRect(x, y - 1, 2, 2);
+    for (let k = 0; k < 40; k++) c.fillRect((k * 97 + i * 31) % SIGN_W, y - 10 + ((k * 53) % 20), 2, 2);
     c.fillStyle = '#e8e4d8';
-    for (let k = 0; k < 4; k++) c.fillRect(60 + ((k * 113 + i * 41) % 380), y + 16, 2, 8 + ((k * 7) % 10));
+    for (let k = 0; k < 4; k++) c.fillRect(30 + ((k * 113 + i * 41) % 190), y + 8, 1, 4 + ((k * 7) % 5));
   });
 });
-const SIGN = toon('#ffffff', { map: SIGN_TEX, alphaTest: 0.5 });
+const SIGN = toon('#ffffff', { map: SIGN_TEX });
 /** A block's name painted on a bridge's parapet, inside, `s` along it from a to c, on its right (o) or left side */
 function drawName(b: Batch, a: Pt, c: Pt, y: number, s: number, side: 1 | -1, name: string) {
   const row = SIGN_NAMES.indexOf(name.toUpperCase());
@@ -737,7 +743,10 @@ function drawName(b: Batch, a: Pt, c: Pt, y: number, s: number, side: 1 | -1, na
   const p0: Pt = [a[0] + t[0] * (s - (dir * w) / 2) + r[0] * o, a[1] + t[1] * (s - (dir * w) / 2) + r[1] * o];
   const p1: Pt = [a[0] + t[0] * (s + (dir * w) / 2) + r[0] * o, a[1] + t[1] * (s + (dir * w) / 2) + r[1] * o];
   const n: Pt = [-r[0] * side, -r[1] * side];
-  const [y0, y1] = [y + 0.18, y + 0.5];
+  nameQuad(b, p0, p1, y + 0.18, y + 0.5, n, row);
+}
+/** A name from the sign sheet (its row) on a quad from p0 to p1, y0 to y1, facing n, read left to right from in front */
+function nameQuad(b: Batch, p0: Pt, p1: Pt, y0: number, y1: number, n: Pt, row: number) {
   const [v0, v1] = [1 - ((row + 1) * SIGN_ROW) / (SIGN_ROW * SIGN_NAMES.length), 1 - (row * SIGN_ROW) / (SIGN_ROW * SIGN_NAMES.length)];
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute([p0[0], y0, p0[1], p1[0], y0, p1[1], p1[0], y1, p1[1], p0[0], y1, p0[1]], 3));
@@ -748,7 +757,8 @@ function drawName(b: Batch, a: Pt, c: Pt, y: number, s: number, side: 1 | -1, na
   b.add(g, SIGN);
 }
 /** Where a bridge's end leads: the block its core serves, the block it meets, nothing for the deck */
-const endName = (e: (typeof BRIDGES)[number]['a']) => ('core' in e ? blockById(CORES.find((q) => q.id === e.core)!.of).name : 'block' in e ? blockById(e.block).name : '');
+const endName = (e: (typeof BRIDGES)[number]['a'], floor = 0) =>
+  'core' in e ? blockById(CORES.find((q) => q.id === e.core)!.of).name : 'block' in e ? (e.block === 'twin-core' && floor >= TOP_FLOOR ? PERCH.name : blockById(e.block).name) : '';
 
 /** A bridge's pier: a concrete column under its span, a cap on it under the deck */
 function drawPier(b: Batch, p: (typeof PIERS)[number]) {
@@ -854,6 +864,94 @@ function drawStair(b: Batch) {
     along(b, at(s1, o0 + w - 0.05), at(s1 + landing, o0 + w - 0.05), 0.07, top, top + 0.9, ACCENT.mustard);
     along(b, at(s1 + landing - 0.05, o0 + 0.2), at(s1 + landing - 0.05, o0 + w), 0.07, top, top + 0.9, ACCENT.mustard);
   });
+}
+
+/* ---------- The Perch (docs/brutalist-plan.md Phase 3) ---------- */
+
+/** Its floor slab's depth, its glass band's height over its floor, its ceiling under its roof */
+const PERCH_SLAB = 0.25;
+const PERCH_GLASS = 1.3;
+const PERCH_CEIL = 0.12;
+/**
+ * The Perch: the hexagonal drum round The Core's top two floors. Its floor slab and soffit; the glass band all round
+ * (its outer face only, so from inside it's the city you see), dark by day and lit warm at night; the concrete band over
+ * it to the roof, its name stencilled on two faces; inside, the band's inner face, the ceiling and a strip light round
+ * it, and near, the glass lift in the middle and mullions; the lift house on its roof
+ */
+function drawPerch(b: Batch, low: boolean) {
+  const { foot, at, y0, y1, apothem } = PERCH;
+  const k = kit(b, WORLD);
+  const [yG, yC, top] = [y0 + PERCH_GLASS, y1 - PERCH_CEIL, topOf(TWIN_CORE)];
+  const inner = (d: number) => foot.map((p): Pt => [at[0] + ((p[0] - at[0]) * (apothem - d)) / apothem, at[1] + ((p[1] - at[1]) * (apothem - d)) / apothem]);
+  const [inn, light] = [inner(0.15), inner(0.35)];
+  const next = (j: number) => (j + 1) % foot.length;
+  /** Where the top bridges meet it, and the faces they meet */
+  const ends = BRIDGES.filter((br) => br.floor === TOP_FLOOR).map((br) => br.pts['block' in br.a && br.a.block === 'twin-core' ? 0 : 1]);
+  const onFace = (e: Pt, j: number) => {
+    const [p, c] = [foot[j], foot[next(j)]];
+    const l = Math.hypot(c[0] - p[0], c[1] - p[1]);
+    const u = ((e[0] - p[0]) * (c[0] - p[0]) + (e[1] - p[1]) * (c[1] - p[1])) / l;
+    return u > 0 && u < l && Math.abs(((e[0] - p[0]) * (c[1] - p[1]) - (e[1] - p[1]) * (c[0] - p[0])) / l) < 0.05;
+  };
+  k.all(() => {
+    prism(b, foot, y0 - PERCH_SLAB, y0, CONC, PAVING);
+    flat(b, foot, y0 - PERCH_SLAB, CONC_DARK, false);
+    // (open where a top bridge meets it: its way in)
+    foot.forEach((p, j) => {
+      const c = foot[next(j)];
+      const l = Math.hypot(c[0] - p[0], c[1] - p[1]);
+      const t: Pt = [(c[0] - p[0]) / l, (c[1] - p[1]) / l];
+      const gaps = ends.filter((e) => onFace(e, j)).map((e) => (e[0] - p[0]) * t[0] + (e[1] - p[1]) * t[1]);
+      let u0 = 0;
+      for (const u of [...gaps.sort((q, r) => q - r), Infinity]) {
+        const u1 = Number.isFinite(u) ? u - BRIDGE_HALF : l;
+        if (u1 - u0 > 0.05) quad(b, [p[0] + t[0] * u0, p[1] + t[1] * u0], [p[0] + t[0] * u1, p[1] + t[1] * u1], y0, yG, outward(foot, j), GLASS);
+        u0 = u + BRIDGE_HALF;
+      }
+    });
+    prism(b, foot, yG, y1 + PARAPET, CONC, ROOF);
+    inn.forEach((p, j) => {
+      const n = outward(foot, j);
+      quad(b, p, inn[next(j)], yG - 0.02, yC, [-n[0], -n[1]], CONC_DARK);
+      along(b, light[j], light[next(j)], 0.08, yC - 0.04, yC - 0.01, STRIP);
+    });
+    flat(b, inn, yC, CONC_DARK, false);
+    // (its posts at the corners, between the panes)
+    for (const p of foot) b.add(plain(new THREE.BoxGeometry(0.22, PERCH_GLASS, 0.22).translate(p[0], y0 + PERCH_GLASS / 2, p[1])), CONC);
+    // Its name on two faces turned from the towers, one to Endswood Road, one to the Rampart
+    for (const j of [1, 4]) {
+      const [a, c] = [foot[j], foot[next(j)]];
+      const n = outward(foot, j);
+      const m: Pt = [(a[0] + c[0]) / 2 + n[0] * 0.012, (a[1] + c[1]) / 2 + n[1] * 0.012];
+      // (read left to right from in front: from the left of someone facing it, -n, to their right)
+      const left: Pt = [-n[1], n[0]];
+      const w = 3;
+      const [p0, p1]: Pt[] = [[m[0] + left[0] * (w / 2), m[1] + left[1] * (w / 2)], [m[0] - left[0] * (w / 2), m[1] - left[1] * (w / 2)]];
+      nameQuad(b, p0, p1, yG + 0.2, yG + 0.84, n, SIGN_NAMES.indexOf(PERCH.name.toUpperCase()));
+    }
+    // The lift house on its roof: The Core's top, no higher than it was
+    b.add(plain(new THREE.BoxGeometry(2.2, top - (y1 + PARAPET), 2.2).rotateY(-PERCH.rot).translate(at[0], (top + y1 + PARAPET) / 2, at[1])), CONC);
+  });
+  // Near: the glass lift in its middle (its posts, its glass), and mullions down the band
+  if (!low)
+    b.detail(() => {
+      const q = 0.6;
+      const [cs, sn] = [Math.cos(PERCH.rot), Math.sin(PERCH.rot)];
+      const sq: Pt[] = [[q, q], [-q, q], [-q, -q], [q, -q]].map(([x, z]): Pt => [at[0] + x * cs - z * sn, at[1] + x * sn + z * cs]);
+      sq.forEach((p, j) => {
+        b.add(plain(new THREE.BoxGeometry(0.08, yC - y0, 0.08).translate(p[0], (y0 + yC) / 2, p[1])), RAIL);
+        // (its glass on three sides, the fourth its door, open)
+        if (j !== 3) quad(b, p, sq[(j + 1) % 4], y0 + 0.02, yC - 0.02, outward(sq, j), MESH);
+      });
+      foot.forEach((p, j) => {
+        const c = foot[next(j)];
+        if (ends.some((e) => onFace(e, j))) return;
+        for (const f of [1 / 3, 2 / 3]) {
+          const m: Pt = [p[0] + (c[0] - p[0]) * f, p[1] + (c[1] - p[1]) * f];
+          b.add(plain(new THREE.BoxGeometry(0.07, PERCH_GLASS, 0.07).translate(m[0], y0 + PERCH_GLASS / 2, m[1])), CONC_DARK);
+        }
+      });
+    });
 }
 
 /** A tower's doors where bridges meet it: dark, a floor's height, on its face */
@@ -1094,12 +1192,15 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
         b.build(into, opts);
       });
     else
-      site(`south-blocks ${blk.id}`, rectOf(blk.foot, 1), (into) => {
+      site(`south-blocks ${blk.id}`, rectOf([...blk.foot, ...PERCH.foot], 1), (into) => {
         const b = new Batch();
         const towers = BLOCKS.filter((q) => q.kind === 'tower').map((q) => centre(q.foot));
         const lift = SKY_LIFTS.find((q) => q.id === blk.id)!;
-        drawCore(b, blk.foot, blk.base, roofY(blk.base, storeysOf(blk)) + 0.8, centre(blk.foot), towers, coreFloors(blk.id).map((f) => floorY(blk.base, f)), lift.door);
+        // (up to The Perch's floor: it's the top two floors, docs/brutalist-plan.md Phase 3)
+        const floors = coreFloors(blk.id).filter((f) => f < TOP_FLOOR);
+        drawCore(b, blk.foot, blk.base, PERCH.y0 - PERCH_SLAB - 0.01, centre(blk.foot), towers, floors.map((f) => floorY(blk.base, f)), lift.door);
         drawStair(b);
+        drawPerch(b, low);
         b.build(into, opts);
       });
   }
@@ -1159,8 +1260,8 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
         const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
         if (l > 4 && !low)
           b.detail(() => {
-            if (endName(br.b)) drawName(b, a, c, y, l - 1.3, -1, endName(br.b));
-            if (endName(br.a)) drawName(b, a, c, y, 1.3, 1, endName(br.a));
+            if (endName(br.b, br.floor)) drawName(b, a, c, y, l - 1.3, -1, endName(br.b, br.floor));
+            if (endName(br.a, br.floor)) drawName(b, a, c, y, 1.3, 1, endName(br.a, br.floor));
           });
       }
       for (const p of PIERS.filter((q) => set.some((br) => q.id.startsWith(`${br.id}-pier`)))) drawPier(b, p);

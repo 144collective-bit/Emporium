@@ -36,36 +36,48 @@ asking, as long as everything in **The rules** below holds:
 1. **Start from fresh `main`.** Fetch `origin/main` and work on top of it.
    If the latest "Build site" run on `main` failed, fixing it is this run's
    item, before anything else.
-2. **One item per run** (two if both are small). Small, low-risk changes
+2. **The board sets the order** (the owner's call, 2026-11-22). After rule 1, the
+   item is the top card of the **Ready** column on the owner's Works Board
+   (https://claude.ai/artifact/GsX2xpXCSNhkr4KFVuQmJH, `cards`, lowest `rank`
+   first). Move it to **In progress** when starting, **Checking** once merged,
+   **Live** when its "Build site" run passes, or **Needs you** with the question
+   in its notes. If Ready is empty, fall back to this plan's order (Track A's
+   jobs, then their sweeps, then the hunt, then the levels). A Ready card that
+   moves something, adds copy the visitor reads, or is otherwise out of scope
+   above gets a short plan or a question, not a build. Each card taken is
+   written into this plan (its job entry, ticked when done) and the log, so
+   the record stays here. If the board can't be read or written, carry on
+   from this plan and catch the board up next pass.
+3. **One item per run** (two if both are small). Small, low-risk changes
    that can be reverted. If an item turns out bigger than one run, split it
    in this plan and do the first part.
-3. **Read before changing.** Read the area's guide file in `docs/guide/` and
+4. **Read before changing.** Read the area's guide file in `docs/guide/` and
    any plan it names. Check that the item is still open, since some backlog
    items may already be fixed. If one is, mark it done here with a note.
-4. **Every check passes, or nothing merges:** `npm run typecheck`,
+5. **Every check passes, or nothing merges:** `npm run typecheck`,
    `npm run lint`, `npm test`, `npm run test:wide`, `npm run build`,
    `npm run budget`, and `npm run smoke` whenever walk mode, input or
    anything drawn changed. Fix the code, not the test.
-5. **Speed work needs numbers.** Measure before and after (`?bench`, or
+6. **Speed work needs numbers.** Measure before and after (`?bench`, or
    `?fps` on the phone tier). Add the numbers to the log. If it isn't faster,
    don't merge it. Write down what was learned instead.
-6. **Visual work needs a look.** Use Playwright against `npm run preview` at
+7. **Visual work needs a look.** Use Playwright against `npm run preview` at
    320, 375, 768, 1024 and 1440 px, plus a phone on its side. Shots go in the
    scratchpad, not the repo.
-7. **Update the guide file** for whatever changed, and add a line to the
+8. **Update the guide file** for whatever changed, and add a line to the
    log below.
-8. **Merge.** Open a pull request to `main` titled `Loop: <item>`, then
+9. **Merge.** Open a pull request to `main` titled `Loop: <item>`, then
    merge it (squash). After merging, check that the "Build site" Action
    starts. A failed build doesn't publish, so the live site stays as it was,
    and the next run fixes it first (rule 1).
-9. **Stop rather than guess.** If a change needs an owner's decision, or
+10. **Stop rather than guess.** If a change needs an owner's decision, or
    the checks can't be made to pass within the run, push the branch with a
    draft pull request titled `Loop (needs owner): <item>`, add the question
    to **Waiting on the owner**, and move on to the next item next time.
-10. **Never** force-push `main`, commit to `deploy`, skip or weaken a test,
+11. **Never** force-push `main`, commit to `deploy`, skip or weaken a test,
     raise a budget, or change `FREE_FOR_NOW`, `PUBLIC_GAME_SERVER` or the
     live settings.
-11. **Pause switch.** If the line under **Status** says `PAUSED`, the run
+12. **Pause switch.** If the line under **Status** says `PAUSED`, the run
     does nothing and ends.
 
 ## The board
@@ -119,8 +131,8 @@ A hunt runs whenever no job is ready, and once a week otherwise.
 **The first night (2026-11-21, the owner's call):** pass 1 takes J1, pass 2
 J2, pass 3 the hunt of Endswood, Aldwyn's Green and Lot 9. Passes 4 to 6 take
 the owner's next jobs (J3 on), added below after J2 in the owner's order, or
-R1's sweep if none have arrived. The Works Board (the owner's kanban) mirrors
-this list; this plan is what the loop reads.
+R1's sweep if none have arrived. From 2026-11-22 the Works Board's Ready column
+sets the order (rule 2).
 
 ### Model repairs
 
@@ -340,6 +352,35 @@ Each later level does the same.
 (Questions the loop couldn't answer itself. The owner answers here, or in a
 session.)
 
+- **Main's build is over the full-tier texture budget (2026-11-21, pass 2).** Brutalist plan
+  Phase 2 (#238) added about 70 KB of textures (the bridges' painted block names and the gallery
+  sides' wall row), putting `texFull` 23 KB over 4955 KB on GitHub. Which do you want?
+  (a) the brutalist plan's session trims its own new textures (a smaller name sheet, the gallery
+  row sharing an existing one); (b) revert #238 until it fits; (c) raise `texFull` to about
+  5040 KB on purpose (your call only, in `scripts/budget.mjs`). Until one is done, every loop
+  pass stops at rule 1.
+  **Owner's answer (2026-11-22): (a).** The brutalist plan's session trims its own new
+  textures back under 4955 KB; the loop waits for that build to pass.
+
 ## The log
 
 (One line for each run: the date, the item, the pull request, the numbers.)
+
+- 2026-11-21, pass 1 (22:07): main's "Build site" #361 failed at typecheck after #238
+  (`farLods` imported but unused in `index.ts` since the readout moved to `readout.ts`).
+  Fixed by dropping the import (rule 1, #240); typecheck, lint, test, test:wide and build
+  pass. **Correction (pass 2):** the local texture bake had not run (it needs
+  `CHROMIUM_PATH=/opt/pw-browsers/chromium` in this container and exits 0 without it), so the
+  budget's texture rows were never checked here. J1 moves on.
+- 2026-11-21, pass 2 (23:07): "Build site" #362 (after #240) failed at the budget: `texFull`
+  4977.5 KB of 4955 on GitHub (5023.8 KB here; `texLow` 3349.7 of 3450 is fine). The growth is
+  #238's (brutalist plan Phase 2): a new painted sheet of the blocks' names for the bridges
+  (`SIGN_TEX` in southblocks3d.ts, 512x640, 36 KB baked) and a new row in the shared wall atlas
+  for the gallery sides (`brutalDeck` in infill.ts's `WALL_KINDS`). Trimming them is a change to
+  owner-signed new art, and raising a budget is the owner's only, so the question is under
+  **Waiting on the owner**. Nothing is live since #235 until main's build passes; rule 1 holds
+  every later pass on this until it's answered.
+- 2026-11-22, passes 3 to 6 (00:07 to 03:07): main unchanged and #363 still failing at
+  `texFull`; each pass checked and stopped at rule 1. Nothing merged.
+- 2026-11-22 (the owner, in session): the texture budget goes to the brutalist plan's session to
+  trim (answer (a)); the Works Board's Ready column now sets the loop's order (rule 2).
