@@ -50,6 +50,8 @@ const CONC = toon(CONCRETE);
 const CONC_DARK = toon('#54575c');
 const ROOF = toon('#424448');
 const PAVING = toon('#7e8085');
+/** The galleries' and balconies' floors: a step lighter than the walls rising off them (R1: floor and wall told apart) */
+const DECK_FLOOR = toon('#8b8d91');
 const PLY = toon('#a3804f');
 const HOARDING = toon('#55697f');
 const DOOR = toon('#1b1820');
@@ -158,6 +160,39 @@ function upstand(b: Batch, pts: Pt[], out: number, t: number, y0: number, y1: nu
 function stripAlong(b: Batch, pts: Pt[], off: number, w: number, y: number, m: THREE.Material, up = false) {
   const [p, q] = [shift(pts, off - w / 2), shift(pts, off + w / 2)];
   for (let k = 1; k < pts.length; k++) flat(b, [p[k - 1], p[k], q[k], q[k - 1]], y, m, up);
+}
+/** Each segment of a line, a to c */
+function pairs(pts: Pt[], each: (a: Pt, c: Pt) => void) {
+  for (let k = 1; k < pts.length; k++) each(pts[k - 1], pts[k]);
+}
+/** An upstand's two open ends closed (as `upstand()` draws it: its outer face `out` right of the line, `t` thick) */
+function capEnds(b: Batch, pts: Pt[], out: number, t: number, y0: number, y1: number, m: THREE.Material) {
+  if (pts.length < 2) return;
+  const s = Math.sign(out) || 1;
+  const [o, i] = [shift(pts, out), shift(pts, out - s * t)];
+  const dir = (a: Pt, c: Pt): Pt => {
+    const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+    return [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+  };
+  const [t0, t1] = [dir(pts[0], pts[1]), dir(pts[pts.length - 2], pts[pts.length - 1])];
+  const last = pts.length - 1;
+  quad(b, o[0], i[0], y0, y1, [-t0[0], -t0[1]], m);
+  quad(b, i[last], o[last], y0, y1, t1, m);
+}
+/** A line's length */
+const runLength = (pts: Pt[]) => pts.slice(1).reduce((d, p, k) => d + Math.hypot(p[0] - pts[k][0], p[1] - pts[k][1]), 0);
+/** The point `d` along a line and the line's direction there */
+function pointAlong(pts: Pt[], d: number): [Pt, Pt] {
+  for (let k = 1; k < pts.length; k++) {
+    const [a, c] = [pts[k - 1], pts[k]];
+    const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+    if (d <= l || k === pts.length - 1) {
+      const f = Math.min(1, d / l);
+      return [[a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f], [(c[0] - a[0]) / l, (c[1] - a[1]) / l]];
+    }
+    d -= l;
+  }
+  return [pts[0], [1, 0]];
 }
 /** A prism: an outline stood up from y0 to y1, walls facing out, its top capped */
 function prism(b: Batch, ring: Pt[], y0: number, y1: number, m: THREE.Material, cap: THREE.Material = m) {
@@ -295,13 +330,36 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
   const outer = shift(part, s * (blk.depth! / 2 + GALLERY_W));
   for (const f of SKY_FLOORS.filter((q) => q < st.storeys)) {
     const y = floorY(base, f);
+    const front = s * (blk.depth! / 2 + GALLERY_W);
+    const runs = openRuns(blk, part);
     k.all(() => {
       const deck = [...inner, ...[...outer].reverse()];
-      flat(b, deck, y, CONC);
+      flat(b, deck, y, DECK_FLOOR);
       flat(b, deck, y - 0.16, CONC_DARK, false);
       // (the front: a solid concrete upstand, its outer face on the gallery's edge; open where a core stands out from
       // it, southsky.ts `CORE_GAP`)
-      for (const run of openRuns(blk, part)) upstand(b, run, s * (blk.depth! / 2 + GALLERY_W), 0.12, y - 0.16, y + 0.62, CONC);
+      for (const run of runs) {
+        upstand(b, run, front, 0.12, y - 0.16, y + 0.62, CONC);
+        // (R1: a coping a little wider than the upstand, in the darker concrete, and each run's ends closed)
+        pairs(run, (a, c) => along(b, a, c, 0.18, y + 0.62, y + 0.67, CONC_DARK, front - s * 0.06));
+        capEnds(b, run, front, 0.12, y - 0.16, y + 0.62, CONC);
+      }
+    });
+    // R1's fine trims, near only: the slab joints across the floor (about 1.2 m), a skirting where the floor meets the
+    // wall (5 mm off it), a drip under the deck's front edge
+    b.detail(() => {
+      const len = runLength(part);
+      const n = Math.max(1, Math.round(len / 1.2));
+      for (let j = 1; j < n; j++) {
+        const [p, t] = pointAlong(part, (len * j) / n);
+        const r: Pt = [-t[1], t[0]];
+        const [ia, ob] = [(s * blk.depth!) / 2 + s * 0.02, front - s * 0.14];
+        const a: Pt = [p[0] + r[0] * ia, p[1] + r[1] * ia];
+        const c: Pt = [p[0] + r[0] * ob, p[1] + r[1] * ob];
+        along(b, a, c, 0.03, y, y + 0.006, CONC_DARK);
+      }
+      pairs(part, (a, c) => along(b, a, c, 0.03, y, y + 0.1, CONC_DARK, (s * blk.depth!) / 2 + s * 0.02));
+      for (const run of runs) pairs(run, (a, c) => along(b, a, c, 0.05, y - 0.24, y - 0.16, CONC_DARK, front - s * 0.03));
     });
     stripAlong(b, part, s * (blk.depth! / 2 + GALLERY_W - 0.3), 0.08, y - 0.18, STRIP);
   }
@@ -316,7 +374,7 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
         const pts = edge.filter((p) => !inRefit(p));
         if (pts.length < 2) continue;
         const deck = [...face.filter((p) => !inRefit(p)), ...[...pts].reverse()];
-        flat(b, deck, y + 0.04, CONC);
+        flat(b, deck, y + 0.04, DECK_FLOOR);
         upstand(b, part.filter((p) => !inRefit(p)), -s * (blk.depth! / 2 + 0.55), 0.08, y - 0.04, y + 0.45, CONC);
       }
     });

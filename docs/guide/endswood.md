@@ -76,7 +76,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   step's wall where steps meet; roofs and parapets; each block's colour (`ACCENTS`) a stripe down its ends (a tower's
   down its face away from The Core), the rest all concrete (`CONCRETE`, a cool grey); the corners chamfered
   (southblocks.ts `CUT`, `CORNER_R`); the Rampart's arch (soffit, piers' faces); galleries at every third floor (deck,
-  concrete upstand, warm strip light under it); balconies with concrete fronts on the slabs' other sides, Teasel's
+  concrete upstand, warm strip light under it; the improvement loop's R1, J1 part 1: the floor `DECK_FLOOR` a step
+  lighter than the walls, the upstand's dark coping and closed ends (`capEnds()`), and near only the slab joints about
+  every 1.2 m, a skirting 5 mm off the wall and a drip under the front); balconies with concrete fronts on the slabs' other sides (floors `DECK_FLOOR`), Teasel's
   boarded windows and hoarding, sky garden planters on the roofs (near only, not on phones); the towers' ledge rings, a
   concrete plant room box and beacon; The Perch round The Core's top two floors (`PERCH`, `TOP_FLOOR`, `drawPerch()`: a
   hexagonal drum, its glass band, its name, a glass lift inside; brutalist plan Phase 3) and the top floor's bridges to

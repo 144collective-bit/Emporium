@@ -241,6 +241,9 @@ sets the order (rule 2).
 
 ### Jobs
 
+- [x] **J1 (R1), part 1: the galleries and balconies** (2026-11-22, pass 1; see the log). Part 2 below.
+- [ ] **J1 (R1), part 2: the bridges' decks, the cores' landings and the podium deck**, as part 1, then the
+      junction where a gallery meets a link's portal checked from on foot.
 - [ ] **J1 (R1): a gallery walkway on Endswood's flats** (the owner's
       screenshot, 2026-11-21: looking down a gallery towards the highway).
       The deck, its upstands and the slabs either side are plain `CONC`
@@ -384,3 +387,9 @@ session.)
   `texFull`; each pass checked and stopped at rule 1. Nothing merged.
 - 2026-11-22 (the owner, in session): the texture budget goes to the brutalist plan's session to
   trim (answer (a)); the Works Board's Ready column now sets the loop's order (rule 2).
+- 2026-11-22, pass 1 (22:07): main green again (#243 trimmed the textures; builds #365 to #368 pass).
+  J1 part 1 (R1 on the galleries and balconies, southblocks3d.ts `drawStep()`): the floor `DECK_FLOOR`
+  a step lighter than the walls; the front upstand's dark coping and closed ends; near only, slab joints
+  about every 1.2 m, a skirting 5 mm off the wall and a drip under the front. All plain colours (they share
+  one paint), no new material or texture. Shots at Marten Court before and after (scratchpad).
+  Draws not measured this pass (the near trims join each step's near part). Checks: see the PR.
