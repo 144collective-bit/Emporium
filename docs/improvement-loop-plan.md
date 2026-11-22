@@ -314,6 +314,9 @@ one is still open before fixing it.
       routes cached across routes.test; motionmatch.test's wall-clock
       assertion made a ratio (polish §11).
 - [ ] The 14 small DOM-free modules without a test get one (polish §11).
+- [ ] Smoke's `station` scene stalls now and then in a full run on the software renderer ("along the hall
+      and down the escalator", 2026-11-22); passes run alone. Find why (a wait too short under load) and
+      fix the scene's timing, not by loosening what it checks.
 
 ## Level 2: speed and phones
 
@@ -392,4 +395,7 @@ session.)
   a step lighter than the walls; the front upstand's dark coping and closed ends; near only, slab joints
   about every 1.2 m, a skirting 5 mm off the wall and a drip under the front. All plain colours (they share
   one paint), no new material or texture. Shots at Marten Court before and after (scratchpad).
-  Draws not measured this pass (the near trims join each step's near part). Checks: see the PR.
+  Draws not measured this pass (the near trims join each step's near part). Checks: typecheck, lint, test,
+  test:wide, build, texture bake, budget (texFull 4918.2 of 4955, texLow 3310.2 of 3450, boot 762.1 of 775)
+  pass; smoke 148 steps ok, the station's escalator step stalled once in the full run and passed run alone,
+  the same on main and the branch (logged under Level 1 as flaky).
