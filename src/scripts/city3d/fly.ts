@@ -22,7 +22,9 @@ import * as THREE from 'three';
 import { createFleet, type Fleet, type ModelKind } from './aircraft';
 import { HANGAR_ROOF, HANGAR_SPOT, type AircraftKind, type Pose } from './airfield';
 import type { Sfx } from './combat';
-import { CEILING, TUNES, canLeave, flyReach, hullAt, newFlight, stepFly, type FlyInput, type FlyState, type FlyTune } from './flight-sim';
+import { CEILING, TUNES, canLeave, flyReach, hullAt, newFlight, type FlyInput, type FlyState, type FlyTune } from './flight-sim';
+import type { stepFly } from './flight-step';
+import { lazy } from './lazy';
 import { paintHex } from './mycar';
 import { FLY, type MyPlane, type PlaneId } from './myplane';
 import type { Box } from './solids';
@@ -69,6 +71,12 @@ interface Craft {
   fleet: Fleet;
   state: FlyState;
 }
+
+/** One step of flying (flight-step.ts, its own chunk): fetched when you come near your aircraft or climb in */
+let step: typeof stepFly | null = null;
+const loadStep = lazy(() => import('./flight-step').then((m) => (step = m.stepFly)), 'flying');
+/** How near your aircraft (tiles) its handling is fetched */
+const FETCH_NEAR = 40;
 
 export function createFly(d: FlyDeps) {
   const { camera, root } = d;
@@ -187,6 +195,7 @@ export function createFly(d: FlyDeps) {
       if (flying) return Infinity;
       const s = craft.state;
       const reach = Math.min(...hullAt(s, tune.hull).map((c) => Math.hypot(c.x - x, c.z - z) - c.r));
+      if (!step && reach < FETCH_NEAR) void loadStep().catch(() => {});
       return s.y > 1.5 ? Infinity : reach;
     },
     /** Does your parked aircraft block this spot (walking)? Only its body, so you can walk under the wings */
@@ -225,6 +234,7 @@ export function createFly(d: FlyDeps) {
     /** Climb in */
     enter() {
       if (flying) return false;
+      if (!step) void loadStep().catch(() => {});
       flying = true;
       tune = TUNES[craft.id];
       const s = craft.state;
@@ -313,7 +323,8 @@ export function createFly(d: FlyDeps) {
       const T = tune;
       const px = s.x;
       const pz = s.z;
-      const hit = stepFly(s, inp, T, Math.min(dt, 1 / 20), { boxes: d.solids(s.x, s.z, flyReach(s)), ceilings: [HANGAR_ROOF], soft: gatherSoft(s), ground: d.groundAt }, d.bounds);
+      // (it sits still the moment until its handling's in: fetched on the way up to it, `FETCH_NEAR`)
+      const hit = !step ? 0 : step(s, inp, T, Math.min(dt, 1 / 20), { boxes: d.solids(s.x, s.z, flyReach(s)), ceilings: [HANGAR_ROOF], soft: gatherSoft(s), ground: d.groundAt }, d.bounds);
       if (hit > 1.5) {
         d.sfx('bump', Math.min(1, hit / 8));
         shake = Math.min(0.3, hit * 0.03);

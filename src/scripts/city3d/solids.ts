@@ -10,7 +10,7 @@
 import { SUN_SOLIDS } from './sunridge';
 import { SUNPLACE_SOLIDS } from './sunplaces';
 import type { SpotId } from '../../lib/city';
-import { DUMMIES } from './combat-sim';
+import { DUMMIES } from './weapons';
 import { BIG_LOTS, BS, GARAGE, MARKET, UNITS, design, designBox } from './layout';
 import { ALLEYS, ALLEY_PROPS, BOLLARD_R, INFILL, SQUARE } from './downtown';
 import { SQUARE_SOLIDS } from './outer';

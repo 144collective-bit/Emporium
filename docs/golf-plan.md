@@ -231,6 +231,16 @@ found in Phase 4: a taxi to the club stopped at the top of Ridge Road, about 175
 
 ### Phase 5: its life, night and sound
 
+The owner's go: 2026-11-22 ("Phase 5: course life", and for the golfers' swing and putt, which the crowd's rows put in
+the boot, "Slim start-up first" rather than raise its budget).
+
+**The boot's room first** (773.6 of 775 KB): flying's step (`stepFly()` and its handling, collisions and edge) moved
+to `flight-step.ts`, fetched when you're near your aircraft or climb in (fly.ts `loadStep()`, `FETCH_NEAR`): 1.7 KB;
+the guns' list and the dummies' places moved to `weapons.ts` (combat-sim.ts re-exports them), so target practice's
+rules leave the boot with it: 3.5 KB. The boot 768.4 KB. (Looked at and left: the gun builder, which the Armoury's
+counter and the parading soldiers' rifle need at the boot, baked it'd be as big as data; the missions' card, which
+paints the level pill at once; the kart park's and the metro's drawing, which the boot shows.)
+
 - The flags on the greens (swaying), tee markers, ball washers, benches, rakes in the bunkers, signs by each tee.
 - Golfers on the course (the crowd: a swing, a putt, walking between holes), carts on the paths, a greenkeeper's mower,
   birds on the lakes; the clubhouse lit at night, the course dark; its sound. Still under reduced motion.

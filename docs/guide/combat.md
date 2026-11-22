@@ -18,10 +18,13 @@ keep it up to date when what it describes changes.
   player's input in and draws / plays the events; walk.ts holds it through
   `combat-lazy.ts` (the same shape, the real one a chunk fetched after the
   first frame, the gun's pivot handed to it through `CombatDeps.pivot`). New gameplay goes in the
-  sim first; looks and sounds in the view.
+  sim first; looks and sounds in the view. The guns (`WEAPONS`, `WEAPON_IDS`, `weaponUnlocked()`) and the dummies'
+  places (`DUMMIES`) are `weapons.ts`'s (DOM-free), which combat-sim.ts re-exports: the boot (combat-lazy.ts, the
+  dummies' solids, the wire's protocol) reads them from there, so the rules come with target practice's chunk, not
+  the boot (2026-11-22, room made in the boot for the golf plan's Phase 5).
 - **The gun store** (`gunshop.ts`, markup `data-shop` in `CityMap.astro`)
   opens at the Armoury counter. Four guns, each defined once in
-  `combat-sim.ts` `WEAPONS` (stats, `need` = lifetime score that unlocks it)
+  `weapons.ts` `WEAPONS` (stats, `need` = lifetime score that unlocks it)
   and modelled in `gunshapes.ts` `SHAPES` (parts round gunfit.ts's muzzle, sight and hand spots): the
   Assault Rifle (holo red-dot, also carried by the soldiers via
   `rifleGeometry()`), Buzz SMG, Street Sweeper shotgun (pellets, iron sights)
