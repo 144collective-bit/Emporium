@@ -109,8 +109,9 @@ export interface Outfit {
   /** Gold watch on the left wrist */
   watch?: boolean;
   /** In the right hand, the crowd's only: a phone (people reading theirs) or a shopping bag (the shoppers on
-   * Crestmont's Drive). Never the player's: his hands hold only weapons (docs/wardrobe-plan.md Phase 1) */
-  held?: 'phone' | 'shopping';
+   * Crestmont's Drive) or a golf club (the golfers, docs/golf-plan.md Phase 5). Never the player's: his hands hold only
+   * weapons (docs/wardrobe-plan.md Phase 1) */
+  held?: 'phone' | 'shopping' | 'club';
   /** Which hand carries a rifle (soldiers) */
   rifle?: 'left' | 'right';
   /** Both hands closed into fists (fighting; the open hands are left off) */
@@ -4377,6 +4378,9 @@ export function items(q: Detail, hero = false): Item[] {
   const bagBand = new THREE.BoxGeometry(0.074, 0.03, 0.204).translate(BAG[0], BAG[1] + 0.07, BAG[2]);
   const bagCord = handle(BAG[1] + 0.095, BAG[2] - 0.05, BAG[2] + 0.06, 0.004);
 
+  // A golf club (the golfers'): its grip in the fist, the shaft on down the hand's way, the head at its foot
+  const clubShaft = new THREE.CylinderGeometry(0.008, 0.006, 0.74, 5).translate(HOOK[0], -0.37 + 0.02, HOOK[1] + 0.02);
+  const clubHead = new THREE.BoxGeometry(0.03, 0.035, 0.085).translate(HOOK[0], -0.73, HOOK[1] + 0.055);
   // The gold watch on the left wrist: on the wrist itself, just under the cuff, riding the hand (its band's edges
   // rounded, the face's bezel turned; docs/clothing-plan.md Phase 5), the face on the outside of the arm
   const WATCH: [number, number] = [WRIST_Y + 0.0365, WRIST_Z - 0.002];
@@ -5115,6 +5119,12 @@ export function items(q: Detail, hero = false): Item[] {
       held: true,
       when: (o) => o.held === 'phone',
       pieces: [P('handR', phoneBody, '#0d0c14'), P('handR', phoneScreen, '#49c2f0', { mat: 'neon' })],
+    },
+    {
+      id: 'club',
+      held: true,
+      when: (o) => o.held === 'club',
+      pieces: [P('handR', clubShaft, '#c9ccd4'), P('handR', clubHead, '#3b3a44')],
     },
     {
       id: 'shopping',

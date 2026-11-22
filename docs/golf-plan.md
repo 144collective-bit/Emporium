@@ -241,9 +241,36 @@ rules leave the boot with it: 3.5 KB. The boot 768.4 KB. (Looked at and left: th
 counter and the parading soldiers' rifle need at the boot, baked it'd be as big as data; the missions' card, which
 paints the level pill at once; the kart park's and the metro's drawing, which the boot shows.)
 
-- The flags on the greens (swaying), tee markers, ball washers, benches, rakes in the bunkers, signs by each tee.
-- Golfers on the course (the crowd: a swing, a putt, walking between holes), carts on the paths, a greenkeeper's mower,
-  birds on the lakes; the clubhouse lit at night, the course dark; its sound. Still under reduced motion.
+**What's built** (golflife.ts the rules and data, golflife3d.ts the drawing; `docs/guide/golf.md`):
+
+- **What stands on the course**, a hole each (`FURNITURE`): the flag in the cup somewhere on the green (the front
+  nine's red, the back's yellow), streaming in the wind and fluttering; the tee markers at the tee's front; a ball
+  washer, a bench facing the tee and the hole's sign (its name: "FIRST LIGHT", never a number) on the grass beside it,
+  clear of the cart path (the first clear of a few spots: on some holes the path hugs the tee); a rake by every
+  bunker, on its far side from the line. Near only, a site for each tee and each green.
+- **The golfers**: three groups on each nine (two to four in each: `GROUPS`), spread round it, each playing its nine
+  for ever, the same round every time (`roundOf()`): off the tee in turn, out to their balls, the furthest from the pin
+  first while the rest stand and watch, onto the green, a putt and a tap-in each, a step back off the line, then on to
+  the next tee by the cart paths (round the water by the hole's path where a straight walk would cross it: the 8th's
+  carry over The Pond), walking abreast; a nine takes an hour and a half or so. They're the crowd's (the spare
+  slots: phones half of them), in the `golfer` look (a light zip top, chinos or shorts, white shoes, mostly a cap) with
+  a club in the right hand; their swing and putt are two new crowd rows (`golf`, `putt`: right-handed, the shoulders
+  and hips turned away and through, the head down till after the ball), each played from its start
+  (`Moment.since`).
+- **The carts**: two round each nine's cart paths end to end (phones one), a driver on each (the crowd's, seated).
+  **The mower**: the greenkeeper up and down the 10th's fairway in its stripes. **The ducks**: two to four on every
+  lake, paddling slow rounds. One instanced mesh each, moved on the tick while the camera's near the course.
+- **Night**: the clubhouse's windows lit warm (`golf-window`); the course stays dark (the drive's lamps as they were).
+- **Sound**: over the course the park's birds by day and owl at night, Crestmont's sprinklers by day and crickets at
+  night, the wind softened (ambience.ts `GOLF_BIRDS`, `GOLF_LAWNS`, from golflift.ts `golfShare()`).
+- Still under reduced motion: everything holds its first frame.
+- Fixed on the way: ink zig-zags across the rough by the tees and greens (the turf's triangles, drawn solid in the
+  ink's pre-pass, its clear parts and all): the turf's now out of it (golf3d.ts, kit.ts `fx()`), paint on the grass.
+- The boot: 769.1 KB (the rows, the look, the club and the sound: 0.7 KB of the room made first).
+- The tests: `tests/golflife.test.ts` (what stands where and on what, the golfers' rounds closing on themselves, on the
+  course and out of the water, a drive off every tee and two putts on every green, standing apart, the groups apart,
+  the carts on their paths at their pace and apart, the mower on its fairway, the ducks on the water, the look, the
+  swing's and the putt's shape and length, the sound).
 
 ### Phase 6: the golf game (its own plan, `docs/golf-game-plan.md`, when Phase 5 is signed off)
 

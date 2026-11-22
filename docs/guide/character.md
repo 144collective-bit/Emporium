@@ -105,7 +105,9 @@ keep it up to date when what it describes changes.
     (`TORSOS`, `OVER`, items `backpack-<kind>` and the rest; straps laid on
     by `strapOver()`); the watch on the wrist riding the hand; a held
     thing's handle in the fingers' hook (`HOOK`, `handle()`), the cup
-    against the fingers' front. `tests/accessories.test.ts` holds the hats
+    against the fingers' front; the golfers' club (`held: 'club'`, docs/golf-plan.md
+    Phase 5: its shaft down from the fist, its head at the foot; crowdlook.ts's
+    `golfer` role, a light zip top, chinos or shorts, white shoes, a cap). `tests/accessories.test.ts` holds the hats
     clear of the head at every level and the held things clear of the
     fingers. The lab takes `wear=` and `at=x,y,z`.
   - **The shades** (`docs/wardrobe-plan.md` Phase 4): five styles from one

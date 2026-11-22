@@ -14,17 +14,21 @@
  * - **The club's edge** (Phase 3, near only): a white post-and-rail fence round it (`FENCE_RUNS`: open where the drive
  *   and the footpath come in, posts either side of the footpath's way), reeds round the lakes (`reedsOf()`).
  *
+ * - **Its life** (Phase 5): golflife3d.ts `registerGolfLife()`, what stands on the course and its flags.
+ *
  * The course's grass itself (its rough and native grass, its hills) is the boot's (world.ts), so the course stands
  * before this chunk comes; the woods between the holes are the outskirts' trees (landuse.ts keeps them off the play).
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { Batch, FONT_DISPLAY, canvasTex, lit, neon, siteMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, fx, lit, neon, siteMat, toon } from './kit';
 import { hip } from './roofs3d';
 import { site } from './tilework';
 import { COVER, LAMP, LAMP_POST, ROAD, STONE } from './palette';
 import { waterMat } from './world';
 import { TILE } from './tiles';
+import { registerGolfLife } from './golflife3d';
+import type { Tick } from './world';
 import { CLUB_NAME, DRIVE, DRIVE_HALF, FOOTPATH, GOLF_CLUBHOUSE, GOLF_RECT, PATH_HALF, clubLevel, golfIn, golfLift, golfMesh, golfWater } from './golflift';
 import {
   COURSE,
@@ -453,7 +457,8 @@ export function drawClubhouse(b: Batch, low: boolean) {
   const wall = toon('#efe7d6');
   const trim = toon('#fbf8f0');
   const roof = toon('#2f5a3e');
-  const glass = toon('#33465c');
+  // (lit at night, warm: the course itself stays dark)
+  const glass = siteMat('golf-window', lit(toon('#33465c', { emissive: '#ffd59a' }), 0, 0.8));
   const pave = toon(STONE.paving);
   const asphalt = toon(ROAD.asphalt);
   const line = toon(ROAD.line);
@@ -551,7 +556,7 @@ export function drawClubhouse(b: Batch, low: boolean) {
   });
 }
 
-export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   const mat = turfMat();
   // The turf, a site a tile, over every tile the course's land comes into
   for (let tx = Math.floor(X0 / TILE) * TILE; tx < X1; tx += TILE)
@@ -564,7 +569,13 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
         const far = turfMesh(r, true, TURF_LIFT);
         if (near) b.detail(() => b.add(near, mat), 'near');
         if (far) b.detail(() => b.add(far, mat), 'far');
-        b.build(into, { cast: false, receive: true });
+        // (out of the ink's pre-pass, kit.ts `fx()`: it draws every mesh solid, the texture's clear parts too, so the
+        // turf's triangles came out as ink zig-zags across the rough; the turf is paint on the grass, with no edge of
+        // its own to ink)
+        const g = new THREE.Group();
+        b.build(g, { cast: false, receive: true });
+        fx(g);
+        for (const c of [...g.children]) into.add(c);
       });
     }
   // Clubhouse Drive: its asphalt in stretches (a site each), its lamps, the pillars where it comes onto the course
@@ -659,6 +670,8 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       b.build(into, { cast: true, receive: true });
     });
   }
+  // What stands on the course, its flags and its life (Phase 5, golflife3d.ts)
+  registerGolfLife({ low, scene, tick });
   // The lakes' water, on the main thread (the city's water shader), all in one mesh: one draw
   if (scene) {
     const lakes = LAKES.map((l, i) => {

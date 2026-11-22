@@ -187,7 +187,15 @@ keep it up to date when what it describes changes.
   acts.ts, over the third idle), the cage's three runners and two
   keepers, The Block's two on two (grown-ups), and a kid on every swing
   seat (`swingsOf()`, the `swing` row, seated); the commons' rings on the
-  courts went, the playground's and skate spot's stay. A formula row's
+  courts went, the playground's and skate spot's stay. The golfers' rows
+  (docs/golf-plan.md Phase 5, acts.ts, formula rows over the look pose,
+  right-handed: the target to the left): `golf` (`golfPose()`, `GOLF`,
+  `SWING_KEYS`: the address, the shoulders and hips turned away to the top,
+  the strike, the finish turned through, the head after the ball;
+  `GOLF_SECONDS`) and `putt` (`puttPose()`, `PUTT`, `PUTT_KEYS`: bent over the
+  ball, the shoulders rocking it back and through; `PUTT_SECONDS`); a park
+  mover's `Moment.since` plays a row from its start (a shot from its
+  address), not the clock's. A formula row's
   loop eases towards its own start (`looped(f, seconds)`). Phase 7 (the
   Fight Club) is built: the fight clips' feet are planted
   (`fightfeet.ts`, DOM-free: `STANCE`, the guard's feet on the canvas;

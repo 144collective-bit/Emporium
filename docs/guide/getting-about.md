@@ -178,5 +178,8 @@ keep it up to date when what it describes changes.
     owl (the park's layer, `VILLAGE_BIRDS`), the High Road's shoppers (the Neon
     Mile's crowd, `HIGH_ROAD_MURMUR`), and below ground (`BELOW`) hushed as
     indoors with a tube train's rumble from the timetable (`tube`,
-    `tubeRumbleAt()`, mixed with the el's in index.ts). ambience.ts is fetched
+    `tubeRumbleAt()`, mixed with the el's in index.ts). Knob Hill Golf Club
+    (docs/golf-plan.md Phase 5): the park's birds and owl (`GOLF_BIRDS`) and
+    Crestmont's sprinklers and crickets (`GOLF_LAWNS`) over its land (golflift.ts
+    `golfShare()`), the wind softened as on the lawns. ambience.ts is fetched
     after the boot (the south plan's 6a).
