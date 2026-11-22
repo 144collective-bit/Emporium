@@ -37,6 +37,10 @@ keep it up to date when what it describes changes.
     `PROMENADE_HALF`, the Great Lawn `LAWN`, `onLawn()` and its walks, the
     ramble's `ramble-e`, `ramble-n`, `ramble-w`; `loopLine()` for the loop's
     lanes);
+    the lake lowered into its embankment and the grand terrace
+    (`docs/westlake-plan.md` Phase 3b: `WATER_Y`, `BED_Y`, `LAKE_PARTS`,
+    `LAKE_HOLE`; `GRAND`, `grandY()`, `onGrand()`, `GRAND_CUT`,
+    `GRAND_SOLIDS`; ground layer `grand`; drawn by `grandterrace3d.ts`);
     the bridges (`docs/westlake-plan.md` Phase 3a: `BRIDGES`, `onBridge()`,
     `bridgeY()`, the loop over them, `arm-walk` and `inlet-walk`; a ground
     layer `park-bridge` in groundheight.ts; drawn by `parkbridges3d.ts`);

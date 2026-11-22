@@ -38,6 +38,7 @@ import {
   PARK_TREES,
   PATHS,
   TERRACES,
+  WATER_Y,
   TERRACE_STEPS,
   distToLine,
   inLake,
@@ -147,11 +148,14 @@ test('the flower beds: along the Mall and round the walks, off every path, lamp,
 });
 
 test('the lakeside terraces: from the loop down to the water in steps, walkable out over it, clear of the boats and the jetty', () => {
-  assert.equal(TERRACES.length, 3);
-  // The steps: a step up off the loop, the platform, then down to just over the water (SLAB + 0.04)
+  // (two since the west one's site went to the grand terrace, docs/westlake-plan.md Phase 3b)
+  assert.equal(TERRACES.length, 2);
+  // The steps: a step up off the loop, the platform, then down the embankment to a landing just over the water (WATER_Y)
   const h = TERRACE_STEPS.map((s) => s[2]);
-  assert.ok(h[1] > h[0] && h.slice(1).every((v, i, a) => i === 0 || v < a[i - 1]));
-  assert.ok(h.at(-1)! > 0.04 + 0.01 && h.at(-1)! < 0.1, 'the last just over the water');
+  assert.ok(h[1] > h[0] && h.slice(1).every((v, i, a) => i === 0 || v <= a[i - 1]));
+  assert.ok(h.at(-1)! > WATER_Y + 0.1 && h.at(-1)! < WATER_Y + 0.4, 'the last just over the water');
+  // (each step down no more than a stair's)
+  for (let i = 2; i < h.length; i++) assert.ok(h[i - 1] - h[i] < 0.2, 'a step too tall');
   for (let i = 1; i < TERRACE_STEPS.length; i++) assert.equal(TERRACE_STEPS[i][0], TERRACE_STEPS[i - 1][1], 'no gaps between the steps');
   for (const t of TERRACES) {
     // On the water's edge, facing out of the lake
@@ -166,10 +170,11 @@ test('the lakeside terraces: from the loop down to the water in steps, walkable 
     }
     // Off the jetty, the boathouse and the boats' rings (their nearest a couple of tiles off)
     assert.ok(Math.hypot(t.at[0] - JETTY.x, t.at[1] - (JETTY.z0 + JETTY.z1) / 2) > 10);
-    const tip: Pt = [t.at[0] - t.u[0] * 2.4, t.at[1] - t.u[1] * 2.4];
+    const far = -TERRACE_STEPS.at(-1)![1];
+    const tip: Pt = [t.at[0] - t.u[0] * far, t.at[1] - t.u[1] * far];
     for (const ring of RINGS) for (const p of ringLine(ring.in)) for (const s of [-t.half, 0, t.half]) assert.ok(Math.hypot(p[0] - tip[0] - t.t[0] * s, p[1] - tip[1] - t.t[1] * s) > 1.5, 'a boat ring over a terrace');
     // Nothing solid on it
-    for (let s = -t.half + 0.4; s < t.half - 0.4; s += 0.5) for (let d = -2.2; d < 3.1; d += 0.5) assert.ok(!blocked([t.at[0] + t.u[0] * d + t.t[0] * s, t.at[1] + t.u[1] * d + t.t[1] * s], 0.2), 'something solid on a terrace');
+    for (let s = -t.half + 0.4; s < t.half - 0.4; s += 0.5) for (let d = -far + 0.2; d < 3.1; d += 0.5) assert.ok(!blocked([t.at[0] + t.u[0] * d + t.t[0] * s, t.at[1] + t.u[1] * d + t.t[1] * s], 0.2), 'something solid on a terrace');
   }
   assert.equal(terraceY(LAKE_C[0], LAKE_C[1]), null);
 });

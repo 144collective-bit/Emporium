@@ -90,7 +90,7 @@ import { count } from './tycoon';
 import { SLAB, type Tick } from './world';
 import { BX as LIBERTY_X, FACES, LIBERTY_CAMERA, LOW_Y, TO_MIDDLE, footbridgeWall, footbridgeY, leavesAt, onLeaves } from './liberty';
 import { BARRIERS as SWING_BARRIERS, BARRIER_WALLS, SX as SWING_X, betweenBarriers, onSwingDeck, swingAt } from './swingbridge';
-import { RIM, inLake, onBridge as onParkBridge, onJetty, onTerrace } from './westlake';
+import { RIM, inLake, onBridge as onParkBridge, onGrand, onJetty, onTerrace } from './westlake';
 import { GATE } from './stadium';
 import { WALK_UNDER, viaductSurface, walkOff } from './viaground';
 import { skyDeckWall, upOnDeck } from './skydeck';
@@ -775,7 +775,7 @@ export function createWalk(d: WalkDeps) {
     // ...and the Docks' basin at its quays' edge (docks.ts; the avenue crosses its mouth on a bridge)
     if (inBasin(x, z, -0.3)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
-    if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS) && !onTerrace(x, z, RADIUS) && !onParkBridge(x, z, RADIUS)) return true;
+    if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS) && !onTerrace(x, z, RADIUS) && !onParkBridge(x, z, RADIUS) && !onGrand(x, z, RADIUS)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS) && !skip?.(b))) return true;
     if (drive.blocks(x, z, RADIUS) || fly.blocks(x, z, RADIUS)) return true;
     return d.placedSolids().some((b) => inBox(b, x, z, RADIUS));

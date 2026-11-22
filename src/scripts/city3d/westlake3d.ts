@@ -23,12 +23,13 @@ import { site } from './tilework';
 import { PATH_Y, PAVE_Y, bench, registerGardens } from './gardens3d';
 import { isMain } from './gardens';
 import { offsetLine } from './streetplan';
-import { BENCHES, GATES, GATE_PIERS, PATHS, PIER, RIM, ROCKS, lakeLine, onBridge, type ParkPath, type Pt, type Rock } from './westlake';
+import { BED_Y, BENCHES, LAKE_HOLE, onGrand, GATES, GATE_PIERS, PATHS, PIER, RIM, ROCKS, WATER_Y, lakeLine, onBridge, type ParkPath, type Pt, type Rock } from './westlake';
 import { TILE, tileOf } from './tiles';
 import { registerFringes } from './fringes3d';
 import { registerBridges } from './parkbridges3d';
+import { registerGrandTerrace } from './grandterrace3d';
 import { registerCivic } from './civic3d';
-import { OUTCROP, STONE as PAL_STONE } from './palette';
+import { BANK, ORNATE, OUTCROP, STONE as PAL_STONE } from './palette';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -39,6 +40,8 @@ const CAP = toon(PAL_STONE.cap);
 const IRON = toon('#1b1830');
 /** The main walks' paving (the gravel paths' is GRAVEL) */
 const PAVING = toon(PAL_STONE.paving);
+/** The lake's embankment: rough-cut stone down to its bed (Phase 3b) */
+const EMBANKMENT = toon(ORNATE.rough);
 const ROCK_FACE = toon(OUTCROP.face);
 const ROCK_DARK = toon(OUTCROP.dark);
 const ROCK_TOP = toon(OUTCROP.top);
@@ -192,6 +195,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerGardens(low);
   // The bridges over the arm and the inlet (parkbridges3d.ts, docs/westlake-plan.md Phase 3a)
   registerBridges(low);
+  // The grand terrace at the west lobe's tip (grandterrace3d.ts, Phase 3b)
+  registerGrandTerrace(low);
   // The rock outcrops on the knolls and at the point (docs/westlake-plan.md Phase 1)
   registerRocks(low);
   // The civic square at its south end (civic3d.ts, docs/civic-plan.md)
@@ -242,17 +247,25 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     site(`westlake rim ${k}`, [Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs)], (into) => {
       const b = new Batch();
       const pos: number[] = [];
+      // (none through the grand terrace's sunken plaza, whose own walls stand there: Phase 3b)
+      const off = (i: number) => onGrand((ins[i][0] + ins[i - 1][0]) / 2, (ins[i][1] + ins[i - 1][1]) / 2, -0.4);
+      const runs: [number, number][] = [];
       for (let i = 1; i < ins.length; i++) {
+        if (off(i)) continue;
         const [a, c, d, e] = [ins[i - 1], ins[i], outs[i], outs[i - 1]];
         for (const v of [a, d, c, a, e, d]) pos.push(v[0], top, v[1]);
+        if (runs.length && runs.at(-1)![1] === i - 1) runs.at(-1)![1] = i;
+        else runs.push([i - 1, i]);
       }
       const g = new THREE.BufferGeometry();
       g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
       g.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
       b.add(g, CAP);
-      // The walls: down to the water inside (facing it), down to the lawn outside (facing away)
-      b.add(band(ins, SLAB, top, sg, true), STONE);
-      b.add(band(outs, SLAB, top, sg, false), STONE);
+      // The walls: the embankment down past the water to its bed inside (facing it; Phase 3b), down to the lawn outside
+      for (const [r0, r1] of runs) {
+        b.add(band(ins.slice(r0, r1 + 1), SLAB + BED_Y, top, sg, true), EMBANKMENT);
+        b.add(band(outs.slice(r0, r1 + 1), SLAB, top, sg, false), STONE);
+      }
       b.build(into, { cast: false, receive: true });
     });
   }
@@ -321,9 +334,16 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     });
   }
 
+  // The lake's bed, deep under the water inside the embankment (Phase 3b): what shows through it from close by
+  site('westlake lake bed', LAKE_HOLE, (into) => {
+    const b = new Batch();
+    b.add(flatPoly(lakeLine(0.1, 240), SLAB + BED_Y + 0.02), toon(BANK.bed));
+    b.build(into, { cast: false, receive: true });
+  });
+
   // The water: on the main thread only (the river's shader, one mesh, never in the tile meshes)
   if (scene) {
-    const water = new THREE.Mesh(flatPoly(lakeLine(0.02, 360), SLAB + 0.04), waterMat);
+    const water = new THREE.Mesh(flatPoly(lakeLine(0.02, 360), SLAB + WATER_Y), waterMat);
     water.name = 'westlake-water';
     water.receiveShadow = false;
     scene.add(water);

@@ -155,7 +155,35 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
      water under each, the deck's rise, the loop across each, the walks
      round the arm and the inlet on land from end to end; walkers and dogs
      over the water only on a deck. Boot 774.3 of 775 KB.
-   - **3b, the terrace** and **3c, the gates, the overlook and the lamps**:
+   - **3b, the lake lowered and the grand terrace** (built, waiting on
+     the owner's sign-off; the owner's call, 2026-11-22: the west shore had
+     only about 12 m of land before the promenade, so the lake was lowered
+     rather than the terrace squeezed): the water 2.2 under the lawn
+     (`WATER_Y`), its bed under it (`BED_Y`, palette.ts `BANK.bed`), inside
+     a rough-cut stone embankment all round (westlake3d.ts, the rim's inner
+     wall down to the bed); the lawn's slab and the ground's grass cut over
+     it (`LAKE_PARTS`, the lake in convex pieces, baked key `lake-parts`;
+     `LAKE_HOLE`; world.ts). The boats float at the new level, the jetty is
+     a pier on posts to the bed with a ladder down to the moored boats, both
+     bridges' arches spring from the water, and the small terraces (two
+     now; the west one's site the grand terrace's) step down the embankment
+     in a flight to a landing over the water (`TERRACE_STEPS`, taken as the
+     ground, groundheight.ts). The grand terrace at the west lobe's tip
+     (`GRAND`, its frame, cut, hole and solids baked as `grand`;
+     `grandY()`, `onGrand()`, groundheight.ts's `grand` layer, walk.ts lets
+     you onto it over the water; `GRAND_SOLIDS`): a plaza at the water's
+     level reaching out over the lake, a carved balustrade along its front
+     with lanterns, side walls to the lawn, the arcade's wall under the lawn
+     with three arches into a tiled recess, two flights of twelve steps down
+     from the lawn along it, and the fountain in its middle: a basin, two
+     bowls with water falling in streams and a winged bronze figure in a
+     robe, arms raised (made up). Drawn by `grandterrace3d.ts` (a site;
+     palette.ts `ORNATE.tile`, `tileDark`, `bronze`). The loop bends round
+     behind it, a walk's width off the arcade. Tested: the pieces cover the
+     lake, the water well down, the plaza just over the water, the steps
+     even and never too tall, the terrace over water and land both, nothing
+     on it, no walk through it. Boot 774.8 of 775 KB.
+   - **3c, the gates, the overlook and the lamps**:
      to come.
    As planned:
    - **The terrace** where the Mall's cross walk meets the lake's west

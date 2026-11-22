@@ -19,7 +19,7 @@ import { KART_PARK } from '../src/scripts/city3d/kartpark';
 import { HIGH_Y, LOW_Y, TOWERS, footbridgeY } from '../src/scripts/city3d/liberty';
 import { FOOTBRIDGE_X, EXT } from '../src/scripts/city3d/layout';
 import { SX as SWING_X, swingY } from '../src/scripts/city3d/swingbridge';
-import { JETTY, TERRACES, onJetty, terraceY, BRIDGES } from '../src/scripts/city3d/westlake';
+import { JETTY, TERRACES, onJetty, terraceY, BRIDGES, GRAND, grandAt, grandY } from '../src/scripts/city3d/westlake';
 import { civicY, CITYHALL_SPAWN, COURT_PORTICO, PORTICO } from '../src/scripts/city3d/civic';
 import { viaductY } from '../src/scripts/city3d/viaground';
 import { DECK_Y as VIADUCT_Y, ringPoint } from '../src/scripts/city3d/viaduct';
@@ -95,7 +95,13 @@ function reference(leavesOpen: () => boolean) {
     if (slab === 0.035 && inChannel(x, z)) return shoreY(x, z) + 0.035;
     if (slab === SLAB && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r) return SLAB + DISC.top;
     // (the civic quarter's steps and porticos came after, civic.ts: the one term added to the old groundAt())
-    const base = Math.max(slab, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (terraceY(x, z) ?? -SLAB), SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB), civicY(x, z) ?? 0);
+    // (the lake's terraces step down its embankment to the water, below the lawn: taken as they stand, docs/westlake-plan.md Phase 3b)
+    const tr = terraceY(x, z);
+    if (tr !== null) return SLAB + tr;
+    // (and the grand terrace's sunken plaza and its steps)
+    const gr = grandY(x, z);
+    if (gr !== null) return SLAB + gr;
+    const base = Math.max(slab, onJetty(x, z) ? SLAB + JETTY.y : 0, SLAB + (skyDeckY(x, z, yNow - SLAB) ?? -SLAB), civicY(x, z) ?? 0);
     if (x < KART_PARK.x0 || x > KART_PARK.x1 || z < KART_PARK.z0 || z > KART_PARK.z1) {
       const [bx0, bz0, bx1, bz1] = BANKS_AREA;
       return x > bx0 && x < bx1 && z > bz0 && z < bz1 ? Math.max(base, bankY(x, z) + 0.035) : base;
@@ -205,6 +211,8 @@ test('every layer answers alone where it stands, and nowhere on the open street 
     jetty: [JETTY_AT[0], JETTY_AT[1], 0],
     terrace: [terraceSpot(TERRACES[0])[0], terraceSpot(TERRACES[0])[1], 0],
     // (Westlake Park's bridges: the cast-iron one's deck at its middle, docs/westlake-plan.md Phase 3a)
+    // (the grand terrace's plaza, at its fountain's side, Phase 3b)
+    grand: [grandAt(GRAND.fountain.d - GRAND.fountain.r - 1, 0)[0], grandAt(GRAND.fountain.d - GRAND.fountain.r - 1, 0)[1], 0],
     'park-bridge': [BRIDGES[0].a[0] + BRIDGES[0].u[0] * (BRIDGES[0].len / 2), BRIDGES[0].a[1] + BRIDGES[0].u[1] * (BRIDGES[0].len / 2), 0],
     skydeck: [mid(SPIRE_LOT)[0], mid(SPIRE_LOT)[1], DECK.y + SLAB],
     civic: [CITYHALL_SPAWN.x, (PORTICO[1] + PORTICO[3]) / 2, 0],

@@ -122,6 +122,8 @@ export const BANK = {
   sand: '#cdbb8e',
   pebbles: '#8f8a80',
   rock: '#77738a',
+  /** Westlake Park's lake bed, deep under its water (docs/westlake-plan.md Phase 3b) */
+  bed: '#173447',
 } as const;
 
 /** Westlake Park's outcrops (docs/westlake-plan.md Phase 1): a grey stone laid in layers, its tops lighter, lichen in its cracks */
@@ -142,6 +144,10 @@ export const ORNATE = {
   ironDark: '#cfc5ad',
   plank: '#9b7653',
   urn: '#cdb994',
+  /** The arcade's tiles (Phase 3b), and the fountain's bronze */
+  tile: '#c08048',
+  tileDark: '#7d4c2a',
+  bronze: '#8a6a3c',
 } as const;
 
 /** The street lamps' light: white in town, sodium orange in The Trenches, along the waterfront and in the Docks */

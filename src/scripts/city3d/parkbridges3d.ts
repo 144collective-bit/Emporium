@@ -12,7 +12,7 @@ import * as THREE from 'three';
 import { Batch, toon } from './kit';
 import { SLAB } from './world';
 import { site } from './tilework';
-import { BRIDGES, inLake, type Bridge, type Pt } from './westlake';
+import { BRIDGES, WATER_Y, inLake, type Bridge, type Pt } from './westlake';
 import { ORNATE, PLANT } from './palette';
 
 const STONE = toon(ORNATE.stone);
@@ -47,6 +47,16 @@ function beam(p: THREE.Vector3, q: THREE.Vector3, w: number, h: number): THREE.B
   return g.translate((p.x + q.x) / 2, (p.y + q.y) / 2, (p.z + q.z) / 2);
 }
 
+/** Where a bridge is over the water: from and to along it (the embankment walls either side) */
+function waterSpan(k: Bridge): [number, number] {
+  let [w0, w1] = [Infinity, -Infinity];
+  for (let s = 0; s <= k.len; s += 0.05) {
+    const p = at(k, s, 0, 0);
+    if (inLake(p.x, p.z)) [w0, w1] = [Math.min(w0, s), Math.max(w1, s)];
+  }
+  return [w0, w1];
+}
+
 /** The cast-iron bridge */
 function ironBridge(b: Batch, k: Bridge, low: boolean) {
   const step = k.len / N;
@@ -60,23 +70,28 @@ function ironBridge(b: Batch, k: Bridge, low: boolean) {
       b.add(beam(at(k, s0, w, deck(k, s0) + 0.04), at(k, s1, w, deck(k, s1) + 0.04), 0.1, 0.34), IRON);
     }
   }
-  // The arched rib under each side: springing from the abutments, rising under the deck to meet it in the middle
-  const rib = (s: number) => -0.25 + (k.rise - 0.1) * Math.sin((Math.PI * s) / k.len);
+  // The arched rib under each side: springing from the embankment walls down by the water (Phase 3b), rising under the
+  // deck to meet it in the middle
+  const [w0, w1] = waterSpan(k);
+  const [mid, span] = [(w0 + w1) / 2, (w1 - w0) / 2];
+  const rib = (s: number) => WATER_Y + 0.7 + (k.rise - 0.15 - WATER_Y - 0.7) * Math.sqrt(Math.max(0, 1 - ((s - mid) / span) ** 2));
+  const ribStep = (w1 - w0) / N;
   for (const side of [-1, 1]) {
     const w = side * (k.half - 0.05);
     for (let i = 0; i < N; i++) {
-      const [s0, s1] = [i * step, (i + 1) * step];
+      const [s0, s1] = [w0 + i * ribStep, w0 + (i + 1) * ribStep];
       b.add(beam(at(k, s0, w, rib(s0)), at(k, s1, w, rib(s1)), 0.09, 0.14), IRON_DARK);
     }
-    // Rings between the rib and the deck where there's room: the spandrels' ironwork
+    // Rings between the rib and the deck where there's room: the spandrels' ironwork, stacked where it's deep
     for (let i = 1; i < N; i++) {
-      const s = i * step;
+      const s = w0 + i * ribStep;
       const gap = deck(k, s) - 0.3 - rib(s);
       if (gap < 0.18) continue;
-      const r = Math.min(0.26, gap / 2);
-      const c = at(k, s, w, rib(s) + gap / 2);
-      const g = new THREE.TorusGeometry(r, 0.025, 4, 12).rotateY(Math.atan2(-k.u[1], k.u[0]));
-      b.add(g.translate(c.x, c.y, c.z), IRON);
+      const r = Math.min(0.24, gap / 2);
+      for (let y = rib(s) + r; y + r < deck(k, s) - 0.28; y += r * 2.1) {
+        const c = at(k, s, w, y);
+        b.add(new THREE.TorusGeometry(r, 0.025, 4, 12).rotateY(Math.atan2(-k.u[1], k.u[0])).translate(c.x, c.y, c.z), IRON);
+      }
     }
   }
   // The railings: posts, a top rail and a mid rail each side; scrolls between the posts near only
@@ -126,16 +141,13 @@ function ironBridge(b: Batch, k: Bridge, low: boolean) {
 /** The stone bridge */
 function stoneBridge(b: Batch, k: Bridge, low: boolean) {
   const step = k.len / N;
-  // The arch: over the water along the deck, a little wider, an ellipse under the deck
-  let [w0, w1] = [Infinity, -Infinity];
-  for (let s = 0; s <= k.len; s += 0.1) {
-    const p = at(k, s, 0, 0);
-    if (inLake(p.x, p.z)) [w0, w1] = [Math.min(w0, s), Math.max(w1, s)];
-  }
-  const [a0, a1] = [w0 - 0.5, w1 + 0.5];
+  // The arch: over the water along the deck, springing at the water from the embankment walls (Phase 3b), an
+  // ellipse under the deck
+  const [w0, w1] = waterSpan(k);
+  const [a0, a1] = [w0 - 0.05, w1 + 0.05];
   const [mid, span] = [(a0 + a1) / 2, (a1 - a0) / 2];
   const crown = (s: number) => deck(k, s) - 0.45;
-  const intrados = (s: number) => (s > a0 && s < a1 ? -0.1 + (crown(mid) + 0.1) * Math.sqrt(1 - ((s - mid) / span) ** 2) : -0.1);
+  const intrados = (s: number) => (s > a0 && s < a1 ? WATER_Y + (crown(mid) - WATER_Y) * Math.sqrt(1 - ((s - mid) / span) ** 2) : -0.1);
   const W = k.half + 0.25;
   // The body: one carved mass, its side the deck's curve over the arch's (or the lawn where there's no arch), the full
   // width, smooth (extruded across the bridge from its profile)
@@ -166,7 +178,7 @@ function stoneBridge(b: Batch, k: Bridge, low: boolean) {
     for (let j = 0; j <= n; j++) {
       const t = Math.PI - (j / n) * Math.PI;
       const s = mid + Math.cos(t) * span;
-      const y = -0.1 + (crown(mid) + 0.1) * Math.sin(t);
+      const y = WATER_Y + (crown(mid) - WATER_Y) * Math.sin(t);
       const p = at(k, s, w, y + 0.12);
       const key = j === Math.round(n / 2);
       const g = new THREE.BoxGeometry(key ? 0.34 : 0.26, key ? 0.42 : 0.3, 0.1).rotateZ(t - Math.PI / 2).rotateY(Math.atan2(-k.u[1], k.u[0]));

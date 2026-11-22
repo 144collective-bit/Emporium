@@ -22,7 +22,7 @@ import { SLAB } from './world';
 import { site } from './tilework';
 import { inPoly, offsetLine } from './streetplan';
 import { EDGES, EDGE_W, FOUNTAIN, GARDEN_BENCHES, GARDEN_WALLS, HEDGE, KERB, KERBS, MALL_BEDS, PARTERRES, PLANTER, PLANTERS, ROUNDS, URN, URNS, WALL, WALLS } from './gardens';
-import { GARDEN_SITE, TERRACES, TERRACE_STEPS, type Pt } from './westlake';
+import { BED_Y, GARDEN_SITE, TERRACES, TERRACE_STEPS, type Pt } from './westlake';
 import { PLANT, SOIL as PAL_SOIL, STONE as PAL_STONE } from './palette';
 
 /** The gravel paths lie this far over the lawn (westlake3d.ts), the paving of the main walks over that, the edges between */
@@ -310,9 +310,17 @@ export function registerGardens(low: boolean) {
       const b = new Batch();
       for (const [d0, d1, h] of TERRACE_STEPS) {
         const [cx, cz] = at((d0 + d1) / 2, 0);
-        // (down into the water for the steps over it)
-        const y0 = SLAB - 0.25;
+        // (from the lake's bed up, for the steps down the embankment over the water: Phase 3b)
+        const y0 = SLAB + BED_Y;
         b.add(place(unitBox, cx, (y0 + SLAB + h) / 2, cz, d0 - d1, SLAB + h - y0, tr.half * 2, 0, ry), STONE);
+        // Its walls either side, stepping down with it, where the flight goes down past the lawn
+        if (h < 0.15)
+          for (const sd of [-1, 1]) {
+            const [wx, wz] = at((d0 + d1) / 2, sd * (tr.half + 0.15));
+            const wt = Math.max(SLAB + h + 0.55, SLAB + 0.12);
+            b.add(place(unitBox, wx, (y0 + wt) / 2, wz, d0 - d1 + 0.01, wt - y0, 0.3, 0, ry), STONE);
+            b.add(place(unitBox, wx, wt + 0.03, wz, d0 - d1 + 0.04, 0.06, 0.38, 0, ry), CAP);
+          }
         // A paler nosing along each step's edge towards the water
         const [nx, nz] = at(d1 + 0.06, 0);
         b.add(place(unitBox, nx, SLAB + h + 0.006, nz, 0.12, 0.012, tr.half * 2 - 0.02, 0, ry), CAP);

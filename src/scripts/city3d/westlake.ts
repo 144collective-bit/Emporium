@@ -370,6 +370,69 @@ export const lakeAt = (a: number, out = 0): Pt => {
 };
 /** How far the shore is from the lake's middle along angle a (where the ray last leaves the water) */
 export const lakeR = (a: number) => Math.hypot(lakeAt(a)[0] - LAKE_C[0], lakeAt(a)[1] - LAKE_C[1]);
+/**
+ * The water's top under the lawn's slab (docs/westlake-plan.md Phase 3b, the owner's call: the lake lowered into a
+ * carved stone embankment all round, so the grand terrace steps down to it); its bed under it
+ */
+export const WATER_Y = -2.2;
+export const BED_Y = WATER_Y - 0.7;
+/**
+ * The lake cut into convex pieces (out to just under the rim's coping): the lawn's slab holed over it (world.ts, as
+ * the Circus's cuts are), and the ground's grass under its box. Worked out once at the build (baked): an ear-clipped
+ * triangulation, its triangles merged two by two wherever the merge stays convex
+ */
+export const LAKE_PARTS: Pt[][] = baked('lake-parts', BUILT ? undefined : () => convexParts(lakeLine(0.15, 240)).map((q) => q.map((p) => [Math.round(p[0] * 1000) / 1000, Math.round(p[1] * 1000) / 1000] as Pt)));
+/** The lake's box out to its coping, for the ground's grass to be cut away under */
+export const LAKE_HOLE: Rect = (() => {
+  const all = LAKE_PARTS.flat();
+  return [Math.min(...all.map((p) => p[0])) - 0.5, Math.min(...all.map((p) => p[1])) - 0.5, Math.max(...all.map((p) => p[0])) + 0.5, Math.max(...all.map((p) => p[1])) + 0.5];
+})();
+function convexParts(poly: Pt[]): Pt[][] {
+  const signed = poly.reduce((t, p, i) => t + p[0] * poly[(i + 1) % poly.length][1] - poly[(i + 1) % poly.length][0] * p[1], 0);
+  const P = signed > 0 ? poly.slice() : poly.slice().reverse();
+  const cr = (a: Pt, b: Pt, c: Pt) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  const inTri = (p: Pt, a: Pt, b: Pt, c: Pt) => cr(a, b, p) > 1e-9 && cr(b, c, p) > 1e-9 && cr(c, a, p) > 1e-9;
+  // Ear-clipping (counter-clockwise: an ear turns left and holds no other corner)
+  const idx = P.map((_, i) => i);
+  const tris: number[][] = [];
+  let guard = 0;
+  while (idx.length > 3 && guard++ < 100000) {
+    let cut = false;
+    for (let i = 0; i < idx.length; i++) {
+      const [a, b, c] = [idx[(i + idx.length - 1) % idx.length], idx[i], idx[(i + 1) % idx.length]];
+      if (cr(P[a], P[b], P[c]) <= 1e-12) continue;
+      if (idx.some((k) => k !== a && k !== b && k !== c && inTri(P[k], P[a], P[b], P[c]))) continue;
+      tris.push([a, b, c]);
+      idx.splice(i, 1);
+      cut = true;
+      break;
+    }
+    if (!cut) break;
+  }
+  if (idx.length === 3) tris.push(idx.slice());
+  // Merge neighbours sharing a diagonal wherever the merged piece stays convex
+  let polys = tris;
+  const convex = (q: number[]) => q.every((_, i) => cr(P[q[i]], P[q[(i + 1) % q.length]], P[q[(i + 2) % q.length]]) >= -1e-9);
+  for (let merged = true; merged; ) {
+    merged = false;
+    outer: for (let i = 0; i < polys.length; i++)
+      for (let j = i + 1; j < polys.length; j++) {
+        const [A, B] = [polys[i], polys[j]];
+        for (let a = 0; a < A.length; a++) {
+          const [u, v] = [A[a], A[(a + 1) % A.length]];
+          const b = B.findIndex((x, k) => x === v && B[(k + 1) % B.length] === u);
+          if (b < 0) continue;
+          // (A round from v back to u, then B round from u to v, the shared edge dropped)
+          const m = [...Array.from({ length: A.length }, (_, k) => A[(a + 1 + k) % A.length]), ...Array.from({ length: B.length - 2 }, (_, k) => B[(b + 2 + k) % B.length])];
+          if (!convex(m)) continue;
+          polys = polys.filter((_, k) => k !== i && k !== j).concat([m]);
+          merged = true;
+          break outer;
+        }
+      }
+  }
+  return polys.map((q) => q.map((k) => P[k]));
+}
 /** The stone rim round the water: how wide and how high above the lawn */
 export const RIM = { w: 0.35, h: 0.12 };
 
@@ -416,18 +479,18 @@ export interface Terrace {
 }
 /**
  * The terraces' levels from the lake loop down to the water: from d to d (out from the water's edge along u, negative
- * over the water), height over the lawn's slab: a step up off the loop, the platform, then three steps down to just over
- * the water (which lies at SLAB + 0.04)
+ * over the water), height over the lawn's slab: a step up off the loop, the platform, then a flight down the embankment
+ * to a landing just over the water (`WATER_Y` under the slab, Phase 3b)
  */
 export const TERRACE_STEPS: [number, number, number][] = [
-  [3.2, 2.6, 0.12],
-  [2.6, 0.6, 0.24],
-  [0.6, -0.4, 0.17],
-  [-0.4, -1.4, 0.11],
-  [-1.4, -2.4, 0.065],
+  [3.2, 2.6, 0.1],
+  [2.6, 0.8, 0.18],
+  // (then a flight down the embankment, a step every 0.28, to a landing just over the water, short of the boats: Phase 3b)
+  ...Array.from({ length: 12 }, (_, k): [number, number, number] => [0.8 - k * 0.28, 0.8 - (k + 1) * 0.28, 0.18 - ((k + 1) * (0.18 - (WATER_Y + 0.25))) / 13]),
+  [0.8 - 12 * 0.28, 0.8 - 12 * 0.28 - 1.0, WATER_Y + 0.25],
 ];
-/** Three terraces: on the south shore by the lake's south walk, the west shore and the east shore */
-export const TERRACES: Terrace[] = [Math.PI / 2 + 0.35, Math.PI + 0.45, 0.05].map((a) => {
+/** Two terraces: on the south shore by the lake's south walk and the east shore (the west one's site the grand terrace's, Phase 3b) */
+export const TERRACES: Terrace[] = [Math.PI / 2 + 0.35, 0.05].map((a) => {
   const at = lakeAt(a);
   const [p, q] = [lakeAt(a - 0.01), lakeAt(a + 0.01)];
   const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
@@ -458,6 +521,110 @@ export function terraceY(x: number, z: number) {
 }
 /** What a terrace covers (its footprint's corners), for keeping benches, lamps and trees off */
 export const nearTerrace = (p: Pt, m = 0) => terraceOf(p[0], p[1], -m) !== null;
+
+/* ---------- The grand terrace (docs/westlake-plan.md Phase 3b) ---------- */
+
+/** The lawn's slab's top (world.ts SLAB): the grand terrace's walls stand over it */
+const SLAB_TOP = 0.15;
+
+/**
+ * The grand terrace at the west lobe's tip, where the walk from the promenade behind City Hall meets the lake: a
+ * plaza sunk into the land and out over the water at the water's level (`plaza`, under the slab), open to the lake
+ * past its balustrade (`front`), its landward wall the arcade under the lawn (`back`, the arches `arches` either side of
+ * the middle, `recess` deep), and a flight of steps down from the lawn along that wall on either side (from `half`
+ * across, at the lawn, down to `foot`, at the plaza; `flight` deep from the wall); the winged figure's fountain in the
+ * plaza's middle (`fountain`). In its own frame: `d` out of the water (along `u`), `s` along the shore (`t`).
+ */
+function makeGrandFrame() {
+  const want: Pt = [-128.4, -66];
+  let k = 0;
+  LAKE_POLY.forEach((p, i) => {
+    if (Math.hypot(p[0] - want[0], p[1] - want[1]) < Math.hypot(LAKE_POLY[k][0] - want[0], LAKE_POLY[k][1] - want[1])) k = i;
+  });
+  const n = LAKE_POLY.length;
+  const [a, b] = [LAKE_POLY[(k + n - 4) % n], LAKE_POLY[(k + 4) % n]];
+  const l = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const t: Pt = [(b[0] - a[0]) / l, (b[1] - a[1]) / l];
+  const at = LAKE_POLY[k];
+  let u: Pt = [t[1], -t[0]];
+  if (lakeDist(at[0] + u[0], at[1] + u[1]) < 0) u = [-u[0], -u[1]];
+  return { at, u, t, front: -7, back: 1.5, half: 7, foot: 2.8, flight: 2.0, recess: 1.2, plaza: WATER_Y + 0.2, steps: 12, fountain: { d: -3.8, r: 2.2 } };
+}
+/** The grand terrace's frame, its cut in the lawn, its hole in the ground and its solids: worked out once at the build (baked) */
+const GRAND_BAKED = baked('grand', BUILT ? undefined : () => {
+  const frame = makeGrandFrame();
+  return { frame, cut: grandCut(frame), hole: grandHole(frame), solids: grandSolids(frame) };
+});
+export const GRAND = GRAND_BAKED.frame;
+/** A point in the grand terrace's frame */
+export const grandLocal = (x: number, z: number) => {
+  const [dx, dz] = [x - GRAND.at[0], z - GRAND.at[1]];
+  return { d: dx * GRAND.u[0] + dz * GRAND.u[1], s: dx * GRAND.t[0] + dz * GRAND.t[1] };
+};
+/** A point from the grand terrace's frame */
+export const grandAt = (d: number, s: number): Pt => [GRAND.at[0] + GRAND.u[0] * d + GRAND.t[0] * s, GRAND.at[1] + GRAND.u[1] * d + GRAND.t[1] * s];
+/** Is a point on the grand terrace's plaza or its steps (`m` in from their edges; negative, out past them) */
+export const onGrand = (x: number, z: number, m = 0) => {
+  const { d, s } = grandLocal(x, z);
+  return d > GRAND.front + m && d < GRAND.back - m && Math.abs(s) < GRAND.half - m;
+};
+/** The grand terrace's ground under a point over the lawn's slab (below it: the plaza and the steps down), or null off it */
+export function grandY(x: number, z: number): number | null {
+  const { d, s } = grandLocal(x, z);
+  if (d <= GRAND.front || d >= GRAND.back || Math.abs(s) >= GRAND.half) return null;
+  const a = Math.abs(s);
+  if (d < GRAND.back - GRAND.flight || a <= GRAND.foot) return GRAND.plaza;
+  // (a step every (half - foot) / steps, the top one the lawn's)
+  const k = Math.floor(((a - GRAND.foot) / (GRAND.half - GRAND.foot)) * GRAND.steps);
+  return GRAND.plaza + ((k + 1) * -GRAND.plaza) / (GRAND.steps + 1);
+}
+type GrandFrame = ReturnType<typeof makeGrandFrame>;
+function frameAt(G: GrandFrame, d: number, s: number): Pt {
+  return [G.at[0] + G.u[0] * d + G.t[0] * s, G.at[1] + G.u[1] * d + G.t[1] * s];
+}
+function grandCut(G: GrandFrame): Pt[] {
+  return [frameAt(G, G.front, -G.half), frameAt(G, G.front, G.half), frameAt(G, G.back, G.half), frameAt(G, G.back, -G.half)];
+}
+function grandHole(G: GrandFrame): Rect {
+  const c = [...grandCut(G), frameAt(G, G.back + G.recess + 0.3, -G.half), frameAt(G, G.back + G.recess + 0.3, G.half)];
+  return [Math.min(...c.map((p) => p[0])) - 0.3, Math.min(...c.map((p) => p[1])) - 0.3, Math.max(...c.map((p) => p[0])) + 0.3, Math.max(...c.map((p) => p[1])) + 0.3];
+}
+/** The lawn cut over the plaza (its outline, convex: world.ts holes the slab over it as it does the lake) */
+export const GRAND_CUT: Pt[] = GRAND_BAKED.cut;
+/** The ground's grass cut away under the plaza and the arcade's recess behind it */
+export const GRAND_HOLE: Rect = GRAND_BAKED.hole;
+/**
+ * What's solid about it: its walls and balustrades as cells along them (the arcade's wall and the steps' sides, the
+ * balustrades on the lawn round the cut but where the steps come up, along the steps over the plaza, along its front
+ * over the water), and the fountain's basin
+ */
+export const GRAND_SOLIDS: [number, number, number, number, number][] = GRAND_BAKED.solids;
+function grandSolids(GRAND: GrandFrame): [number, number, number, number, number][] {
+  const grandAt = (d: number, s: number) => frameAt(GRAND, d, s);
+  const out: [number, number, number, number, number][] = [];
+  const wall = (d0: number, s0: number, d1: number, s1: number, top: number) => {
+    const n = Math.max(1, Math.ceil(Math.hypot(d1 - d0, s1 - s0) / 0.6));
+    for (let i = 0; i < n; i++) {
+      const [p, q] = [grandAt(d0 + ((d1 - d0) * i) / n, s0 + ((s1 - s0) * i) / n), grandAt(d0 + ((d1 - d0) * (i + 1)) / n, s0 + ((s1 - s0) * (i + 1)) / n)];
+      out.push([Math.min(p[0], q[0]) - 0.15, Math.min(p[1], q[1]) - 0.15, Math.max(p[0], q[0]) + 0.15, Math.max(p[1], q[1]) + 0.15, top]);
+    }
+  };
+  const { front: f, back: bk, half: h, foot, flight } = GRAND;
+  const lawn = SLAB_TOP + 1.0;
+  // (the back wall, the arcade's, and the balustrade on the lawn over it and the steps)
+  wall(bk + 0.15, -h, bk + 0.15, h, lawn);
+  // (the sides: on the lawn by the plaza, the steps coming up between)
+  for (const sg of [-1, 1]) wall(f, sg * (h + 0.15), bk - flight, sg * (h + 0.15), lawn);
+  // (the steps' sides over the plaza)
+  for (const sg of [-1, 1]) wall(bk - flight - 0.15, sg * foot, bk - flight - 0.15, sg * h, lawn);
+  // (the front over the water)
+  // (walls by the plaza over the water top out at nought: two metres over anyone on it, nobody on the lawn there)
+  wall(f - 0.15, -h, f - 0.15, h, 0);
+  const c = grandAt(GRAND.fountain.d, 0);
+  const r = GRAND.fountain.r;
+  out.push([c[0] - r * 0.8, c[1] - r * 0.8, c[0] + r * 0.8, c[1] + r * 0.8, 0]);
+  return out;
+}
 
 /* ---------- Paths and gates ---------- */
 
@@ -642,7 +809,17 @@ function makeRoute() {
   const spans = [bridgeOver('iron', LAKE_ARM, 0, 0.85, 1.5, 1.6), bridgeOver('stone', LAKE_INLET, 1, 0.35, 1.4, 1.5)];
   const mm = (p: Pt): Pt => [Math.round(p[0] * 1000) / 1000, Math.round(p[1] * 1000) / 1000];
   const r = routeOver(spans);
-  return { bridges: spans.map(({ segs: _s, ...b }) => b), loop: r.loop.map(mm), arm: r.arm.map(mm), inlet: r.inlet.map(mm) };
+  // (and round behind the grand terrace, Phase 3b: no nearer the water there than a walk's width behind its arcade,
+  // easing back to the shore's line either side)
+  const clear = GRAND.back + 2.5;
+  const loop = r.loop.map((p): Pt => {
+    const { d, s } = grandLocal(p[0], p[1]);
+    const a = Math.abs(s);
+    const min = a <= GRAND.half ? clear : clear - (a - GRAND.half) * 1.5;
+    // (only the loop's stretch round this end of the lake: not the far shore's, out in front of the terrace)
+    return d >= min || d < GRAND.front - 2 ? p : grandAt(min, s);
+  });
+  return { bridges: spans.map(({ segs: _s, ...b }) => b), loop: loop.map(mm), arm: r.arm.map(mm), inlet: r.inlet.map(mm) };
 }
 const ROUTE = baked('park-route', BUILT ? undefined : makeRoute);
 export const BRIDGES: Bridge[] = ROUTE.bridges;
@@ -899,7 +1076,7 @@ export const ROCKS: Rock[] = baked('park-rocks', BUILT ? undefined : () => {
       const p: Pt = [x, z];
       // (by the water the stones come to its rim and to the loop's edge)
       const [wet, walk] = shore ? [rr * 0.5 + RIM.w + 0.1, rr * 0.7 + 0.2] : [rr + 0.5, rr + 0.5];
-      if (!inPark(p, 2) || onLawn(p, -1) || onPath(p, walk) || inLake(x, z, wet) || inCivic(p, 2) || inRect(GARDEN_SITE, p, 2) || nearTerrace(p, rr + 0.5)) continue;
+      if (!inPark(p, 2) || onLawn(p, -1) || onGrand(x, z, -2) || onPath(p, walk) || inLake(x, z, wet) || inCivic(p, 2) || inRect(GARDEN_SITE, p, 2) || nearTerrace(p, rr + 0.5)) continue;
       if (inRect(BOATHOUSE.rect, p, rr + 1.5) || inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], p, rr + 1.2)) continue;
       if (GATES.some((g) => Math.hypot(x - g.at[0], z - g.at[1]) < 5)) continue;
       // (a rock may lean on its neighbour, not sit inside it)
@@ -914,6 +1091,7 @@ export const nearRock = (p: Pt, m = 0) => ROCKS.some((k) => Math.hypot(p[0] - k.
 export const ROCK_SOLIDS: [number, number, number, number, number][] = ROCKS.map((k) => [k.x - k.r * 0.75, k.z - k.r * 0.75, k.x + k.r * 0.75, k.z + k.r * 0.75, k.h]);
 
 export const treeFree = (p: Pt) =>
+  !onGrand(p[0], p[1], -2.5) &&
   !nearRock(p, 1.2) &&
   !onLawn(p, -1.5) &&
   inPark(p, 1.6) && !inCivic(p, 2.2) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !nearTerrace(p, 1.5) && !inRect(BOATHOUSE.rect, p, 2.2) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
@@ -973,7 +1151,7 @@ export const PARK_LAMPS: [number, number, number][] = baked('park-lamps', BUILT 
   }
   // Not on another path where paths meet, nor two on top of each other, nor by the boathouse and its jetty
   // (and none in the formal garden, which has its own, nor on a terrace)
-  const clear = (l: [number, number, number]) => !onBridge(l[0], l[1], -0.8) && !nearRock([l[0], l[1]], 0.8) && !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
+  const clear = (l: [number, number, number]) => !onGrand(l[0], l[1], -0.8) && !onBridge(l[0], l[1], -0.8) && !nearRock([l[0], l[1]], 0.8) && !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
   return out.filter((l, i) => clear(l) && !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
 });
 
@@ -992,7 +1170,7 @@ export const BENCHES: { at: Pt; ry: number }[] = baked('park-benches', BUILT ? u
   for (let z = HALL.rear[1] - 6.5; z > GARDEN_SITE[3] + 3; z -= 5)
     for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (PROMENADE_HALF + 0.45), z], ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
   // (none where another path comes in, nor on a terrace)
-  return out.filter((b) => !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6) && !nearRock(b.at, 1)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || q.id === 'promenade' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
+  return out.filter((b) => !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6) && !nearRock(b.at, 1) && !onGrand(b.at[0], b.at[1], -0.8)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || q.id === 'promenade' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
 });
 
 /** Each gate's two stone piers (x0, z0, x1, z1, height): solid, the path between them */
@@ -1010,7 +1188,7 @@ export const BOATHOUSE_SOLID: [number, number, number, number, number] = [...BOA
  * What's solid in the park: the gates' piers, the boathouse (the lake keeps walkers out through `inLake()` but on the
  * jetty, cars through `LAKE_WALLS`)
  */
-export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID, ...ROCK_SOLIDS];
+export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID, ...ROCK_SOLIDS, ...GRAND_SOLIDS];
 
 /** The lake as walls for cars (drive-sim.ts): strips across it, a tile deep, each its width there */
 export const LAKE_WALLS: [number, number, number, number, number][] = (() => {

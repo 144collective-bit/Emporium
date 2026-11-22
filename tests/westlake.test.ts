@@ -35,6 +35,14 @@ import {
   lakeAt,
   onPath,
   onBridge,
+  LAKE_PARTS,
+  GRAND,
+  grandAt,
+  grandY,
+  onGrand,
+  LAKE_HOLE,
+  WATER_Y,
+  BED_Y,
   bridgeY,
   BRIDGES,
   onLawn,
@@ -259,4 +267,45 @@ test('the bridges (docs/westlake-plan.md Phase 3a): over the arm and the inlet, 
     for (const e of ends) assert.ok([k.a, k.b].some((b) => Math.hypot(b[0] - e[0], b[1] - e[1]) < 0.01), `${id} ends off ${k.id}`);
     for (const p of q.pts) assert.ok(!inLake(p[0], p[1], q.half + 0.3), `${id} in the water at ${p}`);
   }
+});
+
+test('the lake lowered into its embankment (docs/westlake-plan.md Phase 3b): its convex pieces cover it, the ground cut under it, the water down', () => {
+  const area = (q: Pt[]) => Math.abs(q.reduce((t, p, i) => t + p[0] * q[(i + 1) % q.length][1] - q[(i + 1) % q.length][0] * p[1], 0)) / 2;
+  const whole = area(lakeLine(0.15, 240));
+  const parts = LAKE_PARTS.reduce((t, q) => t + area(q), 0);
+  assert.ok(Math.abs(parts - whole) / whole < 0.002, `the pieces cover ${parts.toFixed(1)} of ${whole.toFixed(1)}`);
+  // Each piece convex (to a millimetre's rounding) and the water inside one of them
+  const cr = (a: Pt, b: Pt, c: Pt) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  for (const q of LAKE_PARTS) {
+    const sg = Math.sign(q.reduce((t, p, i) => t + p[0] * q[(i + 1) % q.length][1] - q[(i + 1) % q.length][0] * p[1], 0));
+    for (let i = 0; i < q.length; i++) assert.ok(cr(q[i], q[(i + 1) % q.length], q[(i + 2) % q.length]) * sg > -0.01, 'a piece not convex');
+  }
+  for (const p of lakeLine(-0.5, 120)) assert.ok(p[0] > LAKE_HOLE[0] && p[0] < LAKE_HOLE[2] && p[1] > LAKE_HOLE[1] && p[1] < LAKE_HOLE[3], 'the ground left over the water');
+  assert.ok(WATER_Y < -1.5 && BED_Y < WATER_Y, 'the water down in its embankment');
+});
+
+test('the grand terrace (docs/westlake-plan.md Phase 3b): its plaza at the water, steps evenly down from the lawn, over the water and into the land, clear', () => {
+  const { front, back, half, foot, flight, plaza } = GRAND;
+  assert.ok(plaza > WATER_Y && plaza - WATER_Y < 0.4, 'the plaza just over the water');
+  // On the plaza, the plaza's height; down the steps, each lower than the last, from the lawn to the plaza
+  assert.equal(grandY(...grandAt((front + back) / 2 - 2, 0)), plaza);
+  for (const sg of [-1, 1]) {
+    let last = Infinity;
+    for (let a = half - 0.05; a > foot + 0.05; a -= 0.1) {
+      const y = grandY(...grandAt(back - flight / 2, sg * a))!;
+      assert.ok(y <= last + 1e-9 && y < 0 && y > plaza, `a step at ${a}`);
+      assert.ok(last === Infinity || last - y < 0.2, 'a step too tall');
+      last = y;
+    }
+  }
+  assert.equal(grandY(...grandAt(back + 0.5, 0)), null);
+  // Out over the water and into the land
+  const pts = Array.from({ length: 21 }, (_, i) => grandAt(front + 0.5, -half + i)).concat(Array.from({ length: 21 }, (_, i) => grandAt(back - 0.5, -half + i)));
+  assert.ok(pts.some((p) => inLake(p[0], p[1])) && pts.some((p) => !inLake(p[0], p[1])), 'over the water and the land both');
+  // No path through it, no tree, lamp, bench or rock on it
+  for (const q of PATHS) for (const p of q.pts) assert.ok(!onGrand(p[0], p[1], -0.2), `${q.id} through the terrace at ${p}`);
+  for (const t of PARK_TREES) assert.ok(!onGrand(t.x, t.z, -1), 'a tree on the terrace');
+  for (const [x, z] of PARK_LAMPS) assert.ok(!onGrand(x, z, -0.5), 'a lamp on the terrace');
+  for (const b of BENCHES) assert.ok(!onGrand(b.at[0], b.at[1], -0.5), 'a bench on the terrace');
+  for (const k of ROCKS) assert.ok(!onGrand(k.x, k.z, -1), 'a rock on the terrace');
 });

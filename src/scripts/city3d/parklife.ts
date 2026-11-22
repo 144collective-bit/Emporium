@@ -28,7 +28,9 @@ import {
   BENCHES,
   BIG,
   JETTY,
+  WATER_Y,
   bridgeY,
+  onGrand,
   LOOP_OUT,
   MALL,
   PARK_TREES,
@@ -182,7 +184,7 @@ export const PICNICS: Picnic[] = (() => {
   const [z0, z1] = [Math.min(...BIG.map((p) => p[1])), Math.max(...BIG.map((p) => p[1]))];
   for (let tries = 0; tries < 4000 && out.length < 9; tries++) {
     const p: Pt = [x0 + r() * (x1 - x0), z0 + r() * (z1 - z0)];
-    if (!inPark(p, 4) || onPath(p, 3.2) || inCivic(p, 4) || inLake(p[0], p[1], LOOP_OUT + 3.5) || nearRock(p, 2.5)) continue;
+    if (!inPark(p, 4) || onPath(p, 3.2) || inCivic(p, 4) || inLake(p[0], p[1], LOOP_OUT + 3.5) || nearRock(p, 2.5) || onGrand(p[0], p[1], -3)) continue;
     if (p[0] > GARDEN_SITE[0] - 5 && p[0] < GARDEN_SITE[2] + 5 && p[1] > GARDEN_SITE[1] - 5 && p[1] < GARDEN_SITE[3] + 5) continue;
     if (PARK_TREES.some((t) => Math.hypot(t.x - p[0], t.z - p[1]) < 3.2)) continue;
     if (out.some((o) => Math.hypot(o.at[0] - p[0], o.at[1] - p[1]) < 16)) continue;
@@ -201,8 +203,8 @@ export const PICNICS: Picnic[] = (() => {
 
 /* ---------- Boats ---------- */
 
-/** The water's top (westlake3d.ts lays it at SLAB + 0.04), and a seat's height in a boat over it */
-export const BOAT_Y = SLAB + 0.04;
+/** The water's top (westlake3d.ts lays it at SLAB + WATER_Y, down in its embankment: docs/westlake-plan.md Phase 3b), and a seat's height in a boat over it */
+export const BOAT_Y = SLAB + WATER_Y;
 export const BOAT_SEAT = 0.16;
 /** A boat's length and beam (rowing boat, swan) */
 export const HULL = { row: { l: 2.2, w: 0.9 }, swan: { l: 2.0, w: 1.15 } };
