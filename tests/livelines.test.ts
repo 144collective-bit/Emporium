@@ -3,7 +3,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BOUNCER_LINES, DJS, LIVE_IDS, SUNSET, bouncerLine, highWater, liveLine, mmss, nextLift, pierSailing } from '../src/scripts/city3d/livelines';
-import { fixtureAt, matchOn } from '../src/scripts/city3d/stadium';
 import { ERUPT, SHOW, eruptionAt, showAt } from '../src/scripts/city3d/stripmarks';
 import { LIFT_TIMES, SHIP_TIMES, leavesAt } from '../src/scripts/city3d/liberty';
 import { BUS } from '../src/scripts/city3d/riverbus';
@@ -31,17 +30,6 @@ test('every place with a line has one at every hour: short, plain, never money',
   assert.equal(liveLine('home', at(9, 3)), 'Lights out · Garage locked');
   assert.equal(liveLine('emporium'), null, 'a place with a game has none');
   assert.equal(liveLine('nowhere'), null);
-});
-
-test('the stadium: the next fixture and its kick-off, tonight on the day, match on while it plays', () => {
-  const mon = liveLine('stadium', at(9, 12))!;
-  const f = fixtureAt(at(9, 12));
-  assert.match(mon, /^Next: Sector 7 FC v [A-Z][a-z]+ [A-Z][a-z]+ · Wed 7:30 pm$/);
-  assert.ok(mon.toLowerCase().includes(f.away.toLowerCase()));
-  assert.match(liveLine('stadium', at(11, 12))!, /^Tonight · Sector 7 FC v .* · 7:30 pm$/);
-  assert.match(liveLine('stadium', at(11, 20))!, /^Match on · Sector 7 FC v /);
-  assert.ok(matchOn(at(11, 20)));
-  assert.match(liveLine('stadium', at(11, 22))!, /· Sat 7:30 pm$/);
 });
 
 test("the club's set by the night and the hour, the bar's happy hour, the mall's and the court's hours", () => {

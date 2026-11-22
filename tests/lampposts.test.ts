@@ -18,7 +18,7 @@ import { ENDS_LAMPS } from '../src/scripts/city3d/endswood';
 import { AIRPORT_LAMPS } from '../src/scripts/city3d/airfield';
 import { DOCK_LAMPS } from '../src/scripts/city3d/docks';
 import { SF_LAMPS } from '../src/scripts/city3d/southfield';
-import { STADIUM_LAMPS } from '../src/scripts/city3d/stadium';
+import { STADIUM_LAMPS } from '../src/scripts/city3d/stadiumroad';
 import { KART_LAMPS } from '../src/scripts/city3d/kartfacility';
 import { DIAGONAL_LAMPS } from '../src/scripts/city3d/downtown';
 import { BLOCK_SPAWN } from '../src/scripts/city3d/projects';
@@ -67,11 +67,11 @@ test('each district gets its own post', () => {
   assert.equal(lampStyle(BLOCK_SPAWN.x, BLOCK_SPAWN.z), 'cobra');
 });
 
-test("the town's post everywhere else: downtown, the Docks and the yards (their masts are their own), the stadium, the kart park", () => {
+test("the town's post everywhere else: downtown, the Docks and the yards (their masts are their own), Stadium Road, the kart park", () => {
   only(DIAGONAL_LAMPS.map((l) => l.at), 'town', 'downtown');
   only(DOCK_LAMPS, 'town', 'the Docks');
   only(SF_LAMPS, 'town', 'Southfield Yards');
-  only(STADIUM_LAMPS, 'town', 'the stadium');
+  only(STADIUM_LAMPS, 'town', 'Stadium Road');
   only(KART_LAMPS, 'town', 'the kart park');
   // Open land
   assert.equal(lampStyle(-500, -500), 'town');

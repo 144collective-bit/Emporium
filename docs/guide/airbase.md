@@ -13,7 +13,7 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
   world numbers, but where the base meets the wall (worked out from `WALL_INNER`, `FLOODS` and `CAMERAS`, so it holds
   under `npm run test:wide`).
   - `FENCE`: the fence's closed line, clockwise from the south-west corner (-730, -330), wandering (no run square to
-    the axes but the wall gate's yard's three), 44 or more north of the stadium, west of the hills (x 285), with grass
+    the axes but the wall gate's yard's three), 44 or more north of where the stadium stood (removed 2026-11-22), west of the hills (x 285), with grass
     to the wall's foot all round but at the yard; `inAirbase()` (even-odd), `AIRBASE_RECT`, `southFenceZ()`,
     `fromFence()`. `FENCE_RUNS` is its straight runs, without the yard's face along the wall (the wall closes it),
     broken at the gates' piers. Since Phase 6 a concrete wall stands on the line (it keeps the fence's names):
@@ -74,7 +74,7 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
   taxi there gets the far places' 18 s (tests/travel.test.ts).
 - **The world map** (worldmap.ts) draws its wall (a heavier line than a fence's), the avenue, the car park, the centre
   and the guardhouses.
-- **The views**: `BENCH_VIEWS` has `north-stadium`, `airbase-overview`, `airbase-gate` and `airbase-runway` since
+- **The views**: `BENCH_VIEWS` has `north-road` (`north-stadium` till the stadium went, 2026-11-22), `airbase-overview`, `airbase-gate` and `airbase-runway` since
   Phase 0; each phase is measured against them (the plan's baseline and allowances).
 - **The airfield (Phase 2)**, in `airbase.ts`: `RUNWAY` (x -620 to -120 at z -540, half 6), `APPROACH`, `TAXIWAY`
   and its `CONNECTORS`, `NORTH_TAXI` and its `NORTH_LINKS`, `SHELTER` / `SHELTERS` (nine, in threes, their doors south

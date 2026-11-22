@@ -55,7 +55,6 @@ const spots: Record<SpotId, Spot> = {
   arms: { title: 'Trench Arms', sub: 'Guns & gear' },
   pier: { title: 'Pier 7', sub: 'The waterfront' },
   nightmarket: { title: 'Night Market', sub: 'Street food' },
-  stadium: { title: 'Sector 7 Stadium', sub: 'Events · coming soon' },
   tower: { title: 'Sector 7 Tower', sub: 'Sky deck' },
   palmcourt: { title: 'Palm Court', sub: 'Shopping plaza' },
   mall: { title: 'Starlight Mall', sub: 'Shopping mall' },
@@ -1164,13 +1163,6 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
     <button type="button" class="chip-link kart-walkin" data-market-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="stadium" data-marquee="Gates shut for now">
-    <p class="kicker"><span class="kicker-num">17</span> Westlake Park</p>
-    <h2 id="city-panel-title" class="city-panel-title">Sector 7 Stadium</h2>
-    <p class="city-panel-text">Two tiers round the pitch. Events coming soon.</p>
-    <button type="button" class="chip-link kart-walkin" data-stadium-walkin>Walk in</button>
-  </template>
-
   <template data-panel-tpl="tower" data-marquee="Highest view in town">
     <p class="kicker"><span class="kicker-num">18</span> Uptown</p>
     <h2 id="city-panel-title" class="city-panel-title">Sector 7 Tower</h2>
@@ -1411,7 +1403,7 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
   </template>
 
   <template data-panel-tpl="northgate" data-marquee="Seen through the wire">
-    <p class="kicker"><span class="kicker-num">51</span> North of the stadium</p>
+    <p class="kicker"><span class="kicker-num">51</span> North of Westlake</p>
     <h2 id="city-panel-title" class="city-panel-title">Northgate Air Base</h2>
     <p class="city-panel-text">A base and airfield across the north, its gates shut. The visitors' centre: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-northgate-walkin>Walk in</button>

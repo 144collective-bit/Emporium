@@ -10,7 +10,6 @@ import { WALL_INNER } from '../src/scripts/city3d/wall';
 import { BLOCK_SPAWN } from '../src/scripts/city3d/projects';
 import { KART_SPAWN } from '../src/scripts/city3d/kartpark';
 import { AIR_SPAWN } from '../src/scripts/city3d/airfield';
-import { STADIUM_SPAWN } from '../src/scripts/city3d/stadium';
 import { WALK_SPAWN } from '../src/scripts/city3d/solids';
 import { MOD_LEVELS } from '../src/scripts/city3d/catalog';
 
@@ -26,7 +25,7 @@ test('the world is the one you can walk and drive, edge to edge', () => {
 });
 
 test('every district is inside it', () => {
-  for (const [name, p] of Object.entries({ WALK_SPAWN, BLOCK_SPAWN, KART_SPAWN, AIR_SPAWN, STADIUM_SPAWN }))
+  for (const [name, p] of Object.entries({ WALK_SPAWN, BLOCK_SPAWN, KART_SPAWN, AIR_SPAWN }))
     assert.ok(inWorld(p.x, 0.15, p.z), `${name} at ${p.x}, ${p.z}`);
 });
 

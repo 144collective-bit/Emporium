@@ -11,7 +11,7 @@ export type AreaId = 'downtown' | 'trenches' | 'westlake' | 'uptown' | 'crest' |
 export const AREAS: readonly { id: AreaId; label: string; places: readonly SpotId[] }[] = [
   { id: 'downtown', label: 'Downtown', places: ['emporium', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'fightclub', 'liberty', 'harbour'] },
   { id: 'trenches', label: 'The Trenches', places: ['trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket'] },
-  { id: 'westlake', label: 'Westlake', places: ['stadium', 'cityhall', 'police', 'courthouse'] },
+  { id: 'westlake', label: 'Westlake', places: ['cityhall', 'police', 'courthouse'] },
   { id: 'uptown', label: 'Uptown', places: ['tower', 'palmcourt', 'mall'] },
   { id: 'crest', label: 'Crestmont', places: ['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse', 'vellano', 'solenne'] },
   { id: 'docks', label: 'The Docks', places: ['harbourmaster'] },

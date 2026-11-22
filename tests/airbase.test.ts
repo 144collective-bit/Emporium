@@ -6,7 +6,6 @@ import { AIRBASE_RECT, AIRBASE_SOLIDS, AVENUE, FENCE, FENCE_H, FENCE_RUNS, FENCE
 import { CAMERAS, FLOODS, WALL_INNER } from '../src/scripts/city3d/wall';
 import { RURAL, RURAL_RUNS } from '../src/scripts/city3d/rural';
 import { PLAN, distToStreet, type Pt } from '../src/scripts/city3d/streetplan';
-import { STADIUM_RECTS } from '../src/scripts/city3d/stadium';
 import { FENCES } from '../src/scripts/city3d/ruralfence';
 
 const inRect = (r: readonly number[], x: number, z: number, m = 0) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
@@ -26,10 +25,11 @@ test('the fence: a closed line that wanders, across the whole north, inside the 
   }
   // (the wall gate's yard is square to the wall: its two sides and its face; everything else slants)
   assert.ok(square <= 3, `${square} runs square to the axes`);
-  // From the west wall to Crestmont's hills, north of the stadium
+  // From the west wall to Crestmont's hills, north of where the stadium stood (its block's north edge, z -262: removed
+  // 2026-11-22, the fence stays where it was)
   assert.ok(AIRBASE_RECT[0] < -720 && AIRBASE_RECT[2] < 285 && AIRBASE_RECT[2] > 260);
-  const stadiumN = Math.min(...STADIUM_RECTS.map((r) => r[1]));
-  for (let x = FENCE[0][0]; x <= 262; x += 4) assert.ok(southFenceZ(x) < stadiumN - 40, `the fence at x ${x} is too near the stadium`);
+  const stadiumN = -262;
+  for (let x = FENCE[0][0]; x <= 262; x += 4) assert.ok(southFenceZ(x) < stadiumN - 40, `the fence at x ${x} is too near where the stadium stood`);
   // About the size of the whole built city: a sixth of the land inside the wall
   let n = 0;
   for (let x = AIRBASE_RECT[0]; x < AIRBASE_RECT[2]; x += 2) for (let z = AIRBASE_RECT[1]; z < AIRBASE_RECT[3]; z += 2) if (inAirbase(x, z)) n += 4;
@@ -114,10 +114,10 @@ test('the wall and its shut gates are solid, over a truck (Phase 6); a pier each
   for (const s of PLAN.streets.filter((q) => q.kind !== 'rural')) for (const p of s.pts) assert.ok(fenceDist(p) > s.half + 1, `${s.id} on the fence at ${p}`);
 });
 
-test("the visitors' car park and centre outside the main gate, off the road, clear of the stadium's car park", () => {
+test("the visitors' car park and centre outside the main gate, off the road, where it stood", () => {
   for (const r of [VISITORS, VISITOR_CENTRE, VISITORS_DRIVE]) for (const [x, z] of [[r[0], r[1]], [r[2], r[3]], [r[0], r[3]], [r[2], r[1]]] as Pt[]) assert.ok(!inAirbase(x, z) && fenceDist([x, z]) > 5);
   assert.ok(inRect(VISITORS, VISITOR_CENTRE[0], VISITOR_CENTRE[1], 0.01) && inRect(VISITORS, VISITOR_CENTRE[2], VISITOR_CENTRE[3], 0.01));
-  // (the stadium's car park's loop reaches z -251)
+  // (where the stadium's car park's loop reached, z -251, before the stadium was removed)
   assert.ok(VISITORS[3] < -255);
   for (const s of PLAN.streets) for (let x = VISITORS[0]; x <= VISITORS[2]; x += 2) for (let z = VISITORS[1]; z <= VISITORS[3]; z += 2) assert.ok(distToStreet(s, [x, z]) > s.half, `${s.id} through the car park at ${x}, ${z}`);
   // Its drive meets the north avenue's road, south of its loop

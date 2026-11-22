@@ -1009,7 +1009,10 @@ export function pathBetween(a: Pt, b: Pt): Route | null {
       const uOut = tangent(WAYS[nextRun.w], nextRun.a, nextRun.d);
       const at = way.stations.find((s) => Math.abs(s.along - r.b) < 0.5)?.j;
       const cross = uOut[0] * rightOf(...uIn)[0] + uOut[1] * rightOf(...uIn)[1];
-      turn = at?.merge ? 'merge' : cross > 0 ? 'right' : 'left';
+      // (straight on onto the next street, a join (rural.ts): eased across, not cornered; a taxi first drove one when the
+      // stadium went, 2026-11-22, and Northgate's nearest kerb became the north road's)
+      const ahead = uOut[0] * uIn[0] + uOut[1] * uIn[1];
+      turn = at?.merge ? 'merge' : ahead > 0.98 ? 'straight' : cross > 0 ? 'right' : 'left';
     }
     return { pts: between(way, r.a, r.b, r.d), off: 0, turn };
   });

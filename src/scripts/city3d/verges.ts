@@ -14,7 +14,7 @@
  * gravel bank in the district's cover; walking and driving follow it,
  * `vergeY()`), and along its foot stands the district's own edge (`EDGE_OF`):
  * a clipped hedge round the town and Crestmont's estates, a low stone wall
- * round Uptown and the shops; the rest (the park, the stadium, The Trenches,
+ * round Uptown and the shops; the rest (the park, Stadium Road, The Trenches,
  * the Docks, Sunridge with its own wall) just the bank. A hedge or a wall is
  * broken every `GAP_EVERY` (a way through, `GAP`) and solid between
  * (`VERGE_SOLIDS`, in `SOLIDS`), low enough to vault (vault.ts).
