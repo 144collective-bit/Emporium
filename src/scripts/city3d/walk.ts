@@ -59,8 +59,9 @@ import { loadCar, type Voice } from './mycar';
 import { DEFAULT_CAR } from './mycar';
 import { BIKES, DEFAULT_BIKE, loadBike } from './mybike';
 import type { Garage } from './garage';
-import { createDrive } from './drive';
-import { createFly } from './fly';
+import type { createDrive } from './drive';
+import type { createFly } from './fly';
+import { lazyFront } from './lazyfront';
 import type { HangarUI } from './hangar-ui';
 import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
@@ -1098,8 +1099,11 @@ export function createWalk(d: WalkDeps) {
       canvas.focus({ preventScroll: true });
     },
   }), 'the garage');
+  // The car and the aircraft are chunks of their own (docs/header-plan.md, the boot's trim), fetched once the first frame
+  // is drawn, as target practice is; until they're in, a front answers "not driving, nothing near" (lazyfront.ts)
+  const afterFirstFrame = (go: () => void) => requestAnimationFrame(() => setTimeout(go, 0));
   // Your car: get in where it is, drive, get out anywhere
-  const drive = createDrive({
+  const driveDeps: Parameters<typeof createDrive>[0] = {
     scene: d.scene,
     camera,
     root,
@@ -1145,11 +1149,31 @@ export function createWalk(d: WalkDeps) {
     tyres: d.tyres,
     bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
     reduced: d.reduced,
-  });
-
+  };
+  const drive = lazyFront<ReturnType<typeof createDrive>>(
+    () => import('./drive').then((m) => m.createDrive(driveDeps)),
+    'your car',
+    {
+      active: false,
+      state: null,
+      carState: null,
+      height: 0,
+      inCar: false,
+      away: false,
+      kartAway: false,
+      bikeAway: false,
+      vehicle: null,
+      frozen: false,
+      get model() {
+        return driveDeps.myCar().model;
+      },
+      nearCar: () => Infinity,
+    },
+    afterFirstFrame
+  );
 
   // Your aircraft: get in at the hangar (or wherever you landed it), fly, land and get out
-  const fly = createFly({
+  const flyDeps: Parameters<typeof createFly>[0] = {
     scene: d.scene,
     camera,
     root,
@@ -1165,13 +1189,28 @@ export function createWalk(d: WalkDeps) {
     sfx: d.sfx,
     aero: d.aero,
     bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
-  });
+  };
+  const fly = lazyFront<ReturnType<typeof createFly>>(
+    () => import('./fly').then((m) => m.createFly(flyDeps)),
+    'your aircraft',
+    {
+      active: false,
+      // (on the ground at the hangar, where an aircraft not flown yet stands: the world map's marker, never drawn while home)
+      state: { x: HANGAR_SPOT.x, y: 0, z: HANGAR_SPOT.z, yaw: HANGAR_SPOT.yaw, ground: true, gear: true } as unknown as ReturnType<typeof createFly>['state'],
+      away: false,
+      canLeave: false,
+      name: 'aircraft',
+      near: () => Infinity,
+    },
+    afterFirstFrame
+  );
   // The hangar menu: like the garage's, it frees the mouse and pauses walking while the camera looks into the hangar
   let fpBeforeHangar = false;
   const hangarUI = lazyMenu<HangarUI>(['show'], async () => (await import('./hangar-ui')).createHangarUI(root, {
-    preview: (p) => fly.preview(p),
-    keep: (p) => fly.recall(p),
-    cancel: (saved) => fly.cancel(saved),
+    // (through the aircraft's own chunk: a change made before it was in isn't lost)
+    preview: (p) => void fly.loaded().then((f) => f.preview(p)),
+    keep: (p) => void fly.loaded().then((f) => f.recall(p)),
+    cancel: (saved) => void fly.loaded().then((f) => f.cancel(saved)),
     away: () => fly.away,
     onOpen() {
       still();
