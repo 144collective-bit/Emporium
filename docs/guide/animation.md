@@ -74,7 +74,7 @@ keep it up to date when what it describes changes.
   and `momentPose()` (in `momentposes.ts`, walk mode's on-foot chunk),
   keyed on the `Pose` rig as the vault's (the hands
   on the thing by `reachArm()`, within 1.5 cm in the test). Doors (every
-  landmark's, Trench Avenue's, the stadium's gate, the garage, hangar and
+  landmark's, Trench Avenue's, the garage, hangar and
   kart hut, the lifts and stations): a push, the panel opening as the
   hand lands; counters (the gun stores', the trainer's): a lean with both
   hands on the top while the menu is open; benches: "Sit" at a free bench

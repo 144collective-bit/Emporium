@@ -14,7 +14,7 @@ import { EXT, NS_ROADS } from '../src/scripts/city3d/layout';
 import { TRENCH_RECT } from '../src/scripts/city3d/trenches';
 import { UPTOWN_RECT } from '../src/scripts/city3d/uptown';
 import { WESTLAKE_RECT } from '../src/scripts/city3d/westlake';
-import { STADIUM_RECTS } from '../src/scripts/city3d/stadium';
+import { ROAD_RECTS as STADIUM_ROAD_RECTS } from '../src/scripts/city3d/stadiumroad';
 import { WATERFRONT_RECT } from '../src/scripts/city3d/waterfront';
 
 const trees = outskirtsTrees(150, 0.6, [], EXT);
@@ -55,7 +55,7 @@ test("the trees keep off every street and its verge, the highway's, and the metr
 });
 
 test('the districts that used to clear their own land by hand are still clear', () => {
-  for (const r of [TRENCH_RECT, UPTOWN_RECT, WESTLAKE_RECT, WATERFRONT_RECT, ...STADIUM_RECTS]) {
+  for (const r of [TRENCH_RECT, UPTOWN_RECT, WESTLAKE_RECT, WATERFRONT_RECT, ...STADIUM_ROAD_RECTS]) {
     for (let x = r[0]; x <= r[2]; x += 3) for (let z = r[1]; z <= r[3]; z += 3) assert.ok(!treeSpot(x, z), `a tree may stand at ${x}, ${z}`);
     assert.ok(!trees.some((t) => t.x > r[0] - 2 && t.x < r[2] + 2 && t.z > r[1] - 2 && t.z < r[3] + 2));
   }

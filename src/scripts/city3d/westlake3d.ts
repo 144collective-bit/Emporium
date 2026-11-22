@@ -125,7 +125,7 @@ function nameSign() {
 export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   // Step 3: the boathouse, the jetty, the courts and the picnics as sites; on the main thread, what moves
   registerParkSites();
-  // The stadium's grounds north of the highway, loaded with the park (stadiumgrounds3d.ts)
+  // Stadium Road and the walk north of the highway, loaded with the park (stadiumgrounds3d.ts)
   registerGrounds();
   if (scene && tick) registerParkLife(scene, tick, low);
   // The walks' kerbs and edges, the park's wall, the formal garden, the planters and the terraces (stage 3)

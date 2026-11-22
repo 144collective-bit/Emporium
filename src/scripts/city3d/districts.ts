@@ -21,7 +21,7 @@ import { rectDistance } from './tileplan';
 import type { Rect } from './tiles';
 import type { Tick } from './world';
 import { WESTLAKE_RECT } from './westlake';
-import { STADIUM_AREA } from './stadium';
+import { ROAD_AREA as STADIUM_ROAD_AREA } from './stadiumroad';
 import { KART_AREA } from './kartfacility';
 import { UPTOWN_RECT } from './uptown';
 import { SITE } from './airfield';
@@ -54,8 +54,8 @@ export interface LazyDistrict {
 
 const union = (a: Rect, b: Rect): Rect => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
 export const LAZY_DISTRICTS: LazyDistrict[] = [
-  // (with the stadium's grounds north of the highway beside it: its road, car park and footbridge, stadiumgrounds3d.ts)
-  { id: 'westlake', rect: union(WESTLAKE_RECT, STADIUM_AREA), load: () => import('./westlake3d') },
+  // (with Stadium Road and the walk north of the highway beside it, stadiumgrounds3d.ts)
+  { id: 'westlake', rect: union(WESTLAKE_RECT, STADIUM_ROAD_AREA), load: () => import('./westlake3d') },
   // The kart park's grounds north of the highway: the circuit, trackside, the paddock, Kart Road and the car park (kartgrounds3d.ts)
   { id: 'karts', rect: KART_AREA, load: () => import('./kartgrounds3d') },
   // The airport's grounds on the world's south edge (airportgrounds3d.ts): the runway, taxiways and aprons, the

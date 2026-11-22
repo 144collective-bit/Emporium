@@ -25,7 +25,7 @@ import { WESTLAKE_BLOCKS } from './westlake';
 import { UPTOWN_BLOCKS, UPTOWN_CROSSINGS, UPTOWN_LANES, UPTOWN_STREETS } from './uptown';
 import { HALF as SWING_HALF, ROAD as SWING_ROAD, SWING_STREET, SX as SWING_X, swingPts } from './swingbridge';
 import { NORTH_BLOCK } from './uptownnorth';
-import { BLOCK as STADIUM_BLOCK, STADIUM_CROSSINGS, STADIUM_RECTS, STADIUM_STREETS } from './stadium';
+import { ROAD_RECTS as STADIUM_ROAD_RECTS, STADIUM_CROSSINGS, STADIUM_STREETS } from './stadiumroad';
 import { KART_CROSSINGS, KART_PARK, KART_STREETS } from './kartpark';
 import { COURT, MALL_BLOCK, MALL_CROSSINGS, MALL_STREETS, PARK_BLOCK } from './mall';
 import { CREST_BLOCKS, CREST_CROSSINGS, CREST_STREETS, crestPoly } from './crestmont';
@@ -437,7 +437,7 @@ export function cityPlan(): StreetPlan {
   for (const c of AIRPORT_CROSSINGS) crossings.push({ ...c, lights: false });
   for (const a of GA_STREETS) streets.push({ id: a.id, kind: 'street', pts: a.pts, half: GA_ROAD.half, lanes: 1, ...(a.oneway ? { oneway: a.oneway } : {}) });
   for (const c of GA_CROSSINGS) crossings.push({ ...c, lights: false });
-  // Stadium Road off the north road past the highway, and the one-way loop round the stadium's car park (stadium.ts)
+  // Stadium Road off the north road past the highway (stadiumroad.ts: the stadium itself removed, 2026-11-22)
   for (const t of STADIUM_STREETS) streets.push({ id: t.id, kind: 'street', pts: t.pts, half: t.half, lanes: 1, ...(t.oneway ? { oneway: t.oneway } : {}) });
   for (const c of STADIUM_CROSSINGS) crossings.push({ id: c.id, at: c.at, streets: [...c.streets], lights: false });
   // Kart Road off the east ring avenue past the highway, and the one-way loop round the kart park's car park (kartpark.ts)
@@ -562,8 +562,6 @@ export function cityPlan(): StreetPlan {
     ...UPTOWN_BLOCKS.map((b): Block => ({ id: b.id, poly: b.poly, use: b.use === 'plaza' ? 'plaza' : b.use === 'park' || b.use === 'island' ? 'park' : 'plain', ref: 'uptown', walk: WALK_W })),
     // ...and Uptown North's on Palm Court's old land between the park and the north avenue (uptownnorth.ts)
     { id: NORTH_BLOCK.id, poly: NORTH_BLOCK.poly, use: 'plain', ref: 'uptown', walk: WALK_W },
-    // The stadium's block north of the highway (stadium.ts, the north side's stage 1)
-    { id: 'stadium', poly: square(STADIUM_BLOCK[0], STADIUM_BLOCK[1], STADIUM_BLOCK[2] - STADIUM_BLOCK[0], STADIUM_BLOCK[3] - STADIUM_BLOCK[1]), use: 'plain', ref: 'stadium', walk: WALK_W },
     // The mall's block and its car parks inside the loop, north of downtown past the Parkway, and Palm Court across the east ring avenue (mall.ts)
     ...(
       [
@@ -597,7 +595,7 @@ export function cityPlan(): StreetPlan {
   // (Lot 9 by its park and its lane in: its camp, south of the park since docs/south-plan.md Phase 1b, stands back from the
   // avenue behind its strip, and the country road runs on past its fence as it did)
   // (the el down the Docks' line and over the river onto the north bank avenue's median counts too: docks.ts EL_X)
-  ruralSplit(streets, crossings, [...blocks.map((b) => box(b.poly)), ...AIRPORT_AREAS, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1], [LOT9_RECT[0], LOT9_RECT[1], LOT9_RECT[2], LOT9_PARK[3] + 2], ...STADIUM_RECTS, [EL_X - 12, RING_HI - 8, EL_X + 12, RIVER[1] + 8]]);
+  ruralSplit(streets, crossings, [...blocks.map((b) => box(b.poly)), ...AIRPORT_AREAS, [KART_PARK.x0, KART_PARK.z0, KART_PARK.x1, KART_PARK.z1], [LOT9_RECT[0], LOT9_RECT[1], LOT9_RECT[2], LOT9_PARK[3] + 2], ...STADIUM_ROAD_RECTS, [EL_X - 12, RING_HI - 8, EL_X + 12, RIVER[1] + 8]]);
   return withSlabs({ streets, crossings, blocks, plazas });
 }
 
