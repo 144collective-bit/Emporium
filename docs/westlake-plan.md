@@ -134,9 +134,12 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    City Hall meets the lake; a winged figure on its fountain):
    - **3a, the bridges** (built, waiting on the owner's sign-off):
      westlake.ts `BRIDGES` (`iron` over the arm near its mouth, `stone`
-     over the inlet), each a straight deck between landings on the loop's
-     line (`landings()`, `bridgeOver()`), rising in a low arch
-     (`bridgeY()`, `onBridge()`); the loop re-routed over them and the
+     over the inlet), each a straight deck square across the water, its
+     ends on the land 3.2 past the water's edge either side, the loop
+     joined to them by a short link (`bridgeOver()`), rising in an arch
+     to 1.6 (iron) and 1.5 (stone) at the middle (`bridgeY()`,
+     `onBridge()`; the owner's tweaks after the first look: higher arches,
+     the stone bridge square to the inlet, 11.4 long; the iron one 15); the loop re-routed over them and the
      stretches it went round the arm and the inlet by kept as walks of
      their own (`arm-walk`, `inlet-walk`), all baked (key `park-route`).
      Walk mode crosses them (walk.ts lets you over the water on a deck,

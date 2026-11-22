@@ -602,9 +602,9 @@ const LOOP_LINE = lakeLine(LOOP_OUT, 360);
 /* ---------- The bridges (docs/westlake-plan.md Phase 3a) ---------- */
 
 /**
- * A bridge: its deck straight across the water from one landing on the lake loop to the other (`a` to `b`, `u` the
- * way, `len` long), `half` wide either side, rising in a low arch to `rise` over the lawn at its middle: the
- * cast-iron one over the arm, the stone arch over the inlet
+ * A bridge: its deck straight across the water, square to it, from one end on the land to the other (`a` to `b`, `u`
+ * the way, `len` long; the loop joined to each end), `half` wide either side, rising in an arch to `rise` over the
+ * lawn at its middle: the cast-iron one over the arm, the stone arch over the inlet
  */
 export interface Bridge {
   id: 'iron' | 'stone';
@@ -615,37 +615,31 @@ export interface Bridge {
   half: number;
   rise: number;
 }
-/** Where a line through p along `dir` crosses the loop's line nearest either side (the point and the segment, each way) */
-function landings(p: Pt, dir: Pt): { at: Pt; seg: number }[] {
-  let [fwd, back] = [{ t: Infinity, at: p, seg: -1 }, { t: -Infinity, at: p, seg: -1 }];
-  const n = LOOP_LINE.length;
-  for (let i = 0; i < n; i++) {
-    const [q, r] = [LOOP_LINE[i], LOOP_LINE[(i + 1) % n]];
-    const [ex, ez] = [r[0] - q[0], r[1] - q[1]];
-    const den = dir[0] * ez - dir[1] * ex;
-    if (Math.abs(den) < 1e-12) continue;
-    const t = ((q[0] - p[0]) * ez - (q[1] - p[1]) * ex) / den;
-    const w = ((q[0] - p[0]) * dir[1] - (q[1] - p[1]) * dir[0]) / den;
-    if (w < 0 || w >= 1) continue;
-    const at: Pt = [p[0] + dir[0] * t, p[1] + dir[1] * t];
-    if (t > 0 && t < fwd.t) fwd = { t, at, seg: i };
-    if (t < 0 && t > back.t) back = { t, at, seg: i };
-  }
-  return [back, fwd];
-}
-/** A bridge across an arm of the lake at `f` along its stretch `i` (from its point i to i + 1): square across it, landing on the loop either side */
+/**
+ * A bridge across an arm of the lake at `f` along its stretch `i` (from its point i to i + 1): square across it, its
+ * ends on the land a few metres past the water either side (the loop joins them by a short link: the nearest points of
+ * its line, `segs`)
+ */
 function bridgeOver(id: Bridge['id'], arm: LakeArm, i: number, f: number, half: number, rise: number): Bridge & { segs: [number, number] } {
   const [p0, p1] = [arm.line[i], arm.line[i + 1]];
   const p: Pt = [p0[0] + (p1[0] - p0[0]) * f, p0[1] + (p1[1] - p0[1]) * f];
   const l = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
   const across: Pt = [-(p1[1] - p0[1]) / l, (p1[0] - p0[0]) / l];
-  const [A, B] = landings(p, across);
-  const len = Math.hypot(B.at[0] - A.at[0], B.at[1] - A.at[1]);
-  return { id, a: A.at, b: B.at, u: [(B.at[0] - A.at[0]) / len, (B.at[1] - A.at[1]) / len], len, half, rise, segs: [A.seg, B.seg] };
+  // (out each way to the water's edge, then on past it onto the land)
+  const end = (sg: number): Pt => {
+    let t = 0;
+    while (inLake(p[0] + across[0] * sg * t, p[1] + across[1] * sg * t) && t < 30) t += 0.05;
+    t += 3.2;
+    return [p[0] + across[0] * sg * t, p[1] + across[1] * sg * t];
+  };
+  const [A, B] = [end(-1), end(1)];
+  const near = (q: Pt) => LOOP_LINE.reduce((best, r, k) => (Math.hypot(r[0] - q[0], r[1] - q[1]) < Math.hypot(LOOP_LINE[best][0] - q[0], LOOP_LINE[best][1] - q[1]) ? k : best), 0);
+  const len = Math.hypot(B[0] - A[0], B[1] - A[1]);
+  return { id, a: A, b: B, u: [(B[0] - A[0]) / len, (B[1] - A[1]) / len], len, half, rise, segs: [near(A), near(B)] };
 }
 /** The bridges, the loop over them and the walks round the arm and the inlet: worked out once at the build (baked) */
 function makeRoute() {
-  const spans = [bridgeOver('iron', LAKE_ARM, 0, 0.85, 1.5, 1.1), bridgeOver('stone', LAKE_INLET, 1, 0.35, 1.4, 0.9)];
+  const spans = [bridgeOver('iron', LAKE_ARM, 0, 0.85, 1.5, 1.6), bridgeOver('stone', LAKE_INLET, 1, 0.35, 1.4, 1.5)];
   const mm = (p: Pt): Pt => [Math.round(p[0] * 1000) / 1000, Math.round(p[1] * 1000) / 1000];
   const r = routeOver(spans);
   return { bridges: spans.map(({ segs: _s, ...b }) => b), loop: r.loop.map(mm), arm: r.arm.map(mm), inlet: r.inlet.map(mm) };
