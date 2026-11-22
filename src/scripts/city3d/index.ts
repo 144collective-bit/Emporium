@@ -146,7 +146,7 @@ import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW, figureDetail, headsReady, loadHeads } from './character';
 import type { Outfit } from './wardrobe';
-import { repaint, type GameDeps } from './ui';
+import type { GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
 import { antialias } from './targets';
@@ -1425,8 +1425,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     },
     sfx: (kind, gain) => sound.sfx(kind, gain),
     guideGo: (g) => ('open' in g.go ? open(g.go.open) : startWalking(g.go.walk)),
-    openSpot: (id) => open(id),
-    mayCarry: (id) => walk.combat.canTake(id),
   });
   // A chunk that fails to fetch says so here (lazy.ts)
   setLazyToast((text, ms) => tycoon?.toast(text, ms));
@@ -1443,15 +1441,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       if (walking) canvas.focus({ preventScroll: true });
       dirty = true;
     };
-    // The Bag tab's grid: what he carries, read-only (inventory-ui.ts's chunk, fetched the first time the tab shows)
+    // The Bag tab: what he carries, a row each, Use on a snack or a boost (inventory-ui.ts's chunk, fetched the first time
+    // the tab shows)
     const bagGrid = root.querySelector<HTMLElement>('[data-hub-bag-grid]');
     const bagMod = lazy(() => import('./inventory-ui'), 'your bag');
-    const paintBag = () => {
-      if (!bagGrid) return;
+    let bag: { paint(): void } | null = null;
+    const paintBag = () =>
+      bagGrid &&
       void bagMod().then((m) => {
-        if (hub.tab === 'bag') repaint(bagGrid, m.bagHtml(game.save(), { may: (id) => walk.combat.canTake(id) }));
+        bag ??= m.hubBag(bagGrid, { save: () => game.save(), may: (id) => walk.combat.canTake(id), walking: () => walking, use: (id) => walk.useItem(id), open });
+        if (hub.tab === 'bag') bag.paint();
       });
-    };
     hub.hooks.tab = (id) => {
       root.classList.toggle('is-stall', id === 'business');
       if (id === 'business') tycoon!.paint();

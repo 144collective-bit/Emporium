@@ -75,7 +75,7 @@ keep it up to date when what it describes changes.
   boot) and `tycoon-ui.ts` (the screens, a chunk fetched the first time
   the card or a panel's part opens): the Dorras
   readout, your business card (`[data-biz]`, the hub's Business tab:
-  `openCard()` shows the hub on it, `h.hub`; the till on top, then the Stall / Units / Workshop / Car / Bag tabs; the Bag is the inventory's, read-only), the
+  `openCard()` shows the hub on it, `h.hub`; the till on top in every section, its Collect coin-yellow while there's money in it, then Stall / Units / Workshop / Car as the settings' chips, LT / RT stepping them: `docs/header-plan.md`; what you carry is the hub's own Bag tab), the
   market hall, filled into the Emporium's panel (`[data-market]`, with its
   deliver-to / sell-from picker, your car included when it's parked outside),
   and the Workshop's (`[data-workshop]`), Signal tower's (`[data-contracts]`:
