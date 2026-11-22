@@ -13,7 +13,7 @@
  *   picker (skylift-ui.ts) and the ride (index.ts `rideTo()`).
  */
 import {
-  BLOCKS, BLOCKS_RECT, BRIDGES, BRIDGE_HALF, CAGE, CAGES, CORES, DECKS, GALLERY_W, SKY_FLOORS, TWIN_CORE_HALF, blockById, floorY,
+  BLOCKS, BLOCKS_RECT, BRIDGES, BRIDGE_HALF, CAGE, CAGES, CORES, DECKS, GALLERY_W, SKY_FLOORS, PERCH, TOP_FLOOR, TWIN_CORE_HALF, blockById, floorY,
   lineLength, outward, pointAt, section, storeysOf, type Block, type Pt,
 } from './southblocks';
 import { inside, shift } from './streetfaces';
@@ -73,7 +73,8 @@ const galleryShapes = (): SkyShape[] =>
 export function coreFloors(id: string): number[] {
   if (id === 'twin-core') {
     const t = blockById('twin-core');
-    return SKY_FLOORS.filter((f) => f < storeysOf(t) && BRIDGES.some((br) => br.floor === f && ('block' in br.a ? br.a.block === 'twin-core' : false)));
+    // (and The Perch, at the top floor: docs/brutalist-plan.md Phase 3)
+    return [...SKY_FLOORS, TOP_FLOOR].filter((f) => f < storeysOf(t) && BRIDGES.some((br) => br.floor === f && ('block' in br.a ? br.a.block === 'twin-core' : false)));
   }
   const c = CORES.find((q) => q.id === id)!;
   const b = blockById(c.of);
@@ -151,8 +152,14 @@ const landingShapes = (): SkyShape[] => [
   ...linkShapes(),
   ...cageShapes(),
   ...CORES.flatMap((c) => coreFloors(c.id).map((f) => level(`landing ${c.id} ${f}`, c.foot, floorY(blockById(c.of).base, f)))),
-  ...coreFloors('twin-core').map((f) => level(`landing twin-core ${f}`, blockById('twin-core').foot, floorY(blockById('twin-core').base, f))),
+  ...coreFloors('twin-core').map((f) => level(`landing twin-core ${f}`, f >= TOP_FLOOR ? PERCH_FLOOR : blockById('twin-core').foot, floorY(blockById('twin-core').base, f))),
 ];
+/** The Perch's floor: all of it inside its glass (docs/brutalist-plan.md Phase 3), walked round its lift */
+export const PERCH_IN = 0.2;
+const PERCH_FLOOR: Pt[] = PERCH.foot.map((p): Pt => {
+  const k = (PERCH.apothem - PERCH_IN) / PERCH.apothem;
+  return [PERCH.at[0] + (p[0] - PERCH.at[0]) * k, PERCH.at[1] + (p[1] - PERCH.at[1]) * k];
+});
 
 /* ---------- The bridges ---------- */
 
@@ -279,6 +286,8 @@ export interface SkyLift {
   door: { x: number; z: number; yaw: number };
   base: number;
   floors: number[];
+  /** A floor's own name where it has one (The Core's top: The Perch) */
+  names?: Record<number, string>;
 }
 /** The way out of a core at its foot: its face turned furthest from what it serves */
 function doorOf(foot: Pt[], centre: Pt, from: Pt[]): { x: number; z: number; yaw: number } {
@@ -306,7 +315,7 @@ export const SKY_LIFTS: SkyLift[] = [
     const c = centreOf(t.foot);
     // (its door on the face away from the towers and from its stair: the north, to the Rampart)
     const from = [...BLOCKS.filter((q) => q.kind === 'tower').map((q) => centreOf(q.foot)), at(-1, TWIN_CORE_HALF + 3)];
-    return { id: 'twin-core', name: t.name, at: c, door: doorOf(t.foot, c, from), base: t.base, floors: coreFloors('twin-core') };
+    return { id: 'twin-core', name: t.name, at: c, door: doorOf(t.foot, c, from), base: t.base, floors: coreFloors('twin-core'), names: { [TOP_FLOOR]: PERCH.name } };
   })(),
 ];
 function nearestAlong(pts: Pt[], p: Pt) {
@@ -324,6 +333,8 @@ function nearestAlong(pts: Pt[], p: Pt) {
 }
 /** A floor's name in the lift (the ground, or its number: "3rd floor") */
 export const floorName = (f: number) => (f === 0 ? 'Ground' : `${f}${f % 10 === 1 && f !== 11 ? 'st' : f % 10 === 2 && f !== 12 ? 'nd' : f % 10 === 3 && f !== 13 ? 'rd' : 'th'} floor`);
+/** A floor's name in a lift: its own (The Perch) or its number */
+export const liftFloorName = (l: SkyLift, f: number) => l.names?.[f] ?? floorName(f);
 /** Which of a lift's floors someone `y` high (over the street) is on, or null if they're nowhere near it */
 export function liftFloorOf(l: SkyLift, y: number): number | null {
   if (y < UP_FROM) return 0;
