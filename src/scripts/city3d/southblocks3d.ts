@@ -703,26 +703,32 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | n
 
 /** The names a bridge's end can lead to: the blocks' own (made up), each a row of one painted texture */
 const SIGN_NAMES = [...BLOCKS.map((q) => q.name.toUpperCase()), PERCH.name.toUpperCase()];
-const SIGN_ROW = 64;
-const SIGN_TEX = canvasTex(512, SIGN_ROW * SIGN_NAMES.length, (c) => {
-  c.clearRect(0, 0, 512, SIGN_ROW * SIGN_NAMES.length);
+/**
+ * (half-size and opaque, on the concrete's own colour: the names are small, and a sheet with no see-through parts bakes
+ * to the lighter texture format; it stood the full-tier texture budget over at first: docs/brutalist-plan.md)
+ */
+const SIGN_ROW = 32;
+const SIGN_W = 256;
+const SIGN_BG = `#${CONCRETE.toString(16).padStart(6, '0')}`;
+const SIGN_TEX = canvasTex(SIGN_W, SIGN_ROW * SIGN_NAMES.length, (c) => {
+  c.fillStyle = SIGN_BG;
+  c.fillRect(0, 0, SIGN_W, SIGN_ROW * SIGN_NAMES.length);
   SIGN_NAMES.forEach((name, i) => {
     const y = i * SIGN_ROW + SIGN_ROW / 2;
-    c.font = `800 40px ${FONT_DISPLAY}`;
+    c.font = `800 20px ${FONT_DISPLAY}`;
     c.textAlign = 'center';
     c.textBaseline = 'middle';
     c.fillStyle = '#e8e4d8';
-    c.fillText(name, 256, y, 496);
-    // (stencil breaks across the letters, a drip or two under them, worn through here and there)
-    c.globalCompositeOperation = 'destination-out';
-    for (let x = 18; x < 500; x += 23) c.fillRect(x, y - 2, 3, 4);
-    for (let k = 0; k < 40; k++) c.fillRect((k * 97 + i * 31) % 512, y - 20 + ((k * 53) % 40), 4, 3);
-    c.globalCompositeOperation = 'source-over';
+    c.fillText(name, SIGN_W / 2, y, SIGN_W - 8);
+    // (stencil breaks across the letters, a drip or two under them, worn through here and there: the concrete showing)
+    c.fillStyle = SIGN_BG;
+    for (let x = 9; x < SIGN_W - 6; x += 12) c.fillRect(x, y - 1, 2, 2);
+    for (let k = 0; k < 40; k++) c.fillRect((k * 97 + i * 31) % SIGN_W, y - 10 + ((k * 53) % 20), 2, 2);
     c.fillStyle = '#e8e4d8';
-    for (let k = 0; k < 4; k++) c.fillRect(60 + ((k * 113 + i * 41) % 380), y + 16, 2, 8 + ((k * 7) % 10));
+    for (let k = 0; k < 4; k++) c.fillRect(30 + ((k * 113 + i * 41) % 190), y + 8, 1, 4 + ((k * 7) % 5));
   });
 });
-const SIGN = toon('#ffffff', { map: SIGN_TEX, alphaTest: 0.5 });
+const SIGN = toon('#ffffff', { map: SIGN_TEX });
 /** A block's name painted on a bridge's parapet, inside, `s` along it from a to c, on its right (o) or left side */
 function drawName(b: Batch, a: Pt, c: Pt, y: number, s: number, side: 1 | -1, name: string) {
   const row = SIGN_NAMES.indexOf(name.toUpperCase());
