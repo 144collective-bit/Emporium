@@ -41,6 +41,9 @@ keep it up to date when what it describes changes.
     (`docs/westlake-plan.md` Phase 3b: `WATER_Y`, `BED_Y`, `LAKE_PARTS`,
     `LAKE_HOLE`; `GRAND`, `grandY()`, `onGrand()`, `GRAND_CUT`,
     `GRAND_SOLIDS`; ground layer `grand`; drawn by `grandterrace3d.ts`);
+    the overlook at the rocky point (`OVERLOOK`, `onOverlook()`,
+    `OVERLOOK_RAIL`; Phase 3c) and the walks' kerbs and edges
+    (`gardenedges.ts`, drawing only, out of the boot);
     the bridges (`docs/westlake-plan.md` Phase 3a: `BRIDGES`, `onBridge()`,
     `bridgeY()`, the loop over them, `arm-walk` and `inlet-walk`; a ground
     layer `park-bridge` in groundheight.ts; drawn by `parkbridges3d.ts`);

@@ -21,7 +21,8 @@ import { Batch, neon, place, toon } from './kit';
 import { SLAB } from './world';
 import { site } from './tilework';
 import { inPoly, offsetLine } from './streetplan';
-import { EDGES, EDGE_W, FOUNTAIN, GARDEN_BENCHES, GARDEN_WALLS, HEDGE, KERB, KERBS, MALL_BEDS, PARTERRES, PLANTER, PLANTERS, ROUNDS, URN, URNS, WALL, WALLS } from './gardens';
+import { EDGE_W, FOUNTAIN, GARDEN_BENCHES, GARDEN_WALLS, HEDGE, KERB, MALL_BEDS, PARTERRES, PLANTER, PLANTERS, ROUNDS, URN, URNS, WALL, WALLS } from './gardens';
+import { EDGES, KERBS } from './gardenedges';
 import { BED_Y, GARDEN_SITE, TERRACES, TERRACE_STEPS, type Pt } from './westlake';
 import { PLANT, SOIL as PAL_SOIL, STONE as PAL_STONE } from './palette';
 

@@ -183,7 +183,21 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
      lake, the water well down, the plaza just over the water, the steps
      even and never too tall, the terrace over water and land both, nothing
      on it, no walk through it. Boot 774.8 of 775 KB.
-   - **3c, the gates, the overlook and the lamps**:
+   - **3c, the gates, the overlook and the lamps** (built, waiting on the
+     owner's sign-off): room in the boot first (the owner's call: trim
+     again): the walks' kerbs and edges moved out of gardens.ts into
+     `gardenedges.ts`, which only the park's chunk loads. The park's lamp
+     (lampposts.ts `park`) an ornate black post with twin lanterns hung
+     from its arms, along every walk; the gates' piers carved in the warm
+     stone (a plinth, a sunk panel each face, a moulded cap), an urn of
+     flowers on each and an iron lantern on a bracket over the walk (the
+     Mall's north gate keeps its lanterns under its sign); the overlook at
+     the rocky point (westlake.ts `OVERLOOK`, `onOverlook()`,
+     `OVERLOOK_RAIL`, solid): paved from the rim back to the loop, a carved
+     balustrade along the embankment with a pier and urn at each end, the
+     point's stones moved to its flanks. Drawn in westlake3d.ts. Tested: the
+     balustrade on the rim and solid, nothing on the overlook, stones on
+     the point's flanks. Boot 774.6 of 775 KB.
      to come.
    As planned:
    - **The terrace** where the Mall's cross walk meets the lake's west

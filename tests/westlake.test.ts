@@ -40,6 +40,9 @@ import {
   grandAt,
   grandY,
   onGrand,
+  onOverlook,
+  OVERLOOK,
+  OVERLOOK_RAIL,
   LAKE_HOLE,
   WATER_Y,
   BED_Y,
@@ -205,9 +208,14 @@ test('the lake redesigned (docs/westlake-plan.md Phase 1): round its old centre,
 });
 
 test('the rock outcrops: on the park, off the paths and the water, apart, solid, the trees off them', () => {
-  assert.ok(ROCKS.length >= 25, `${ROCKS.length} rocks`);
-  const point = lakeAt((150 * Math.PI) / 180, 1.5);
-  assert.ok(ROCKS.filter((k) => Math.hypot(k.x - point[0], k.z - point[1]) < 4).length >= 2, `stones at the point by ${point}`);
+  // (fewer since the point's tip went to the overlook, Phase 3c)
+  assert.ok(ROCKS.length >= 20, `${ROCKS.length} rocks`);
+  // (on the point's flanks either side of the overlook)
+  for (const deg of [136, 164]) {
+    const point = lakeAt((deg * Math.PI) / 180, 1.5);
+    assert.ok(ROCKS.some((k) => Math.hypot(k.x - point[0], k.z - point[1]) < 4), `stones by the point at ${point}`);
+  }
+  for (const k of ROCKS) assert.ok(!onOverlook(k.x, k.z, k.r), 'a rock on the overlook');
   for (const k of ROCKS) {
     const p: Pt = [k.x, k.z];
     assert.ok(inPark(p, 1.5), `a rock off the park at ${p}`);
@@ -308,4 +316,16 @@ test('the grand terrace (docs/westlake-plan.md Phase 3b): its plaza at the water
   for (const [x, z] of PARK_LAMPS) assert.ok(!onGrand(x, z, -0.5), 'a lamp on the terrace');
   for (const b of BENCHES) assert.ok(!onGrand(b.at[0], b.at[1], -0.5), 'a bench on the terrace');
   for (const k of ROCKS) assert.ok(!onGrand(k.x, k.z, -1), 'a rock on the terrace');
+});
+
+test('the overlook (docs/westlake-plan.md Phase 3c): at the point, its balustrade along the rim, solid, nothing on it', () => {
+  assert.ok(OVERLOOK_RAIL.length > 10, 'its balustrade');
+  for (const p of OVERLOOK_RAIL) {
+    assert.ok(!inLake(p[0], p[1]) && inLake(p[0], p[1], RIM.w + 0.2), `the balustrade off the rim at ${p}`);
+    assert.ok(SOLIDS.some((b) => p[0] > b[0] && p[0] < b[2] && p[1] > b[1] && p[1] < b[3]), 'the balustrade not solid');
+  }
+  for (const t of PARK_TREES) assert.ok(!onOverlook(t.x, t.z, 0.5), 'a tree on the overlook');
+  for (const [x, z] of PARK_LAMPS) assert.ok(!onOverlook(x, z), 'a lamp on the overlook');
+  for (const b of BENCHES) assert.ok(!onOverlook(b.at[0], b.at[1]), 'a bench on the overlook');
+  assert.ok(onOverlook(...lakeAt((150 * Math.PI) / 180, 1.5)) && !onOverlook(OVERLOOK.tip[0] + 20, OVERLOOK.tip[1]));
 });

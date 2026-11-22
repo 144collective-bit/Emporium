@@ -23,13 +23,13 @@ import { site } from './tilework';
 import { PATH_Y, PAVE_Y, bench, registerGardens } from './gardens3d';
 import { isMain } from './gardens';
 import { offsetLine } from './streetplan';
-import { BED_Y, BENCHES, LAKE_HOLE, onGrand, GATES, GATE_PIERS, PATHS, PIER, RIM, ROCKS, WATER_Y, lakeLine, onBridge, type ParkPath, type Pt, type Rock } from './westlake';
+import { BED_Y, BENCHES, LAKE_HOLE, LOOP_OUT, OVERLOOK, OVERLOOK_RAIL, lakeDist, onGrand, GATES, GATE_PIERS, PATHS, PIER, RIM, ROCKS, WATER_Y, lakeLine, onBridge, type ParkPath, type Pt, type Rock } from './westlake';
 import { TILE, tileOf } from './tiles';
 import { registerFringes } from './fringes3d';
 import { registerBridges } from './parkbridges3d';
 import { registerGrandTerrace } from './grandterrace3d';
 import { registerCivic } from './civic3d';
-import { BANK, ORNATE, OUTCROP, STONE as PAL_STONE } from './palette';
+import { BANK, ORNATE, OUTCROP, PLANT, STONE as PAL_STONE } from './palette';
 
 /** Its own address, for the site worker (sitework.ts) */
 export const SELF = import.meta.url;
@@ -42,6 +42,29 @@ const IRON = toon('#1b1830');
 const PAVING = toon(PAL_STONE.paving);
 /** The lake's embankment: rough-cut stone down to its bed (Phase 3b) */
 const EMBANKMENT = toon(ORNATE.rough);
+/** The ornate stone (Phase 3c): the gates' piers, the overlook */
+const ORN = toon(ORNATE.stone);
+const ORN_DRESSED = toon(ORNATE.dressed);
+const URN_STONE = toon(ORNATE.urn);
+const FOLIAGE = toon(PLANT.shrub);
+const BLOOMS = [toon('#d0567a'), toon('#e0b23a'), toon('#e8e0d0')];
+
+/** A box from p to q along the ground (its length theirs), w wide, from y0 to y1 */
+function along(p: Pt, q: Pt, w: number, y0: number, y1: number) {
+  const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+  return new THREE.BoxGeometry(l + 0.02, y1 - y0, w).rotateY(-Math.atan2(q[1] - p[1], q[0] - p[0])).translate((p[0] + q[0]) / 2, (y0 + y1) / 2, (p[1] + q[1]) / 2);
+}
+/** An urn of flowers standing at x, y, z */
+function urn(b: Batch, x: number, y: number, z: number, k: number) {
+  b.add(new THREE.LatheGeometry([new THREE.Vector2(0.1, 0), new THREE.Vector2(0.17, 0.05), new THREE.Vector2(0.11, 0.17), new THREE.Vector2(0.24, 0.4), new THREE.Vector2(0.26, 0.46)], 10).translate(x, y, z), URN_STONE);
+  b.add(new THREE.SphereGeometry(0.24, 7, 5).scale(1, 0.6, 1).translate(x, y + 0.5, z), FOLIAGE);
+  b.detail(() => {
+    for (let j = 0; j < 5; j++) {
+      const a = (j / 5) * Math.PI * 2 + k;
+      b.add(new THREE.SphereGeometry(0.06, 5, 4).translate(x + Math.cos(a) * 0.15, y + 0.6, z + Math.sin(a) * 0.15), BLOOMS[(j + k) % 3]);
+    }
+  });
+}
 const ROCK_FACE = toon(OUTCROP.face);
 const ROCK_DARK = toon(OUTCROP.dark);
 const ROCK_TOP = toon(OUTCROP.top);
@@ -280,14 +303,31 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     const zs = piers.flatMap((p) => [p[1], p[3]]);
     site(`westlake ${g.id}`, [Math.min(...xs) - 0.5, Math.min(...zs) - 0.5, Math.max(...xs) + 0.5, Math.max(...zs) + 0.5], (into) => {
       const b = new Batch();
-      for (const [x0, z0, x1, z1, h] of piers) {
-        b.box(x0, SLAB, z0, x1 - x0, h - SLAB, z1 - z0, STONE);
-        b.box(x0 - 0.06, h, z0 - 0.06, x1 - x0 + 0.12, 0.1, z1 - z0 + 0.12, CAP);
-        // A lantern on each (lit at night)
+      for (const [k, [x0, z0, x1, z1, h]] of piers.entries()) {
+        // A carved pier (Phase 3c): a plinth, the shaft with a sunk panel on each face, a moulded cap, an urn of
+        // flowers on it (a lantern on the Mall's, under its sign's posts), an iron lantern on a bracket off its side
+        const [cx, cz] = [(x0 + x1) / 2, (z0 + z1) / 2];
+        b.box(x0 - 0.08, SLAB, z0 - 0.08, x1 - x0 + 0.16, 0.25, z1 - z0 + 0.16, ORN_DRESSED);
+        b.box(x0, SLAB + 0.25, z0, x1 - x0, h - SLAB - 0.25, z1 - z0, ORN);
+        b.box(x0 + 0.1, SLAB + 0.5, z0 - 0.02, x1 - x0 - 0.2, h - SLAB - 0.85, z1 - z0 + 0.04, ORN_DRESSED);
+        b.box(x0 - 0.02, SLAB + 0.5, z0 + 0.1, x1 - x0 + 0.04, h - SLAB - 0.85, z1 - z0 - 0.2, ORN_DRESSED);
+        b.box(x0 - 0.08, h - 0.12, z0 - 0.08, x1 - x0 + 0.16, 0.12, z1 - z0 + 0.16, ORN_DRESSED);
+        b.box(x0 - 0.12, h, z0 - 0.12, x1 - x0 + 0.24, 0.1, z1 - z0 + 0.24, ORN_DRESSED);
+        if (!main) urn(b, cx, h + 0.1, cz, gi + k);
         b.detail(() => {
-          b.box((x0 + x1) / 2 - 0.05, h + 0.1, (z0 + z1) / 2 - 0.05, 0.1, 0.12, 0.1, IRON);
-          b.box((x0 + x1) / 2 - 0.09, h + 0.22, (z0 + z1) / 2 - 0.09, 0.18, 0.22, 0.18, neon('#ffe2a0', 0.6, 2.4));
-          b.box((x0 + x1) / 2 - 0.12, h + 0.44, (z0 + z1) / 2 - 0.12, 0.24, 0.05, 0.24, IRON);
+          if (main) {
+            b.box(cx - 0.05, h + 0.1, cz - 0.05, 0.1, 0.12, 0.1, IRON);
+            b.box(cx - 0.09, h + 0.22, cz - 0.09, 0.18, 0.22, 0.18, neon('#ffe2a0', 0.6, 2.4));
+            b.box(cx - 0.12, h + 0.44, cz - 0.12, 0.24, 0.05, 0.24, IRON);
+            return;
+          }
+          // (the bracket out over the walk, towards the gate's middle)
+          const [ox, oz] = [g.at[0] - cx, g.at[1] - cz];
+          const l = Math.hypot(ox, oz) || 1;
+          const [lx, lz] = [cx + (ox / l) * ((x1 - x0) / 2 + 0.3), cz + (oz / l) * ((z1 - z0) / 2 + 0.3)];
+          b.add(along([cx, cz], [lx, lz], 0.05, h - 0.45, h - 0.4), IRON);
+          b.box(lx - 0.09, h - 0.7, lz - 0.09, 0.18, 0.26, 0.18, neon('#ffe2a0', 0.6, 2.4));
+          b.box(lx - 0.12, h - 0.44, lz - 0.12, 0.24, 0.05, 0.24, IRON);
         });
       }
       if (main) {
@@ -316,6 +356,64 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       b.build(into, { cast: true, receive: true });
     });
   });
+
+  // The overlook at the rocky point (Phase 3c): its paving from the rim back to the loop, a balustrade along the
+  // embankment's edge, a pier at each end with an urn
+  {
+    const { tip, reach } = OVERLOOK;
+    site('westlake overlook', [tip[0] - reach - 6, tip[1] - reach - 6, tip[0] + reach + 6, tip[1] + reach + 6], (into) => {
+      const b = new Batch();
+      const near = (p: Pt) => Math.hypot(p[0] - tip[0], p[1] - tip[1]) < reach;
+      // (the back edge out from the rim along its own normals, point for point: away from the water)
+      const inner = lakeLine(RIM.w, 480);
+      const w = LOOP_OUT - 1.15 - RIM.w;
+      const outer = inner.map((p, i): Pt => {
+        const [a, c] = [inner[(i + inner.length - 1) % inner.length], inner[(i + 1) % inner.length]];
+        const l = Math.hypot(c[0] - a[0], c[1] - a[1]) || 1;
+        let [nx, nz] = [(c[1] - a[1]) / l, -(c[0] - a[0]) / l];
+        if (lakeDist(p[0] + nx, p[1] + nz) < lakeDist(p[0], p[1])) [nx, nz] = [-nx, -nz];
+        return [p[0] + nx * w, p[1] + nz * w];
+      });
+      const pos: number[] = [];
+      for (let i = 1; i < inner.length; i++) {
+        if (!near(inner[i]) || !near(inner[i - 1])) continue;
+        const [a, c, d, e] = [inner[i - 1], inner[i], outer[i], outer[i - 1]];
+        // (each triangle wound to face up)
+        for (const [p, q, t] of [[a, c, d], [a, d, e]] as Pt[][]) {
+          const up = (q[1] - p[1]) * (t[0] - p[0]) - (q[0] - p[0]) * (t[1] - p[1]) > 0;
+          for (const v of up ? [p, q, t] : [p, t, q]) pos.push(v[0], SLAB + 0.012, v[1]);
+        }
+      }
+      const g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+      g.setAttribute('normal', new THREE.Float32BufferAttribute(pos.map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+      b.add(g, PAVING);
+      const R = OVERLOOK_RAIL;
+      for (let i = 1; i < R.length; i++) {
+        b.add(along(R[i - 1], R[i], 0.3, SLAB, SLAB + 0.16), ORN_DRESSED);
+        b.add(along(R[i - 1], R[i], 0.36, SLAB + 0.9, SLAB + 1.02), ORN_DRESSED);
+      }
+      for (const [k, p] of [R[0], R.at(-1)!].entries()) {
+        b.box(p[0] - 0.22, SLAB, p[1] - 0.22, 0.44, 1.1, 0.44, ORN_DRESSED);
+        urn(b, p[0], SLAB + 1.1, p[1], k);
+      }
+      b.detail(() => {
+        if (low) return;
+        // The balusters, a short turned post every 0.28 along it
+        let carry = 0;
+        for (let i = 1; i < R.length; i++) {
+          const [a, c] = [R[i - 1], R[i]];
+          const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+          for (let t = carry; t < l; t += 0.28) {
+            const [x, z] = [a[0] + ((c[0] - a[0]) * t) / l, a[1] + ((c[1] - a[1]) * t) / l];
+            b.add(new THREE.LatheGeometry([new THREE.Vector2(0.05, 0), new THREE.Vector2(0.08, 0.14), new THREE.Vector2(0.05, 0.36), new THREE.Vector2(0.09, 0.54), new THREE.Vector2(0.05, 0.74)], 6).translate(x, SLAB + 0.16, z), ORN);
+          }
+          carry = (((carry - l) % 0.28) + 0.28) % 0.28;
+        }
+      });
+      b.build(into, { cast: true, receive: true });
+    });
+  }
 
   // Benches (near only), a site each tile's worth
   const byTile = new Map<string, typeof BENCHES>();

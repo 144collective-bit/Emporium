@@ -522,6 +522,18 @@ export function terraceY(x: number, z: number) {
 /** What a terrace covers (its footprint's corners), for keeping benches, lamps and trees off */
 export const nearTerrace = (p: Pt, m = 0) => terraceOf(p[0], p[1], -m) !== null;
 
+/* ---------- The overlook (docs/westlake-plan.md Phase 3c) ---------- */
+
+/**
+ * The overlook at the rocky point: the lawn paved from the rim back to the loop over the shore within `reach` of the
+ * point's tip (`tip`), a carved balustrade along the embankment's edge there (`OVERLOOK_RAIL`, solid)
+ */
+export const OVERLOOK = { tip: lakeAt((150 * Math.PI) / 180), reach: 5.5 };
+/** The overlook's balustrade: its line along the rim, a little in from the water */
+export const OVERLOOK_RAIL: Pt[] = lakeLine(RIM.w * 0.5, 480).filter((p) => Math.hypot(p[0] - OVERLOOK.tip[0], p[1] - OVERLOOK.tip[1]) < OVERLOOK.reach);
+/** Is a point on the overlook's paving (`m` more round it) */
+export const onOverlook = (x: number, z: number, m = 0) => Math.hypot(x - OVERLOOK.tip[0], z - OVERLOOK.tip[1]) < OVERLOOK.reach + m && !inLake(x, z) && lakeDist(x, z) < LOOP_OUT - 1.1 + m;
+
 /* ---------- The grand terrace (docs/westlake-plan.md Phase 3b) ---------- */
 
 /** The lawn's slab's top (world.ts SLAB): the grand terrace's walls stand over it */
@@ -1064,7 +1076,8 @@ export const ROCKS: Rock[] = baked('park-rocks', BUILT ? undefined : () => {
     [-110, -94, 5, false],
     [-80, -138, 6, false],
     [-54, -140, 6, false],
-    ...[146, 150, 154].map((deg) => [...lakeAt((deg * Math.PI) / 180, 1.5), 5, true] as [number, number, number, boolean]),
+    // (on the point's flanks: its tip is the overlook's, Phase 3c)
+    ...[136, 164].map((deg) => [...lakeAt((deg * Math.PI) / 180, 1.5), 5, true] as [number, number, number, boolean]),
   ];
   for (const [cx, cz, n, shore] of clusters)
     for (let k = 0; k < n; k++) {
@@ -1076,7 +1089,7 @@ export const ROCKS: Rock[] = baked('park-rocks', BUILT ? undefined : () => {
       const p: Pt = [x, z];
       // (by the water the stones come to its rim and to the loop's edge)
       const [wet, walk] = shore ? [rr * 0.5 + RIM.w + 0.1, rr * 0.7 + 0.2] : [rr + 0.5, rr + 0.5];
-      if (!inPark(p, 2) || onLawn(p, -1) || onGrand(x, z, -2) || onPath(p, walk) || inLake(x, z, wet) || inCivic(p, 2) || inRect(GARDEN_SITE, p, 2) || nearTerrace(p, rr + 0.5)) continue;
+      if (!inPark(p, 2) || onLawn(p, -1) || onGrand(x, z, -2) || onOverlook(x, z, rr + 0.3) || onPath(p, walk) || inLake(x, z, wet) || inCivic(p, 2) || inRect(GARDEN_SITE, p, 2) || nearTerrace(p, rr + 0.5)) continue;
       if (inRect(BOATHOUSE.rect, p, rr + 1.5) || inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], p, rr + 1.2)) continue;
       if (GATES.some((g) => Math.hypot(x - g.at[0], z - g.at[1]) < 5)) continue;
       // (a rock may lean on its neighbour, not sit inside it)
@@ -1091,6 +1104,7 @@ export const nearRock = (p: Pt, m = 0) => ROCKS.some((k) => Math.hypot(p[0] - k.
 export const ROCK_SOLIDS: [number, number, number, number, number][] = ROCKS.map((k) => [k.x - k.r * 0.75, k.z - k.r * 0.75, k.x + k.r * 0.75, k.z + k.r * 0.75, k.h]);
 
 export const treeFree = (p: Pt) =>
+  !onOverlook(p[0], p[1], 1.5) &&
   !onGrand(p[0], p[1], -2.5) &&
   !nearRock(p, 1.2) &&
   !onLawn(p, -1.5) &&
@@ -1151,7 +1165,7 @@ export const PARK_LAMPS: [number, number, number][] = baked('park-lamps', BUILT 
   }
   // Not on another path where paths meet, nor two on top of each other, nor by the boathouse and its jetty
   // (and none in the formal garden, which has its own, nor on a terrace)
-  const clear = (l: [number, number, number]) => !onGrand(l[0], l[1], -0.8) && !onBridge(l[0], l[1], -0.8) && !nearRock([l[0], l[1]], 0.8) && !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
+  const clear = (l: [number, number, number]) => !onOverlook(l[0], l[1], 0.6) && !onGrand(l[0], l[1], -0.8) && !onBridge(l[0], l[1], -0.8) && !nearRock([l[0], l[1]], 0.8) && !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
   return out.filter((l, i) => clear(l) && !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
 });
 
@@ -1170,7 +1184,7 @@ export const BENCHES: { at: Pt; ry: number }[] = baked('park-benches', BUILT ? u
   for (let z = HALL.rear[1] - 6.5; z > GARDEN_SITE[3] + 3; z -= 5)
     for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (PROMENADE_HALF + 0.45), z], ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
   // (none where another path comes in, nor on a terrace)
-  return out.filter((b) => !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6) && !nearRock(b.at, 1) && !onGrand(b.at[0], b.at[1], -0.8)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || q.id === 'promenade' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
+  return out.filter((b) => !onOverlook(b.at[0], b.at[1], 0.5) && !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6) && !nearRock(b.at, 1) && !onGrand(b.at[0], b.at[1], -0.8)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || q.id === 'promenade' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
 });
 
 /** Each gate's two stone piers (x0, z0, x1, z1, height): solid, the path between them */
@@ -1188,7 +1202,12 @@ export const BOATHOUSE_SOLID: [number, number, number, number, number] = [...BOA
  * What's solid in the park: the gates' piers, the boathouse (the lake keeps walkers out through `inLake()` but on the
  * jetty, cars through `LAKE_WALLS`)
  */
-export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID, ...ROCK_SOLIDS, ...GRAND_SOLIDS];
+/** The overlook's balustrade as cells along it, waist high */
+const OVERLOOK_SOLIDS: [number, number, number, number, number][] = OVERLOOK_RAIL.slice(1).map((p, i) => {
+  const q = OVERLOOK_RAIL[i];
+  return [Math.min(p[0], q[0]) - 0.15, Math.min(p[1], q[1]) - 0.15, Math.max(p[0], q[0]) + 0.15, Math.max(p[1], q[1]) + 0.15, 0.15 + 1.0];
+});
+export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID, ...ROCK_SOLIDS, ...GRAND_SOLIDS, ...OVERLOOK_SOLIDS];
 
 /** The lake as walls for cars (drive-sim.ts): strips across it, a tile deep, each its width there */
 export const LAKE_WALLS: [number, number, number, number, number][] = (() => {
