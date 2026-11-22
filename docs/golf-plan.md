@@ -267,6 +267,11 @@ paints the level pill at once; the kart park's and the metro's drawing, which th
 - Fixed on the way: ink zig-zags across the rough by the tees and greens (the turf's triangles, drawn solid in the
   ink's pre-pass, its clear parts and all): the turf's now out of it (golf3d.ts, kit.ts `fx()`), paint on the grass.
 - The boot: 769.1 KB (the rows, the look, the club and the sound: 0.7 KB of the room made first).
+- The shots: `docs/golf-shots/phase-5-*.webp` (a group on the 1st tee with their clubs, a tee's bench and sign, a flag,
+  a cart, the mower, ducks on Fen Pond, the clubhouse at night, the phone tier).
+- Learnt on the way: a spare crowd slot shows only the pieces its kind's meshes carried at the boot, so the first spare
+  slot of each kind holds a club till the course's chunk fills it (life.ts), and the golfers' trousers are left to
+  their slot's kind (crowdlook.ts).
 - The tests: `tests/golflife.test.ts` (what stands where and on what, the golfers' rounds closing on themselves, on the
   course and out of the water, a drive off every tee and two putts on every green, standing apart, the groups apart,
   the carts on their paths at their pace and apart, the mower on its fairway, the ducks on the water, the look, the
