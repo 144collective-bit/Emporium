@@ -1,5 +1,5 @@
 // Every street lamp by a street reaches out over it (the owner's call, 2026-11-12: Endswood's, Lot 9's, the Docks',
-// the Neon Mile's, Southfield's, the stadium's, the kart park's, Crestmont's, the airport's and the park side of
+// the Neon Mile's, Southfield's, Stadium Road's, the kart park's, Crestmont's, the airport's and the park side of
 // Uptown's avenue had reached back off it): a lamp's arm reaches along (cos ry, -sin ry) (world.ts `buildLamps()`),
 // so for every lamp within `NEAR` of a street's edge, its head is no further from that street than its pole. The one
 // exception is the well's in Endswood Circus, which reach in over the well (tests/endslamps.test.ts).
@@ -26,7 +26,7 @@ import { EDGE_LAMPS } from '../src/scripts/city3d/boulevard';
 import { MALL_LAMPS } from '../src/scripts/city3d/mall';
 import { NORTH_LAMPS } from '../src/scripts/city3d/uptownnorth';
 import { EDGE_LAMPS as PARK_EDGE } from '../src/scripts/city3d/parkedge';
-import { STADIUM_LAMPS } from '../src/scripts/city3d/stadium';
+import { STADIUM_LAMPS } from '../src/scripts/city3d/stadiumroad';
 import { AIRPORT_LAMPS, DECK_LAMPS as AIR_DECK } from '../src/scripts/city3d/airfield';
 import { KART_LAMPS } from '../src/scripts/city3d/kartfacility';
 import { RING_LAMPS, PARK_SIDE_LAMPS, MALL_SIDE_LAMPS } from '../src/scripts/city3d/ringstreet';

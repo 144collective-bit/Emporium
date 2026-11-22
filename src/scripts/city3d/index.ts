@@ -45,7 +45,6 @@ import { STREETLIFE_PEOPLE } from './streetlife';
 import { GARDEN_TREES as UPTOWN_GARDEN_TREES, SITE_PEOPLE } from './uptownsites';
 import { DECK_Y as BOARDWALK_Y } from './waterfront';
 import { LAZY_DISTRICTS, createDistricts } from './districts';
-import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
@@ -66,7 +65,7 @@ import { LINK_PEOPLE, stationLiftDoors } from './malllink';
 import { COURT_INSIDE_PEOPLE } from './courtinside';
 import { STATIONS } from './metro';
 import { LIFT, TOWER_SPAWN } from './skydeck';
-import { STADIUM_LAMPS, STADIUM_SPAWN } from './stadium';
+import { STADIUM_LAMPS } from './stadiumroad';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -363,8 +362,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The Night Market on its deck in front of Harbor Stores, a place
   const nightMarket = buildNightMarket(scene, crowd, { tick, low: tier === 'low' });
   spots.push(nightMarket.spot);
-  // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
-  spots.push(buildStadium(scene, crowd, { low: tier === 'low', tick }).spot);
   // Uptown's spire as a place, Sector 7 Tower (finance plan Phase 6): its spot only (the tower is Uptown's, drawn as a site)
   spots.push(buildTower(scene).spot);
   // ...and Palm Court and Starlight Mall north of downtown: their spots (they're drawn in their own chunk)
@@ -511,7 +508,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...the vendors at their carts and their customers
   for (const p of STREETLIFE_PEOPLE) crowd.push({ x: p.x, z: p.z, y: SLAB, ry: p.ry, act: p.act });
   for (const [x, z] of UPTOWN_GARDEN_TREES) addTree(x, z, 0.8, false);
-  // ...and the stadium's, north of the highway (stadium.ts)
+  // ...and Stadium Road's, north of the highway (stadiumroad.ts)
   for (const [x, z, ry, y] of STADIUM_LAMPS) addLamp(x, z, ry, y);
   // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
   for (const [x, z, ry, y] of [...MALL_LAMPS, ...NORTH_LAMPS]) addLamp(x, z, ry, y);
@@ -878,12 +875,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-market-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(MARKET_SPAWN);
-      });
-    // The stadium's panel: Walk in starts walk mode on its forecourt, facing the gate
-    if (id === 'stadium')
-      panelBody.querySelector('[data-stadium-walkin]')?.addEventListener('click', () => {
-        close();
-        startWalking(STADIUM_SPAWN);
       });
     // Sector 7 Tower's panel: Walk in starts walk mode on the plaza in front of its pavilion, the lift inside
     if (id === 'tower')

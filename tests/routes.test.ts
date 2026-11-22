@@ -6,7 +6,7 @@ import { test } from 'node:test';
 import { MEDIAN, NS_ROADS } from '../src/scripts/city3d/layout';
 import { LOT9_STREETS, inLot9 } from '../src/scripts/city3d/lot9';
 import { inEndswood } from '../src/scripts/city3d/endswood';
-import { LOOP, IN } from '../src/scripts/city3d/stadium';
+import { ROAD_RECTS as STADIUM_ROAD_RECTS } from '../src/scripts/city3d/stadiumroad';
 import { DRIVE_X, EW0, LOOP as K_LOOP } from '../src/scripts/city3d/kartpark';
 import assert from 'node:assert/strict';
 import { EXITS } from '../src/scripts/city3d/viaduct';
@@ -47,11 +47,9 @@ test('every route is a closed loop: round and round', () => {
   }
 });
 
-/** The stadium's streets north of the highway and the kart park's west of it, the roads out to them: driven too */
+/** Stadium Road north of the highway (stadiumroad.ts; the stadium itself removed 2026-11-22) and the kart park's streets west of it, the roads out to them: driven too */
 const stadiumWay = (q: Pt) =>
-  (q[0] > LOOP.x0 - 3 && q[0] < LOOP.x1 + 3 && q[1] > LOOP.z1 - 3 && q[1] < -165) ||
-  // (its way in from the north road, docs/highway-plan.md Phase 1b)
-  (q[0] >= LOOP.x1 + 3 && q[0] < IN.x0 + 12 && q[1] > IN.z - 3 && q[1] < -165) ||
+  STADIUM_ROAD_RECTS.some((r) => q[0] > r[0] - 3 && q[0] < r[2] + 12 && q[1] > r[1] - 3 && q[1] < -165) ||
   // ...and the kart park's west of the highway (kartpark.ts, docs/kart-west-plan.md): ew0 out from exit 8 to its drive,
   // the drive north, Kart Road and the car park's loop
   (q[0] > DRIVE_X - 3 && q[0] < HIGHWAY_BOX[0] && q[1] > K_LOOP.z1 - 3 && q[1] < EW0 + 4.5);
@@ -99,7 +97,7 @@ function alongPts(pts: Pt[], p: Pt) {
   return at;
 }
 
-test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on the stadium's, the kart park's, the airport's, Crestmont's, the Docks', Lot 9's and Endswood's streets, exit 6A's road in, or the country roads)", () => {
+test("every route stays on the asphalt, a car's width in from the kerb, off every slab, and inside the highway (or on Stadium Road, the kart park's, the airport's, Crestmont's, the Docks', Lot 9's and Endswood's streets, exit 6A's road in, or the country roads)", () => {
   // (the country roads past the highway, their joins and turning loops: rural.ts, docs/highway-plan.md Phase 7)
   // (and the grid roads' town pieces out to them, past the last junction: the arterials, `ns` / `ew`)
   const ruralWay = (q: [number, number]) => PLAN.streets.some((s) => (s.kind === 'rural' || /^(ns|ew)\d+[es]?$/.test(s.id)) && distToStreet(s, q) < s.half + 4);
@@ -163,8 +161,6 @@ test('between them the routes drive every street that goes anywhere, each way (a
           if (!alongs.length || d < Math.min(...alongs) - 1 || d > Math.max(...alongs) + 1) continue;
         }
         if (JUNCTIONS.some((j) => Math.hypot(at[0] - j.at[0], at[1] - j.at[1]) < 14)) continue;
-        // (the same on Stadium Road east along the stadium's loop: its cars leave the loop at its east end)
-        if (s.id === 'stadium-road' && lane.dir === -1 && at[0] < LOOP.x1) continue;
         // (and on Kart Road west along the kart park's loop: its cars leave the loop at its west end)
         if (s.id === 'kart-road' && lane.dir === -1 && at[0] > K_LOOP.x0) continue;
         // (and on Cargo Road west along the truck yard's loop: its cars leave the loop at its west end)

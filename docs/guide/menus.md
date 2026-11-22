@@ -123,7 +123,7 @@ keep it up to date when what it describes changes.
   `tests/livelines.test.ts`, a chunk of its own fetched the first time a
   panel opens: `liveLine(id, t)`, one short line from the visitor's clock
   and the place's own timetable for every coming-soon place, `LIVE_IDS`:
-  the stadium's next fixture, the club's set, the bar's happy hour, the
+  the club's set, the bar's happy hour, the
   mall's hours, the fountain show's and the volcano's countdowns, the
   Pier House's next river bus, Liberty's next lift, the Night Market after
   dusk, the Harbour Master's tide, Crestmont's and Sunridge's hours;

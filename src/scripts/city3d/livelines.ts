@@ -2,8 +2,7 @@
  * The live lines (the polish plan's Phase 7, docs/polish-plan.md: the dead
  * ends made live). Every place whose panel says "coming soon" gets one short
  * line under its marquee that changes with the visitor's clock and the place
- * (`liveLine()`): the stadium's next fixture and kick-off, the club's set
- * tonight, the bar's happy hour, the mall's hours, the fountain show's and
+ * (`liveLine()`): the club's set tonight, the bar's happy hour, the mall's hours, the fountain show's and
  * the volcano's countdowns from the Neon Mile's own timetables, the ferry
  * hall's next sailing from the river bus's, Liberty Bridge's next lift from
  * the tall ship's, the Night Market open after dusk, the Harbour Master's
@@ -17,7 +16,7 @@
  * owner's to change. The timetables are the same for everyone (the clock);
  * the hours are the visitor's own.
  */
-import { clockAt, clockText, fixtureAt, type Clock } from './stadium';
+import { clockAt, clockText, type Clock } from './clock';
 import { ERUPT, SHOW, eruptionAt, showAt } from './stripmarks';
 import { BUSES, BUS_VIEW, LOOP_T, dwellStart } from './riverroute';
 import { BUS } from './riverbus';
@@ -26,7 +25,6 @@ import { FILMS } from './uptownsites';
 
 /** The places with a line (every coming-soon panel, and the landmarks with a timetable) */
 export const LIVE_IDS = [
-  'stadium',
   'club',
   'bar',
   'mall',
@@ -125,13 +123,6 @@ export function liveLine(id: string, t = Date.now()): string | null {
   const film = title(FILMS[((c.day % FILMS.length) + FILMS.length) % FILMS.length]);
   const sunset = SUNSET[new Date(t).getMonth()];
   switch (id as LiveId) {
-    case 'stadium': {
-      const f = fixtureAt(t);
-      const sides = `${title(f.home)} v ${title(f.away)}`;
-      if (f.on) return `Match on · ${sides}`;
-      if (f.daysAway === 0) return `Tonight · ${sides} · ${clockText(f.kickoff)}`;
-      return `Next: ${sides} · ${title(['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][f.dow])} ${clockText(f.kickoff)}`;
-    }
     case 'club':
       if (between(h, 22, 4)) return `${dj} on now · Guest list only`;
       if (between(h, 20, 22)) return `Doors at ten · ${dj} tonight`;

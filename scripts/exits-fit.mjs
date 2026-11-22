@@ -84,7 +84,7 @@ mkdirSync(OUT, { recursive: true });
 const STD = { deck: 6.2, gap: 0.3, rampW: 4.4, walk: 1.2, clear: 1.5, F: 8, R: 80, Dd: 55, A: 80 };
 const BAND = STD.deck + STD.gap + STD.rampW; // 10.9
 const SYS = [
-  { id: 'north', n: 1, title: 'Exit 1 (north): 1A Stadium · Westlake Park, 1B Starlight Mall · Sunridge', cross: [[1805, 'ns0', '1A'], [35, 'ns3', '1B']], old: [1, 2] },
+  { id: 'north', n: 1, title: 'Exit 1 (north): 1A Westlake · Northgate, 1B Starlight Mall · Sunridge', cross: [[1805, 'ns0', '1A'], [35, 'ns3', '1B']], old: [1, 2] },
   { id: 'east', n: 2, title: 'Exit 2 (east): 2A Crestmont · Sunridge, 2B Airport · Harbour', cross: [[380, 'ew0', '2A'], [402, 'ew1e'], [428, 'ew2e'], [449, 'ew3'], [522, 'ew4', '2B']], old: [3, 4] },
   { id: 'south', n: 3, title: 'Exit 3 (south): 3A Southfield · General Aviation, 3B Endswood · The Trenches', cross: [[885, 'ns3', '3A'], [907, 'ns2s'], [933, 'ns1s'], [954, 'ns0s', '3B']], old: [5, 6] },
   { id: 'west', n: 4, title: "Exit 4 (west): 4A Southbank Docks · Aldwyn's Green, 4B Uptown · Kart Park (exit 6A retired)", cross: [[1318, 'ew4', '4A'], [1390, 'ew3'], [1412, 'ew2'], [1438, 'ew1'], [1459, 'ew0', '4B']], old: [7, 8, 9] },

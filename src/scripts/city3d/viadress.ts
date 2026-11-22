@@ -20,7 +20,7 @@ import { TRACKS } from './metro';
 import { inChannel } from './river';
 import { TUNNEL } from './lot9';
 import { ENDSWOOD_RECT } from './endswood';
-import { WALK as STADIUM_WALK } from './stadium';
+import { WALK as STADIUM_WALK } from './stadiumroad';
 
 import { TRENCH_RECT } from './trenches';
 
@@ -50,7 +50,7 @@ export const SKATE_MIN = 11;
 /** The ground under the deck kept clear across it (`m` in from its edges) */
 const ACROSS = DECK_HALF - 0.4;
 const UNDER_STREETS = PLAN.streets.filter((s) => !raised(s) && s.kind !== 'alley');
-/** Is the ground under the deck from s0 to s1 clear: no street through it, no water or bank, the tunnel, the stadium's walk, the metro, the hills */
+/** Is the ground under the deck from s0 to s1 clear: no street through it, no water or bank, the tunnel, the walk to Stadium Road, the metro, the hills */
 function clearUnder(s0: number, s1: number) {
   for (let s = s0; s <= s1 + 1e-6; s += 1)
     for (const o of [-ACROSS, 0, ACROSS]) {

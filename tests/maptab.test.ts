@@ -5,7 +5,7 @@ import { AREA_CHOICES, AREA_OF, AREAS, areaHere, areaLabel, DIRECTORY, GO_LABEL,
 import { PLACES } from '../src/scripts/city3d/places';
 
 /** The Map tab's places before it was split by district (CityMap.astro's old `directory`): none lost, none added */
-const BEFORE = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse', 'vellano', 'solenne', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec', 'northgate'];
+const BEFORE = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse', 'vellano', 'solenne', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec', 'northgate'];
 
 const at = (spot: string) => PLACES.find((p) => p.spot === spot)?.at;
 
