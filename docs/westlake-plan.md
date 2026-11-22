@@ -132,7 +132,7 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    (the owner's calls, 2026-11-22: in three steps, each signed off; the
    terrace on the west shore, where the walk from the promenade behind
    City Hall meets the lake; a winged figure on its fountain):
-   - **3a, the bridges** (built, waiting on the owner's sign-off):
+   - **3a, the bridges** (built, signed off 2026-11-22):
      westlake.ts `BRIDGES` (`iron` over the arm near its mouth, `stone`
      over the inlet), each a straight deck square across the water, its
      ends on the land 3.2 past the water's edge either side, the loop
