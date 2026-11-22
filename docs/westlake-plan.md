@@ -155,8 +155,8 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
      water under each, the deck's rise, the loop across each, the walks
      round the arm and the inlet on land from end to end; walkers and dogs
      over the water only on a deck. Boot 774.3 of 775 KB.
-   - **3b, the lake lowered and the grand terrace** (built, waiting on
-     the owner's sign-off; the owner's call, 2026-11-22: the west shore had
+   - **3b, the lake lowered and the grand terrace** (built, signed off
+     2026-11-22; the owner's call, 2026-11-22: the west shore had
      only about 12 m of land before the promenade, so the lake was lowered
      rather than the terrace squeezed): the water 2.2 under the lawn
      (`WATER_Y`), its bed under it (`BED_Y`, palette.ts `BANK.bed`), inside
