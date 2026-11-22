@@ -19,7 +19,7 @@ import { KART_PARK } from '../src/scripts/city3d/kartpark';
 import { HIGH_Y, LOW_Y, TOWERS, footbridgeY } from '../src/scripts/city3d/liberty';
 import { FOOTBRIDGE_X, EXT } from '../src/scripts/city3d/layout';
 import { SX as SWING_X, swingY } from '../src/scripts/city3d/swingbridge';
-import { JETTY, TERRACES, onJetty, terraceY } from '../src/scripts/city3d/westlake';
+import { JETTY, TERRACES, onJetty, terraceY, BRIDGES } from '../src/scripts/city3d/westlake';
 import { civicY, CITYHALL_SPAWN, COURT_PORTICO, PORTICO } from '../src/scripts/city3d/civic';
 import { viaductY } from '../src/scripts/city3d/viaground';
 import { DECK_Y as VIADUCT_Y, ringPoint } from '../src/scripts/city3d/viaduct';
@@ -204,6 +204,8 @@ test('every layer answers alone where it stands, and nowhere on the open street 
     turntable: [DISC.x, DISC.z, 0],
     jetty: [JETTY_AT[0], JETTY_AT[1], 0],
     terrace: [terraceSpot(TERRACES[0])[0], terraceSpot(TERRACES[0])[1], 0],
+    // (Westlake Park's bridges: the cast-iron one's deck at its middle, docs/westlake-plan.md Phase 3a)
+    'park-bridge': [BRIDGES[0].a[0] + BRIDGES[0].u[0] * (BRIDGES[0].len / 2), BRIDGES[0].a[1] + BRIDGES[0].u[1] * (BRIDGES[0].len / 2), 0],
     skydeck: [mid(SPIRE_LOT)[0], mid(SPIRE_LOT)[1], DECK.y + SLAB],
     civic: [CITYHALL_SPAWN.x, (PORTICO[1] + PORTICO[3]) / 2, 0],
     circuit: [sample(12)[0], sample(12)[1], 0],

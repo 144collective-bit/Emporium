@@ -37,6 +37,9 @@ keep it up to date when what it describes changes.
     `PROMENADE_HALF`, the Great Lawn `LAWN`, `onLawn()` and its walks, the
     ramble's `ramble-e`, `ramble-n`, `ramble-w`; `loopLine()` for the loop's
     lanes);
+    the bridges (`docs/westlake-plan.md` Phase 3a: `BRIDGES`, `onBridge()`,
+    `bridgeY()`, the loop over them, `arm-walk` and `inlet-walk`; a ground
+    layer `park-bridge` in groundheight.ts; drawn by `parkbridges3d.ts`);
     the rock outcrops (`ROCKS`, `ROCK_SOLIDS`, `nearRock()`; drawn by
     westlake3d.ts `registerRocks()`);
     `GARDEN_SITE` (the stadium's old site, kept for the formal garden); step 3's

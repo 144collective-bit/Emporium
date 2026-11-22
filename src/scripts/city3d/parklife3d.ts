@@ -21,7 +21,7 @@ import { SLAB, type Tick } from './world';
 import { site } from './tilework';
 import { dogGeometry, leadEnds } from './dogs3d';
 import { CROWD_VIEW } from './character';
-import { BOATHOUSE, JETTY, WESTLAKE_RECT } from './westlake';
+import { BOATHOUSE, JETTY, WESTLAKE_RECT, bridgeY } from './westlake';
 import { BOATS, BOAT_Y, DOGS, HULL, PARK_PEOPLE, PICNICS, moment } from './parklife';
 import { TREE } from './palette';
 
@@ -365,11 +365,13 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
       // A trot: a quick bob and a rock fore and aft
       const ph = t * 9 + k;
       e.set(0, dp.ry - Math.PI / 2, Math.sin(ph) * 0.06, 'YXZ');
-      m4.compose(v.set(dp.x, SLAB + Math.abs(Math.sin(ph)) * 0.025, dp.z), q.setFromEuler(e), sv.setScalar(d.size));
+      // (up over a bridge's deck, as their walkers are)
+      const dy = SLAB + (bridgeY(dp.x, dp.z) ?? 0);
+      m4.compose(v.set(dp.x, dy + Math.abs(Math.sin(ph)) * 0.025, dp.z), q.setFromEuler(e), sv.setScalar(d.size));
       dogs.setMatrixAt(k, m4);
       // The lead: from the walker's hand to the collar
       PARK_PEOPLE[d.walker].at(t, wm);
-      leadEnds(leadPos, k, wm, dp, d.size, SLAB, SLAB);
+      leadEnds(leadPos, k, wm, dp, d.size, wm.y, dy);
     });
     for (const mesh of [rowHull, rowInside, swanMesh, oars, dogs]) mesh.instanceMatrix.needsUpdate = true;
     leadGeo.attributes.position.needsUpdate = true;

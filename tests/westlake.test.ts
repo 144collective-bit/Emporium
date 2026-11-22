@@ -34,6 +34,9 @@ import {
   RIM,
   lakeAt,
   onPath,
+  onBridge,
+  bridgeY,
+  BRIDGES,
   onLawn,
   PROMENADE_HALF,
 } from '../src/scripts/city3d/westlake';
@@ -115,7 +118,8 @@ test('the paths: on the park, off the lake and the garden\'s site (but the Mall 
     for (let i = 1; i < pts.length; i++)
       for (const p of along(pts[i - 1], pts[i], 1)) {
         assert.ok(inPark(p, -0.01), `${q.id} on the park at ${p}`);
-        assert.ok(!inLake(p[0], p[1], q.half + 0.5), `${q.id} in the lake at ${p}`);
+        // (but where the loop crosses a bridge over the arm or the inlet: docs/westlake-plan.md Phase 3a)
+        if (!onBridge(p[0], p[1], -1.5)) assert.ok(!inLake(p[0], p[1], q.half + 0.5), `${q.id} in the lake at ${p}`);
         const [x0, z0, x1, z1] = GARDEN_SITE;
         if (q.id !== 'mall' && !q.id.startsWith('garden-')) assert.ok(!(p[0] > x0 && p[0] < x1 && p[1] > z0 && p[1] < z1), `${q.id} on the garden's site at ${p}`);
       }
@@ -228,4 +232,31 @@ test('the paths re-laid (docs/westlake-plan.md Phase 2): none a dead end, the Gr
   const avenue = PARK_TREES.filter((t) => Math.abs(t.x - prom.pts[0][0]) < PROMENADE_HALF + 6 && t.z < prom.pts[0][1] && t.z > prom.pts[1][1]);
   for (const side of [-1, 1]) for (const row of [1.75, 4.7]) assert.ok(avenue.filter((t) => Math.abs(t.x - (prom.pts[0][0] + side * (PROMENADE_HALF + row))) < 0.01).length >= 2, `the avenue's row ${side * row}`);
   assert.ok(BENCHES.filter((b) => Math.abs(Math.abs(b.at[0] - prom.pts[0][0]) - (PROMENADE_HALF + 0.45)) < 0.01).length >= 4, 'benches along the promenade');
+});
+
+test('the bridges (docs/westlake-plan.md Phase 3a): over the arm and the inlet, landing on the loop, the loop over them, their walks round', () => {
+  assert.deepEqual(BRIDGES.map((k) => k.id), ['iron', 'stone']);
+  const loop = PATHS.find((q) => q.id === 'loop')!;
+  for (const k of BRIDGES) {
+    // Its ends on the land, on the loop; its middle over the water, its deck up off it
+    for (const e of [k.a, k.b]) {
+      assert.ok(!inLake(e[0], e[1], 0.5), `${k.id}'s end at ${e} in the water`);
+      assert.ok(distToLine(loop.pts, e, true) < 0.2, `${k.id}'s end at ${e} off the loop`);
+    }
+    assert.ok(k.len > 8 && k.len < 25, `${k.id}: ${k.len.toFixed(1)} long`);
+    const water = Array.from({ length: 41 }, (_, i) => (i / 40) * k.len).filter((s) => inLake(k.a[0] + k.u[0] * s, k.a[1] + k.u[1] * s));
+    assert.ok(water.length > 3, `${k.id} over no water`);
+    const m: Pt = [k.a[0] + k.u[0] * (k.len / 2), k.a[1] + k.u[1] * (k.len / 2)];
+    assert.ok(onBridge(m[0], m[1], 0.5) && Math.abs(bridgeY(m[0], m[1])! - k.rise) < 1e-6, `${k.id}'s deck at its middle`);
+    assert.ok(bridgeY(k.a[0], k.a[1])! < 0.05, `${k.id}'s deck at its end`);
+    // The loop runs across it
+    for (let s = 1; s < k.len - 1; s += 1) assert.ok(distToLine(loop.pts, [k.a[0] + k.u[0] * s, k.a[1] + k.u[1] * s], true) < 0.2, `the loop off ${k.id} at ${s}`);
+  }
+  // The walks round the arm and the inlet, from one end of its bridge to the other, on the land
+  for (const [id, k] of [['arm-walk', BRIDGES[0]], ['inlet-walk', BRIDGES[1]]] as const) {
+    const q = PATHS.find((r) => r.id === id)!;
+    const ends = [q.pts[0], q.pts.at(-1)!];
+    for (const e of ends) assert.ok([k.a, k.b].some((b) => Math.hypot(b[0] - e[0], b[1] - e[1]) < 0.01), `${id} ends off ${k.id}`);
+    for (const p of q.pts) assert.ok(!inLake(p[0], p[1], q.half + 0.3), `${id} in the water at ${p}`);
+  }
 });

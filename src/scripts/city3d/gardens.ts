@@ -51,6 +51,7 @@ import {
   ZS,
   distToLine,
   inLake,
+  onBridge,
   nearRock,
   inset,
   nearTerrace,
@@ -137,6 +138,8 @@ function edgeCut(q: ParkPath, p: Pt) {
   if (ROUND_AT.some(([x, z]) => Math.hypot(p[0] - x, p[1] - z) < ROUND_R + 0.1)) return true;
   // (and the civic square, paved edge to edge: the walks that cross it or come into it open into it)
   if (inSquare(p, 0.1)) return true;
+  // (and the bridges, whose decks carry their own railings and parapets: docs/westlake-plan.md Phase 3a)
+  if (onBridge(p[0], p[1], -0.4)) return true;
   return nearTerrace(p, 0.4);
 }
 /** Runs along both edges of each path, `inside` in from its edge, broken where something crosses */

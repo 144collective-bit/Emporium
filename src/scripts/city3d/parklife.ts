@@ -28,6 +28,7 @@ import {
   BENCHES,
   BIG,
   JETTY,
+  bridgeY,
   LOOP_OUT,
   MALL,
   PARK_TREES,
@@ -155,7 +156,8 @@ function walkerAt(w: Walker, t: number, out: Moment, ahead = 0, side = 0) {
   out.x = scratch.x - dz * side;
   out.z = scratch.z + dx * side;
   out.ry = Math.atan2(dx, dz);
-  out.y = SLAB;
+  // (up over a bridge's deck where the loop crosses the arm or the inlet)
+  out.y = SLAB + (bridgeY(out.x, out.z) ?? 0);
   out.clip = l.pace > 1 ? 'jog' : 'walk';
   out.speed = l.pace;
   return out;

@@ -598,8 +598,123 @@ export function onLawn(p: Pt, m = 0) {
 const lawnAt = (side: number, z: number): Pt => [LAWN.c[0] + side * LAWN.rx * Math.sqrt(Math.max(0, 1 - ((z - LAWN.c[1]) / LAWN.rz) ** 2)), z];
 /** Where the lake loop is nearest a point (for paths that join it) */
 const LOOP_LINE = lakeLine(LOOP_OUT, 360);
-/** A line alongside the lake loop's centre, `d` off it (out from the water positive): its people's lanes keep to the path where it folds round the point */
-export const loopLine = (d: number, n = 240): Pt[] => resample(offset(LOOP_LINE, d), n);
+
+/* ---------- The bridges (docs/westlake-plan.md Phase 3a) ---------- */
+
+/**
+ * A bridge: its deck straight across the water from one landing on the lake loop to the other (`a` to `b`, `u` the
+ * way, `len` long), `half` wide either side, rising in a low arch to `rise` over the lawn at its middle: the
+ * cast-iron one over the arm, the stone arch over the inlet
+ */
+export interface Bridge {
+  id: 'iron' | 'stone';
+  a: Pt;
+  b: Pt;
+  u: Pt;
+  len: number;
+  half: number;
+  rise: number;
+}
+/** Where a line through p along `dir` crosses the loop's line nearest either side (the point and the segment, each way) */
+function landings(p: Pt, dir: Pt): { at: Pt; seg: number }[] {
+  let [fwd, back] = [{ t: Infinity, at: p, seg: -1 }, { t: -Infinity, at: p, seg: -1 }];
+  const n = LOOP_LINE.length;
+  for (let i = 0; i < n; i++) {
+    const [q, r] = [LOOP_LINE[i], LOOP_LINE[(i + 1) % n]];
+    const [ex, ez] = [r[0] - q[0], r[1] - q[1]];
+    const den = dir[0] * ez - dir[1] * ex;
+    if (Math.abs(den) < 1e-12) continue;
+    const t = ((q[0] - p[0]) * ez - (q[1] - p[1]) * ex) / den;
+    const w = ((q[0] - p[0]) * dir[1] - (q[1] - p[1]) * dir[0]) / den;
+    if (w < 0 || w >= 1) continue;
+    const at: Pt = [p[0] + dir[0] * t, p[1] + dir[1] * t];
+    if (t > 0 && t < fwd.t) fwd = { t, at, seg: i };
+    if (t < 0 && t > back.t) back = { t, at, seg: i };
+  }
+  return [back, fwd];
+}
+/** A bridge across an arm of the lake at `f` along its stretch `i` (from its point i to i + 1): square across it, landing on the loop either side */
+function bridgeOver(id: Bridge['id'], arm: LakeArm, i: number, f: number, half: number, rise: number): Bridge & { segs: [number, number] } {
+  const [p0, p1] = [arm.line[i], arm.line[i + 1]];
+  const p: Pt = [p0[0] + (p1[0] - p0[0]) * f, p0[1] + (p1[1] - p0[1]) * f];
+  const l = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]);
+  const across: Pt = [-(p1[1] - p0[1]) / l, (p1[0] - p0[0]) / l];
+  const [A, B] = landings(p, across);
+  const len = Math.hypot(B.at[0] - A.at[0], B.at[1] - A.at[1]);
+  return { id, a: A.at, b: B.at, u: [(B.at[0] - A.at[0]) / len, (B.at[1] - A.at[1]) / len], len, half, rise, segs: [A.seg, B.seg] };
+}
+/** The bridges, the loop over them and the walks round the arm and the inlet: worked out once at the build (baked) */
+function makeRoute() {
+  const spans = [bridgeOver('iron', LAKE_ARM, 0, 0.85, 1.5, 1.1), bridgeOver('stone', LAKE_INLET, 1, 0.35, 1.4, 0.9)];
+  const mm = (p: Pt): Pt => [Math.round(p[0] * 1000) / 1000, Math.round(p[1] * 1000) / 1000];
+  const r = routeOver(spans);
+  return { bridges: spans.map(({ segs: _s, ...b }) => b), loop: r.loop.map(mm), arm: r.arm.map(mm), inlet: r.inlet.map(mm) };
+}
+const ROUTE = baked('park-route', BUILT ? undefined : makeRoute);
+export const BRIDGES: Bridge[] = ROUTE.bridges;
+/** Where a point is along a bridge and across it */
+const onSpan = (k: Bridge, x: number, z: number) => {
+  const [dx, dz] = [x - k.a[0], z - k.a[1]];
+  return { s: dx * k.u[0] + dz * k.u[1], w: -dx * k.u[1] + dz * k.u[0] };
+};
+/** Is a point on a bridge's deck (`m` in from its edges and its ends) */
+export const onBridge = (x: number, z: number, m = 0) =>
+  BRIDGES.some((k) => {
+    const { s, w } = onSpan(k, x, z);
+    return Math.abs(w) < k.half - m && s > m && s < k.len - m;
+  });
+/** A bridge's deck over the lawn's slab under a point (its low arch), or null off them */
+export function bridgeY(x: number, z: number): number | null {
+  for (const k of BRIDGES) {
+    const { s, w } = onSpan(k, x, z);
+    if (Math.abs(w) < k.half && s >= 0 && s <= k.len) return k.rise * Math.sin((Math.PI * s) / k.len);
+  }
+  return null;
+}
+/**
+ * The lake loop as walked: the loop's line, but across each bridge where it went round the arm and the inlet; and the
+ * stretches it went round them by, walks of their own (`arm-walk`, `inlet-walk`), from one bridge's end to the other
+ */
+function routeOver(spans: ReturnType<typeof bridgeOver>[]) {
+  const n = LOOP_LINE.length;
+  const cut: { from: number; to: number; span: ReturnType<typeof bridgeOver>; round: Pt[] }[] = [];
+  for (const span of spans) {
+    const [i, j] = span.segs;
+    // (the stretch round the arm: whichever way from one landing to the other passes its tip)
+    const tip = (span.id === 'iron' ? LAKE_ARM : LAKE_INLET).line.at(-1)!;
+    const way = (from: number, to: number) => {
+      const out: Pt[] = [];
+      for (let k = (from + 1) % n; k !== (to + 1) % n; k = (k + 1) % n) out.push(LOOP_LINE[k]);
+      return out;
+    };
+    const near = (pts: Pt[]) => Math.min(...pts.map((q) => Math.hypot(q[0] - tip[0], q[1] - tip[1])));
+    const [w1, w2] = [way(i, j), way(j, i)];
+    cut.push(near(w1) < near(w2) ? { from: i, to: j, span, round: w1 } : { from: j, to: i, span, round: w2 });
+  }
+  const skip = new Set<number>();
+  for (const c of cut) for (let k = (c.from + 1) % n; k !== (c.to + 1) % n; k = (k + 1) % n) skip.add(k);
+  const loop: Pt[] = [];
+  for (let k = 0; k < n; k++) {
+    if (skip.has(k)) continue;
+    loop.push(LOOP_LINE[k]);
+    const c = cut.find((q) => q.from === k);
+    if (!c) continue;
+    // (across the bridge, a point a metre, from the landing at this end to the other)
+    const { a, b } = c.span;
+    const [p, q] = Math.hypot(a[0] - LOOP_LINE[k][0], a[1] - LOOP_LINE[k][1]) < Math.hypot(b[0] - LOOP_LINE[k][0], b[1] - LOOP_LINE[k][1]) ? [a, b] : [b, a];
+    const m = Math.ceil(c.span.len);
+    for (let t = 0; t <= m; t++) loop.push([p[0] + ((q[0] - p[0]) * t) / m, p[1] + ((q[1] - p[1]) * t) / m]);
+  }
+  const ends = (c: (typeof cut)[number]): Pt[] => {
+    const { a, b } = c.span;
+    const first = c.round[0];
+    const [p, q] = Math.hypot(a[0] - first[0], a[1] - first[1]) < Math.hypot(b[0] - first[0], b[1] - first[1]) ? [a, b] : [b, a];
+    return [p, ...c.round, q];
+  };
+  return { loop, arm: ends(cut[0]), inlet: ends(cut[1]) };
+}
+/** A line alongside the lake loop's centre, `d` off it (out from the water positive): its people's lanes, over the bridges */
+export const loopLine = (d: number, n = 240): Pt[] => resample(offset(ROUTE.loop, d), n);
 /** A line alongside the ring walk's centre, `d` off it (out towards the park's edge positive): its people's lanes */
 export const ringLine = (d: number, n = 360): Pt[] => resample(offset(RING_WALK, d), n);
 const toLoop = (p: Pt): Pt => LOOP_LINE.reduce((b, q) => (Math.hypot(q[0] - p[0], q[1] - p[1]) < Math.hypot(b[0] - p[0], b[1] - p[1]) ? q : b));
@@ -635,7 +750,10 @@ const ringWestX = (z: number) => {
 
 export const PATHS: ParkPath[] = [
   { id: 'ring', pts: RING_WALK, half: 1.2, loop: true },
-  { id: 'loop', pts: LOOP_LINE, half: 1.1, loop: true },
+  { id: 'loop', pts: ROUTE.loop, half: 1.1, loop: true },
+  // (the walks round the arm and the inlet, from one end of its bridge to the other: docs/westlake-plan.md Phase 3a)
+  { id: 'arm-walk', pts: ROUTE.arm, half: 1.1 },
+  { id: 'inlet-walk', pts: ROUTE.inlet, half: 1.1 },
   // The Mall: its promenade from City Hall's back door (the civic quarter, civic.ts) to the formal garden, then on
   // through the garden's site to the north gate
   // (the promenade laid over the Mall, its rounded ends short of City Hall's lot and the garden's hedges)
@@ -861,7 +979,7 @@ export const PARK_LAMPS: [number, number, number][] = baked('park-lamps', BUILT 
   }
   // Not on another path where paths meet, nor two on top of each other, nor by the boathouse and its jetty
   // (and none in the formal garden, which has its own, nor on a terrace)
-  const clear = (l: [number, number, number]) => !nearRock([l[0], l[1]], 0.8) && !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
+  const clear = (l: [number, number, number]) => !onBridge(l[0], l[1], -0.8) && !nearRock([l[0], l[1]], 0.8) && !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
   return out.filter((l, i) => clear(l) && !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
 });
 

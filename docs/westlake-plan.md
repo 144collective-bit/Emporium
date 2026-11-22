@@ -128,7 +128,33 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    end. Kerbs, edges, planters, lamps, benches, the people's lanes and
    the picnics refitted (gardens.ts, parklife.ts). Tested: every path joins
    another or a gate, the lanes on paths, nothing on a path.
-3. **The ornate masonry.** The park's set pieces, in a warm carved stone:
+3. **The ornate masonry.** The park's set pieces, in a warm carved stone
+   (the owner's calls, 2026-11-22: in three steps, each signed off; the
+   terrace on the west shore, where the walk from the promenade behind
+   City Hall meets the lake; a winged figure on its fountain):
+   - **3a, the bridges** (built, waiting on the owner's sign-off):
+     westlake.ts `BRIDGES` (`iron` over the arm near its mouth, `stone`
+     over the inlet), each a straight deck between landings on the loop's
+     line (`landings()`, `bridgeOver()`), rising in a low arch
+     (`bridgeY()`, `onBridge()`); the loop re-routed over them and the
+     stretches it went round the arm and the inlet by kept as walks of
+     their own (`arm-walk`, `inlet-walk`), all baked (key `park-route`).
+     Walk mode crosses them (walk.ts lets you over the water on a deck,
+     groundheight.ts's `park-bridge` layer), the loop's walkers and their
+     dogs rise over them (parklife.ts, parklife3d.ts), the kerbs, the
+     paving and the lamps stop at them. Drawn by `parkbridges3d.ts` (a site
+     each, palette.ts `ORNATE`): the cast-iron bridge's timber deck, cream
+     girders, an arched rib with rings, railings with scrolls (near only),
+     stone abutments with urns of flowers; the stone bridge's carved body
+     (one extruded profile), an elliptical arch with voussoirs and a lighter
+     keystone, parapets with caps and piers. The boats keep to the open
+     water, so none pass under. Tested: the ends on land and on the loop,
+     water under each, the deck's rise, the loop across each, the walks
+     round the arm and the inlet on land from end to end; walkers and dogs
+     over the water only on a deck. Boot 774.3 of 775 KB.
+   - **3b, the terrace** and **3c, the gates, the overlook and the lamps**:
+     to come.
+   As planned:
    - **The terrace** where the Mall's cross walk meets the lake's west
      arm: a grand double flight of steps down to a paved plaza on the
      water, an arcade under the walk above (tiled ceiling, arches), carved

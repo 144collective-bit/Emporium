@@ -132,6 +132,18 @@ export const OUTCROP = {
   lichen: '#7f8f62',
 } as const;
 
+/** Westlake Park's ornate masonry and ironwork (docs/westlake-plan.md Phase 3): a warm carved stone, its darker
+ * rough-cut, a lighter dressed stone for keystones and caps, the cream-painted cast iron, the bridge's timber deck */
+export const ORNATE = {
+  stone: '#d6c3a0',
+  rough: '#b6a283',
+  dressed: '#e6d8bb',
+  iron: '#ece4d0',
+  ironDark: '#cfc5ad',
+  plank: '#9b7653',
+  urn: '#cdb994',
+} as const;
+
 /** The street lamps' light: white in town, sodium orange in The Trenches, along the waterfront and in the Docks */
 export const LAMP = {
   white: { bulb: '#fff1c2', halo: '#ffe2a0', pool: '#ffd98a' },

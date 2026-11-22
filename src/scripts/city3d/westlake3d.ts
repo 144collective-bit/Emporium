@@ -23,9 +23,10 @@ import { site } from './tilework';
 import { PATH_Y, PAVE_Y, bench, registerGardens } from './gardens3d';
 import { isMain } from './gardens';
 import { offsetLine } from './streetplan';
-import { BENCHES, GATES, GATE_PIERS, PATHS, PIER, RIM, ROCKS, lakeLine, type ParkPath, type Pt, type Rock } from './westlake';
+import { BENCHES, GATES, GATE_PIERS, PATHS, PIER, RIM, ROCKS, lakeLine, onBridge, type ParkPath, type Pt, type Rock } from './westlake';
 import { TILE, tileOf } from './tiles';
 import { registerFringes } from './fringes3d';
+import { registerBridges } from './parkbridges3d';
 import { registerCivic } from './civic3d';
 import { OUTCROP, STONE as PAL_STONE } from './palette';
 
@@ -189,16 +190,34 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   if (scene && tick) registerParkLife(scene, tick, low);
   // The walks' kerbs and edges, the park's wall, the formal garden, the planters and the terraces (stage 3)
   registerGardens(low);
+  // The bridges over the arm and the inlet (parkbridges3d.ts, docs/westlake-plan.md Phase 3a)
+  registerBridges(low);
   // The rock outcrops on the knolls and at the point (docs/westlake-plan.md Phase 1)
   registerRocks(low);
   // The civic square at its south end (civic3d.ts, docs/civic-plan.md)
   registerCivic(scene, tick);
   // The slivers by the highway beside it (fringes3d.ts, docs/blend-plan.md Phase 5c)
   registerFringes(['west', 'north'], low);
-  // The paths: a site a stretch
-  for (const q of PATHS)
+  // The paths: a site a stretch (the loop's paving stopping at each bridge, whose deck carries it over the water)
+  const runsOf = (q: ParkPath): ParkPath[] => {
+    if (q.id !== 'loop') return [q];
+    const out: ParkPath[] = [];
+    let cur: Pt[] = [];
+    const n = q.pts.length;
+    const start = q.pts.findIndex((p) => onBridge(p[0], p[1], -0.2));
+    for (let i = 1; i <= n; i++) {
+      const p = q.pts[(start + i) % n];
+      if (onBridge(p[0], p[1], 0.3)) {
+        if (cur.length > 1) out.push({ ...q, pts: cur, loop: false });
+        cur = [];
+      } else cur.push(p);
+    }
+    if (cur.length > 1) out.push({ ...q, pts: cur, loop: false });
+    return out;
+  };
+  for (const q of PATHS.flatMap(runsOf))
     stretches(q).forEach((s, k) =>
-      site(`westlake path ${q.id} ${k}`, s.rect, (into) => {
+      site(`westlake path ${q.id} ${q.pts[0].map((v) => Math.round(v)).join(',')} ${k}`, s.rect, (into) => {
         const b = new Batch();
         // The main walks paved (their kerbs and the gravel paths' edges are gardens3d.ts's)
         if (isMain(q)) b.add(ribbon(s.pts, q.half, PAVE_Y), PAVING);

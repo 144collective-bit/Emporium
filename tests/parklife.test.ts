@@ -4,9 +4,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BOATS, DOGS, HULL, LANES, LEAD, PARK_PEOPLE, PICNICS, moment } from '../src/scripts/city3d/parklife';
+import { onBridge } from '../src/scripts/city3d/westlake';
 import { BOATHOUSE, JETTY, PARK_TREES, PATHS, BENCHES, inLake, inPark, onJetty, onPath, distToLine, LOOP_OUT, lakeLine } from '../src/scripts/city3d/westlake';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 
+/** The lawn's slab: a walker on a bridge stands over it */
+const SLAB_Y = 0.15;
 const TIMES = Array.from({ length: 160 }, (_, i) => i * 1.37 + 0.11);
 
 test('the boathouse and its jetty: on the north shore, the jetty from the loop out over the water, walkable', () => {
@@ -32,7 +35,8 @@ test('walkers, joggers and dog walkers: on their paths, never through each other
     for (const p of walkers) {
       p.at(t, m);
       assert.ok(onPath([m.x, m.z], 0.05), `${p.id} off the paths at ${m.x.toFixed(1)}, ${m.z.toFixed(1)} (t ${t})`);
-      assert.ok(!inLake(m.x, m.z, 0.5));
+      // (over the water only on a bridge's deck, up off the lawn: docs/westlake-plan.md Phase 3a)
+      if (inLake(m.x, m.z, 0.5)) assert.ok(onBridge(m.x, m.z, 0.2) && m.y > SLAB_Y, `${p.id} in the water at ${m.x.toFixed(1)}, ${m.z.toFixed(1)}`);
     }
   for (const l of LANES) {
     const mine = walkers.filter((p) => p.id.startsWith(`${l.id}-`));
@@ -58,7 +62,7 @@ test('dogs: on the lead ahead of their walkers, on the park, never in the water'
       PARK_PEOPLE[dog.walker].at(t, m);
       const gap = Math.hypot(d.x - m.x, d.z - m.z);
       assert.ok(gap > 0.6 && gap < LEAD.ahead + 0.6, `a lead of ${gap.toFixed(2)}`);
-      assert.ok(inPark([d.x, d.z], -0.2) && !inLake(d.x, d.z, 0.4));
+      assert.ok(inPark([d.x, d.z], -0.2) && (!inLake(d.x, d.z, 0.4) || onBridge(d.x, d.z, 0.1)));
     }
 });
 
