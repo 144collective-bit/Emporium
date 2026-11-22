@@ -147,7 +147,7 @@ import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
 import { CROWD_VIEW, figureDetail, headsReady, loadHeads } from './character';
 import type { Outfit } from './wardrobe';
-import { repaint, type GameDeps } from './ui';
+import type { GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
 import { antialias } from './targets';
@@ -1454,24 +1454,13 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // the tab shows)
     const bagGrid = root.querySelector<HTMLElement>('[data-hub-bag-grid]');
     const bagMod = lazy(() => import('./inventory-ui'), 'your bag');
-    const paintBag = () => {
-      if (!bagGrid) return;
+    let bag: { paint(): void } | null = null;
+    const paintBag = () =>
+      bagGrid &&
       void bagMod().then((m) => {
-        if (hub.tab === 'bag') repaint(bagGrid, m.bagHtml(game.save(), { may: (id) => walk.combat.canTake(id), walking }));
+        bag ??= m.hubBag(bagGrid, { save: () => game.save(), may: (id) => walk.combat.canTake(id), walking: () => walking, use: (id) => walk.useItem(id), open });
+        if (hub.tab === 'bag') bag.paint();
       });
-    };
-    // Its Use (the hotbar's own, where it works: docs/header-plan.md) and its ways to get more (a building's panel)
-    bagGrid?.addEventListener('click', (e) => {
-      const t = e.target as HTMLElement;
-      const use = t.closest<HTMLButtonElement>('[data-bag-use]');
-      if (use && !use.disabled) {
-        walk.useItem(use.dataset.bagUse as import('./catalog').ItemId);
-        setTimeout(paintBag, 60);
-        return;
-      }
-      const go = t.closest<HTMLButtonElement>('[data-bag-go]');
-      if (go) open(go.dataset.bagGo!);
-    });
     hub.hooks.tab = (id) => {
       root.classList.toggle('is-stall', id === 'business');
       if (id === 'business') tycoon!.paint();

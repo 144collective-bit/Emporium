@@ -175,6 +175,26 @@ export function bagHtml(save: TycoonSave, o: { may(id: WeaponId): boolean; walki
   );
 }
 
+/**
+ * The hub's Bag tab worked (docs/header-plan.md): painted from the save, its Use through the hotbar's own use (walk.ts
+ * `useItem()`), its ways to get more opening a building's panel; `paint()` when the tab shows
+ */
+export function hubBag(grid: HTMLElement, d: { save(): TycoonSave; may(id: WeaponId): boolean; walking(): boolean; use(id: ItemId): void; open(spot: string): void }) {
+  const paint = () => repaint(grid, bagHtml(d.save(), { may: d.may, walking: d.walking() }));
+  grid.addEventListener('click', (e) => {
+    const t = e.target as HTMLElement;
+    const use = t.closest<HTMLButtonElement>('[data-bag-use]');
+    if (use && !use.disabled) {
+      d.use(use.dataset.bagUse as ItemId);
+      setTimeout(paint, 60);
+      return;
+    }
+    const go = t.closest<HTMLButtonElement>('[data-bag-go]');
+    if (go) d.open(go.dataset.bagGo!);
+  });
+  return { paint };
+}
+
 /** What using one says when it can't be used (Phase 5: each where it works) */
 function notNow(id: ItemId, why: InvResult & { ok: false }) {
   const c = ITEM_CATALOG[id];

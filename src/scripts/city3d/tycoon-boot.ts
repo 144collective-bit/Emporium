@@ -275,13 +275,6 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     true
   );
   tabsEl.innerHTML = TABS.map((t) => `<button type="button" data-tab="${t.id}" aria-pressed="false">${t.label}</button>`).join('');
-  // LT / RT on a gamepad step the sections while the hub shows Business (hub.ts sends `mk-subtab`; docs/header-plan.md)
-  card.closest('[data-hub]')?.addEventListener('mk-subtab', (e) => {
-    if (!cardOpen()) return;
-    const i = TABS.findIndex((t) => t.id === state.tab);
-    openCard(TABS[(i + (e as CustomEvent<number>).detail + TABS.length) % TABS.length].id);
-    tabsEl.querySelector<HTMLButtonElement>(`[data-tab="${state.tab}"]`)?.focus({ preventScroll: true });
-  });
   // (a tab tapped before the screens are in: the screens take the card's clicks once they are)
   tabsEl.addEventListener('click', (e) => {
     const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-tab]');

@@ -244,6 +244,13 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
   /** Give up was pressed on this contract: its row shows the confirm (menukit.ts; the board ticks, so the state paints it) */
   let askDrop: number | null = null;
   const stands = () => Object.entries(STAND) as [PlaceId, { x: number; z: number }][];
+  // LT / RT on a gamepad step the sections while the hub shows Business (hub.ts sends `mk-subtab`; docs/header-plan.md)
+  card.closest('[data-hub]')?.addEventListener('mk-subtab', (e) => {
+    if (!cardOpen()) return;
+    const i = TABS.findIndex((t) => t.id === state.tab);
+    openCard(TABS[(i + (e as CustomEvent<number>).detail + TABS.length) % TABS.length].id);
+    tabsEl.querySelector<HTMLButtonElement>(`[data-tab="${state.tab}"]`)?.focus({ preventScroll: true });
+  });
 
   function carAt(): PlaceId | null {
     const c = h.car();
