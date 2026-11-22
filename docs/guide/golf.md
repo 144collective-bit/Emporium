@@ -116,3 +116,11 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
     crowdclips.ts), `ParkClip`'s and `Moment.since` (parklife.ts, life.ts), the `golfer` role's look (crowdlook.ts)
     and its club (wardrobe.ts `held: 'club'`), the course's sound (ambience.ts `GOLF_BIRDS`, `GOLF_LAWNS`).
   - The clubhouse's windows lit at night (golf3d.ts `golf-window`); the course stays dark.
+- **The golf game** (`docs/golf-game-plan.md`; Phase 1, the rules, built): **`golfgame-sim.ts`** (DOM-free, on
+  `DOM_FREE`, seeded, tested in `tests/golfgame.test.ts`): the clubs (`CLUBS`, `club()`, `launchOf()`, `lieTake()`,
+  `SPRAY`, `PUTT_MAX`, `puttSpeed()`), a shot (`strike()`: `ShotInput` aim, power, accuracy; `GRAVITY`, `DRAG`,
+  `STEP`, `CURVE`, `OVER`; the trees `inTree()`, `TREE`; `BOUNCE`, `ROLL`, `SLOPE_PULL`, `CUP`, `BALL_R`;
+  `groundAt()`, `slopeAt()`, `outOfBounds()`, `dropBy()`; `ShotResult` with its `path` every `TRACE` steps and its
+  `carry`), a round (`newRound()`, `teeBall()`, `windOn()`, `playShot()`, `toPar()`, `roundOver()`, `MAX_STROKES`,
+  `WIND_MAX`, `rng()`), the test golfer (`botShot()`). The pins are golflife.ts's flags (`FURNITURE[i].pin`).
+  `npm run golfmap` draws a round on the map (`GOLF_ROUND`, `GOLF_ROUND_BOT`).

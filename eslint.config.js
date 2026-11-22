@@ -33,6 +33,7 @@ const DOM_FREE = [
   'src/scripts/city3d/flight-step.ts',
   'src/scripts/city3d/weapons.ts',
   'src/scripts/city3d/golflife.ts',
+  'src/scripts/city3d/golfgame-sim.ts',
   'src/scripts/city3d/golfbake.ts',
   'src/scripts/city3d/southblocks.ts',
   'src/scripts/city3d/southsky.ts',

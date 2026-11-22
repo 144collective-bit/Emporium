@@ -12,7 +12,11 @@ Nothing is built until the owner signs off a phase; keep this plan up to date. T
 | Question | Answer |
 | --- | --- |
 | Plan the golf game next | Yes (2026-11-22) |
-| The questions below | Waiting for the owner |
+| The swing | The three-tap meter on a keyboard (start, power, accuracy); on touch a pull-back drag, with the same power and accuracy behind it |
+| Degen holding a club | Yes: golf is the one exception to "his hands hold only weapons" (docs/wardrobe-plan.md Phase 1), a club in his hands only while a round is on |
+| How long a round | The player's pick each time: a hole, the front nine, the back nine or all eighteen; a round left is carried on later |
+| Between shots | The camera flies to the ball |
+| Phase 1 | Go (2026-11-22); built, waiting for the owner's sign-off |
 
 ## What it is
 
@@ -72,16 +76,6 @@ green. Rewards are Dorras and XP only, like the kart park's. Nothing in it costs
 - **The boot** stays as it is: everything but the door's prompt and the panel's line comes with the game's chunk
   (`npm run budget`).
 
-## Questions for the owner
-
-1. **The swing:** the classic three-tap meter (start, power, accuracy) everywhere, or a pull-back drag on touch and
-   the meter on a keyboard?
-2. **Degen holding a club:** the wardrobe's rule is that his hands hold only weapons (docs/wardrobe-plan.md Phase 1).
-   Make golf the exception (a club in his hands while he plays), or show his swing with no club, the ball and its
-   flight telling the story?
-3. **How long a round:** one hole, a nine or all eighteen, the player's pick each time (as planned), or nines only?
-4. **Between shots:** the camera flies to the ball (as planned, quick), or Degen walks or drives a cart to it?
-
 ## The phases (each with the owner's sign-off)
 
 ### Phase 1: the rules
@@ -89,6 +83,24 @@ green. Rewards are Dorras and XP only, like the kart park's. Nothing in it costs
 `golfgame-sim.ts` and its tests: the clubs, a shot, the flight, the landing, the roll on the slope, the lies, the
 penalties, the trees, the cup, a hole and a round, the bot's rounds. Nothing on screen yet. A map from the data
 (`npm run golfmap`): every hole with the bot's shots drawn on it, for the sign-off.
+
+**Built** (2026-11-22; `docs/guide/golf.md`):
+
+- `golfgame-sim.ts` (DOM-free, on `DOM_FREE`, seeded): `CLUBS` (Driver 92, 3 Wood 80, 5 Iron 66, 7 Iron 54, 9 Iron
+  42, Wedge 32, Sand Wedge 20 tiles of carry; the Putter, `PUTT_MAX` 26), `lieTake()` and `SPRAY` (the lie's share
+  and wobble), `launchOf()` (each club's launch speed found from its carry), `strike()` (the flight with `GRAVITY`,
+  `DRAG`, the wind and a hook or slice's `CURVE`; `OVER` off the top of the meter; the trees, `inTree()`, `TREE`; the
+  landing's `BOUNCE` and the roll's `ROLL` by surface, the slope's `SLOPE_PULL`; the `CUP`; the water and out of bounds
+  with `dropBy()`, `outOfBounds()`; the result's `path`, `carry`, `lie`, `holed`, `penalty`), `newRound()` /
+  `playShot()` / `windOn()` / `toPar()` / `roundOver()` (`MAX_STROKES` 10 picks a hole up, `WIND_MAX` 5), `botShot()`
+  (the test golfer: the club that gets there, a search of aims and powers on the sim, two passes on the green).
+- The tests (`tests/golfgame.test.ts`): the carries off the 1st tee, the wind, the slice and the hook, the meter's top,
+  the lies, putting's length and the cup, the water's drop on dry land at every lake, out of bounds (two strokes, the
+  ball back), the trees, the card and the pick-up, the same with the same seed; the bot round all eighteen within par
+  plus two a hole and under par (it never mishits: -15 to -18), a golfer who mishits a little about par (+1 to +9 on
+  the seeds tried), no hole picked up.
+- The map: `GOLF_ROUND=3 npm run golfmap -- game-phase-1-round` (`docs/golf-shots/game-phase-1-round.png`): the
+  mishitting golfer's round on seed 3 drawn shot by shot, 9 over par. `GOLF_ROUND_BOT=1` draws the bot's.
 
 ### Phase 2: a shot on the course
 

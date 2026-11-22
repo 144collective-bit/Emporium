@@ -3,6 +3,9 @@
 // and number, the lakes, the clubhouse's grounds and the drive in. For the owner's sign-off on each phase's design.
 //   npm run golfmap -- <label>        writes docs/golf-shots/<label>.png (default: layout)
 //   GOLF_SCALE=3                      pixels a tile (default 2)
+//   GOLF_ROUND=3                      a round played by the rules' test golfer (golfgame-sim.ts, docs/golf-game-plan.md),
+//                                     mishitting a little, seeded: every shot's flight and roll drawn, the card in the key
+//   GOLF_ROUND_BOT=1                  ... by the bot that never mishits instead
 import { build } from 'esbuild';
 import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -16,7 +19,8 @@ const dir = mkdtempSync(join(tmpdir(), 'golfmap-'));
 try {
   const out = join(dir, 'golf.mjs');
   await build({
-    stdin: { contents: `import './golfbake';\nexport * from './golf';\nexport * from './golfground';\nexport { golfTrees, LAND, golfLand } from './golflift';`, resolveDir: resolve('src/scripts/city3d'), loader: 'ts' },
+    stdin: { contents: `import './golfbake';\nexport * from './golf';\nexport * from './golfground';\nexport { golfTrees, LAND, golfLand } from './golflift';\nexport { newRound, playShot, botShot, roundOver, toPar, rng } from './golfgame-sim';\nexport { FURNITURE } from './golflife';`, resolveDir: resolve('src/scripts/city3d'), loader: 'ts' },
+    define: { __CITY_BUILT__: 'false', __FREE_PLAY__: 'true' },
     outfile: out,
     bundle: true,
     format: 'esm',
@@ -84,16 +88,42 @@ try {
     const r = 6 * S;
     parts.push(`<circle cx="${(tx - X0) * S}" cy="${(tz - Z0) * S}" r="${r}" fill="#1d2b5a" stroke="#fff" stroke-width="${0.6 * S}"/>`);
     parts.push(`<text x="${(tx - X0) * S}" y="${(tz - Z0) * S + 2.6 * S}" text-anchor="middle" ${font} font-size="${7 * S}" fill="#fff">${h.n}</text>`);
-    const [fx, fz] = g.flagOf ? g.flagOf(h) : h.line.at(-1);
+    const [fx, fz] = g.FURNITURE ? g.FURNITURE[h.n - 1].pin : h.line.at(-1);
     parts.push(`<circle cx="${(fx - X0) * S}" cy="${(fz - Z0) * S}" r="${1.2 * S}" fill="#d22"/>`);
   }
   for (const l of g.LAKES) parts.push(`<text x="${(l.at[0] - X0) * S}" y="${(l.at[1] - Z0) * S + 2 * S}" text-anchor="middle" ${font} font-size="${4.5 * S}" fill="#e8f4ff">${l.name}</text>`);
   for (const f of g.FEATURES.filter((f) => f.h >= 3))
     parts.push(`<text x="${(f.at[0] - X0) * S}" y="${(f.at[1] - Z0) * S}" text-anchor="middle" ${font} font-size="${5 * S}" fill="#24361d" fill-opacity="0.8">${f.name.replace(/'/g, '&#39;')}</text>`);
+  // A round played by the rules' test golfer (GOLF_ROUND): each shot's path, where it stopped, the penalties
+  const rows2 = [];
+  if (process.env.GOLF_ROUND) {
+    const seed = Number(process.env.GOLF_ROUND) || 1;
+    const bot = !!process.env.GOLF_ROUND_BOT;
+    const pinOf = (h) => g.FURNITURE[h].pin;
+    const r = g.newRound([...Array(18).keys()], seed);
+    const wob = g.rng(seed * 99);
+    let n = 0;
+    while (!g.roundOver(r) && n++ < 400) {
+      const s0 = g.botShot(r, pinOf);
+      const putt = s0.club === 'putter';
+      const shot = bot ? s0 : { ...s0, aim: s0.aim + (wob() - 0.5) * (putt ? 0.06 : 0.08), power: s0.power * (1 + (wob() - 0.5) * (putt ? 0.16 : 0.12)), accuracy: putt ? 0 : (wob() - 0.5) * 0.5 };
+      const res = g.playShot(r, shot, pinOf);
+      const col = res.penalty ? '#ff3b30' : putt ? '#ffffff' : '#ffd23f';
+      parts.push(`<polyline points="${res.path.map((b) => px([b.x, b.z])).join(' ')}" fill="none" stroke="#111" stroke-opacity="0.55" stroke-width="${0.9 * S}"/>`);
+      parts.push(`<polyline points="${res.path.map((b) => px([b.x, b.z])).join(' ')}" fill="none" stroke="${col}" stroke-width="${0.5 * S}"/>`);
+      const e = res.at;
+      parts.push(`<circle cx="${((e.x - X0) * S).toFixed(1)}" cy="${((e.z - Z0) * S).toFixed(1)}" r="${0.7 * S}" fill="${col}" stroke="#111" stroke-width="${0.25 * S}"/>`);
+    }
+    const tp = g.toPar(r);
+    rows2.push(`A round by the ${bot ? 'bot' : 'test golfer (mishitting a little)'}, seed ${seed}: ${tp === 0 ? 'level par' : tp > 0 ? `${tp} over par` : `${-tp} under par`}; wind ${r.wind.speed.toFixed(1)} tiles/s`);
+    rows2.push(`Card: ${r.card.map((c, i) => `${i + 1}:${c}/${g.HOLES[i].par}`).join(' ')}`);
+    rows2.push(`Yellow: full shots; white: putts; red: into the water or out of bounds`);
+  }
   // The key, top left
   const par = g.HOLES.reduce((s, h) => s + h.par, 0);
   const len = Math.round(g.HOLES.reduce((s, h) => s + g.lengthOf(h), 0));
   const rows = [`Sector 7 golf course: ${label} (${g.golfTrees().length} trees)`, `18 holes, par ${par}, ${len} tiles (about ${Math.round((len * 1.8) / 10) * 10} m)`, `Contours every tile (1.8 m); ground ${lo.toFixed(1)} to ${hi.toFixed(1)} tiles`, `North is up; x ${Math.round(X0)} to ${Math.round(X1)}, z ${Math.round(Z0)} to ${Math.round(Z1)}`];
+  rows.push(...rows2);
   rows.forEach((t, k) => parts.push(`<text x="${6 * S}" y="${(10 + k * 7) * S}" ${font} font-size="${5 * S}" fill="#111">${t}</text>`));
   const svg = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}">${parts.join('')}</svg>`);
   mkdirSync('docs/golf-shots', { recursive: true });
