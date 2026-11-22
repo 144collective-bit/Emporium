@@ -147,7 +147,14 @@ keep it up to date when what it describes changes.
     `combat-lazy.ts`, which walk.ts holds as `combat`: the same shape,
     fetched once the first frame is drawn since the targets stand in the
     city from the start; until then it answers from the save and replays
-    what was set). A dynamic import goes through `lazy(load, what)` in
+    what was set), and your car and your aircraft (`drive.ts`, `fly.ts`
+    and what only they use, the boot's trim, 2026-11-22: 7.6 KB, the boot
+    from 774.9 to 767.3) behind `lazyFront()` (`lazyfront.ts`): the same
+    shape, fetched once the first frame is drawn, answering from `idle`
+    until then ("not driving, nothing near": every getter walk.ts reads has
+    its stand-in there, since anything else comes back as a do-nothing
+    function), everything the real one's once it's in; the hangar's
+    preview, keep and cancel wait for it (`loaded()`). A dynamic import goes through `lazy(load, what)` in
     `lazy.ts` (walk.ts's `lazyMenu()` too): a failed fetch toasts
     "Couldn't load <what> · reload" once and the next call tries again. New
     features that aren't needed until they're used come the same way. three.js is a chunk of its own (`manualChunks` in
