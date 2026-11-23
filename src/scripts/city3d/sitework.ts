@@ -19,6 +19,8 @@
  * so does anything wanted at once (`want()`, the boot, building near pieces
  * again). The worker closes once every site is built.
  */
+import { KARTS2, KART2_LAND } from './kartswitch';
+import { flattenRolls } from './rolls';
 import * as THREE from 'three';
 import { FROM_BUILD } from './baked';
 import { initFarCars } from './cars';
@@ -39,6 +41,8 @@ import { buildOuterDress } from './outerdress3d';
 export interface SiteInit {
   low: boolean;
   placed: Placed;
+  /** Riverside Raceway's switch (`?karts=new`, kartswitch.ts): its land's rolls levelled as the main thread's are */
+  karts2?: boolean;
 }
 
 /** One of a built site's meshes, as arrays */
@@ -75,6 +79,10 @@ export interface DistrictModule {
 
 /** In the worker: register the sites, then build each one when it's asked for */
 export function serveSites(scope: Scope, init: SiteInit) {
+  if (init.karts2) {
+    KARTS2.on = true;
+    flattenRolls([KART2_LAND]);
+  }
   // The boot's own builders, in its order (what they make besides sites stays here, unused)
   const scene = new THREE.Scene();
   // (the parked cars go into the far cars' mesh, made first at the boot)

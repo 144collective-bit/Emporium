@@ -992,7 +992,7 @@ function guidance(cc: Course, gb: Batch, signs: Batch, pads: Batch, atlas: THREE
     }
   // The boards (kartside.ts: placed clear of everything trackside)
   const post = (x: number, z: number, h: number) => gb.box(x - 0.05, 0, z - 0.05, 0.1, h, 0.1, INK);
-  for (const bd of BOARDS[cc.id]) {
+  for (const bd of BOARDS[cc.id as CourseId] ?? []) {
     const { x, z, tx, tz, nx, nz } = bd;
     if (bd.kind === 'chevron') {
       post(x - tx * 0.5, z - tz * 0.5, 1.2);

@@ -70,6 +70,7 @@ import type { PadHost, PadState, pollPad as PollPad } from './walkpad';
 import { onKey as onKeyOf, type KeyHost } from './walkkeys';
 import { wireTouch, type TouchHost } from './walktouch';
 import { KART_PARK } from './kartpark';
+import { KARTS2 } from './kartswitch';
 import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
@@ -774,6 +775,8 @@ export function createWalk(d: WalkDeps) {
     if (swingShut() && BARRIER_WALLS.some((b) => inBox(b, x, z, RADIUS))) return true;
     // ...and the Docks' basin at its quays' edge (docks.ts; the avenue crosses its mouth on a bridge)
     if (inBasin(x, z, -0.3)) return true;
+    // Riverside Raceway's tunnel and cuttings behind `?karts=new` (kartswitch.ts): their walls under their tops
+    if (KARTS2.wall?.(x, z, y, RADIUS)) return true;
     // Westlake Park's lake (westlake.ts): you stop on the lawn at its stone rim, but out along the jetty (its edges stop you)
     if (inLake(x, z, RADIUS + RIM.w + 0.1) && !onJetty(x, z, RADIUS) && !onTerrace(x, z, RADIUS)) return true;
     if (SOLID_GRID.near(x, z, RADIUS, nearBoxes).some((b) => inBox(b, x, z, RADIUS) && !skip?.(b))) return true;
@@ -1246,7 +1249,7 @@ export function createWalk(d: WalkDeps) {
    * The hut's menu and the race (kart-ui.ts, kart.ts) come in their own chunk (kartgame.ts), loaded when Degen comes
    * near the park or asks at the hut; until then they stand idle
    */
-  const NO_KART_UI: KartUI = { open: false, show() {}, close: () => false, step() {}, stepTab() {}, take() {}, showHud() {}, paintHud() {}, count() {}, pop() {}, showResult() {}, update() {} };
+  const NO_KART_UI: KartUI = { open: false, show() {}, close: () => false, step() {}, stepTab() {}, take() {}, showHud() {}, setMap() {}, paintHud() {}, count() {}, pop() {}, showResult() {}, update() {} };
   const NO_KARTS: KartRace = { active: false, sim: null, start() {}, setGhosts() {}, update() {}, exit: () => ({ x: pos.x, z: pos.z, yaw }), preview() {}, idle() {}, home: () => null, takeOut: () => null, bringBack() {}, toggleView: () => 'near' };
   let kartUI: KartUI = NO_KART_UI;
   let karts: KartRace = NO_KARTS;

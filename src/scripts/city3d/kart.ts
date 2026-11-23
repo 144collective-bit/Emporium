@@ -38,9 +38,11 @@ import type { Sfx } from './combat';
 import type { ClassId } from './catalog';
 import { COUNTDOWN, CUPS, NO_INPUT, T, TICK, createKartSim, tune, type CupId, type KartEvent, type KartInput, type KartSim, type Racer } from './kart-sim';
 import type { KartHud, KartRace, KartRaceDeps, KartResultView, KartStanding } from './kart-types';
-import { CAM_GAP, COURSES, HUT_DOOR, camRoom, type Course, type CourseId, type Cond } from './kartcircuit';
+import { CAM_GAP, HUT_DOOR, camRoom, type Course, type RaceCourseId, type Cond } from './kartcircuit';
+import { courseOf, isRiverside, trackOf } from './kart-track';
+import { camRoom2 } from './kartcourse2';
 import { KART_AREA, bankY } from './kartfacility';
-import { BOXES, ITEM, ITEM_NAMES } from './kartitems';
+import { ITEM, ITEM_NAMES } from './kartitems';
 import { CEREMONY, CONFETTI, ceremonyAt, ceremonyCam, confettiAt, confettiColour, excited, marshalFlags, podiumSpot, type Seen } from './kartcrowd';
 import { CHEER } from './life';
 import { KART_VIEW } from './kartpark3d';
@@ -203,7 +205,7 @@ const parCache = new Map<string, Ghost>();
  * The par ghost: the rivals' brain driving the Pocket Rocket round the course at the class's
  * pace, alone, its second lap (a flying one) recorded. A headless sim, a few milliseconds.
  */
-function parGhost(course: CourseId, cls: ClassId): Ghost | null {
+function parGhost(course: RaceCourseId, cls: ClassId): Ghost | null {
   const key = recordKey(course, cls);
   const hit = parCache.get(key);
   if (hit) return hit;
@@ -259,7 +261,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
   scene.add(group);
 
   let sim: KartSim | null = null;
-  let course: CourseId = 'circuit';
+  let course: RaceCourseId = 'circuit';
   let cond: Cond = 'day';
   let cup: CupId | 'time' = 'time';
   /** A single race: a cup's rivals at its class, outside any series */
@@ -361,8 +363,12 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     else camPos.lerp(goal, damp(10, dt));
     // (never through the tunnel's wall, up into the flyover's deck or under the ground and the banks: kartcircuit.ts)
     if (!seat) {
-      const [rx, ry, rz] = camRoom(camPos.x, camPos.y, camPos.z, p.x, p.y, p.z);
-      camPos.set(rx, Math.max(ry, bankY(rx, rz) + CAM_GAP), rz);
+      // (on Riverside Raceway: its tunnel's walls and roof, its hill: kartcourse2.ts)
+      if (isRiverside(course)) camPos.set(...camRoom2(camPos.x, camPos.y, camPos.z, p.x, p.y, p.z));
+      else {
+        const [rx, ry, rz] = camRoom(camPos.x, camPos.y, camPos.z, p.x, p.y, p.z);
+        camPos.set(rx, Math.max(ry, bankY(rx, rz) + CAM_GAP), rz);
+      }
     }
     camReady = true;
     camera.position.copy(camPos);
@@ -434,7 +440,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
           lapDone(e.time);
           d.ui.pop(placeText(e.place), e.place <= 3 ? 'good' : 'plain');
           // A time trial's results after a breath; a race's after the podium (kartcrowd.ts), once the top three are home
-          if (sim.timeTrial) finishAt = 1.5;
+          // (Riverside Raceway's podium comes with its venue, Phase 4: its results after a breath meanwhile)
+          if (sim.timeTrial || isRiverside(course)) finishAt = 1.5;
           else podiumWait = 0;
         }
         break;
@@ -835,7 +842,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       group.add(o);
       return o;
     };
-    const boxes = mk(new THREE.InstancedMesh(new THREE.BoxGeometry(0.55, 0.55, 0.55), new THREE.MeshToonMaterial({ color: '#ffd23f', emissive: '#ff8a2a', emissiveIntensity: 0.35, transparent: true, opacity: 0.85 }), BOXES.length));
+    const boxes = mk(new THREE.InstancedMesh(new THREE.BoxGeometry(0.55, 0.55, 0.55), new THREE.MeshToonMaterial({ color: '#ffd23f', emissive: '#ff8a2a', emissiveIntensity: 0.35, transparent: true, opacity: 0.85 }), Math.max(trackOf('circuit').boxes.length, trackOf('riverside').boxes.length)));
     boxes.frustumCulled = false;
     boxes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     const slicks = mk(new THREE.InstancedMesh(new THREE.CylinderGeometry(0.62, 0.62, 0.02, 18), new THREE.MeshToonMaterial({ color: '#1a1424' }), ITEM.most));
@@ -856,7 +863,10 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         for (const sh of shields) sh.visible = false;
       },
       update(sim: KartSim, t: number) {
-        BOXES.forEach((b, i) => {
+        // (the course's own track's: today's circuit's or Riverside Raceway's)
+        const list = trackOf(course).boxes;
+        boxes.count = list.length;
+        list.forEach((b, i) => {
           e.set(0.4, d.reduced ? 0.6 : t * 1.8 + i, 0.25);
           m4.compose(v.set(b.x, b.y + 0.55 + (d.reduced ? 0 : Math.sin(t * 2.4 + i) * 0.08), b.z), q.setFromEuler(e), sim.boxLive(i) ? one : none);
           boxes.setMatrixAt(i, m4);
@@ -1142,14 +1152,16 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       view = START_VIEW;
       fov0 = camera.fov;
       fov = camera.fov;
-      d.park.setCourse(course);
+      // (today's park's guidance for the way round; Riverside Raceway's boards come with its night racing, Phase 5)
+      if (!isRiverside(course)) d.park.setCourse(course);
       d.park.racing(true);
       d.conditions(cond);
+      d.ui.setMap(course);
       d.ui.showHud(true);
       root.classList.add('is-karting');
       root.classList.toggle('has-items', sim.items);
       itemsView.show(sim.items);
-      root.dataset.kart = COURSES[course].name;
+      root.dataset.kart = courseOf(course).name;
       // The sim only announces counts below its first, so the first number is ours
       shownCount = '';
       showCount(String(Math.ceil(COUNTDOWN)));
@@ -1204,7 +1216,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       if ((flagT -= dt) <= 0) {
         flagT = 0.25;
         const lead = s.standings()[0];
-        KART_VIEW.flags = marshalFlags(s.course, s.started ? s.time : -1, seen, spins, s.laps, s.racers[lead].lap);
+        // (today's park's marshals; Riverside Raceway's come with its race control, Phase 4)
+        if (!isRiverside(course)) KART_VIEW.flags = marshalFlags(s.course, s.started ? s.time : -1, seen, spins, s.laps, s.racers[lead].lap);
       }
       if (levelAt >= 0 && (levelAt -= dt) < 0) d.sfx('levelup');
       // The engine, the camera, the HUD
@@ -1228,7 +1241,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
         boardT = d.low ? 0.5 : 0.25;
         const names = s.timeTrial ? [] : lineup(cup as CupId).map((r) => r.name);
         d.park.board({
-          title: COURSES[course].name.toUpperCase(),
+          title: courseOf(course).name.toUpperCase(),
           lap: p.finished ? s.laps : Math.min(s.laps, p.lap + 1),
           laps: s.laps,
           done: p.finished,

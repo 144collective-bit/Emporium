@@ -118,6 +118,20 @@ function lattice() {
     }
   return heights;
 }
+/**
+ * Land kept level besides what the bake kept (Riverside Raceway's behind `?karts=new`, kartswitch.ts): every lattice
+ * point within `ROLL.clear` of it made 0, rising back over `ROLL.ramp`, as the bake does round what it keeps. Asked
+ * once at the boot (and in the site worker), before anything's built on the rolls.
+ */
+export function flattenRolls(rects: readonly [number, number, number, number][]) {
+  const h = lattice();
+  for (let j = 0; j < N; j++)
+    for (let i = 0; i < N; i++) {
+      const [px, pz] = [(I0 + i) * L, (J0 + j) * L];
+      const d = Math.min(...rects.map((r) => Math.hypot(Math.max(r[0] - px, 0, px - r[2]), Math.max(r[1] - pz, 0, pz - r[3]))));
+      if (d < ROLL.clear + ROLL.ramp) h[j * N + i] *= smooth(ROLL.clear, ROLL.clear + ROLL.ramp, d);
+    }
+}
 /** The lattice point (i, j)'s height (0 off the lattice) */
 function nodeY(h: Float32Array, i: number, j: number) {
   const [a, b] = [i - I0, j - J0];

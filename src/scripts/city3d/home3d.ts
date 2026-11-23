@@ -49,7 +49,7 @@ import { houseRooms, type BaseThing, type Furniture, type UpThing } from './home
 import { curtains } from './spawn';
 import type { Rect } from './endswood';
 
-const { FURNITURE, UPSTAIRS, BASEMENT, DRESS_X, BED_DOOR, BATH_DOOR, BATH_Z } = houseRooms(HOUSE_GEO);
+const { FURNITURE, UPSTAIRS, BASEMENT, DRESS_X, BED_DOOR, BATH_DOOR, BATH_Z, SPLIT_Z, LAND_X, PART, UP_DOORS } = houseRooms(HOUSE_GEO);
 
 const S = HOME_SLAB;
 /** On the plot: what lies on its ground 24 mm over the slab (the paving is at 6 and its darker courses at 12:
@@ -987,7 +987,7 @@ function inside(into: THREE.Object3D, low: boolean) {
     // The lounge's and the hall's ceiling lights, flat discs (a round one hung in front of the trophy wall's top shelf
     // and read as a trophy; the kitchen's is the pendant over the island), the rug under the coffee table, the skirting
     // along the west wall
-    for (const [lx, lz] of [[x0 + 1.65, z0 + 2.15], [dx + 1.2, cz]]) b.add(new THREE.CylinderGeometry(0.13, 0.13, 0.02, 12).translate(lx, top - 0.016, lz), glow(PAL.warm));
+    for (const [lx, lz] of [[x0 + 1.9, z0 + 2.5], [dx + 1.2, cz]]) b.add(new THREE.CylinderGeometry(0.13, 0.13, 0.02, 12).translate(lx, top - 0.016, lz), glow(PAL.warm));
     // (the rug under the coffee table, a border round its field, from the media wall's foot to the sofa's front)
     const t = FURNITURE.find((f) => f.kind === 'table')!.rect;
     const so = FURNITURE.find((f) => f.kind === 'sofa')!.rect;
@@ -1424,8 +1424,8 @@ function upstairs(b: Batch, low: boolean) {
   const [cx, cz, w, d] = [(x0 + x1) / 2, (z0 + z1) / 2, x1 - x0, z1 - z0];
   const fy = S + UP_Y;
   const top = S + UP_CEIL - G;
-  const SPLIT = ROOM[1] + 3.0 - 0.05;
-  const LAND = ROOM[2] - 2.6;
+  const SPLIT = SPLIT_Z - PART;
+  const LAND = LAND_X;
   face(b, cx, z0, w, fy, top, 0, WALLS_IN, 0.94);
   face(b, cx, z1, w, fy, top, Math.PI, WALLS_IN, 0.9);
   face(b, x0, cz, d, fy, top, Math.PI / 2, WALLS_IN, 0.82);
@@ -1464,7 +1464,7 @@ function upstairs(b: Batch, low: boolean) {
   for (const u of UPSTAIRS) upFurnish(b, u, fy, low);
   b.detail(() => {
     // Ceiling lights, flat discs: the bedroom's, the dressing room's, the office's, the landing's, the bathroom's
-    const lights: [number, number][] = [[x0 + 1.6, z0 + 1.4], [DRESS_X + 1.45, z0 + 1.6], [x0 + 3.0, z1 - 1.6], [x1 - 1.3, z0 + 3.4], [x1 - 1.3, z1 - 0.5]];
+    const lights: [number, number][] = [[x0 + 1.6, z0 + 1.65], [DRESS_X + 2.1, z0 + 1.75], [x0 + 3.4, z1 - 1.7], [x1 - 1.3, z0 + 3.8], [x1 - 1.3, z1 - 0.7]];
     for (const [lx, lz] of lights) b.add(new THREE.CylinderGeometry(0.11, 0.11, 0.02, 12).translate(lx, top - 0.01, lz), glow(PAL.warm));
     // The rug under the bed, a border round its field
     const bed = UPSTAIRS.find((u) => u.kind === 'bed')!.rect;
@@ -1473,8 +1473,8 @@ function upstairs(b: Batch, low: boolean) {
     // His art (docs/interior-plan.md Phase 5), each under its picture light: over the bed on the green wall, in the
     // office on the landing's partition, on the landing's east wall
     art(b, x0 + 0.004, (bed[1] + bed[3]) / 2, 1, 0, 1.0, fy + 0.74, fy + 1.06, 'dusk', low);
-    art(b, LAND - 0.05, ROOM[1] + 3.58, -1, 0, 0.8, fy + 0.45, fy + 0.92, 'stack', low);
-    art(b, x1, ROOM[1] + 3.85, -1, 0, 0.8, fy + 0.42, fy + 0.9, 'bars', low);
+    art(b, LAND - PART, (SPLIT_Z + PART + UP_DOORS[1][0]) / 2, -1, 0, 0.75, fy + 0.45, fy + 0.92, 'stack', low);
+    art(b, x1, (ROOM[1] + 2.8 + BATH_Z) / 2 - 0.25, -1, 0, 0.8, fy + 0.42, fy + 0.9, 'bars', low);
   });
 }
 
@@ -1738,13 +1738,13 @@ function basement(b: Batch, low: boolean) {
   for (const u of BASEMENT) denFurnish(b, u, fy, low);
   b.detail(() => {
     // His mark in neon on the west wall over the sofa's end, a rug under the table, two ceiling lights (dim, warm)
-    mark(b, LED_MAGENTA, 0.36, V(x0 + 0.02, fy + 0.75, z0 + 2.05), V(0, 0, -1), V(0, 1, 0), V(1, 0, 0), { tube: 0.014 });
+    mark(b, LED_MAGENTA, 0.36, V(x0 + 0.02, fy + 0.75, z0 + 2.25), V(0, 0, -1), V(0, 1, 0), V(1, 0, 0), { tube: 0.014 });
     const t = BASEMENT.find((u) => u.kind === 'table')!.rect;
     iflat(b, [t[0] - 0.6, t[1] - 0.25, t[2] + 0.6, t[3] + 1.3], fy + G + 0.006, RUG_EDGE);
     iflat(b, [t[0] - 0.52, t[1] - 0.17, t[2] + 0.52, t[3] + 1.22], fy + G + 0.01, RUG_FIELD);
-    for (const [lx, lz] of [[x0 + 2.2, z0 + 1.4], [x0 + 3.2, z1 - 1.6]]) b.add(new THREE.CylinderGeometry(0.1, 0.1, 0.02, 10).translate(lx, top - 0.01, lz), glow(PAL.warm));
+    for (const [lx, lz] of [[x0 + 2.5, z0 + 1.6], [x0 + 3.8, z1 - 1.6]]) b.add(new THREE.CylinderGeometry(0.1, 0.1, 0.02, 10).translate(lx, top - 0.01, lz), glow(PAL.warm));
     // His art on the west wall past the arcade, in his neon's colours (Phase 5)
-    art(b, x0, ROOM[1] + 4.6, 1, 0, 0.9, fy + 0.45, fy + 0.9, 'tiles', low);
+    art(b, x0, ROOM[3] - 1.95, 1, 0, 0.9, fy + 0.45, fy + 0.9, 'tiles', low);
   });
 }
 

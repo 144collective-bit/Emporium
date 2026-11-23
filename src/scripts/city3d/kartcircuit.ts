@@ -28,6 +28,7 @@
  * Reverse runs the same surface the other way: every corner flipped, the
  * flyover before the west loop.
  */
+import type { Course2Id } from './kartcircuit2';
 import { F, GATE, KART_PARK, KART_W, STEP, frame, heightAt, locate, sampleLine, toLocal, toWorld, type CPt, type Frame, type Line, type Pt } from './kartpark';
 
 /** The track's width and half width (four or five karts abreast) */
@@ -181,6 +182,11 @@ export const START_U = 48;
 /* ---------- The two courses: the circuit forward and in reverse ---------- */
 
 export type CourseId = 'circuit' | 'circuit-reverse';
+/** Any course a race can run: today's circuit's or Riverside Raceway's (kartcircuit2.ts, behind `?karts=new`) */
+export type RaceCourseId = CourseId | Course2Id;
+/** Riverside Raceway's two (kartcircuit2.ts's COURSE2_IDS, named here so the save needn't load the circuit to keep their records) */
+export const RIVER_COURSE_IDS: Course2Id[] = ['riverside', 'riverside-reverse'];
+export const RIVER_COURSE_NAME = 'Riverside Raceway';
 export const COURSE_IDS: CourseId[] = ['circuit', 'circuit-reverse'];
 /** A boost pad's length along the track (it spans the track's width) */
 export const PAD_LEN = 4;
@@ -194,7 +200,7 @@ const NAMES: Record<CourseId, { name: string; blurb: string }> = {
 export type Cond = 'day' | 'night' | 'rain';
 export const CONDS: Record<Cond, { name: string }> = { day: { name: 'Day' }, night: { name: 'Night' }, rain: { name: 'Rain' } };
 export interface Course extends Line {
-  id: CourseId;
+  id: RaceCourseId;
   name: string;
   blurb: string;
   reverse: boolean;
