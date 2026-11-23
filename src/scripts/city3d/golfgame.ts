@@ -5,7 +5,8 @@
  *
  * - **A shot**: Degen at his ball side-on (right-handed: the target to his left), the camera behind the ball down
  *   the aim, a ring where the club carries at full power (the putter's: at the pin's distance) and a line out to it.
- *   A / D (or the arrows) aim, W / S change the club (the one for the distance is picked first), Space starts the
+ *   A / D (or the arrows) aim, W / S change the club (the one for the distance is picked first), V the camera
+ *   (behind the ball, or high over the hole looking down the aim), Space starts the
  *   meter, Space again sets the power on its way up (past the top is more distance, less control), Space a third
  *   time on its way back down sets the accuracy: on the line straight, early a hook, late a slice (`METER`).
  * - **The swing**: his `golf` or `putt` pose (acts.ts, the crowd's rows on his figure) from the top of the backswing,
@@ -170,6 +171,8 @@ export function createGolfGame(d: GolfDeps): GolfGame {
   const want = new THREE.Vector3();
   const wantLook = new THREE.Vector3();
   const root0 = { roll: 0, pitch: 0, pivot: 0 };
+  /** The shot camera: behind the ball, or high over the hole looking down the aim (V) */
+  let high = false;
 
   const hole = () => HOLES[round!.play.hole];
   const ballAt = () => round!.play.ball;
@@ -208,8 +211,9 @@ export function createGolfGame(d: GolfDeps): GolfGame {
   function shotCamera(out: THREE.Vector3, look: THREE.Vector3) {
     const b = ballAt();
     const [fx, fz] = dir();
-    // (behind the ball, a little to his side of it so he's in the picture, the ball low in the middle of it)
-    const [back, up, ahead, side] = putting() ? [2.6, 1.2, 4, 0.5] : [4.2, 1.7, 10, 0.9];
+    // (behind the ball, a little to his side of it so he's in the picture, the ball low in the middle of it; or high
+    // over it looking down the aim, V: the hole laid out ahead)
+    const [back, up, ahead, side] = high ? (putting() ? [5, 7, 3, 0] : [10, 26, 40, 0]) : putting() ? [2.6, 1.2, 4, 0.5] : [4.2, 1.7, 10, 0.9];
     const [sx, sz] = [-fz * side, fx * side];
     out.set(b.x - fx * back - sx, Math.max(b.y, groundAt(b.x - fx * back, b.z - fz * back)) + up, b.z - fz * back - sz);
     look.set(b.x + fx * ahead, b.y + (putting() ? 0 : 0.5), b.z + fz * ahead);
@@ -463,7 +467,11 @@ export function createGolfGame(d: GolfDeps): GolfGame {
       else held.delete(code);
       return true;
     }
-    if (!down || repeat) return ['KeyW', 'KeyS', 'ArrowUp', 'ArrowDown', 'Space'].includes(code);
+    if (!down || repeat) return ['KeyW', 'KeyS', 'ArrowUp', 'ArrowDown', 'Space', 'KeyV'].includes(code);
+    if (code === 'KeyV') {
+      high = !high;
+      return true;
+    }
     if (phase === 'aim' && ['KeyW', 'KeyS', 'ArrowUp', 'ArrowDown'].includes(code)) {
       // W / up a longer club, S / down a shorter one
       const ids = CLUBS.map((c) => c.id);

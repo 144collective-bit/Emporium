@@ -141,6 +141,7 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
       steer('Aim'),
       { job: 'club', label: 'Club', keys: ['W', 'S', '↑', '↓'], pad: ['LB', 'RB'], touch: 'Club' },
       { job: 'swing', label: 'Swing: start, power, accuracy', keys: ['Space'], pad: ['A'], touch: 'Swing' },
+      camera('Camera: behind the ball or high over the hole'),
       quit('Quit the round'),
     ],
   },

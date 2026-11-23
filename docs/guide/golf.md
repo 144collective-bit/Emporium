@@ -136,5 +136,5 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   built in the chunk, styled by `src/styles/golf.css` (imported after karts.css in Base.astro), walk mode's own
   buttons, the guide and the hotbar hidden under `.city.is-golfing`; `scoreName()` (par, birdie...). Walk mode's
   hooks: `golfFrame()` in `update()`, `modeNow()`'s `golf` (keymap.ts `golf`: aim A / D, club W / S, swing Space,
-  quit Esc; the jobs `club` and `swing`), walkkeys.ts's `golf` branch, Esc's `quitGolf()`, `endGolf()` standing
+  the camera V (behind the ball or high over the hole), quit Esc; the jobs `club` and `swing`), walkkeys.ts's `golf` branch, Esc's `quitGolf()`, `endGolf()` standing
   Degen back at the door. The smoke's `golf` scene plays a shot (`npm run smoke -- golf`).
