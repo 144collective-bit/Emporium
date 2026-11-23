@@ -495,7 +495,8 @@ function house(b: Batch, low: boolean) {
   cube(b, [x0, z1 - T, x1, z1], S, S + E, LOFT_BRICK);
   cube(b, [x0, z0 + T, x0 + T, z1 - T], S, S + E, LOFT_BRICK);
   cube(b, [x1 - T, z0 + T, x1, z1 - T], S, S + E, LOFT_BRICK);
-  cube(b, [x0 + T, z0 + T, x1 - T, z1 - T], S + CEIL + 0.004, S + CEIL + 0.1, COPING);
+  // (the upper floor's slab open over the stair's well: docs/house-plan.md Phase 2)
+  for (const r of aroundWell(x0 + T, z0 + T, x1 - T, z1 - T)) cube(b, r, S + CEIL + 0.004, S + CEIL + 0.1, COPING);
   cube(b, [x0, z0, x1, z1], S + E, S + E + 0.06, FELT);
   // The parapet round the roof under a stone coping; over the door's bay on the front it steps up
   const dx = HOME.door[0];
@@ -1454,7 +1455,8 @@ function stair(b: Batch, low: boolean) {
   icube(b, [door + 0.19, z1 + 0.024, door + 0.215, z1 + 0.05], S + 0.35, S + 0.75, BRASS);
   // Over the well the room's ceiling is open: the floor's edge round it (its sides into the well), the front and east
   // walls on up between the two floors
-  icube(b, [x0 - 0.02, z0 + 0.006, x0, z1], S + CEIL - 0.004, S + UP_Y, WALLS_IN);
+  // (a hair proud of the shell's slab, whose edge it covers)
+  icube(b, [x0 - 0.015, z0 + 0.006, x0 + 0.005, z1], S + CEIL - 0.004, S + UP_Y, WALLS_IN);
   icube(b, [spine[0], z1 - 0.02, x1 - E, z1], S + CEIL - 0.004, S + UP_Y, WALLS_IN);
   face(b, (x0 + x1) / 2, ROOM[1] + 0.006, x1 - x0, S + CEIL, S + UP_Y, 0, WALLS_IN, 0.94);
   face(b, ROOM[2] - 0.006, (z0 + z1) / 2, z1 - z0, S + CEIL, S + UP_Y, -Math.PI / 2, WALLS_IN, 0.82);
