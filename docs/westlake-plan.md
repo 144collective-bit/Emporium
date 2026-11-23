@@ -215,7 +215,21 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
      walks.
    Walk mode walks the steps and bridges (groundheight.ts layers, as the
    terraces are); solids for the balustrades and piers.
-4. **The formal garden made ornate.** Its site and its walls kept, laid
+4. **The formal garden made ornate** (built, waiting on the owner's
+   sign-off). gardens.ts: the wisteria pergola along the north side inside
+   the wall (`PERGOLA`, `PERGOLA_COLUMNS`, solid; the north beds start
+   behind it); drawn by gardens3d.ts: the wall a balustrade on the same
+   lines (`balustrade()`: plinth, rail, piers, balusters near only), the
+   pergola's stone columns, timber beams and joists, the vine and its
+   hanging blooms (palette.ts `PLANT.wisteria`), each bed on lawn in a
+   pattern (`patternBed()`: a knot of low clipped box, a diamond as big as
+   fits and a ring, a ring of one colour round a tiered topiary on a
+   plinth, the diamond's corners in two more), the two fountains carved
+   (a moulded base, eight piers round the basin, a rounded coping, a
+   turned pedestal, two bowls with water spilling in streams, a finial).
+   Tested: the columns in the garden, off every walk and solid, the beds
+   behind the pergola. Boot 774.8 of 775 KB.
+   (As planned:) Its site and its walls kept, laid
    anew inside: balustrades in place of the low walls, a wisteria pergola
    along its north side, beds in patterns (knots of box hedge, rings and
    diamonds of colour on lawn, not grids on soil), a carved central

@@ -160,6 +160,19 @@ export const GARDEN_WALLS: Pt[][] = (() => {
   return runs(dense(ring, 0.25, true), (p) => !open(p), true, 3);
 })();
 
+/**
+ * The wisteria pergola along the garden's north side, inside its wall (docs/westlake-plan.md Phase 4): a covered walk
+ * from one side to the other (`z0`..`z1` deep), stone columns in pairs along it every `every` but where the Mall and
+ * the garden's walks pass under, timber beams across them hung with wisteria
+ */
+export const PERGOLA = { z0: GARDEN_IN[1] + 0.4, z1: GARDEN_IN[1] + 3.6, x0: GARDEN_IN[0] + 0.8, x1: GARDEN_IN[2] - 0.8, every: 2.6, col: 0.32, h: 2.5 };
+export const PERGOLA_COLUMNS: Pt[] = (() => {
+  const out: Pt[] = [];
+  const clear = (x: number) => Math.abs(x - MALL.x) > PROMENADE_HALF + 0.3 && GARDEN_XS.every((g) => Math.abs(x - g) > GARDEN_WALK + 0.5);
+  for (let x = PERGOLA.x0; x <= PERGOLA.x1 + 1e-6; x += PERGOLA.every) if (clear(x)) for (const z of [PERGOLA.z0 + 0.3, PERGOLA.z1 - 0.3]) out.push([x, z]);
+  return out;
+})();
+
 /** The round places where each garden walk crosses the cross walk, and the fountain in each */
 export const ROUNDS: { c: Pt; r: number }[] = ROUND_AT.map((c) => ({ c, r: ROUND_R }));
 export const FOUNTAIN = { r: 2.2, h: 0.45, bowl: 0.7, top: 1.5 };
@@ -185,7 +198,7 @@ const area = (poly: Pt[]) => poly.reduce((a, p, i) => a + p[0] * poly[(i + 1) % 
 const sameWay = (poly: Pt[]) => (Math.sign(area(poly)) === Math.sign(area(BIG)) ? poly : [...poly].reverse());
 
 export const PARTERRES: Parterre[] = (() => {
-  const [gx0, gz0, gx1, gz1] = GARDEN_IN;
+  const [gx0, , gx1, gz1] = GARDEN_IN;
   const m = 0.8;
   const out: Parterre[] = [];
   for (const [ri, walkX] of GARDEN_XS.entries()) {
@@ -194,8 +207,9 @@ export const PARTERRES: Parterre[] = (() => {
     // Each side of the garden's walk: out to the garden's wall, or in to the Mall
     const sides: [number, number][] = walkX < MALL.x ? [[gx0 + m, walkX - GARDEN_WALK - m], [walkX + GARDEN_WALK + m, MALL.x - MALL.half - m]] : [[MALL.x + MALL.half + m, walkX - GARDEN_WALK - m], [walkX + GARDEN_WALK + m, gx1 - m]];
     for (const [x0, x1] of sides)
+      // (the north row starts behind the pergola, Phase 4)
       for (const [z0, z1] of [
-        [gz0 + m, GARDEN_Z - CROSS - m],
+        [PERGOLA.z1 + m, GARDEN_Z - CROSS - m],
         [GARDEN_Z + CROSS + m, gz1 - m],
       ] as [number, number][]) {
         // The corner by the round place is cut by an arc round it
@@ -359,8 +373,10 @@ function runBoxes(run: Pt[], half: number, h: number): Box[] {
 }
 const WALL_BOXES = [...WALLS.flatMap((r) => runBoxes(r, WALL.w / 2, WALL.h)), ...GARDEN_WALLS.flatMap((r) => runBoxes(r, WALL.w / 2, WALL.h))];
 const HEDGE_BOXES = PARTERRES.flatMap((p) => p.hedge.flatMap((r) => runBoxes(r, HEDGE.w / 2, HEDGE.h)));
+const PERGOLA_BOXES: Box[] = PERGOLA_COLUMNS.map(([x, z]): Box => [x - PERGOLA.col / 2, z - PERGOLA.col / 2, x + PERGOLA.col / 2, z + PERGOLA.col / 2, SOLID_H(PERGOLA.h)]);
 const BED_BOXES = [...MALL_BEDS.map((r): Box => [...r, SOLID_H(PLANTER.h)]), ...PLANTERS.map(({ at: [x, z], r }): Box => [x - r * 0.8, z - r * 0.8, x + r * 0.8, z + r * 0.8, SOLID_H(PLANTER.h)])];
 export const GARDEN_SOLIDS: Box[] = [
+  ...PERGOLA_BOXES,
   ...WALL_BOXES,
   ...HEDGE_BOXES,
   ...ROUNDS.map(({ c }): Box => [c[0] - FOUNTAIN.r, c[1] - FOUNTAIN.r, c[0] + FOUNTAIN.r, c[1] + FOUNTAIN.r, SOLID_H(FOUNTAIN.h)]),

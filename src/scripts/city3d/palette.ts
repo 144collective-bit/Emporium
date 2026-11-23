@@ -107,6 +107,9 @@ export const PLANT = {
   shrub: '#2a7048',
   shrubDark: '#1f5a3a',
   box: '#2f6a3c',
+  /** Westlake Park's formal garden (docs/westlake-plan.md Phase 4): the pergola's wisteria, its leaves */
+  wisteria: '#9a7fd6',
+  wisteriaLeaf: '#5f8f4a',
 } as const;
 
 /** Soil in a bed */

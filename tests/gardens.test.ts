@@ -4,6 +4,7 @@
 // clear of everything; terraces stepping down to the water that you can walk out on.
 import { test } from 'node:test';
 import { EDGES, KERBS } from '../src/scripts/city3d/gardenedges';
+import { PERGOLA, PERGOLA_COLUMNS } from '../src/scripts/city3d/gardens';
 import assert from 'node:assert/strict';
 import {
   FOUNTAIN,
@@ -182,6 +183,18 @@ test('solids: in the city\'s, each on the park', () => {
   for (const b of GARDEN_SOLIDS) {
     assert.ok(SOLIDS.includes(b));
     assert.ok(inPark([(b[0] + b[2]) / 2, (b[1] + b[3]) / 2], 0.05), `a solid off the park at ${b}`);
-    assert.ok(b[4] < 2, 'all low');
+    // (all low but the pergola's columns, Phase 4)
+    const column = PERGOLA_COLUMNS.some(([x, z]) => x > b[0] && x < b[2] && z > b[1] && z < b[3]);
+    assert.ok(b[4] < 2 || (column && b[4] < 3), 'all low');
   }
+});
+
+test('the formal garden made ornate (docs/westlake-plan.md Phase 4): the pergola along its north side, its columns off every walk and solid, the beds behind it', () => {
+  assert.ok(PERGOLA_COLUMNS.length >= 12, `${PERGOLA_COLUMNS.length} columns`);
+  for (const [x, z] of PERGOLA_COLUMNS) {
+    assert.ok(x > GARDEN_SITE[0] && x < GARDEN_SITE[2] && z > GARDEN_SITE[1] && z < GARDEN_SITE[3], 'a column out of the garden');
+    assert.ok(!onPath([x, z], PERGOLA.col), `a column on a walk at ${x}, ${z}`);
+    assert.ok(SOLIDS.some((b) => x > b[0] && x < b[2] && z > b[1] && z < b[3]), 'a column not solid');
+  }
+  for (const p of PARTERRES) for (const q of p.line) assert.ok(q[1] > PERGOLA.z1, 'a bed under the pergola');
 });
