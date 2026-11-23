@@ -177,7 +177,7 @@ sets the order (rule 2).
   stadium's concourse, the mall's upper floors, the Docks' quays and
   walkways, the airport's terminal decks, the Neon Mile's resort terraces,
   Crestmont's terraces and pool decks, Lot 9.
-  - [ ] Endswood's blocks
+  - [x] Endswood's blocks (J1, parts 1 to 3)
   - [ ] The Trenches
   - [ ] Uptown and Uptown North
   - [ ] Westlake and the civic quarter
@@ -244,8 +244,9 @@ sets the order (rule 2).
 - [x] **J1 (R1), part 1: the galleries and balconies** (2026-11-22, pass 1; see the log). Part 2 below.
 - [x] **J1 (R1), part 2: the bridges' decks, the cores' landings and the podium deck** (2026-11-22, pass 2;
       see the log). The junction where a gallery meets a link's portal is left for a look on foot (J1 part 3).
-- [ ] **J1 (R1), part 3:** the gallery-to-portal junction checked on foot at each block; rebuilt where it
-      still reads as slabs meeting at a point. Then J1 is done and R1's sweep starts at The Trenches.
+- [x] **J1 (R1), part 3:** the gallery-to-portal junction checked on foot (2026-11-23, pass 3): the portal
+      reads; the fault was a landing post standing in every link's doorway at its tower (15 of 15), drawn
+      only, walked through. Cleared (`landingPosts()`, tested). **J1 done**; R1's sweep goes on at The Trenches.
 - [ ] **J1 (R1): a gallery walkway on Endswood's flats** (the owner's
       screenshot, 2026-11-21: looking down a gallery towards the highway).
       The deck, its upstands and the slabs either side are plain `CONC`
@@ -406,3 +407,8 @@ session.)
   shot from above before and after: one flat grey slab, now a jointed 1.2 grid with a capped balustrade.
   Checks: typecheck, lint, test, test:wide, build, texture bake, budget (texFull 4918.2 of 4955, texLow
   3310.2 of 3450) and smoke (150 steps, none failed) pass. Draws not measured (plain colours, near trims).
+- 2026-11-23, pass 3 (00:07, started 00:20): J1 part 3. On foot along Marten's floor-6 gallery to its link: the
+  portal reads; the fault left was a landing post in the link's doorway at the tower, at all 15 links (drawn
+  only, no solid, walked through). `landingPosts()` / `inDoorway()` (southblocks.ts, tested) leave those out.
+  J1 done; R1's Endswood sweep ticked. Checks: typecheck, lint, test (with the new test), test:wide, build,
+  texture bake, budget (texFull 4918.2 of 4955), smoke 150 steps, none failed.

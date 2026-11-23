@@ -34,7 +34,7 @@ import {
 } from './southblocks';
 import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors } from './southsky';
 import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, COLUMN_R, DECK_COLUMNS, DECK_PROPS, FRAME, SANDPIT, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
-import { COURTS, DESIRE_LINES, GRASS, PLAY } from './southblocks';
+import { COURTS, DESIRE_LINES, GRASS, PLAY, landingPosts } from './southblocks';
 import { BANK, COVER, ROAD, STONE } from './palette';
 import { parkedCars } from './cars';
 import type { CarId } from './carspec';
@@ -474,7 +474,7 @@ function drawTower(b: Batch, t: Block, low: boolean) {
  * A core: concrete, open at each landing (`landings`: the levels of its floors, a post at each corner), a lit stair slot
  * down each face turned away from what it serves; its lift's door at its foot
  */
-function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from: Pt[], landings: number[], door: { x: number; z: number; yaw: number } | null) {
+function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from: Pt[], landings: number[], door: { x: number; z: number; yaw: number } | null, link: [Pt, Pt] | null = null) {
   const k = kit(b, WORLD);
   const cuts = [...landings].sort((p, q) => p - q);
   k.all(() => {
@@ -490,8 +490,8 @@ function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from:
       if (!Number.isFinite(y)) break;
       y0 = y + LANDING_H;
     }
-    // The landings' corner posts
-    const posts = cornersOf(ring);
+    // The landings' corner posts (none in the link's doorway: southblocks.ts `landingPosts()`)
+    const posts = landingPosts(ring, link);
     for (const y of cuts) for (const p of posts) b.add(plain(new THREE.BoxGeometry(0.3, LANDING_H, 0.3).translate(p[0], y + LANDING_H / 2, p[1])), CONC);
     // The stair slots, a stretch between each landing
     ring.forEach((a, j) => {
@@ -688,17 +688,6 @@ function drawCage(b: Batch, g: Cage, low: boolean, tired: boolean) {
   quad(b, g.at(len, -half), g.at(len, half), g.base, top, g.out, MESH);
 }
 
-/** A rounded square's four corners, a little in: the ring's points furthest out each way round its middle */
-function cornersOf(ring: Pt[]): Pt[] {
-  const c = centre(ring);
-  const far = [...ring].sort((p, q) => Math.hypot(q[0] - c[0], q[1] - c[1]) - Math.hypot(p[0] - c[0], p[1] - c[1]));
-  const out: Pt[] = [];
-  for (const p of far) {
-    if (out.length === 4) break;
-    if (out.every((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) > 1)) out.push(p);
-  }
-  return out.map((p) => [c[0] + (p[0] - c[0]) * 0.85, c[1] + (p[1] - c[1]) * 0.85]);
-}
 const centre = (ring: Pt[]): Pt => [ring.reduce((s, p) => s + p[0], 0) / ring.length, ring.reduce((s, p) => s + p[1], 0) / ring.length];
 
 /* ---------- The bridges, the podium deck, Bunker Sound's door ---------- */
@@ -1304,7 +1293,7 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       const near = pointAt(blk.spine!, Math.min(lineLength(blk.spine!), Math.max(0, alongOf(blk.spine!, c.at)))).p;
       const lift = SKY_LIFTS.find((q) => q.id === c.id)!;
       const landings = coreFloors(c.id).map((f) => floorY(blk.base, f));
-      drawCore(b, c.foot, blk.base, c.top, c.at, [near], landings, lift.door);
+      drawCore(b, c.foot, blk.base, c.top, c.at, [near], landings, lift.door, c.link);
       // A service tower standing off its block: a covered link from the gallery to it at each landing
       // (its portal at the gallery; every fourth tower's link lights tired, stuttering)
       // (and every seventh's dead: no light at all)
