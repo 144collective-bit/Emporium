@@ -131,12 +131,12 @@ async function scene(name, spawn, play, init, device) {
 // waits ("Getting ready…") until the street outside is built, then out he goes
 await scene('wake', null, async (t) => {
   const [x, z] = await t.where();
-  if (!(z > 385.0 && z < 391.3 && x > -237.7 && x < -228.9)) throw new Error(`woke at ${x}, ${z}, not in the room`);
+  if (!(z > 384.0 && z < 391.3 && x > -237.7 && x < -227.5)) throw new Error(`woke at ${x}, ${z}, not in the room`);
   await t.step(`woke in the room, at ${x}, ${z}`);
   // (sat on the sofa: up off it a moment after the menu's gone, onto the spot in front of it, the view swung behind him)
   await t.until('him to stand up', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
-    return !!m && Number(m[1]) < -235.0;
+    return !!m && Number(m[1]) < -234.6;
   });
   await t.step(`stood up, at ${(await t.where()).join(', ')}`);
   // (the camera looking west, at the media wall: its forward is -z of its matrix, so -x of the world is its +x)
@@ -148,11 +148,11 @@ await scene('wake', null, async (t) => {
   await t.go('w', 0.2, 'stepped off the sofa');
   await t.go('d', 1.3, 'past the sofa\'s end');
   // (asked short: at a frame or two a second he coasts on half a tile or more, and the door's prompt is within 1 of it)
-  await t.go('s', 1.6, 'and along to the front door');
+  await t.go('s', 2.2, 'and along to the front door');
   await t.prompt('Front door');
   await t.until('him to be outside', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
-    return !!m && Number(m[2]) < 384.5;
+    return !!m && Number(m[2]) < 383.5;
   });
   await t.step('out by the front door');
 });
@@ -186,10 +186,10 @@ await scene('wakelook', null, async (t) => {
 
 // Home (home.ts): in the yard of Degen's compound in the far west, in through his front door (a fade into the room), a
 // few steps in, and out again by the same door
-await scene('home', '-232.8,383.45,3.14', async (t) => {
+await scene('home', '-232.1,382.45,3.14', async (t) => {
   const inside = () => t.until('him to be inside', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
-    return !!m && Number(m[2]) > 385.0 && Number(m[2]) < 391.3;
+    return !!m && Number(m[2]) > 384.0 && Number(m[2]) < 391.3;
   });
   await t.prompt('Go in');
   await inside();
@@ -203,7 +203,7 @@ await scene('home', '-232.8,383.45,3.14', async (t) => {
   await t.prompt('Front door');
   await t.until('him to be outside', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
-    return !!m && Number(m[2]) < 384.5;
+    return !!m && Number(m[2]) < 383.5;
   });
   await t.step('out by the front door');
 });
@@ -221,7 +221,7 @@ await scene('homegarage', '-238.35,380', async (t) => {
 // Up through the house (docs/compound-plan.md Phase 3): at the stairs' foot in his room, up to the landing (a fade),
 // on up through the hatch to the roof terrace, a few steps along the rail, and down to the landing again
 const shows = (label) => (l) => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').includes(l);
-await scene('hometerrace', '-230.25,387.5,3.14', async (t) => {
+await scene('hometerrace', '-228.85,386.5,3.14', async (t) => {
   await t.prompt('Upstairs');
   await t.until('the way up to the roof to show (he is on the landing)', shows(), 'Roof', 120000);
   await t.step(`up on the landing, at ${(await t.where()).join(', ')}`);
@@ -236,7 +236,7 @@ await scene('hometerrace', '-230.25,387.5,3.14', async (t) => {
 });
 
 // Upstairs, the office's desk (docs/compound-plan.md Phase 3): it opens the business card, which closes again
-await scene('homedesk', '-235.25,389.95,3.14,1.45', async (t) => {
+await scene('homedesk', '-234.25,389.95,3.14,1.45', async (t) => {
   await t.prompt('Desk');
   await t.until('the business card', () => !!document.querySelector('.city.is-hub'), null, 60000);
   await t.step('the business card opened at the desk');
@@ -247,17 +247,17 @@ await scene('homedesk', '-235.25,389.95,3.14,1.45', async (t) => {
 
 // Down to his basement (docs/compound-plan.md Phase 4): by the stairs in his room, down the steps (a fade), a few
 // steps into the den, back, and up again
-await scene('homeden', '-230.25,385.65,3.14', async (t) => {
+await scene('homeden', '-228.85,384.65,3.14', async (t) => {
   const z = () => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/)?.[2] ?? NaN);
   await t.prompt('Basement');
-  await t.until('him down in the den (past the steps\' foot)', `(${z})() > 387.3`, null, 120000);
+  await t.until('him down in the den (past the steps\' foot)', `(${z})() > 386.3`, null, 120000);
   await t.step(`down in the den, at ${(await t.where()).join(', ')}`);
   const foot = await t.where();
   await t.go('w', 1.2, 'walked into the den');
   const there = await t.where();
   await t.go('s', Math.hypot(there[0] - foot[0], there[1] - foot[1]), 'and back to the steps');
   await t.prompt('Upstairs');
-  await t.until('him back in the room by the stairs', `(${z})() < 387`, null, 120000);
+  await t.until('him back in the room by the stairs', `(${z})() < 386`, null, 120000);
   await t.step('up in the room again');
 });
 
@@ -273,7 +273,7 @@ await scene('homeworkshop', '-233.7,373.15', async (t) => {
 
 // In his house (home.ts HOME_USES): at the den's vault (docs/interior-plan.md Phase 1), the stash's card opens and
 // closes; at the wardrobe upstairs, the fitting room opens in Drop 001's panel and closes
-await scene('homestash', '-232.5,385.55,0,-1.17', async (t) => {
+await scene('homestash', '-231.75,384.55,0,-1.17', async (t) => {
   await t.prompt('Stash');
   await t.until('the stash card', () => !!document.querySelector('[data-stash]:not([hidden]) [data-stash-inv]'));
   await t.step('the stash opened');
@@ -282,7 +282,7 @@ await scene('homestash', '-232.5,385.55,0,-1.17', async (t) => {
   await t.step('the stash closed');
 });
 // (the wardrobe is the dressing room's rails upstairs now, docs/interior-plan.md Phase 3)
-await scene('homewardrobe', '-233.05,387.27,3.14,1.45', async (t) => {
+await scene('homewardrobe', '-232.35,386.77,3.14,1.45', async (t) => {
   await t.prompt('Wardrobe');
   await t.until('the fitting room', () => !!document.querySelector('[data-panel]:not([hidden]) [data-fit-items]'));
   await t.step('the fitting room opened at the wardrobe');

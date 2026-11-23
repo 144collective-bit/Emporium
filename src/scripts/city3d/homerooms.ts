@@ -101,16 +101,16 @@ function layOut(g: HouseGeo) {
    */
   const FURNITURE: Furniture[] = [
     { kind: 'stairs', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.8], h: CEIL },
-    { kind: 'media', rect: [rx0, rz0 + 0.7, rx0 + 0.16, rz0 + 3.6], h: CEIL },
+    { kind: 'media', rect: [rx0, rz0 + 0.85, rx0 + 0.16, rz0 + 3.95], h: CEIL },
     // (the sofa's run facing west at the media wall, the chaise turning its south end toward it; he wakes in front of
     // the run, `HOME_WAKE`)
-    { kind: 'sofa', rect: [rx0 + 2.7, rz0 + 0.85, rx0 + 3.44, rz0 + 3.55], h: 0.42 },
-    { kind: 'chaise', rect: [rx0 + 1.8, rz0 + 2.83, rx0 + 2.7, rz0 + 3.55], h: 0.42 },
-    { kind: 'armchair', rect: [rx0 + 0.95, rz0 + 0.08, rx0 + 1.65, rz0 + 0.78], h: 0.44 },
+    { kind: 'sofa', rect: [rx0 + 3.1, rz0 + 1.15, rx0 + 3.84, rz0 + 3.95], h: 0.42 },
+    { kind: 'chaise', rect: [rx0 + 2.2, rz0 + 3.23, rx0 + 3.1, rz0 + 3.95], h: 0.42 },
+    { kind: 'armchair', rect: [rx0 + 1.0, rz0 + 0.08, rx0 + 1.7, rz0 + 0.78], h: 0.44 },
     { kind: 'lamp', rect: [rx0 + 0.65, rz0 + 0.1, rx0 + 0.9, rz0 + 0.35], h: 1.05 },
-    { kind: 'table', rect: [rx0 + 1.15, rz0 + 1.65, rx0 + 1.95, rz0 + 2.65], h: 0.2 },
-    { kind: 'trophies', rect: [rx0, rz0 + 3.85, rx0 + 0.22, rz0 + 4.95], h: 1.1 },
-    { kind: 'plant', rect: [rx0 + 0.06, rz0 + 5.02, rx0 + 0.36, rz0 + 5.32], h: 0.75 },
+    { kind: 'table', rect: [rx0 + 1.45, rz0 + 2.0, rx0 + 2.3, rz0 + 3.0], h: 0.2 },
+    { kind: 'trophies', rect: [rx0, rz0 + 4.15, rx0 + 0.22, rz0 + 5.25], h: 1.1 },
+    { kind: 'plant', rect: [rx0 + 0.06, rz0 + 5.32, rx0 + 0.36, rz0 + 5.62], h: 0.75 },
     // (a tall one in the lounge's front corner, by the armchair: docs/interior-plan.md Phase 5)
     { kind: 'plant', rect: [rx0 + 0.06, rz0 + 0.14, rx0 + 0.4, rz0 + 0.48], h: 1.1 },
     { kind: 'console', rect: [DX + 0.75, rz0, DX + 2.05, rz0 + 0.3], h: 0.36 },
@@ -122,14 +122,14 @@ function layOut(g: HouseGeo) {
     { kind: 'counter', rect: [rx0 + 0.75, rz1 - 0.6, rx0 + 4.6, rz1], h: 0.52 },
     { kind: 'fridge', rect: [rx0 + 4.66, rz1 - 0.66, rx0 + 5.26, rz1], h: 1.12 },
     // Dining for four in the corner east of the hall, clear of the way to the side door and to the stairs
-    { kind: 'dining', rect: [DX + 1.1, rz0 + 3.3, DX + 2.5, rz0 + 3.95], h: 0.4 },
-    { kind: 'chair', rect: [DX + 1.25, rz0 + 2.9, DX + 1.6, rz0 + 3.25], h: 0.5 },
-    { kind: 'chair', rect: [DX + 1.95, rz0 + 2.9, DX + 2.3, rz0 + 3.25], h: 0.5 },
-    { kind: 'chair', rect: [DX + 1.25, rz0 + 4.0, DX + 1.6, rz0 + 4.3], h: 0.5 },
-    { kind: 'chair', rect: [DX + 1.95, rz0 + 4.0, DX + 2.3, rz0 + 4.3], h: 0.5 },
+    { kind: 'dining', rect: [DX + 1.4, rz0 + 3.55, DX + 2.8, rz0 + 4.2], h: 0.4 },
+    { kind: 'chair', rect: [DX + 1.55, rz0 + 3.15, DX + 1.9, rz0 + 3.5], h: 0.5 },
+    { kind: 'chair', rect: [DX + 2.25, rz0 + 3.15, DX + 2.6, rz0 + 3.5], h: 0.5 },
+    { kind: 'chair', rect: [DX + 1.55, rz0 + 4.25, DX + 1.9, rz0 + 4.55], h: 0.5 },
+    { kind: 'chair', rect: [DX + 2.25, rz0 + 4.25, DX + 2.6, rz0 + 4.55], h: 0.5 },
     // The boot room by the side door (docs/interior-plan.md Phase 4): the bench under his coats north of it, the laundry's
     // tall unit in the corner south of it; both clear of the way out
-    { kind: 'boots', rect: [rx1 - 0.45, rz0 + 3.0, rx1, rz0 + 4.1], h: 0.24 },
+    { kind: 'boots', rect: [rx1 - 0.45, rz0 + 4.05, rx1, rz0 + 5.15], h: 0.24 },
     { kind: 'laundry', rect: [rx1 - 0.65, rz1 - 0.9, rx1, rz1], h: 1.12 },
   ];
 
@@ -137,7 +137,7 @@ function layOut(g: HouseGeo) {
 
   /** The partition between the landing (east, by the stairs) and his two rooms, and between the bedroom (front) and the office (back) */
   const LAND_X = rx1 - 2.6;
-  const SPLIT_Z = rz0 + 3.0;
+  const SPLIT_Z = rz0 + 3.5;
   const PART = 0.05;
   /**
    * Upstairs (docs/compound-plan.md Phase 3; fitted out, docs/interior-plan.md Phase 3), on the slab over the room:
@@ -154,15 +154,15 @@ function layOut(g: HouseGeo) {
   /** The doorways in the landing's partition, into the dressing room and into the office (from, to along z) */
   const UP_DOORS: [number, number][] = [
     [rz0 + 1.2, rz0 + 2.1],
-    [rz0 + 4.1, rz0 + 5.0],
+    [rz0 + 4.55, rz0 + 5.45],
   ];
   const UH = UP_CEIL - UP_Y;
   /** The partition between the dressing room (east) and the bedroom (west), clear of the middle front window, and its doorway (z from, to) */
   const DRESS_X = rx0 + 3.15;
-  const BED_DOOR: [number, number] = [rz0 + 2.0, rz0 + 2.85];
+  const BED_DOOR: [number, number] = [rz0 + 2.4, rz0 + 3.25];
   /** The bathroom's doorway in its wall at the landing's back (x from, to) */
   const BATH_DOOR: [number, number] = [rx1 - 1.8, rx1 - 1.1];
-  const BATH_Z = rz0 + 5.1;
+  const BATH_Z = rz0 + 5.55;
   const UPSTAIRS: UpThing[] = [
     // The partitions: the landing's (but for its two doorways), the one between the rooms, the dressing room's from the
     // bedroom (but for its doorway), the bathroom's at the landing's back (but for its doorway)
@@ -177,21 +177,21 @@ function layOut(g: HouseGeo) {
     // The stairwell over the stairs, railed (the steps on up to the hatch rise in it)
     { kind: 'well', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.8], h: 0.45 },
     // The bedroom: the bed's head on the west wall, a bedside table each side, a bench at its foot, the telly facing it
-    { kind: 'bed', rect: [rx0, rz0 + 0.7, rx0 + 1.45, rz0 + 2.0], h: 0.3 },
-    { kind: 'bedside', rect: [rx0, rz0 + 0.25, rx0 + 0.34, rz0 + 0.62], h: 0.24 },
-    { kind: 'bedside', rect: [rx0, rz0 + 2.08, rx0 + 0.34, rz0 + 2.45], h: 0.24 },
-    { kind: 'bench', rect: [rx0 + 1.6, rz0 + 0.85, rx0 + 1.9, rz0 + 1.85], h: 0.2 },
-    { kind: 'tv', rect: [DRESS_X - PART - 0.05, rz0 + 0.85, DRESS_X - PART, rz0 + 1.85], h: 0.9 },
+    { kind: 'bed', rect: [rx0, rz0 + 1.0, rx0 + 1.45, rz0 + 2.3], h: 0.3 },
+    { kind: 'bedside', rect: [rx0, rz0 + 0.55, rx0 + 0.34, rz0 + 0.92], h: 0.24 },
+    { kind: 'bedside', rect: [rx0, rz0 + 2.38, rx0 + 0.34, rz0 + 2.75], h: 0.24 },
+    { kind: 'bench', rect: [rx0 + 1.6, rz0 + 1.15, rx0 + 1.9, rz0 + 2.15], h: 0.2 },
+    { kind: 'tv', rect: [DRESS_X - PART - 0.05, rz0 + 1.15, DRESS_X - PART, rz0 + 2.15], h: 0.9 },
     // (a tall plant in its corner by the window: docs/interior-plan.md Phase 5)
     { kind: 'plant', rect: [DRESS_X - PART - 0.4, rz0 + 0.08, DRESS_X - PART - 0.08, rz0 + 0.4], h: 0.95 },
     // The dressing room: the rails along its back (the wardrobe's prompt), the drawers, the shoe wall, the caps, the mirror
     { kind: 'rails', rect: WARDROBE_RECT, h: 1.05 },
-    { kind: 'drawers', rect: [rx0 + 3.95, rz0 + 0.5, rx0 + 5.15, rz0 + 0.9], h: 0.42 },
+    { kind: 'drawers', rect: [rx0 + 4.6, rz0 + 1.25, rx0 + 5.8, rz0 + 1.65], h: 0.42 },
     { kind: 'shoes', rect: [LAND_X - PART - 0.32, rz0 + 0.08, LAND_X - PART, rz0 + 1.1], h: 1.05 },
     { kind: 'caps', rect: [DRESS_X + PART, rz0 + 0.25, DRESS_X + PART + 0.12, rz0 + 1.85], h: 0.95 },
-    { kind: 'mirror', rect: [LAND_X - PART - 0.05, rz0 + 2.15, LAND_X - PART, rz0 + 2.5], h: 1.1 },
+    { kind: 'mirror', rect: [LAND_X - PART - 0.05, rz0 + 2.55, LAND_X - PART, rz0 + 2.9], h: 1.1 },
     // The office
-    { kind: 'desk', rect: [rx0 + 1.4, rz1 - 0.55, rx0 + 3.4, rz1], h: 0.38 },
+    { kind: 'desk', rect: [rx0 + 2.4, rz1 - 0.55, rx0 + 4.4, rz1], h: 0.38 },
     { kind: 'chair', rect: DESK_CHAIR_RECT, h: 0.5 },
     { kind: 'shelf', rect: [rx0, SPLIT_Z + PART + 0.3, rx0 + 0.3, SPLIT_Z + PART + 1.7], h: 1.0 },
     { kind: 'plant', rect: [LAND_X - PART - 0.4, rz1 - 0.4, LAND_X - PART - 0.1, rz1 - 0.1], h: 0.7 },
@@ -220,23 +220,23 @@ function layOut(g: HouseGeo) {
     // The steps down, along the east wall from under the stairs (their top at the front, at the room's floor)
     { kind: 'steps', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.2], h: BH },
     // The cave: the telly on the front wall, the table, the sofa facing it, a beanbag
-    { kind: 'tv', rect: [rx0 + 1.0, rz0, rx0 + 3.0, rz0 + 0.12], h: 0.9 },
+    { kind: 'tv', rect: [rx0 + 1.4, rz0, rx0 + 3.4, rz0 + 0.12], h: 0.9 },
     // The stash's vault (docs/interior-plan.md Phase 1, the owner's pick): a round steel door in the north wall
     { kind: 'vault', rect: VAULT_RECT, h: 0.95 },
-    { kind: 'table', rect: [rx0 + 1.55, rz0 + 0.75, rx0 + 2.45, rz0 + 1.2], h: 0.2 },
-    { kind: 'sofa', rect: [rx0 + 0.8, rz0 + 1.55, rx0 + 3.2, rz0 + 2.25], h: 0.42 },
-    { kind: 'beanbag', rect: [rx0 + 3.5, rz0 + 1.0, rx0 + 4.0, rz0 + 1.5], h: 0.25 },
-    { kind: 'arcade', rect: [rx0, rz0 + 3.0, rx0 + 0.5, rz0 + 3.55], h: 1.0 },
+    { kind: 'table', rect: [rx0 + 1.95, rz0 + 1.0, rx0 + 2.85, rz0 + 1.45], h: 0.2 },
+    { kind: 'sofa', rect: [rx0 + 1.2, rz0 + 1.9, rx0 + 3.6, rz0 + 2.6], h: 0.42 },
+    { kind: 'beanbag', rect: [rx0 + 4.0, rz0 + 1.2, rx0 + 4.5, rz0 + 1.7], h: 0.25 },
+    { kind: 'arcade', rect: [rx0, rz0 + 3.8, rx0 + 0.5, rz0 + 4.35], h: 1.0 },
     // The trading desk along the back wall, his chair, the tower
-    { kind: 'desk', rect: [rx0 + 1.6, rz1 - 0.6, rx0 + 4.8, rz1], h: 0.38 },
-    { kind: 'chair', rect: [rx0 + 2.95, rz1 - 1.15, rx0 + 3.45, rz1 - 0.65], h: 0.55 },
-    { kind: 'tower', rect: [rx0 + 4.9, rz1 - 0.5, rx0 + 5.15, rz1 - 0.05], h: 0.4 },
+    { kind: 'desk', rect: [rx0 + 2.2, rz1 - 0.6, rx0 + 5.4, rz1], h: 0.38 },
+    { kind: 'chair', rect: [rx0 + 3.55, rz1 - 1.15, rx0 + 4.05, rz1 - 0.65], h: 0.55 },
+    { kind: 'tower', rect: [rx0 + 5.5, rz1 - 0.5, rx0 + 5.75, rz1 - 0.05], h: 0.4 },
     // The bar along the east wall: the counter, the lit shelf behind it, the stools, the mini fridge
-    { kind: 'bar', rect: [rx1 - 0.8, rz0 + 3.3, rx1 - 0.4, rz0 + 5.3], h: 0.5 },
-    { kind: 'barshelf', rect: [rx1 - 0.25, rz0 + 3.3, rx1, rz0 + 5.3], h: 1.05 },
-    { kind: 'stools', rect: [rx1 - 1.2, rz0 + 3.5, rx1 - 0.85, rz0 + 5.1], h: 0.3 },
+    { kind: 'bar', rect: [rx1 - 0.8, rz0 + 3.6, rx1 - 0.4, rz0 + 5.6], h: 0.5 },
+    { kind: 'barshelf', rect: [rx1 - 0.25, rz0 + 3.6, rx1, rz0 + 5.6], h: 1.05 },
+    { kind: 'stools', rect: [rx1 - 1.2, rz0 + 3.8, rx1 - 0.85, rz0 + 5.4], h: 0.3 },
     { kind: 'fridge', rect: [rx1 - 0.55, rz1 - 0.55, rx1, rz1], h: 0.45 },
     { kind: 'plant', rect: [rx0 + 0.05, rz1 - 0.4, rx0 + 0.35, rz1 - 0.1], h: 0.7 },
   ];
-  return { FURNITURE, UPSTAIRS, BASEMENT, UP_DOORS, DRESS_X, BED_DOOR, BATH_DOOR, BATH_Z };
+  return { FURNITURE, UPSTAIRS, BASEMENT, UP_DOORS, DRESS_X, BED_DOOR, BATH_DOOR, BATH_Z, SPLIT_Z, LAND_X, PART };
 }

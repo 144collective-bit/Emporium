@@ -45,7 +45,7 @@ const AXIS = (GATES.z0 + GATES.z1) / 2;
 /** The house's walls' top and its parapet's (over the slab): two storeys under a flat roof */
 const EAVES = 2.5;
 const RIDGE = 2.75;
-const HOUSE: Rect = [ix0 + 6.4, iz1 - 6.8, ix0 + 15.4, iz1 - 0.3];
+const HOUSE: Rect = [ix0 + 6.4, iz1 - 7.8, ix0 + 16.8, iz1 - 0.3];
 const GARAGE: Rect = [ix0 + 0.3, AXIS - 4, ix0 + 5.3, AXIS + 4];
 const WORKSHOP: Rect = [ix0 + 8, iz0 + 0.3, ix0 + 13, iz0 + 4.3];
 
@@ -56,6 +56,11 @@ interface DoorZ {
   z1: number;
   h: number;
 }
+/**
+ * The east lawn starts this far back from the house's front (docs/house-plan.md Phase 1: the house a metre deeper, its
+ * front nearer the drive), a strip of the yard's paving along it for the bollards
+ */
+const LAWN_SET = 0.45;
 const garageDoor = (z0: number): DoorZ => ({ x: GARAGE[2], z0, z1: z0 + 3.2, h: 1.45 });
 
 export const HOME = {
@@ -88,7 +93,7 @@ export const HOME = {
   /** The lawns: the north-west corner's (a tree, a bench) and the one east of the house (the washing line) */
   lawns: [
     [ix0, iz0, WORKSHOP[0] - 0.6, GARAGE[1] - 0.6],
-    [HOUSE[2] + 0.5, HOUSE[1], ix1, iz1],
+    [HOUSE[2] + 0.5, HOUSE[1] + LAWN_SET, ix1, iz1],
   ] as Rect[],
 } as const;
 
@@ -118,7 +123,8 @@ export const BOLLARD = { r: 0.07, h: 0.38 };
  * north strip from the workshop to the wall
  */
 export const BOLLARDS: Pt[] = [
-  ...[0, 1, 2, 3, 4].map((k): Pt => [HOUSE[2] + 1.4 + k * 1.95, HOUSE[1] - 0.25]),
+  // (docs/house-plan.md Phase 1: four along the paving strip in front of the east lawn, spaced to fit)
+  ...[0, 1, 2, 3].map((k): Pt => [HOUSE[2] + 1.4 + (k * (ix1 - 2.2 - HOUSE[2] - 1.4)) / 3, HOUSE[1] + LAWN_SET / 2]),
   ...[0, 1, 2, 3, 4].map((k): Pt => [WORKSHOP[2] + 1.0 + k * 2.4, WORKSHOP[3] + 0.25]),
 ];
 /** A planter each side of the front door, between the door and the windows, at the wall's foot */
@@ -167,7 +173,7 @@ export const PALM_PLANTER = { r: 0.35, h: 0.32 };
  * lawn's middle, its stone edge solid (no swimming: looks only), three loungers on its north side, the cabana in the
  * lawn's far corner (an open front on posts, a sofa under its roof); the way round to the side door kept clear
  */
-const [lx0, lz0, lx1, lz1] = [HOUSE[2] + 0.5, HOUSE[1], ix1, iz1];
+const [lx0, lz0, lx1, lz1] = [HOUSE[2] + 0.5, HOUSE[1] + LAWN_SET, ix1, iz1];
 export const POOL: Rect = [lx0 + 1.7, lz0 + 1.3, lx1 - 1.6, lz0 + 4.5];
 export const POOL_EDGE = 0.15;
 export const LOUNGERS: Rect[] = [0, 1, 2].map((k): Rect => [lx0 + 2.2 + k * 1.6, lz0 + 0.2, lx0 + 2.62 + k * 1.6, lz0 + 1.1]);
@@ -293,9 +299,9 @@ const SZ = HOME.sideDoor[1];
  * desk). Here, in the boot, for the prompts; the rooms' lists (homerooms.ts) put the things themselves on them
  */
 /** (the dressing room's rails upstairs, docs/interior-plan.md Phase 3: along its back, by the partition to the office) */
-export const WARDROBE_RECT: Rect = [rx0 + 3.3, rz0 + 2.57, rx1 - 2.8, rz0 + 2.95];
-export const VAULT_RECT: Rect = [rx0 + 4.75, rz0, rx0 + 5.55, rz0 + 0.1];
-export const DESK_CHAIR_RECT: Rect = [rx0 + 2.15, rz1 - 1.05, rx0 + 2.65, rz1 - 0.6];
+export const WARDROBE_RECT: Rect = [rx0 + 3.3, rz0 + 3.07, rx1 - 2.8, rz0 + 3.45];
+export const VAULT_RECT: Rect = [rx0 + 5.5, rz0, rx0 + 6.3, rz0 + 0.1];
+export const DESK_CHAIR_RECT: Rect = [rx0 + 3.15, rz1 - 1.05, rx0 + 3.65, rz1 - 0.6];
 
 /**
  * What stands on each floor (homerooms.ts's `FURNITURE`, `UPSTAIRS`, `BASEMENT`), as `homeWall()` asks it. The lists
@@ -369,8 +375,8 @@ export function homeCamera(y: number): [number, number, number, number, number, 
  * walls while the doors out wait (`HOME_WAITS`). He's sat on the sofa as the room appears and stands up onto it
  * (Phase 2, `SOFA_SEAT`), but under reduced motion, where he's standing there already.
  */
-const SEAT_X = rx0 + 2.86;
-const SEAT_Z = rz0 + 1.84;
+const SEAT_X = rx0 + 3.26;
+const SEAT_Z = rz0 + 2.2;
 export const HOME_WAKE = { x: SEAT_X - 0.33, z: SEAT_Z, yaw: Math.PI / 2 };
 /**
  * The sofa as a seat (moments.ts's bench mark: its middle, `ry` the way the sitter faces, 0 south; he stands up onto
