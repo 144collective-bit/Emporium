@@ -134,13 +134,14 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
       quit('Quit the race (no prize)'),
     ],
   },
-  // The golf game (docs/golf-game-plan.md Phase 2): aim, the club, the swing's three presses (start, power, accuracy)
+  // The golf game (docs/golf-game-plan.md Phases 2 and 4): aim, the club, the swing's three presses (start, power,
+  // accuracy); on touch the pull-back (its length the power, its lean the accuracy)
   golf: {
     name: 'A round of golf',
     binds: [
-      steer('Aim'),
-      { job: 'club', label: 'Club', keys: ['W', 'S', '↑', '↓'], pad: ['LB', 'RB'], touch: 'Club' },
-      { job: 'swing', label: 'Swing: start, power, accuracy', keys: ['Space'], pad: ['A'], touch: 'Swing' },
+      { job: 'steer', label: 'Aim', keys: ['A', 'D', '←', '→'], pad: ['Left stick', 'D-pad ← →'], touch: '◀ ▶' },
+      { job: 'club', label: 'Club', keys: ['W', 'S', '↑', '↓'], pad: ['LB', 'RB', 'D-pad ↑ ↓'], touch: 'Club' },
+      { job: 'swing', label: 'Swing: start, power, accuracy', keys: ['Space'], pad: ['A'], touch: 'Pull back, let go' },
       camera('Camera: behind the ball or high over the hole'),
       quit('Quit the round'),
     ],

@@ -151,3 +151,16 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   the driver picked first off a tee only (`pickClub()`); Degen put back where he stood at the door, facing it
   (walk.ts `golfFrom`). Missions `tee-off`, `birdie`, `nine-holes` and badges `golf-18`, `birdies-10`, `ace-1`,
   `under-par` (missions.ts).
+  Phase 4 (phones, pads and polish) built: **touch** (shown on a coarse pointer, golf.css): ◀ ▶ aim, Club ▲ ▼, View in
+  a row over the meter (`.golf-touch`, `.golf-tb`), and the swing's **pull-back** anywhere over the course between the
+  HUD's blocks and that row (`.golf-pull`: down from where the finger went is the power, full at `PULL`'s share of
+  the screen's height, past it to the meter's top; its lean off straight down the accuracy, as a slingshot's: right a
+  hook, left a slice; `pullShot()` and `PULL` with `METER` now in golfgame-sim.ts, tested), its line drawn from
+  where it started (`.golf-pull-line`, hot past full); the **gamepad** (walkpad.ts's `golf` branch, before the hub's
+  Start: `GolfGame.pad()`): the left stick or the d-pad aims, LB / RB or the d-pad's up and down the club, A the
+  meter's presses, R3 or Y the camera, B or Start quits; the menu and the cards by the menus' kit (`menuKit()`: the
+  arrows and the d-pad round the buttons, A or Enter presses, the first choice focused for the pad); the HUD's hints
+  follow what you last used (Space, A, Pull back; W/S or LB/RB); **sounds** (combat.ts `Sfx`, synthesised in
+  sound.ts: `golfHit`, `golfPutt`, `golfLand`, `golfTree`, `golfSplash`, `golfCup`; the round's card `finish`); under
+  **reduced motion** the camera cuts between shots and only turns to follow the ball. The smoke's `golf` scene plays
+  the 1st hole through to its card; `golf-touch` (a phone on its side) plays a shot by a real touch's pull-back.

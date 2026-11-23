@@ -2038,6 +2038,9 @@ export function createWalk(d: WalkDeps) {
     get karts() {
       return karts;
     },
+    get golf() {
+      return golf;
+    },
     get kartUI() {
       return kartUI;
     },
@@ -2392,7 +2395,7 @@ export function createWalk(d: WalkDeps) {
       if (combat.armed) combat.toggleHolster();
       golfFrom.x = pos.x;
       golfFrom.z = pos.z;
-      golf ??= m.createGolfGame({ scene: d.scene, camera, root, hero, scale: SCALE, toast: (text, ms) => d.game.toast(text, ms), game: d.game, prizes: () => !live.closed('prizes'), end: endGolf });
+      golf ??= m.createGolfGame({ scene: d.scene, camera, root, hero, scale: SCALE, toast: (text, ms) => d.game.toast(text, ms), game: d.game, prizes: () => !live.closed('prizes'), end: endGolf, sfx: (k) => d.sfx(k), reduced: d.reduced });
       keys.clear();
       near = null;
       prompt.hidden = true;

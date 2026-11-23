@@ -4,6 +4,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  METER,
+  PULL,
+  pullShot,
   BOUNCE,
   CLUBS,
   CUP,
@@ -229,4 +232,21 @@ test('every hole is playable: the bot plays all eighteen within par plus two a h
     assert.ok(Math.abs(toPar(r)) <= 14, `seed ${seed}: a mishitting golfer goes round ${toPar(r)} against par`);
     assert.ok(r.card.every((s) => s! < MAX_STROKES), `seed ${seed}: a hole picked up: ${r.card}`);
   }
+});
+
+test("the touch pull-back: its length the power (past full to the meter's top), its lean the accuracy as a slingshot", () => {
+  const full = 200;
+  assert.deepEqual(pullShot(0, 100, full), { power: 0.5, accuracy: 0 });
+  assert.equal(pullShot(0, 200, full).power, 1);
+  assert.equal(pullShot(0, 900, full).power, METER.top, "no further than the meter's top");
+  assert.equal(pullShot(0, -40, full).power, 0, 'pushed up is no swing');
+  // (a sliver off straight down is straight; leaning right a hook (negative), left a slice, a full one at PULL.lean)
+  assert.equal(pullShot(3, 150, full).accuracy, 0);
+  assert.ok(pullShot(30, 150, full).accuracy < 0);
+  assert.ok(pullShot(-30, 150, full).accuracy > 0);
+  const d = 150 * Math.tan(PULL.lean * 1.2);
+  assert.equal(pullShot(d, 150, full).accuracy, -1);
+  assert.equal(pullShot(-d, 150, full).accuracy, 1);
+  // (the full length a share of the screen, between its least and most)
+  assert.ok(PULL.min < PULL.max && PULL.least < PULL.min);
 });

@@ -18,7 +18,8 @@ Nothing is built until the owner signs off a phase; keep this plan up to date. T
 | Between shots | The camera flies to the ball |
 | Phase 1 | Go (2026-11-22); built, signed off (2026-11-23: "1") |
 | Phase 2 | Go (2026-11-23); built, signed off (2026-11-23: "3", hold before Phase 3) |
-| Phase 3 | Go (2026-11-23: "1"); built, waiting for the owner's sign-off |
+| Phase 3 | Go (2026-11-23: "1"); built, signed off (2026-11-23: "1") |
+| Phase 4 | Go (2026-11-23: "1") |
 
 ## What it is
 

@@ -41,10 +41,11 @@ const browser = await chromium.launch({
 const only = process.argv[2]?.split(',');
 let failed = 0;
 
-/** One scene: a fresh page at `spawn` (x,z), walking, then `play(t)`; a page error or a throw fails it */
-async function scene(name, spawn, play, init) {
+/** One scene: a fresh page at `spawn` (x,z), walking, then `play(t)`; a page error or a throw fails it. `device` is the
+ * browser's context instead of a desktop's (a phone: its size, touch) */
+async function scene(name, spawn, play, init, device) {
   if (only && !only.includes(name)) return;
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const ctx = await browser.newContext(device ?? { viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
   if (init) await page.addInitScript(init);
   const errors = [];
@@ -423,10 +424,66 @@ await scene('golf', '528,-497.6', async (t) => {
   await t.prompt('Play golf');
   await t.until('Continue on the menu', () => !!document.querySelector('.golf-menu:not([hidden]) [data-golf-continue]:not([hidden])'), null, 120000);
   await t.step(`the menu offers ${await t.page.evaluate(() => document.querySelector('[data-golf-continue]')?.textContent ?? '')}`);
-  await t.click('.golf-menu [data-golf-menu-close]');
-  await t.until('the menu closed', () => !document.querySelector('.city.is-golfing'), null, 60000);
-  await t.step('the menu closed');
+  // A hole played through (Phase 4): the 1st on its own, every shot the meter's three presses, till its card
+  await t.click('.golf-menu [data-golf-one]');
+  await t.until('the 1st tee', () => !!document.querySelector('.golf-hud:not([hidden])'), null, 120000);
+  for (let shot = 1; shot <= 12; shot++) {
+    await t.until(
+      'a shot to play or the card',
+      () => !!document.querySelector('.golf-card:not([hidden])') || document.querySelector('[data-golf-tip]')?.textContent === 'Space: swing',
+      null,
+      120000
+    );
+    if (await t.has('.golf-card:not([hidden])')) break;
+    await t.page.keyboard.press('Space');
+    await t.page.waitForTimeout(700);
+    await t.page.keyboard.press('Space');
+    await t.page.waitForTimeout(1250);
+    await t.page.keyboard.press('Space');
+    // (the ball off: the tip goes till the next shot's ready)
+    await t.until('the swing', () => document.querySelector('[data-golf-tip]')?.textContent !== 'Space: accuracy', null, 60000);
+    await t.page.waitForTimeout(1500);
+  }
+  await t.until("the hole's card", () => !!document.querySelector('.golf-card:not([hidden])'), null, 120000);
+  const card = await t.page.evaluate(() => `${document.querySelector('[data-golf-card-score]')?.textContent} · ${document.querySelector('[data-golf-card-line]')?.textContent} · ${document.querySelector('[data-golf-card-take]')?.textContent}`);
+  await t.step(`the hole played: ${card}`);
+  await t.click('.golf-card [data-golf-done]');
+  await t.until('the round over', () => !document.querySelector('.city.is-golfing'), null, 60000);
+  await t.step('back at the door');
 });
+
+// Golf on a phone on its side (Phase 4): the touch controls, a club down, and the swing's pull-back (a real touch
+// dragged down the screen and let go)
+await scene(
+  'golf-touch',
+  '528,-497.6',
+  async (t) => {
+    await t.prompt('Play golf');
+    await t.until('the golf menu', () => !!document.querySelector('.golf-menu:not([hidden]) [data-golf-one]'), null, 120000);
+    await t.click('.golf-menu [data-golf-one]');
+    await t.until('the touch controls', () => !!document.querySelector('.golf-hud:not([hidden]) .golf-touch [data-golf-view]')?.getClientRects().length, null, 120000);
+    await t.until('the pull-back tip', () => document.querySelector('[data-golf-tip]')?.textContent === 'Pull back to swing', null, 60000);
+    await t.step('on the tee, by touch');
+    const cdp = await t.page.context().newCDPSession(t.page);
+    const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    const r = await t.page.evaluate(() => {
+      const b = document.querySelector('[data-golf-pull]').getBoundingClientRect();
+      return { x: b.left + b.width / 2, y: b.top + 10 };
+    });
+    await touch('touchStart', r.x, r.y);
+    for (let i = 1; i <= 8; i++) await touch('touchMove', r.x + i, r.y + i * 13);
+    await t.until('the pull drawn', () => !document.querySelector('[data-golf-pull-line]')?.hidden, null, 30000);
+    await t.step('pulled back');
+    await touch('touchEnd', 0, 0);
+    await t.until('the next shot', () => (document.querySelector('[data-golf-stroke]')?.textContent ?? '') === 'Stroke 2', null, 90000);
+    await t.step(`the ball played by touch: ${await t.page.evaluate(() => document.querySelector('[data-golf-to]')?.textContent ?? '')}`);
+    await t.click('[data-golf-quit]');
+    await t.until('the round left', () => !document.querySelector('.city.is-golfing'), null, 60000);
+    await t.step('quit');
+  },
+  undefined,
+  { viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true }
+);
 
 // Flying: beside your aircraft in Hangar 1 (airfield.ts HANGAR_SPOT), in, rolling out under power
 await scene('fly', '126.8,347.4', async (t) => {

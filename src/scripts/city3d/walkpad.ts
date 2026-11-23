@@ -47,6 +47,8 @@ export interface PadHost {
   // What may change between polls
   readonly hotbar: { open: boolean; pad(edge: Edge): void } | null;
   readonly karts: { active: boolean };
+  /** The golf game (golfgame.ts, docs/golf-game-plan.md Phase 4): while it's on (its menu, a round, a card) the pad is its */
+  readonly golf?: { active: boolean; pad(edge: Edge, held: Edge, x: number): void } | null;
   readonly kartUI: Stepper & { stepTab(dir: 1 | -1): void; take(): void };
   readonly ride: unknown;
   readonly fight: { snack(): void } | null;
@@ -131,6 +133,15 @@ export function pollPad(gp: PadLike | null | undefined, dt: number, s: PadState,
   // The inventory: the D-pad moves round it, A does the selected thing, B or View closes
   if (h.hotbar?.open) {
     h.hotbar.pad(edge);
+    pad.x = pad.y = 0;
+    pad.prev = b;
+    return;
+  }
+  // The golf game: its menu and cards by the d-pad and A; a round's aim the left stick or the d-pad, the club LB / RB,
+  // the swing A, the camera R3 or Y, B or Start quits (golfgame.ts `pad()`)
+  if (h.golf?.active) {
+    h.golf.pad(edge, (i) => !!b[i], pad.x);
+    if (pad.x || b.some(Boolean)) d.touched();
     pad.x = pad.y = 0;
     pad.prev = b;
     return;

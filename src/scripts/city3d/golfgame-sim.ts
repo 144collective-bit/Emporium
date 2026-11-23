@@ -569,3 +569,21 @@ export function botShot(r: Round, pinOf: PinOf): ShotInput {
   // (nothing clean: a short wedge back down the line)
   return best?.s ?? { club: 'pw', aim: heading(greenOf(h).at), power: 0.6, accuracy: 0 };
 }
+
+/* ---------- The swing's input (docs/golf-game-plan.md Phases 2 and 4): the keys' and the pad's meter, the touch pull-back ---------- */
+
+/** The meter (seconds and its reading): up from 0 past the top (`top`, a little over full) and back down; the
+ * power's set on the way up, the accuracy on the way down (0 the line; `window` either side of it is a full hook or
+ * slice; past `end` it's a full slice) */
+export const METER = { rate: 1.05, top: 1.1, window: 0.12, end: -0.22 };
+/** The touch swing's pull-back (CSS pixels): the length that's full power (a share of the screen's height, between
+ * `min` and `max`), too short to count, and the lean off straight down (radians) that's a full hook or slice */
+export const PULL = { share: 0.3, min: 110, max: 240, least: 14, lean: 0.35 };
+/** The pull-back's power and accuracy from how far it went down (`dy`) and across (`dx`) and its full length */
+export function pullShot(dx: number, dy: number, full: number) {
+  const power = Math.max(0, Math.min(METER.top, dy / full));
+  // (a slingshot's: pulled back to the right sends it left, a hook; to the left a slice; a sliver off straight is straight)
+  const lean = Math.atan2(dx, Math.max(1, dy));
+  const accuracy = Math.abs(lean) < 0.03 ? 0 : Math.max(-1, Math.min(1, -lean / PULL.lean));
+  return { power, accuracy };
+}
