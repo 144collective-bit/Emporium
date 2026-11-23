@@ -102,6 +102,8 @@ function alongFace(g: THREE.BufferGeometry) {
   return g;
 }
 
+/** How far his painted buzz blends into his skin: a shade of the hair colour, not the colour itself */
+export const SLIME_BUZZ_SOFT = 0.45;
 /** His hairline round the head (`a` 0 is +x, PI/2 the front, as the head's rows go round): high over the brow, above the ears at the sides, down to the nape at the back */
 export const slimeHairline = (a: number) => {
   const f = Math.sin(a);
@@ -545,6 +547,8 @@ export interface HeadPart {
   detail?: boolean;
   /** On the head bone alone, unbent (a block's big flat faces: weighted by height, they'd bend under its ink) */
   rigid?: boolean;
+  /** Blended this far into another of the outfit's colours (`skin`, `hair`) */
+  blend?: { key: 'skin' | 'hair'; t: number };
 }
 
 /** A character's head at a detail level, part by part, as the wardrobe draws it */
@@ -558,7 +562,8 @@ export function characterParts(id: CharacterId, q: 2 | 3): HeadPart[] {
         { geos: s.lime, color: SLIME_LIME },
         { geos: s.ink, color: SLIME_INK },
         { geos: s.glints, color: SLIME_GLINT, detail: true },
-        { geos: s.hair, color: 'hair' },
+        // (softened into his skin, the owner's call, 2026-11-23: a shade on his head; the Hair row still picks it)
+        { geos: s.hair, color: 'hair', blend: { key: 'skin', t: SLIME_BUZZ_SOFT } },
       ];
     }
     case 'smilex': {

@@ -11,7 +11,7 @@ import { CHARACTERS, CHARACTER_LOOKS, DEFAULT_LOOK, PALETTE, cleanLook, type Cha
 import { SKIN_TONES } from '../src/scripts/city3d/crowdlook';
 import { CHOICES, describe as describeLook, isPlaying, pickCharacter, theirOutfit, wearsTheirOutfit } from '../src/scripts/city3d/lookrows';
 import { DEGEN_HEAD, HEAD_ROWS, headGeometry, headModel, type HeadDef } from '../src/scripts/city3d/body';
-import { CHARACTER_IDS, characterChain, characterGloves, characterParts, characterPendant, setHeadModel, SMILEX, SMILEX_HEAD, inSmilexBlock, smilex, SLIME, slimeAround, slimeHairline, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
+import { CHARACTER_IDS, characterChain, characterGloves, characterParts, characterPendant, setHeadModel, SMILEX, SMILEX_HEAD, inSmilexBlock, smilex, SLIME, SLIME_BUZZ_SOFT, slimeAround, slimeHairline, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
 import { newPose, poseSkeleton, weigh, type Influence } from '../src/scripts/city3d/skeleton';
 import { dress, inside, posed, shells, type Worn } from './dress';
 
@@ -160,6 +160,18 @@ test("heads: SlimeWhale's buzz painted on: his own scalp above the hairline, no 
     each(s.skin[0], (v) => assert.ok(v.y <= slimeHairline(slimeAround(v.x, v.y, v.z)) + 1e-4, `detail ${q}: skin above the hairline at ${v.toArray().map((n) => n.toFixed(3))}`));
     assert.ok(top <= SLIME.top + 1e-6, `detail ${q}: no volume (${top.toFixed(4)})`);
     assert.ok(low > 0.06 && low < 0.08, `detail ${q}: down to the nape (${low.toFixed(3)})`);
+  }
+});
+
+test("heads: SlimeWhale's buzz a softened shade of his hair colour, blended into his skin", () => {
+  for (const q of [3, 2] as const) {
+    const parts = characterParts('slimewhale', q);
+    const hair = parts.find((p) => p.color === 'hair')!;
+    assert.deepEqual(hair.blend, { key: 'skin', t: SLIME_BUZZ_SOFT });
+    assert.ok(SLIME_BUZZ_SOFT > 0.2 && SLIME_BUZZ_SOFT < 0.7, 'a shade: neither the hair colour nor the skin');
+    // (on the figure: the piece carries the blend through)
+    const item = items(q, true).find((i) => i.id === 'character-slimewhale')!;
+    assert.ok(item.pieces.some((p) => p.color === 'hair' && p.blend?.key === 'skin' && p.blend.t === SLIME_BUZZ_SOFT));
   }
 });
 

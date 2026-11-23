@@ -30,7 +30,9 @@ it):
 - **Hair:** a buzz, short and grey-brown, over the crown and back only (the
   face's front bare). The Hair row still colours it; no other cuts. Painted
   on, no volume (the owner's call, 2026-11-23: "a shade on his head"): his
-  skull cut along the hairline, the scalp in the hair colour.
+  skull cut along the hairline, the scalp in the hair colour softened 45%
+  into his skin (`SLIME_BUZZ_SOFT`, a piece's `blend`: the owner's call,
+  2026-11-23), the edge crisp.
 - **Three eyes:** sculpted domes in a row across the brow, lime green,
   bulging past the head's outline at the sides as in the art, each with a
   flat black ink pupil and a white glint (the owner's call: domes, not flat
