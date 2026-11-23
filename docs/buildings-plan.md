@@ -117,7 +117,7 @@ a street or a lane.
   on a phone and 2.4 MB on a desktop, all of it near-only detail held
   from the boot as the pilot's was.
 
-### Phase 3: the kits (built, waiting on the owner's sign-off)
+### Phase 3: the kits (built, signed off by the owner, 2026-11-23)
 
 The buildings the kits lay (The Trenches' tenements and rows, the
 recipes' districts): `IN_SITE` buildings take a modelled front too, built
@@ -139,6 +139,12 @@ in their sites (and in the site worker).
   (the headless readings swing too much with how many sites had built
   to show it). On desktops it's all of it, near-only detail in the sites,
   let go with them past the haze.
+- **memcheck** (the phone, every site built; the owner's ask before
+  merging): geometry 201.2 MiB of 210 with Phase 3, 200.7 on main without
+  it (+0.5: near forms past the budget are let go). Its frame ceilings
+  failed on main without Phase 3 too (`south-rampart` 294 ms, `crest-drive`
+  348, the route 1843) and with it (`south-rampart` 296, the rest under):
+  a hitch from what the sites build there, not Phase 3's.
 - **Measured** (headless, the medium tier and the phone tier, at the bench
   view over The Block, a row's corner and a tenement's): desktop draws
   282 / 523 / 267 before, 292 / 514 / 292 after; triangles 1.49M / 1.79M /
