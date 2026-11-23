@@ -165,3 +165,10 @@ prompt and the guide's Head out card on screen and apart, no page errors. Not ye
 - **Getting started's first step:** a new one at home, **Head out** (built in Phase 1).
 - **The City view from the title screen:** no; it's to be for the admin only, behind a password, later (not in
   this plan).
+
+## Waking in the flat (2026-11-23, docs/brutalist-plan.md Phase 7a)
+
+Once Degen owns his flat in Kite Point (the save's `flat`) he can choose on its card to wake there instead (`flat.wake`,
+tycoon.ts `wakeAt()`). Then `wake()` in index.ts loads the estate's blocks (`south-blocks`) instead of the south, wants
+what's round the flat built, opens its door (southsky.ts `setFlatOpen()`) and starts him standing by its front windows
+(`FLAT.wake`, at its floor); `?spawn=` still wins, and home stays the default.

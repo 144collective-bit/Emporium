@@ -98,7 +98,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   and Deck Stores lit with their neon and eight shuttered units, `drawShops()`; cables between the blocks, `CABLES`;
   court puddles that catch the sodium light; noticeboards by the lift doors); the lobbies (Phase 6: a hall in each
   block but The Core, `LOBBIES` in southblocks.ts, cut out of its solids, `coverWithHall()`, walked on groundheight.ts's
-  `lobby` layer, its lift doors calling the block's lift, `lobbyLiftDoor()`; drawn rough by `drawLobby()`); the glass
+  `lobby` layer, its lift doors calling the block's lift, `lobbyLiftDoor()`; drawn rough by `drawLobby()`); Degen's flat (Phase 7a: `FLAT` in Kite Point's 15th floor, its rooms walked once it's
+  his, southsky.ts `setFlatOpen()`, its card flat-ui.ts, drawn by `drawFlat()`; Kite's solids hollowed round it for the
+  camera, `hollowAt()`); the glass
   and the slots dark glass by day, lit warm at night (`lit()` toons); the podium deck on its columns; Bunker Sound's door
   with its neon. Built with `lift: false` (kit.ts `Batch.build()`): they stand level on their plinths, not on the
   rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in solids.ts. Bench views `south-blocks` and
