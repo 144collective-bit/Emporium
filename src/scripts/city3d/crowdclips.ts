@@ -35,7 +35,7 @@
 import * as THREE from 'three';
 import { BONES, NECK_SHARE, SPINE_SHARE, makeSkeleton, newPose, poseSkeleton, reachArm, type Limb, type Pose, type Skeleton } from './skeleton';
 import { HURRY, PHONE, PHONE_GLANCE_YAW, kerbLook, phoneGlance } from './pedestrians';
-import { ridePose, BRASS, BRASS_SECONDS, brassPose, DRUM, DRUM_SECONDS, drumPose, CHEER, CHEER_SECONDS, cheerOver, sitCheerPose, CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, SHOOT, SWING, SWING_SECONDS, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver, shootOver, swingPose } from './acts';
+import { GOLF, GOLF_SECONDS, PUTT, PUTT_SECONDS, golfPose, puttPose, ridePose, BRASS, BRASS_SECONDS, brassPose, DRUM, DRUM_SECONDS, drumPose, CHEER, CHEER_SECONDS, cheerOver, sitCheerPose, CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, SHOOT, SWING, SWING_SECONDS, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver, shootOver, swingPose } from './acts';
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
 import { BUILT, baked as atBuild } from './baked';
@@ -75,7 +75,9 @@ export type CrowdClip =
   | 'tuck'
   | 'salute'
   | 'cheer'
-  | 'sitcheer';
+  | 'sitcheer'
+  | 'golf'
+  | 'putt';
 /** What an idle person in the city is doing (life.ts picks their row from it; 'queue' is their own idle) */
 export type IdleAct = 'look' | 'chat' | 'sit' | 'queue' | 'phone' | 'wait' | 'serve' | 'cook' | 'fish' | 'guard' | 'eat' | 'chess' | 'lounge' | 'brass' | 'drum';
 /** The rows played sitting down (life.ts drops their root by the seat) */
@@ -333,6 +335,9 @@ export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
   // Cheering, standing over a captured idle and seated (acts.ts `cheerOver()`; the kart park's fans as the karts go by)
   cheer: { frames: 24, loop: true, grip: CHEER.grip, sample: looped((p, t) => idlePose(p, t + 8), CHEER_SECONDS), seconds: CHEER_SECONDS, capture: { take: 'crowd-idle-2', tail: IDLE_TAIL }, over: cheerOver, arms: 'both', head: true },
   sitcheer: { frames: 24, loop: true, grip: CHEER.grip, sample: looped(sitCheerPose, CHEER_SECONDS), seconds: CHEER_SECONDS },
+  // The golfers (docs/golf-plan.md Phase 5, acts.ts): a full swing and a putt, each its own loop, the club in the right hand
+  golf: { frames: 40, loop: true, grip: GOLF.grip, sample: looped(golfPose, GOLF_SECONDS), seconds: GOLF_SECONDS },
+  putt: { frames: 30, loop: true, grip: PUTT.grip, sample: looped(puttPose, PUTT_SECONDS), seconds: PUTT_SECONDS },
   // Attention (0) to the free hand at the brow (1), the rifle in the left hand
   salute: { frames: 9, loop: false, grip: RIFLE, sample: (u, p) => attentionPose(p, u, 'left') },
 };

@@ -48,6 +48,7 @@ import { BANK, COVER, KERB, LAMP, LAMP_POST, PLANT, ROAD, TREE, VERGE } from './
 import { EDGE, RAMP, VERGES, edgePieces, pieceLine } from './verges';
 import { colourAt, groundStep } from './ground';
 import { ROLL, rollGrad, rollSlope, rollsAt, rollsIn } from './rolls';
+import { golfIn, golfLift, golfMesh, golfTrees } from './golflift';
 
 export { BLOCKS, BS, CORE_ROADS, EW_ROADS, EXT, NS_ROADS, RIVER, SOUTH_ROAD, WALK_W, type Road };
 /** District blocks around the core: one pad each (layout.ts DISTRICTS). */
@@ -711,6 +712,37 @@ const ROLL_HIGH = new THREE.Color(COVER.dryGrass);
 const SHADE_TO = [-0.6, -0.8] as const;
 const SHADE = 3.2;
 /** Each vertex of a piece of the ground in what covers it there (ground.ts); over the rolls the lows lusher, the crests drier, the slopes shaded */
+/**
+ * A piece of the ground over the golf course (golflift.ts, docs/golf-plan.md Phase 2), near or far: `golfMesh()`'s
+ * triangles at the course's heights (near, exactly what's walked on; far, a coarser middle with its edges on the near
+ * grid's points, so a tile drawn far meets one drawn near with no gap)
+ */
+function golfPlane(x0: number, z0: number, x1: number, z1: number, far: boolean) {
+  const m = golfMesh([x0, z0, x1, z1], far);
+  const pos: number[] = [];
+  for (let k = 0; k < m.xz.length; k += 2) pos.push(m.xz[k], golfLift(m.xz[k], m.xz[k + 1]) + rollsAt(m.xz[k], m.xz[k + 1]), m.xz[k + 1]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(new Array((pos.length / 3) * 2).fill(0), 2));
+  g.setIndex(m.tri);
+  g.computeVertexNormals();
+  return g;
+}
+/** The golf course's grass painted: the ground's cover (ground.ts: the course's rough and native grass), a little
+ * lighter up its hills and darker down in its hollows */
+function paintGolf(g: THREE.BufferGeometry) {
+  const pos = g.getAttribute('position');
+  const col = g.getAttribute('color') as THREE.BufferAttribute;
+  for (let i = 0; i < pos.count; i++) {
+    const [x, h, z] = [pos.getX(i), pos.getY(i), pos.getZ(i)];
+    const [r, gr, bl] = colourAt(x, z, RGB);
+    GROUND_TINT.setRGB(r, gr, bl, THREE.SRGBColorSpace);
+    if (h > 0) GROUND_TINT.lerp(ROLL_HIGH, 0.35 * Math.min(1, h / 10));
+    else if (h < 0) GROUND_TINT.lerp(ROLL_LOW, 0.5 * Math.min(1, -h / 2));
+    col.setXYZ(i, GROUND_TINT.r, GROUND_TINT.g, GROUND_TINT.b);
+  }
+}
+
 function paintGround(g: THREE.BufferGeometry) {
   const pos = g.getAttribute('position');
   const col = g.getAttribute('color') as THREE.BufferAttribute;
@@ -910,6 +942,16 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
         // holed over them, cover the rest)
         for (const [px0, pz0, px1, pz1] of minusRects([x0, a, x1, c], [BASIN, CHANNEL, DRY_DOCK, ...TUNNEL_HOLES, ...GROUND_HOLES, LAKE_HOLE, GRAND_HOLE])) {
           const hill = hillsPlane(px0, pz0, px1, pz1);
+          // (the golf course: its grid near, a coarser one of its points far, golflift.ts, docs/golf-plan.md Phase 2)
+          if (!hill && golfIn(px0, pz0, px1, pz1)) {
+            const near = golfPlane(px0, pz0, px1, pz1, false);
+            const far = golfPlane(px0, pz0, px1, pz1, true);
+            b.detail(() => b.add(near, grass), 'near');
+            b.detail(() => b.add(far, grass), 'far');
+            paintGolf(near);
+            paintGolf(far);
+            continue;
+          }
           // (the open land outside the town rolls, rolls.ts; flat everywhere anything stands)
           const flat = hill ? null : (rolledPlane(px0, pz0, px1, pz1, low) ?? groundPlane(px0, pz0, px1, pz1, low));
           b.add(hill ?? flat!, grass);
@@ -1307,9 +1349,12 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
  * and woods in patches well away from the city, seeded tile by tile at a density per area
  * (outskirts.ts, growth plan Phases 5 and 6)
  */
-export function scatterOutskirts(count: number, sparse = 0.6, keep = 1) {
-  // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim)
-  for (const t of outskirtsTrees(count, sparse)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : rollsAt(t.x, t.z) - 0.08 * t.s * rollSlope(t.x, t.z));
+export function scatterOutskirts(count: number, sparse = 0.6, keep = 1, clear: readonly [number, number, number, number][] = []) {
+  // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim; `clear`: land kept
+  // clear besides, Riverside Raceway's behind `?karts=new`)
+  for (const t of outskirtsTrees(count, sparse, clear)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : rollsAt(t.x, t.z) - 0.08 * t.s * rollSlope(t.x, t.z));
+  // The golf course's woods in their place there (golflift.ts, docs/golf-plan.md Phase 3)
+  for (const t of golfTrees(keep)) addTree(t.x, t.z, t.s, t.pine, heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z));
 }
 
 

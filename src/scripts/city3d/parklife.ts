@@ -50,7 +50,7 @@ import { HALL, inCivic } from './civic';
 import { BUILT, baked } from './baked';
 
 /** What a person in the park is doing at a moment: where, facing (0 is +z), standing (or seat) height, the crowd clip, how fast */
-export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic' | 'row' | 'pedal' | 'shoot' | 'swing' | 'serve';
+export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic' | 'row' | 'pedal' | 'shoot' | 'swing' | 'golf' | 'putt' | 'serve';
 export interface Moment {
   x: number;
   z: number;
@@ -60,6 +60,9 @@ export interface Moment {
   clip: ParkClip;
   /** How fast they're going (their walk or jog is played at its stride from it) */
   speed: number;
+  /** How long they've been at what they're doing (seconds): a row played from its start (a golfer's swing, golflife.ts),
+   * not the clock's */
+  since?: number;
 }
 export interface ParkPerson {
   id: string;

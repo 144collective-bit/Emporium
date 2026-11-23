@@ -15,6 +15,7 @@
     "bake:textures": "node scripts/bake-textures.mjs",
     "mocap": "node scripts/mocap.mjs",
     "seams": "node scripts/seams.mjs",
+    "golfmap": "node scripts/golfmap.mjs",
     "shots": "node scripts/shots.mjs",
     "smoke": "node scripts/walk-smoke.mjs",
     "memcheck": "node scripts/memcheck.mjs",

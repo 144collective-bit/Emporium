@@ -53,6 +53,21 @@ export const COVER = {
   paving: '#3a3470',
   /** Concrete (a concrete lot, a paved rim) */
   concrete: '#4b4766',
+  /** The golf course (golf.ts, docs/golf-plan.md): its rough round the holes, its native grass between them */
+  courseRough: '#2b6a44',
+  courseNative: '#4f6a3f',
+  /** Its fairways, mown in stripes, and the first cut beside them */
+  fairway: '#4e9a4a',
+  fairwayStripe: '#57a652',
+  firstCut: '#3f8443',
+  /** Its greens, mown in stripes, their fringes and its tees */
+  green: '#6cc05e',
+  greenStripe: '#74c866',
+  fringe: '#5aab54',
+  tee: '#63b35a',
+  /** A bunker's sand, and its lip */
+  sand: '#e3cf94',
+  sandLip: '#c9b277',
 } as const;
 export type Cover = keyof typeof COVER;
 

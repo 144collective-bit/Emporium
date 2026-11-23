@@ -30,7 +30,7 @@
 import { ESTATES, ESTATE_CARS, COURT_HALF, FOUNTAIN, GATE, HEDGE, SLAB_Y, fountainOf, gardenPalmsOf, motorCourt, rectToWorld, wingSide, type Estate, type EstateStyle, type Part } from './estates';
 import { MANSIONS, MANSION_CARS, WALL, type MPart, type Mansion, type MansionKind } from './mansions';
 import { CREST_IDLE, GARDENERS } from './crestlife';
-import { CIVIC, CLUB, HOTEL } from './crestsites';
+import { CIVIC, HOTEL } from './crestsites';
 import { GATES } from './crestcover';
 import { nearGateway } from './crestgate';
 import { CREST_LAMPS } from './crestmont';
@@ -660,18 +660,10 @@ export const SITE_GARDENS: { id: string; y: number; g: Garden }[] = (() => {
     for (const dz of [-1, 1]) c('urn', at(fx + s * (C.fountainR + 1), fz + dz * (C.fountainR + 1), 0.3));
     c('flag', at(ax + s * 10.5, C.colonnade.z + 1.6, 0.1));
   }
-  // The country club: a putting green beside the clubhouse, borders along its back, cones at the terrace's ends, flags
-  const K = CLUB;
-  const club: Feat[] = [];
-  const k = (kind: FeatKind, r: FR) => club.push({ kind, r, tone: 'villa' });
-  k('putting', at((K.pad[0] + K.house[0]) / 2, (K.house[1] + K.house[3]) / 2, (K.house[0] - K.pad[0]) / 2 - 0.5, 3.2));
-  k('border', [K.house[0] + 0.5, K.house[1] - 0.55, K.house[2] - 0.5, K.house[1] - 0.1]);
-  for (const x of [K.terrace[0] - 0.45, K.terrace[2] + 0.45]) k('cone', at(x, (K.terrace[1] + K.terrace[3]) / 2, 0.28));
-  for (const x of [K.house[0] - 0.8, K.house[2] + 0.8]) k('flag', at(x, K.pad[3] - 1.2, 0.1));
   return [
     { id: 'hotel', y: SLAB_Y, g: { feats: hotel, lawn: [], verge: hotelVerge(hotel) } },
     { id: 'civic', y: C.y, g: { feats: civic, lawn: [] } },
-    { id: 'club', y: K.y, g: { feats: club, lawn: [] } },
+    // (and the country club's, till it was retired: docs/golf-plan.md Phase 4)
   ];
 })();
 

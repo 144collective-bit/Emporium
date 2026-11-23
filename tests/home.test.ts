@@ -71,9 +71,10 @@ test('inside the wall: the garage on the Close\'s line, the house, the workshop 
     assert.ok(within(r, HOME.inner, 1e-9), `${id} through the wall`);
   }
   for (let i = 0; i < things.length; i++) for (let j = i + 1; j < things.length; j++) assert.ok(!overlap(things[i][1], things[j][1]), `${things[i][0]} on ${things[j][0]}`);
-  // The owner's sizes: the house about 9 by 7, the garage 8 by 5 with two doors, the workshop 5 by 4
+  // The owner's sizes: the house 10.4 by 7.5 (docs/house-plan.md Phase 1: a third more floor than its 9 by 6.5), the
+  // garage 8 by 5 with two doors, the workshop 5 by 4
   const size = (r: Rect) => [r[2] - r[0], r[3] - r[1]].map((n) => Math.round(n * 10) / 10);
-  assert.deepEqual(size(HOME.house), [9, 6.5]);
+  assert.deepEqual(size(HOME.house), [10.4, 7.5]);
   assert.deepEqual(size(HOME.garage), [5, 8]);
   assert.deepEqual(size(HOME.workshop), [5, 4]);
   // The garage faces the gates down the Close's line; nothing stands between them

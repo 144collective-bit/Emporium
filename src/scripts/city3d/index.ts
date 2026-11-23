@@ -55,6 +55,7 @@ import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
 import { SITE_SPAWNS } from './crestsites';
+import { GOLF_CLUBHOUSE } from './golflift';
 import { CORAL_SPAWNS } from './coral';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
@@ -119,6 +120,8 @@ import { placeName } from './places';
 import { hubHooks } from './hubhooks';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
+import { KARTS2, KART2_LAND, kartsNewAsked } from './kartswitch';
+import { flattenRolls } from './rolls';
 import { AIR_SPAWN } from './airfield';
 import { FIGHT_SPAWN } from './fightsite';
 import { HIGH_Y as LIBERTY_HIGH, LIBERTY_SPAWN, LIFTS as LIBERTY_LIFTS, LOW_Y as LIBERTY_LOW } from './liberty';
@@ -155,6 +158,7 @@ import { hazeHorizon } from './tileplan';
 import { createTileWork } from './tilework';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
 import { meshesOf, startSiteWorker } from './sitework';
+import { addSolids } from './solids';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
@@ -204,6 +208,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const bar = loader.querySelector<HTMLElement>('[data-loader-bar]')!;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const progress = (k: number) => bar.style.setProperty('--p', String(k));
+  // Riverside Raceway behind ?karts=new until its switch (kartswitch.ts, docs/kart-harbour-plan.md)
+  KARTS2.on = kartsNewAsked(location.search);
+  // (its land's rolls levelled before anything's built on them: rolls.ts)
+  if (KARTS2.on) flattenRolls([KART2_LAND]);
   // ?anim: the animation lab on its own, over the page (no city behind it)
   if (new URLSearchParams(location.search).has('anim')) {
     await (await import('./anim-lab')).openLab(root, { reduced, low: ((root.dataset.tier as Tier) || pickTier(device()).tier) === 'low' });
@@ -527,7 +535,15 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   progress(0.55);
   await waited(nextFrame());
   // (phones keep half of them: the trim)
-  scatterOutskirts(Q.trees, 0.6, tier === 'low' ? 0.5 : 1);
+  // (Riverside Raceway's rules, ground and walls with the switch on, and its land kept clear of the trees)
+  const river = KARTS2.on ? await import('./kartcourse2') : null;
+  if (river) {
+    KARTS2.surfaceAt = river.riversideSurfaceAt;
+    KARTS2.wall = river.riversideWall;
+    // (its venue's sheds, racks, benches and stacks: kartvenue2.ts)
+    addSolids((await import('./kartvenue2')).VENUE2_SOLIDS);
+  }
+  scatterOutskirts(Q.trees, 0.6, tier === 'low' ? 0.5 : 1, river ? river.KART2_RECTS : []);
   buildTrees(tier === 'low');
   buildLamps(scene, tier === 'low', tick, reduced);
   buildBusStops(tier === 'low');
@@ -640,7 +656,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Building as you go (growth plan Phase 3): of the sites (the fixed city drawn from data: trees, lamps, the
   // airport's grounds, the kart park's circuit), only those in the home view and the intro's are built now
   // Most sites built off the main thread (performance phase 4): in the built site, unless ?worker=0
-  const siteWorker = import.meta.env.PROD && new URLSearchParams(location.search).get('worker') !== '0' ? startSiteWorker(import.meta.url, { low: tier === 'low', placed: everyPlaced() }) : null;
+  const siteWorker = import.meta.env.PROD && new URLSearchParams(location.search).get('worker') !== '0' ? startSiteWorker(import.meta.url, { low: tier === 'low', placed: everyPlaced(), karts2: KARTS2.on }) : null;
   const horizonAsked = new URLSearchParams(location.search).get('horizon');
   const horizonOff = horizonAsked === '0';
   const horizonForced = Number(horizonAsked) || 0;
@@ -897,13 +913,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(INSIDE_SPAWN);
       });
     // Crestmont's landmarks (crestsites.ts): Walk in where you arrive at each, facing it
-    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir' || id === 'asterly' || id === 'belvedere' || id === 'glasshouse') {
+    if (id === 'hotel' || id === 'civichall' || id === 'overlook' || id === 'reservoir' || id === 'asterly' || id === 'belvedere' || id === 'glasshouse') {
       const at = SITE_SPAWNS[id];
       panelBody.querySelector('[data-crest-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(at);
       });
     }
+    // Knob Hill Golf Club (docs/golf-plan.md Phase 4): Walk in in its car park, facing the clubhouse
+    if (id === 'golfclub')
+      panelBody.querySelector('[data-golf-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(GOLF_CLUBHOUSE.spawn);
+      });
     // Coral Drive's showroom and spa (the premium upgrade's Phase 4): Walk in on the strip in front of each
     if (id === 'vellano' || id === 'solenne') {
       const at = CORAL_SPAWNS[id];

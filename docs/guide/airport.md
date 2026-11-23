@@ -136,13 +136,18 @@ keep it up to date when what it describes changes.
   hangar's east half; the airport's prop plane's stand is in front of the
   west half) and stays wherever you land it.
   - The rules are `flight-sim.ts` (DOM-free, tested in
-    `tests/flight.test.ts`): `TUNES` per aircraft, `stepFly()`, `HULLS`
+    `tests/flight.test.ts`): `TUNES` per aircraft, `HULLS`
     (spheres for every kind, the airport's too), `floorAt()` (the ground or
     a roof under the wheels), `canLeave()`, `CEILING`, `EDGE_TURN`. Arcade
     and forgiving: it levels itself, can't stall, eases a hard descent
     near the ground and lands wherever it touches down; collisions are soft
     (it slides off, nothing is damaged). New handling goes in the sim
-    first.
+    first. One step of it, `stepFly()` and what it runs (the plane's and the
+    helicopter's handling, landing, the collisions, the world's edge), is
+    `flight-step.ts`'s (DOM-free, its own chunk): fly.ts fetches it
+    (`lazy()`) once you're within `FETCH_NEAR` (40) of your aircraft or
+    climb in, so it stays out of the boot (2026-11-22, room made in the
+    boot for the golf plan's Phase 5).
   - `fly.ts` is the view: your aircraft is a fleet of one
     (`createFleet()`, repainted with `paint()`), chase and nose cameras
     (V), the readout (`data-fly-hud`: speed, height, throttle, state), the

@@ -29,7 +29,10 @@ keep it up to date when what it describes changes.
   `line()` for the Workshop and factories), the ledger (`book()`, called by
   every rule that moves Dorras) and loans (`borrow()`, `repay()`, a share
   of takings in `advance()`).
-  `cleanSave()` cleans anything loaded and upgrades older saves (now v14:
+  `cleanSave()` cleans anything loaded and upgrades older saves (now v15:
+  golf at Knob Hill, `golf` { round (a round on the go, `SavedRound`, `cleanRound()`), holes (each hole's best),
+  front, back, full }, `cleanGolf()`, `emptyGolf()`, its counters `golfHoles`, `birdies`, `eagles`, `aces`,
+  `golfRounds`, `underPar`, the ledger's `golf` and the prize cap's `rounds`, docs/golf-game-plan.md Phase 3; v14
   the Night Market's stall, `night`, below; v13 the daily prize cap's count,
   `prizes`, below; v12 Build mode retired, the district plots a save owned
   refunded in full, `plotRefund()`, with a toast once; v11 brought the
@@ -39,8 +42,8 @@ keep it up to date when what it describes changes.
 - **Balance** (the polish plan's Phase 9, the owner's call; the numbers
   before and after are in `docs/tycoon-plan.md`, "Balance"): **the daily
   prize cap** (`PRIZE_CAP` in catalog.ts: the day's first 6 cup races (a
-  cup's and single races) and first 4 purses won pay in full, then 35%;
-  the save's `prizes` { day (`dayKey()`), races, bouts }, brought to today
+  cup's and single races), first 4 purses won and first 4 rounds of golf (`rounds`, golfscore.ts) pay in full, then 35%;
+  the save's `prizes` { day (`dayKey()`), races, bouts, rounds }, brought to today
   by `prizesToday()`, `cappedPrize()`, `prizesLeft()`; older saves start at
   zero; `KartResult.capped` / `FightResult.capped` put "Daily prize cap ·
   35%" on the result cards (kart-ui.ts, fight-ui.ts); a series' prize, the

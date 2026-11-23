@@ -104,6 +104,10 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'airbase-overview', name: 'Northgate Air Base, from high', pos: [-200, 110, -230], target: [-260, 0, -560] },
   { id: 'airbase-gate', name: 'Northgate Air Base, the main gate', pos: [-10, 2.2, -285], target: [-4.5, 1.6, -340] },
   { id: 'airbase-runway', name: 'Northgate Air Base, the runway', pos: [-60, 16, -560], target: [-300, 2, -540] },
+  // The golf course in the north-east corner (docs/golf-plan.md, Phase 2 on): over it from the clubhouse, and its Knob's
+  // green at eye level
+  { id: 'golf', name: 'The golf course, from over the clubhouse', pos: [530, 40, -440], target: [640, 0, -620] },
+  { id: 'golf-green', name: "The golf course, the Knob's green", pos: [676, 6, -572], target: [700, 0, -592] },
 ];
 /** The route, through these views in order and back home */
 const ROUTE = ['home', 'street', 'square', 'airport', 'karts', 'highway', 'outskirts', 'edge', 'home'];

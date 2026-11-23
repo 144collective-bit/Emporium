@@ -8,7 +8,8 @@
 import * as THREE from 'three';
 import { PAL, PICK, fx, glowMat } from './kit';
 import type { Spot } from './landmarks';
-import { ASTERLY, BELVEDERE, CIVIC, CLUB, GLASSHOUSE, HOTEL, OVERLOOK, RESERVOIR, SLAB_Y } from './crestsites';
+import { ASTERLY, BELVEDERE, CIVIC, GLASSHOUSE, HOTEL, OVERLOOK, RESERVOIR, SLAB_Y } from './crestsites';
+import { GOLF_CLUBHOUSE, GOLF_CLUBHOUSE_H, clubLevel } from './golflift';
 import { CORAL_PLACES, SLAB_Y as CORAL_Y, heightOf } from './coral';
 import type { Rect } from './crestmont';
 import type { SpotId } from '../../lib/city';
@@ -44,7 +45,8 @@ export function buildCrestSpots(scene: THREE.Scene): Spot[] {
   return [
     spot(scene, 'hotel', SLAB_Y, [{ rect: HOTEL.body, h: hotelH - 2 }, { rect: HOTEL.tower, h: hotelH }], HOTEL.block, hotelH + 2.4, tower(HOTEL.tower)),
     spot(scene, 'civichall', CIVIC.y, [{ rect: CIVIC.hall, h: hallH }, { rect: CIVIC.tower, h: CIVIC.towerTop + CIVIC.dome }], CIVIC.pad, CIVIC.towerTop + CIVIC.dome + 2.6, tower(CIVIC.tower)),
-    spot(scene, 'golfclub', CLUB.y, [{ rect: CLUB.house, h: CLUB.storey.ground + CLUB.storey.upper + 1.3 }], CLUB.pad, 7.4, tower(CLUB.house)),
+    // (Knob Hill Golf Club, in the north-east corner past the hills: docs/golf-plan.md Phase 4, drawn by golf3d.ts)
+    spot(scene, 'golfclub', clubLevel(), [{ rect: GOLF_CLUBHOUSE.house, h: GOLF_CLUBHOUSE_H }], GOLF_CLUBHOUSE.grounds, GOLF_CLUBHOUSE_H + 2.6, tower(GOLF_CLUBHOUSE.house)),
     spot(scene, 'overlook', OVERLOOK.y, [{ rect: OVERLOOK.rect, h: 1.2 }], OVERLOOK.rect, 4),
     spot(scene, 'reservoir', RESERVOIR.y, [{ rect: RESERVOIR.water, h: 1 }], RESERVOIR.water, valve.h + 3, [valve.x, valve.z]),
     // (the premium upgrade's Phase 4: THE ASTERLY off the overlook, Coral Drive's showroom and spa)

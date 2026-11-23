@@ -20,6 +20,7 @@ import { insideHighway } from './highway';
 import { keptOff } from './landuse';
 import { TERRAIN_RECT } from './hills';
 import { SOUTH_GROUND_RECT } from './southground';
+import { golfLand } from './golflift';
 import { BUILT, baked } from './baked';
 
 export const ROLL = {
@@ -72,6 +73,8 @@ function kept(x: number, z: number) {
   if (x > TERRAIN_RECT[0] && x < TERRAIN_RECT[2] && z > TERRAIN_RECT[1] && z < TERRAIN_RECT[3]) return true;
   // (and the south's rolling ground, its own shape: southground.ts)
   if (x > SOUTH_GROUND_RECT[0] && x < SOUTH_GROUND_RECT[2] && z > SOUTH_GROUND_RECT[1] && z < SOUTH_GROUND_RECT[3]) return true;
+  // (and the golf course, its own shape: golfground.ts)
+  if (golfLand(x, z) > 0) return true;
   return insideHighway(x, z) || keptOff(x, z) !== null;
 }
 
@@ -117,6 +120,20 @@ function lattice() {
       if (s > 0) heights[j * N + i] = (s / ROLL.levels) * shape((I0 + i) * L, (J0 + j) * L);
     }
   return heights;
+}
+/**
+ * Land kept level besides what the bake kept (Riverside Raceway's behind `?karts=new`, kartswitch.ts): every lattice
+ * point within `ROLL.clear` of it made 0, rising back over `ROLL.ramp`, as the bake does round what it keeps. Asked
+ * once at the boot (and in the site worker), before anything's built on the rolls.
+ */
+export function flattenRolls(rects: readonly [number, number, number, number][]) {
+  const h = lattice();
+  for (let j = 0; j < N; j++)
+    for (let i = 0; i < N; i++) {
+      const [px, pz] = [(I0 + i) * L, (J0 + j) * L];
+      const d = Math.min(...rects.map((r) => Math.hypot(Math.max(r[0] - px, 0, px - r[2]), Math.max(r[1] - pz, 0, pz - r[3]))));
+      if (d < ROLL.clear + ROLL.ramp) h[j * N + i] *= smooth(ROLL.clear, ROLL.clear + ROLL.ramp, d);
+    }
 }
 /** The lattice point (i, j)'s height (0 off the lattice) */
 function nodeY(h: Float32Array, i: number, j: number) {

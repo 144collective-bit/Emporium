@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import { onSouthGround, southLift } from '../src/scripts/city3d/southground';
 import { SKY_LIFTS, skyFloorAt } from '../src/scripts/city3d/southsky';
-import { floorY } from '../src/scripts/city3d/southblocks';
+import { LOBBIES, floorY } from '../src/scripts/city3d/southblocks';
 import { BRIDGE as REC_BRIDGE, recBridgeY } from '../src/scripts/city3d/rec';
 import assert from 'node:assert/strict';
 import { GROUND_LAYERS, SLAB, STREET, UNDER, baseAt, createGroundHeight } from '../src/scripts/city3d/groundheight';
@@ -16,6 +16,9 @@ import { DEPARTURES, departuresY } from '../src/scripts/city3d/airfield';
 import { circuitSurfaceAt as trackSurfaceAt, CIRCUIT, FLY_H } from '../src/scripts/city3d/kartcircuit';
 import { BANKS_AREA, bankY } from '../src/scripts/city3d/kartfacility';
 import { KART_PARK } from '../src/scripts/city3d/kartpark';
+import { KARTS2 } from '../src/scripts/city3d/kartswitch';
+import { riversideSurfaceAt } from '../src/scripts/city3d/kartcourse2';
+import { CIRCUIT2 } from '../src/scripts/city3d/kartcircuit2';
 import { HIGH_Y, LOW_Y, TOWERS, footbridgeY } from '../src/scripts/city3d/liberty';
 import { FOOTBRIDGE_X, EXT } from '../src/scripts/city3d/layout';
 import { SX as SWING_X, swingY } from '../src/scripts/city3d/swingbridge';
@@ -221,9 +224,16 @@ test('every layer answers alone where it stands, and nowhere on the open street 
     civic: [CITYHALL_SPAWN.x, (PORTICO[1] + PORTICO[3]) / 2, 0],
     circuit: [sample(12)[0], sample(12)[1], 0],
     banks: [sample(12)[0], sample(12)[1], 0],
+    // (an Endswood block's lobby: the Rampart's hall, docs/brutalist-plan.md Phase 6)
+    lobby: [LOBBIES[0].poly.reduce((a, p) => a + p[0], 0) / 4, LOBBIES[0].poly.reduce((a, p) => a + p[1], 0) / 4, LOBBIES[0].base],
+    // (Riverside Raceway behind ?karts=new: the road at the hill's top, its ground on only with the switch)
+    riverside: [CIRCUIT2.x[CIRCUIT2.y.indexOf(Math.max(...CIRCUIT2.y))], CIRCUIT2.z[CIRCUIT2.y.indexOf(Math.max(...CIRCUIT2.y))], 3.5],
     // (the air base's visitors' centre: up on its roof's terrace)
     visitors: [(VISITOR_TERRACE[0] + VISITOR_TERRACE[2]) / 2, (VISITOR_TERRACE[1] + VISITOR_TERRACE[3]) / 2, VISITOR_CENTRE_H],
   };
+  const river = GROUND_LAYERS.find((l) => l.id === 'riverside')!;
+  assert.equal(river.at(where.riverside[0], where.riverside[1], where.riverside[2], g(where.riverside[0], where.riverside[1])), null, 'riverside: nothing with the switch off');
+  KARTS2.surfaceAt = riversideSurfaceAt;
   for (const L of GROUND_LAYERS) {
     const w = where[L.id];
     if (!w) {
@@ -234,6 +244,7 @@ test('every layer answers alone where it stands, and nowhere on the open street 
     // (the open street downtown, the Emporium's block's south side: nothing but the street)
     assert.equal(L.at(30, 44.5, 0, g(30, 44.5)), null, `${L.id} answers on the street`);
   }
+  KARTS2.surfaceAt = null;
   // A verge: somewhere along the first one's line
   const vg = GROUND_LAYERS.find((l) => l.id === 'verge')!;
   let found = false;

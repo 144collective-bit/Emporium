@@ -14,7 +14,7 @@
   display: flex;
 }
 /* Not on foot, or a menu or card is open: out of the way (as specific as the rule that shows it, and more) */
-.city[data-view="3d"][data-mode="walk"]:is(.is-driving, .is-karting, .is-fighting, .is-riding, .is-shopping) .hotbar {
+.city[data-view="3d"][data-mode="walk"]:is(.is-driving, .is-karting, .is-fighting, .is-riding, .is-shopping, .is-golfing) .hotbar {
   display: none;
 }
 /* The consumables' boosts on now (Phase 5, inventory-ui.ts paintBoosts()): a chip each with the time left, over the

@@ -1211,6 +1211,36 @@ export function createSound(given?: AudioContext) {
           tone(t + 0.24, 'sine', 2093, 2093, 0.1, 0.65);
           break;
         // The Fight Club: cartoon fisticuffs
+        // The golf game: the club's crisp click through the ball with the air's swish behind it; the putter's soft
+        // tap; a dull thump on the turf; a hollow knock off a tree; a splash; the cup's rattle and drop
+        case 'golfHit':
+          crack(t, 'bandpass', 3200, 2.2, 0.5, 0.05);
+          tone(t, 'sine', 1900, 1200, 0.16, 0.06);
+          crack(t + 0.01, 'bandpass', 1100, 0.8, 0.14, 0.22, true);
+          break;
+        case 'golfPutt':
+          crack(t, 'bandpass', 2400, 2.5, 0.22, 0.035);
+          tone(t, 'sine', 900, 700, 0.08, 0.05);
+          break;
+        case 'golfLand':
+          tone(t, 'sine', 120, 70, 0.22, 0.1);
+          crack(t, 'lowpass', 600, 0.8, 0.14, 0.07);
+          break;
+        case 'golfTree':
+          tone(t, 'triangle', 520, 380, 0.22, 0.09);
+          crack(t, 'bandpass', 1600, 1.5, 0.2, 0.06);
+          crack(t + 0.05, 'highpass', 4000, 0.6, 0.06, 0.25);
+          break;
+        case 'golfSplash':
+          crack(t, 'lowpass', 1400, 0.7, 0.45, 0.35);
+          crack(t + 0.04, 'bandpass', 3000, 0.8, 0.22, 0.4);
+          tone(t, 'sine', 160, 60, 0.18, 0.18);
+          break;
+        case 'golfCup':
+          [0, 0.07, 0.12].forEach((dt, i) => tone(t + dt, 'triangle', 1500 - i * 220, 1300 - i * 220, 0.12, 0.06));
+          tone(t + 0.18, 'sine', 300, 140, 0.3, 0.16);
+          crack(t + 0.18, 'lowpass', 800, 0.9, 0.2, 0.08);
+          break;
         case 'whoosh':
           crack(t, 'bandpass', 1400, 0.7, 0.16, 0.1);
           break;
