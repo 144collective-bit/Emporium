@@ -10,7 +10,8 @@
  * - **the tyre store**: open-fronted, steel racks of tyres along its walls, a tyre-fitting machine;
  * - **tyres stacked everywhere**: loose stacks by the sheds and along the pit lane's garage side, and the corners' tyre
  *   walls painted in the club's colours (kartgrounds2-3d.ts).
- * The east end of the strip (u 50 to 64) is kept for the hire-kart garage (4b).
+ * 4b, the hire-kart garage, on the strip's east end (u 50 to 64): rows of hire karts under a canopy, a helmet rack, the
+ * sign-on cabin with its desk and a briefing room's benches facing a screen (a circuit and flags on it: no words).
  */
 import { SITE2 } from './kartcircuit2';
 
@@ -92,6 +93,25 @@ export const STACKS2: TyreStack[] = [
   ...Array.from({ length: 7 }, (_, k): TyreStack => ({ u: 112 + k * 4, v: 128.9, n: 2 + ((k * 5) % 3) })),
 ];
 
+/* ---------- 4b: the hire-kart garage, on its land east of the tyre store ---------- */
+
+/** The canopy over the hire karts (open on every side, on posts), and its height */
+export const HIRE_CANOPY2 = { u0: 50.5, v0: 133.5, u1: 63.5, v1: 142.5, h: 3.0 } as const;
+/** The canopy's posts (site frame) */
+export const CANOPY_POSTS2: [number, number][] = [HIRE_CANOPY2.u0 + 0.3, (HIRE_CANOPY2.u0 + HIRE_CANOPY2.u1) / 2, HIRE_CANOPY2.u1 - 0.3].flatMap((u) => [
+  [u, HIRE_CANOPY2.v0 + 0.3] as [number, number],
+  [u, HIRE_CANOPY2.v1 - 0.3] as [number, number],
+]);
+/** The hire karts: two rows of four under the canopy, parked nose to the track (north) */
+export const HIRE_KARTS2: { u: number; v: number; ry: number }[] = [136.4, 140].flatMap((v) => [52.4, 55.4, 58.6, 61.6].map((u) => ({ u, v, ry: Math.PI / 2 })));
+/** The sign-on cabin behind the canopy: its doorway in its north wall, the desk inside it, the briefing benches facing the screen on its east wall */
+export const CABIN2 = { u0: 50.5, v0: 145, u1: 63.5, v1: 153.5, h: 3.2, door: [55.6, 57.4] as [number, number] } as const;
+export const DESK2: URect = { u0: 51.2, v0: 147, u1: 54.6, v1: 147.7 };
+export const BRIEF_BENCHES2: URect[] = [57, 59].map((u) => ({ u0: u, v0: 147.2, u1: u + 0.5, v1: 152.2 }));
+export const SCREEN2 = { u: CABIN2.u1 - WALL - 0.04, v0: 147, v1: 152, y0: 1.0, y1: 2.6 } as const;
+/** The helmet rack on the cabin's front wall, west of its doorway */
+export const HELMET_RACK2: URect = { u0: 51.2, v0: CABIN2.v0 - 0.35, u1: 55, v1: CABIN2.v0 };
+
 /** The world's numbers of a point in the site's frame */
 export const W2 = (u: number, v: number): [number, number] => [SITE2.x0 + u, SITE2.z0 + v];
 const box = (r: URect, top: number): Box2 => [SITE2.x0 + r.u0, SITE2.z0 + r.v0, SITE2.x0 + r.u1, SITE2.z0 + r.v1, top];
@@ -123,4 +143,15 @@ export const VENUE2_SOLIDS: Box2[] = [
   box({ u0: FITTER2.u - 0.5, v0: FITTER2.v - 0.5, u1: FITTER2.u + 0.5, v1: FITTER2.v + 0.5 }, 1.3),
   ...STANDS2.map((s) => box({ u0: s.u - 0.75, v0: s.v - 0.75, u1: s.u + 0.75, v1: s.v + 0.75 }, 1)),
   ...STACKS2.map((s) => box({ u0: s.u - TYRE2.r, v0: s.v - TYRE2.r, u1: s.u + TYRE2.r, v1: s.v + TYRE2.r }, s.n * TYRE2.h)),
+  // 4b: the canopy's posts, the hire karts, the cabin's walls (its doorway open), the desk, the benches, the helmet rack
+  ...CANOPY_POSTS2.map(([u, v]) => box({ u0: u - 0.12, v0: v - 0.12, u1: u + 0.12, v1: v + 0.12 }, HIRE_CANOPY2.h)),
+  ...HIRE_KARTS2.map((k) => box({ u0: k.u - 0.45, v0: k.v - 0.7, u1: k.u + 0.45, v1: k.v + 0.7 }, 0.7)),
+  box({ u0: CABIN2.u0, v0: CABIN2.v1 - WALL, u1: CABIN2.u1, v1: CABIN2.v1 }, CABIN2.h),
+  box({ u0: CABIN2.u0, v0: CABIN2.v0, u1: CABIN2.u0 + WALL, v1: CABIN2.v1 }, CABIN2.h),
+  box({ u0: CABIN2.u1 - WALL, v0: CABIN2.v0, u1: CABIN2.u1, v1: CABIN2.v1 }, CABIN2.h),
+  box({ u0: CABIN2.u0, v0: CABIN2.v0, u1: CABIN2.door[0], v1: CABIN2.v0 + WALL }, CABIN2.h),
+  box({ u0: CABIN2.door[1], v0: CABIN2.v0, u1: CABIN2.u1, v1: CABIN2.v0 + WALL }, CABIN2.h),
+  box(DESK2, 1.05),
+  ...BRIEF_BENCHES2.map((b) => box(b, 0.5)),
+  box(HELMET_RACK2, 1.8),
 ];
