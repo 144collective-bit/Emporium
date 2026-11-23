@@ -397,6 +397,7 @@ export function createGolfGame(d: GolfDeps): GolfGame {
     const tip = input === 'touch' ? (pull.id >= 0 ? 'Let go to swing' : 'Pull back to swing') : `${b}: swing`;
     set(el.tip, phase === 'aim' ? tip : phase === 'meter' ? (power === null ? `${b}: power` : `${b}: accuracy`) : '');
     set(el.clubKey, input === 'pad' ? 'LB/RB' : 'W/S');
+    el.clubKey.hidden = input === 'touch';
   }
 
   /** The third press (or the meter run out): the shot played, the swing under way */

@@ -19,7 +19,7 @@ Nothing is built until the owner signs off a phase; keep this plan up to date. T
 | Phase 1 | Go (2026-11-22); built, signed off (2026-11-23: "1") |
 | Phase 2 | Go (2026-11-23); built, signed off (2026-11-23: "3", hold before Phase 3) |
 | Phase 3 | Go (2026-11-23: "1"); built, signed off (2026-11-23: "1") |
-| Phase 4 | Go (2026-11-23: "1") |
+| Phase 4 | Go (2026-11-23: "1"); built, waiting for the owner's sign-off |
 
 ## What it is
 
@@ -145,6 +145,19 @@ where he was at the door after a round, facing it; the driver's picked first onl
 Touch (the meter or the drag, the aim, the club), the gamepad, the phone tier's camera and HUD at 320 to 1440 wide,
 upright and on their side; reduced motion (the ball still flies: it's the game, without the camera's shake); the
 sounds; `?fps` and `?bench` on the course; the smoke play-through plays a hole.
+
+**Built** (2026-11-23; `docs/guide/golf.md`): on a touch screen ◀ ▶ aim, Club ▲ ▼ and View in a row over the meter,
+and the swing's a pull-back anywhere over the course (down is the power, full at 30% of the screen's height, its lean
+off straight down the hook or slice as a slingshot's; its line drawn as you pull); the pad (the stick or the d-pad
+aims, LB / RB or the d-pad's up and down the club, A the meter, R3 or Y the camera, B or Start quits; the menu and the
+cards by the d-pad and A); the HUD's hints follow what you last used; sounds (the club's strike, a putt, the landing,
+a tree, a splash, the cup, the round's fanfare); under reduced motion the camera cuts between shots and only turns
+with the ball. Checked at 320, 375, 768, 1024 and 1440 wide and phones on their side (upright under 480 the club's
+block drops under the hole's; under 420 tall the hole's name and the lie are left out); walk mode's fist buttons hide
+in a round. `?fps` on the 1st tee: 142 draws (the course in view; the game's own are 5: the ball, its trail, the
+aim's ring and line, the green's chevrons), 120 on the phone tier; `?bench`'s `golf` and `golf-green` views cover the
+course. The boot unchanged (770.7 KB): all of it in the game's chunk and sound.ts's. The smoke's `golf` plays the 1st
+hole through to its card, `golf-touch` a phone's pull-back swing.
 
 ### Phase 5 (later, the owner's to choose)
 
