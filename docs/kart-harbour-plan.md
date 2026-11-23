@@ -131,10 +131,17 @@ Each phase merges on its own and leaves the city working; the new park is behind
    its straight along the garages `PIT2_STRAIGHT` clear of the run-off) and a racing line each way (in to the apexes,
    out wide either side, on the track with room for a kart, about 4% shorter than the middle); tested, and drawn by
    `npm run kart-fit`.
-2. **The site and its ground** (`kartpark2.ts`): the park's rect on the land, the ground held level and shaped
-   round it (banks, the approach to the river), its solids, its land kept clear of the outskirts' trees, the riverside
-   road's edge and the service road. Behind the switch.
-3. **The track drawn and raced, behind the switch**: the circuit, its kerbs and run-off, the bridge and ramps, armco,
+2. **The site and its ground** (`kartpark2.ts`, done as data 2026-11-23, `tests/kartpark2.test.ts`): the site's natural
+   ground measured level (0 throughout); the hill, cones of embankment from the raised run falling at `HILL_SIDE`
+   (0.45) to the level, with the tunnel's cover (its clear height and 0.5) all along it and a cutting at each mouth
+   (`TUNNEL2`, 35.5 long, both passes under the switchbacks inside it); the open track on its own road height
+   everywhere; a low west bank for watching the esses; the gate path north to the riverside road (`GATE2_PATH`), the
+   service road off the Southfield road's west end to the paddock (`SERVICE2`), and the park's land (`KART2_RECTS`).
+   **Not yet read by the city**: the city's ground, trees' keep-off, land and solids (`groundheight.ts`, `ground.ts`,
+   `landuse.ts`, `outskirts.ts`) are built when they load and can't read `?karts=new`, so they take the park's land in
+   Phase 3, when it's first drawn (behind the switch, as the drawing is), and for everyone at the switch (Phase 8).
+3. **The track drawn and raced, behind the switch**: the park's ground, land and solids joined to the city's (Phase 2's
+   data); the circuit, its kerbs and run-off, the bridge and ramps, armco,
    tyre walls, catch fencing; `kart-sim.ts` on the new circuit (heights, the bridge), the AI's lines, the items mode's
    boxes, the race start and finish. `npm run smoke`'s kart race run on it with `?karts=new`.
 4. **The venue, behind the switch**, a step a night: 4a workshops and the tyre store; 4b the hire-kart garage;
