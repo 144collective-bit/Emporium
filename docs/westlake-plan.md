@@ -297,7 +297,26 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
      water, people at the tables by day. A place: spot, pin, directory
      entry, a panel (coming soon), its door, `PLACES` and `LIVE_PLACES`
      with its marquee line and live line, its footprint on the world map.
-7. **Life, night and performance.** The park's people on their new
+7. **Life, night and performance** (built, waiting on the owner's
+   sign-off; the owner's go, 2026-11-23, with the recommended picks: a
+   brass band, most evenings, the café busy by day with a waiter).
+   parkcrowd.ts (DOM-free, out of the boot): the band (`BAND`: three
+   cornets, a trombone, a drummer and a tuba seated in a horseshoe facing
+   the benches; acts `brass` and `drum`) from 6 to 9:30 pm on five
+   evenings in seven (`bandOn()`, seeded by the day), listeners on the
+   bandstand's benches while it plays; the café's diners from 8 am to 6 pm
+   and its waiter's round from the door (the strip's middle table, which
+   stood in the doorway, split into two either side of it); walkers,
+   joggers and dog walkers out along the ramble's three paths and back.
+   All handed to the crowd's spare slots by the park's chunk
+   (parkstands3d.ts `registerStandsLife()`; life.ts `addPeople()` now
+   carries an idle's `when`). The band's chairs, music stands and
+   instruments drawn only while it plays; the bandstand's lanterns lit at
+   night. Sound (lazy, sound.ts / ambience.ts): the band's march while it
+   plays (`band`), the café's murmur and cups by day (`cafe`), the grand
+   terrace's fountain. The picnics baked to keep the boot at 774.6 of
+   775 KB; `?bench` gains `park-terrace`.
+   (As planned:) The park's people on their new
    lanes, joggers and dog walkers through the ramble, the boats on the new
    shore; the lamps and the bandstand lit at night (under the bloom's
    threshold); sound (the band, the fountain, the café's murmur);

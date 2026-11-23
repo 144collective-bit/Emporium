@@ -19,6 +19,7 @@
  */
 
 import { showAt } from './stripmarks';
+import { BAND_NOW } from './parkcrowd';
 import type { Sfx } from './combat';
 import type { Ambience } from './ambience';
 import type { Voice } from './vehicleids';
@@ -116,6 +117,13 @@ export function createSound(given?: AudioContext) {
   /** The civic square (docs/civic-plan.md Phase 4): its footsteps and murmur, the flags fluttering (each made the first
    * time it's heard), and City Hall's bell */
   let civicMurmur: GainNode | null = null;
+  /** Westlake Park's band and the Lakehouse Café's murmur (docs/westlake-plan.md Phase 7), each made the first time it's heard */
+  let bandGain: GainNode | null = null;
+  let cafeMurmur: GainNode | null = null;
+  let nextBand = 0;
+  let bandK = 0;
+  let nextCup = 0;
+  const BAND_BPM = 112;
   let civicFlags: GainNode | null = null;
   let hallBellGain: GainNode;
   const BOOM_BPM = 88;
@@ -693,6 +701,53 @@ export function createSound(given?: AudioContext) {
     play(note(TUNE[k % TUNE.length] + 12), 0.9, 0.05, 'triangle');
     // (a chord every four beats, under it)
     if (k % 4 === 0) for (const s of CHORDS[Math.floor(k / 4) % CHORDS.length]) play(note(s - 12), 2.6, 0.022, 'sine');
+  }
+  /**
+   * The park's band, a beat of its march (a made-up tune): the cornets' melody on bright brass (a sawtooth through a
+   * low-pass), the tuba's bass on the bar's first and third beats, the snare on the second and fourth, the bass drum
+   * on the first
+   */
+  const MARCH = [7, 7, 9, 7, 12, 11, 9, 7, 5, 5, 7, 5, 9, 7, 5, 4, 7, 7, 9, 7, 12, 14, 12, 11, 9, 11, 12, 9, 7, 5, 4, 0];
+  const ROOTS = [0, 7, 5, 0, 0, 7, 5, 0];
+  function bandBeat(t: number, k: number) {
+    const out = bandGain!;
+    const brass = (f: number, len: number, peak: number, cut: number) => {
+      const o = ctx!.createOscillator();
+      o.type = 'sawtooth';
+      o.frequency.value = f;
+      const lp = ctx!.createBiquadFilter();
+      lp.type = 'lowpass';
+      lp.frequency.value = cut;
+      const g = ctx!.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + 0.035);
+      g.gain.setValueAtTime(peak * 0.8, t + len * 0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(lp).connect(g).connect(out);
+      o.start(t);
+      o.stop(t + len + 0.05);
+    };
+    const beat = 60 / BAND_BPM;
+    const inBar = k % 4;
+    brass(note(MARCH[k % MARCH.length]), beat * 0.85, 0.05, 1500);
+    // (a second cornet a third under it, softer)
+    brass(note(MARCH[k % MARCH.length] - 4), beat * 0.85, 0.025, 1300);
+    const root = ROOTS[Math.floor(k / 4) % ROOTS.length];
+    if (inBar === 0 || inBar === 2) brass(note(root + (inBar === 2 ? 7 : 0) - 24), beat * 0.7, 0.07, 420);
+    if (inBar === 1 || inBar === 3) snare(t, out);
+    if (inBar === 0) kick(t, out);
+  }
+  /** A cup set down on a saucer at the café: a short high ping */
+  function cup(t: number) {
+    const o = ctx!.createOscillator();
+    o.frequency.value = 2400 + Math.random() * 900;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.012, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(g).connect(cafeMurmur!);
+    o.start(t);
+    o.stop(t + 0.15);
   }
   /** A dog a few yards over: two or three barks */
   function dog(t: number) {
@@ -1518,6 +1573,28 @@ export function createSound(given?: AudioContext) {
         civicFlags ??= layer('highpass', 1500, 0.7, 0.85, 7.5);
         civicMurmur.gain.setTargetAtTime(a.civic * (1 - night * 0.8) * 0.045, t, 1.2);
         civicFlags.gain.setTargetAtTime(a.civic * (0.012 + 0.02 * rain), t, 1);
+      }
+      // Westlake Park's band while it plays (parkcrowd.ts `BAND_NOW`, kept by the park's chunk), carrying across the
+      // lawn; the café's murmur and its cups by day
+      if ((a.band > 0.01 && BAND_NOW.on) || bandGain) {
+        if (!bandGain) {
+          bandGain = ctx!.createGain();
+          bandGain.gain.value = 0;
+          bandGain.connect(master);
+        }
+        bandGain.gain.setTargetAtTime(BAND_NOW.on ? a.band * 0.6 : 0, t, 1);
+        if (BAND_NOW.on && a.band > 0.05 && t > nextBand) {
+          bandBeat(t, bandK++);
+          nextBand = t + 60 / BAND_BPM;
+        }
+      }
+      if (a.cafe > 0.01 || cafeMurmur) {
+        cafeMurmur ??= layer('bandpass', 640, 1, 0.5, 0.35);
+        cafeMurmur.gain.setTargetAtTime(a.cafe * (1 - night) * 0.05, t, 1.2);
+        if (a.cafe > 0.2 && night < 0.5 && t > nextCup) {
+          cup(t);
+          nextCup = t + 2 + Math.random() * 5;
+        }
       }
       rainGain.gain.setTargetAtTime(rain * 0.5, t, 0.5);
       // The neon buzz is the town's; the beat carries a little everywhere in town, more near the Emporium

@@ -35,7 +35,7 @@
 import * as THREE from 'three';
 import { BONES, NECK_SHARE, SPINE_SHARE, makeSkeleton, newPose, poseSkeleton, reachArm, type Limb, type Pose, type Skeleton } from './skeleton';
 import { HURRY, PHONE, PHONE_GLANCE_YAW, kerbLook, phoneGlance } from './pedestrians';
-import { ridePose, CHEER, CHEER_SECONDS, cheerOver, sitCheerPose, CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, SHOOT, SWING, SWING_SECONDS, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver, shootOver, swingPose } from './acts';
+import { ridePose, BRASS, BRASS_SECONDS, brassPose, DRUM, DRUM_SECONDS, drumPose, CHEER, CHEER_SECONDS, cheerOver, sitCheerPose, CHESS, CHESS_SECONDS, COOK, EAT, EAT_SECONDS, FISH, GUARD, LOUNGE_SECONDS, PEDAL, PEDAL_SECONDS, ROW, ROW_SECONDS, SERVE, SHOOT, SWING, SWING_SECONDS, chessPose, cookOver, eatPose, fishOver, guardOver, loungePose, pedalPose, rowPose, serveOver, shootOver, swingPose } from './acts';
 import { copyPose, createLocomotion } from './locomotion';
 import { attentionPose, chatPose, idlePose, lookPose, picnicPose, set, sitPose } from './poses';
 import { BUILT, baked as atBuild } from './baked';
@@ -68,6 +68,8 @@ export type CrowdClip =
   | 'pedal'
   | 'shoot'
   | 'swing'
+  | 'brass'
+  | 'drum'
   | 'scoot'
   | 'ride'
   | 'tuck'
@@ -75,9 +77,9 @@ export type CrowdClip =
   | 'cheer'
   | 'sitcheer';
 /** What an idle person in the city is doing (life.ts picks their row from it; 'queue' is their own idle) */
-export type IdleAct = 'look' | 'chat' | 'sit' | 'queue' | 'phone' | 'wait' | 'serve' | 'cook' | 'fish' | 'guard' | 'eat' | 'chess' | 'lounge';
+export type IdleAct = 'look' | 'chat' | 'sit' | 'queue' | 'phone' | 'wait' | 'serve' | 'cook' | 'fish' | 'guard' | 'eat' | 'chess' | 'lounge' | 'brass' | 'drum';
 /** The rows played sitting down (life.ts drops their root by the seat) */
-export const SEATED: ReadonlySet<CrowdClip> = new Set<CrowdClip>(['sit', 'picnic', 'eat', 'chess', 'lounge', 'row', 'pedal', 'swing', 'sitcheer']);
+export const SEATED: ReadonlySet<CrowdClip> = new Set<CrowdClip>(['sit', 'picnic', 'eat', 'chess', 'lounge', 'row', 'pedal', 'swing', 'sitcheer', 'brass', 'drum']);
 export const seated = (c: CrowdClip) => SEATED.has(c);
 
 interface ClipDef {
@@ -320,6 +322,9 @@ export const CLIP_DEFS: Record<CrowdClip, ClipDef> = {
   pedal: { frames: 18, loop: true, grip: PEDAL.grip, sample: looped(pedalPose, PEDAL_SECONDS), seconds: PEDAL_SECONDS },
   // A kid on a swing (step 4)
   swing: { frames: 26, loop: true, grip: SWING.grip, sample: looped(swingPose, SWING_SECONDS), seconds: SWING_SECONDS },
+  // The park's band (docs/westlake-plan.md Phase 7)
+  brass: { frames: 24, loop: true, grip: BRASS.grip, sample: looped(brassPose, BRASS_SECONDS), seconds: BRASS_SECONDS },
+  drum: { frames: 24, loop: true, grip: DRUM.grip, sample: looped(drumPose, DRUM_SECONDS), seconds: DRUM_SECONDS },
   // Riding in the traffic (vehicle plan Phase 8): astride a scooter, a street bike, a sport bike (acts.ts `ridePose()`),
   // the left foot coming down (0 riding, 1 stopped)
   scoot: { frames: 5, loop: false, grip: 0.8, sample: (u, p) => ridePose(p, 'scooter', u) },

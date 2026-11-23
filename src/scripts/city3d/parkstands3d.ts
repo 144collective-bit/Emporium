@@ -17,6 +17,11 @@ import { site } from './tilework';
 import { bench } from './gardens3d';
 import { BANDSTAND, LAKEHOUSE, WATER_Y, type Pt } from './westlake';
 import { BANDSTAND_BENCHES, CAFE_TABLES } from './parkstands';
+import { addPeople } from './life';
+import { clockAt } from './stadium';
+import { CROWD_VIEW } from './character';
+import type { Tick } from './world';
+import { BAND, BAND_FLOOR, BAND_NOW, BAND_SEAT, DINERS, RAMBLE_PEOPLE, bandOn, bandPeople, listeners, waiter, type Part } from './parkcrowd';
 import { ORNATE } from './palette';
 
 const STONE = toon(ORNATE.stone);
@@ -33,6 +38,11 @@ const CHAIR = toon('#2f6b52');
 const PARASOL = toon('#efe6cf');
 const GOLD = toon('#c9a24a');
 const DOOR = toon('#5a3b2a');
+const LANTERN = neon('#ffe2a0', 0.6, 2.4);
+const BRASS = toon('#d9b44a');
+const BRASS_DARK = toon('#a8842e');
+const DRUM_SHELL = toon('#9b2f36');
+const DRUM_HEAD = toon('#f1ece0');
 
 /** The café's name board over its door: one small texture */
 function cafeSign() {
@@ -91,9 +101,12 @@ function bandstand(b: Batch, low: boolean) {
   for (let i = 1; i < rings.length; i++)
     for (let k = 0; k < 8; k++) {
       const [a, bb, cc, d] = [rings[i - 1][k], rings[i - 1][(k + 1) % 8], rings[i][(k + 1) % 8], rings[i][k]];
-      const g = new THREE.BufferGeometry().setFromPoints([a, bb, cc, a, cc, d]);
-      g.computeVertexNormals();
-      b.add(g, k % 2 ? ROOF : ROOF_DARK);
+      // (both faces: its top seen from over the lawn, its underside from inside)
+      for (const tri of [[a, bb, cc, a, cc, d], [a, cc, bb, a, d, cc]]) {
+        const g = new THREE.BufferGeometry().setFromPoints(tri);
+        g.computeVertexNormals();
+        b.add(g, k % 2 ? ROOF : ROOF_DARK);
+      }
     }
   b.add(new THREE.CylinderGeometry(0.3, 0.3, 0.45, 8).translate(x, y + roof + 1.65, z), IRON);
   b.add(new THREE.ConeGeometry(0.36, 0.4, 8).translate(x, y + roof + 2.07, z), ROOF);
@@ -105,6 +118,14 @@ function bandstand(b: Batch, low: boolean) {
     const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
     b.add(new THREE.BoxGeometry(l, 0.16, 0.08).rotateY(-Math.atan2(q[1] - p[1], q[0] - p[0])).translate((p[0] + q[0]) / 2, y + roof - 0.05, (p[1] + q[1]) / 2), IRON);
   }
+  // Lanterns under the eaves at each column and one hung in the middle, lit at night (small: under the bloom's threshold)
+  for (const [px, pz] of corners) {
+    const [ox, oz] = [x + (px - x) * 0.9, z + (pz - z) * 0.9];
+    b.add(new THREE.CylinderGeometry(0.012, 0.012, 0.2, 4).translate(ox, y + roof - 0.42, oz), IRON);
+    b.box(ox - 0.08, y + roof - 0.72, oz - 0.08, 0.16, 0.2, 0.16, LANTERN);
+  }
+  b.add(new THREE.CylinderGeometry(0.012, 0.012, 1.0, 4).translate(x, y + roof + 0.2, z), IRON);
+  b.box(x - 0.11, y + roof - 0.55, z - 0.11, 0.22, 0.26, 0.22, LANTERN);
   b.detail(() => {
     if (low) return;
     // The frieze's lace: a row of small rings under the eaves between each pair of columns
@@ -241,5 +262,79 @@ export function registerStands(low: boolean) {
     const b = new Batch();
     cafe(b, low);
     b.build(into, { cast: true, receive: true });
+  });
+}
+
+/* ---------- The band and the café's people (docs/westlake-plan.md Phase 7) ---------- */
+
+/** A player's chair, their music stand and their instrument, drawn where they sit (`at`, facing `ry`) */
+function player(b: Batch, x: number, z: number, ry: number, part: Part) {
+  const [fx, fz] = [Math.sin(ry), Math.cos(ry)];
+  const [rx, rz] = [Math.cos(ry), -Math.sin(ry)];
+  /** A point `f` forward, `r` to the right and `u` up from the chair's seat */
+  const P = (f: number, r: number, u: number): [number, number, number] => [x + fx * f + rx * r, BAND_FLOOR + BAND_SEAT + u, z + fz * f + rz * r];
+  const put = (g: THREE.BufferGeometry, f: number, r: number, u: number, m: THREE.Material) => b.add(g.rotateY(ry).translate(...P(f, r, u)), m);
+  // The chair: a seat, a back, four legs
+  put(new THREE.BoxGeometry(0.32, 0.04, 0.3), -0.03, 0, -0.02, CHAIR);
+  put(new THREE.BoxGeometry(0.32, 0.34, 0.03), -0.18, 0, 0.17, CHAIR);
+  for (const [lf, lr] of [[0.1, 0.13], [0.1, -0.13], [-0.16, 0.13], [-0.16, -0.13]]) put(new THREE.CylinderGeometry(0.012, 0.012, BAND_SEAT, 4), lf, lr, -BAND_SEAT / 2 - 0.02, IRON);
+  // (forward along the way they face: a geometry along +z turned to face `ry`)
+  const along = (g: THREE.BufferGeometry, pitch = 0) => g.rotateX(Math.PI / 2 + pitch);
+  switch (part) {
+    case 'cornet':
+      put(along(new THREE.CylinderGeometry(0.018, 0.018, 0.2, 6), 0.25), 0.18, 0.01, 0.25, BRASS);
+      put(along(new THREE.CylinderGeometry(0.06, 0.02, 0.08, 8, 1, true), 0.25), 0.3, 0.01, 0.22, BRASS);
+      put(new THREE.BoxGeometry(0.05, 0.05, 0.1), 0.16, 0.01, 0.22, BRASS_DARK);
+      break;
+    case 'trombone':
+      put(along(new THREE.CylinderGeometry(0.012, 0.012, 0.56, 5), 0.18), 0.36, -0.03, 0.22, BRASS);
+      put(along(new THREE.CylinderGeometry(0.012, 0.012, 0.56, 5), 0.18), 0.36, 0.03, 0.22, BRASS);
+      put(along(new THREE.CylinderGeometry(0.08, 0.02, 0.14, 8, 1, true), 0.18), 0.3, 0.08, 0.28, BRASS);
+      break;
+    case 'tuba':
+      put(new THREE.CylinderGeometry(0.1, 0.1, 0.28, 10), 0.16, 0.02, 0.14, BRASS);
+      put(new THREE.CylinderGeometry(0.15, 0.08, 0.16, 10, 1, true), 0.14, 0.1, 0.36, BRASS);
+      put(new THREE.TorusGeometry(0.08, 0.014, 4, 10), 0.18, -0.06, 0.12, BRASS_DARK);
+      break;
+    case 'drum':
+      // A snare on its stand in front, a bass drum on its side beside it
+      put(new THREE.CylinderGeometry(0.15, 0.15, 0.1, 12), 0.24, 0, 0.0, DRUM_SHELL);
+      put(new THREE.CylinderGeometry(0.152, 0.152, 0.012, 12), 0.24, 0, 0.056, DRUM_HEAD);
+      put(new THREE.CylinderGeometry(0.012, 0.012, BAND_SEAT, 4), 0.24, 0, -BAND_SEAT / 2, IRON);
+      put(new THREE.CylinderGeometry(0.24, 0.24, 0.2, 14).rotateZ(Math.PI / 2), 0.3, 0.42, -BAND_SEAT + 0.24, DRUM_SHELL);
+      for (const s of [-1, 1]) put(new THREE.CylinderGeometry(0.242, 0.242, 0.012, 14).rotateZ(Math.PI / 2), 0.3, 0.42 + s * 0.1, -BAND_SEAT + 0.24, DRUM_HEAD);
+      return;
+  }
+  // The music stand in front: a post and a tilted desk
+  put(new THREE.CylinderGeometry(0.01, 0.01, 0.62, 4), 0.58, 0, -0.14, IRON);
+  put(new THREE.BoxGeometry(0.26, 0.18, 0.012).rotateX(-0.5), 0.56, 0, 0.2, IRON);
+  put(new THREE.BoxGeometry(0.22, 0.14, 0.004).rotateX(-0.5), 0.548, 0, 0.205, DRUM_HEAD);
+}
+
+/**
+ * The band, the café's people and the woodland walk's into the city's crowd (life.ts `addPeople()`; phones take every
+ * other listener and diner and leave out the walk's trimmed half), and the band's chairs, stands and instruments, shown
+ * while it plays; `BAND_NOW` kept for the sound
+ */
+export function registerStandsLife(scene: THREE.Scene, tick: (f: Tick) => void, low: boolean) {
+  let hour = 12;
+  const day = () => clockAt(Date.now()).day;
+  addPeople(
+    [...bandPeople(day), ...listeners(day).filter((_, i) => !low || i % 2 === 0), ...DINERS.filter((_, i) => !low || i % 2 === 0)],
+    [waiter(() => hour), ...RAMBLE_PEOPLE.filter((p) => !(low && p.trim))]
+  );
+  const group = new THREE.Group();
+  group.name = 'westlake-band';
+  const b = new Batch();
+  for (const s of BAND) player(b, s.x, s.z, s.ry, s.part);
+  b.build(group, { cast: !low, receive: true, lift: false });
+  group.visible = false;
+  scene.add(group);
+  const [cx, cz] = BANDSTAND.c;
+  tick((env) => {
+    hour = env.hour;
+    BAND_NOW.on = bandOn(day(), hour);
+    // (only near enough to see: the crowd draws nobody past 170)
+    group.visible = BAND_NOW.on && Math.hypot(CROWD_VIEW.eye.x - cx, CROWD_VIEW.eye.z - cz) < 180;
   });
 }

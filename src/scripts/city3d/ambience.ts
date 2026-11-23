@@ -47,7 +47,7 @@ import { DOORS } from './solids';
 import { TRENCH_RECT, inTrenches } from './trenches';
 import { BOOMBOXES } from './grit';
 import { CLUB } from './avenue';
-import { WESTLAKE_RECT, inPark, lakeDist } from './westlake';
+import { BANDSTAND, GRAND, LAKEHOUSE, WESTLAKE_RECT, grandAt, inPark, lakeDist } from './westlake';
 import { CIRCLE, UPTOWN_RECT, inUptown } from './uptown';
 import { NORTH_RECT } from './uptownnorth';
 import { CENTRE, POOL, WALL_RUNS, WATER_WALL } from './plaza';
@@ -142,6 +142,10 @@ export interface Ambience {
   civic: number;
   /** City Hall's bell in its tower (sound.ts tolls it on the hour, deeper than St Aldwyn's), 0-1 */
   hallBell: number;
+  /** Westlake Park's bandstand (docs/westlake-plan.md Phase 7): the band's music while it plays (sound.ts asks parkcrowd.ts whether it is), 0-1 */
+  band: number;
+  /** The Lakehouse Café's tables: a murmur of talk and cups by day, 0-1 */
+  cafe: number;
   /** By the wall round the city (docs/wall-plan.md Phase 6): the wind along its face and a low hum off it, 0-1 */
   wall: number;
   /** Below ground by the south's underground line: a tube train's rumble as it passes (index.ts mixes it with the el's), 0-1 */
@@ -296,9 +300,12 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const crest = near(CREST_RECT, x, z, 0, 30);
   let spring = Infinity;
   for (const [fx, fz, r] of CREST_FOUNTAINS) spring = Math.min(spring, Math.max(0, Math.hypot(x - fx, z - fz) - r));
-  // (and the civic square's twin fountains in front of City Hall, docs/civic-plan.md Phase 5)
+  // (and the civic square's twin fountains in front of City Hall, docs/civic-plan.md Phase 5, and the park's grand
+  // terrace's: docs/westlake-plan.md Phase 7)
   let civicJet = Infinity;
   for (const [fx, fz] of CIVIC_FOUNTAINS) civicJet = Math.min(civicJet, Math.max(0, Math.hypot(x - fx, z - fz) - CIVIC_FOUNTAIN.r));
+  const [gx, gz] = grandAt(GRAND.fountain.d, 0);
+  civicJet = Math.min(civicJet, Math.max(0, Math.hypot(x - gx, z - gz) - GRAND.fountain.r));
   const fountain = Math.max(1 - smooth(1.5, 18, Math.min(pool, wall) + lift * 0.5), 0.8 * (1 - smooth(1, 14, Math.min(spring, civicJet) + lift * 0.5)));
   // Sunridge: all of it on its land, fading out over 30 past its wall
   const suburb = 1 - smooth(0, 30, inSunridge(x, z, 0) ? 0 : past(SUNRIDGE_RECT, x, z) + 2);
@@ -369,6 +376,9 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   // The civic square: on it, fading over 22 past it and from high over it; City Hall's bell across the park and Uptown
   const civic = near(CIVIC_SQUARE, x, z, 0, 22) * (1 - smooth(8, 40, lift));
   const hallBell = 1 - smooth(30, 200, Math.hypot(x - HALL_BELL[0], z - HALL_BELL[1]) + lift * 0.3);
+  // The park's bandstand: carrying across the Great Lawn and fading over 70; the café's tables close by
+  const band = 1 - smooth(4, 70, Math.max(0, Math.hypot(x - BANDSTAND.c[0], z - BANDSTAND.c[1]) - BANDSTAND.r) + lift * 0.4);
+  const cafe = Math.max(near(LAKEHOUSE.rect, x, z, 1, 16), near(LAKEHOUSE.deck, x, z, 1, 16)) * (1 - smooth(6, 30, lift));
   return {
     city: town,
     water: Math.max(water, lake) * k,
@@ -400,6 +410,8 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     bell,
     civic: civic * k,
     hallBell,
+    band: band * k,
+    cafe: cafe * k,
     wall: (1 - smooth(0, WALL_SOUND, Math.max(0, fromWall(x, z)))) * k,
     tube,
   };

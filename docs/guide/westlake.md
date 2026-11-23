@@ -77,7 +77,7 @@ keep it up to date when what it describes changes.
     up and down the Mall (`PARK_PEOPLE`, `trim` ones left
     out on phones), dogs on the lead ahead of their walkers (`DOGS`,
     `LEAD`), people on every third bench, picnics in the glades
-    (`PICNICS`) and the boats on the lake (`BOATS`: rowing boats and swan pedalos on rings
+    (`PICNICS`, baked) and the boats on the lake (`BOATS`: rowing boats and swan pedalos on rings
     along the shore's normals, `ringLine()`, `RINGS`, each its own pace and
     way round so none meet; rowers and swan riders aboard; two moored at the
     jetty). The people are the crowd's (life.ts, kind `park`; clips `jog`
@@ -87,6 +87,27 @@ keep it up to date when what it describes changes.
     and their leads, an instanced mesh a kind (not drawn
     while the camera is far from the park). Its sound: `park` (birds by
     day, an owl at night) in ambience.ts, the lake in `water`.
+  - **The park's people who come with its chunk** (`docs/westlake-plan.md`
+    Phase 7) are `parkcrowd.ts` (DOM-free, out of the boot, tested in
+    `tests/parkcrowd.test.ts`), handed to the crowd's spare slots by
+    parkstands3d.ts `registerStandsLife()` (life.ts `addPeople()`, which
+    now carries an idle's `when`): the brass band at the bandstand (`BAND`,
+    six seated players facing the benches, acts `brass` and `drum` in
+    acts.ts / crowdclips.ts) from 6 to 9:30 pm on five evenings in seven
+    (`BAND_HOURS`, `bandDay()`, `bandOn()`: seeded by the day, the same for
+    everyone), its listeners on the bandstand's benches (`listeners()`);
+    the Lakehouse Café's diners at its tables from 8 am to 6 pm
+    (`DINERS`, `SEATED`, `chairsOf()`, `CAFE_HOURS`) and its waiter on a
+    round from the door (`waiter()`, `WAITER_STOPS`; the strip's tables
+    stand either side of the door to keep it clear); the woodland walk's
+    walkers, joggers and dog walkers out along the ramble's paths and back
+    (`RAMBLE_PEOPLE`, `RAMBLE_DOGS`: parklife.ts `lanePerson()`; the dogs
+    drawn with the others by parklife3d.ts). The band's chairs, stands and
+    instruments are drawn only while it plays, and `BAND_NOW` tells
+    sound.ts it is: the band's march (ambience `band`), the café's murmur
+    and cups by day (`cafe`), the grand terrace's fountain in `fountain`.
+    The bandstand's lanterns light at night (small, under the bloom's
+    threshold). `?bench` has a `park-terrace` view.
   - **Sector 7 Stadium** (step 2; moved north of the ring highway in the
     north side's stage 1, `docs/north-plan.md`, the owner's call) is
     `stadium.ts` (DOM-free, tested in `tests/stadium.test.ts`) on its own

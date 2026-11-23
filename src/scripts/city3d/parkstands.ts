@@ -11,8 +11,8 @@ export const BANDSTAND_BENCHES: { at: Pt; ry: number }[] = Array.from({ length: 
   const at: Pt = [BANDSTAND.c[0] + Math.cos(a) * 6.2, BANDSTAND.c[1] + Math.sin(a) * 6.2];
   return { at, ry: Math.atan2(BANDSTAND.c[0] - at[0], BANDSTAND.c[1] - at[1]) };
 });
-/** The tables on the deck and on a strip in front of the pavilion: where each stands (their chairs round them) */
+/** The tables on the deck and on a strip in front of the pavilion, either side of its door (kept clear: docs/westlake-plan.md Phase 7): where each stands (their chairs round them) */
 export const CAFE_TABLES: Pt[] = [
   ...[-27.2, -26, -24.8].flatMap((z): Pt[] => [[-67.8, z], [-66.2, z]]),
-  ...[-27.6, -25, -22.4].map((z): Pt => [LAKEHOUSE.rect[0] - 0.8, z]),
+  ...[-27.7, -22.3].map((z): Pt => [LAKEHOUSE.rect[0] - 1.15, z]),
 ];

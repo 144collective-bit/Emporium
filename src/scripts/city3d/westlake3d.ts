@@ -29,7 +29,7 @@ import { registerFringes } from './fringes3d';
 import { registerBridges } from './parkbridges3d';
 import { registerGrandTerrace } from './grandterrace3d';
 import { registerParkTrees } from './parktrees3d';
-import { registerStands } from './parkstands3d';
+import { registerStands, registerStandsLife } from './parkstands3d';
 import { registerCivic } from './civic3d';
 import { BANK, ORNATE, OUTCROP, PLANT, STONE as PAL_STONE } from './palette';
 
@@ -226,6 +226,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerParkTrees(low);
   // The bandstand and the Lakehouse Café (parkstands3d.ts, Phase 6)
   registerStands(low);
+  // ...and the band some evenings, the café's diners and waiter by day, the woodland walk's people (Phase 7)
+  if (scene && tick) registerStandsLife(scene, tick, low);
   // The rock outcrops on the knolls and at the point (docs/westlake-plan.md Phase 1)
   registerRocks(low);
   // The civic square at its south end (civic3d.ts, docs/civic-plan.md)

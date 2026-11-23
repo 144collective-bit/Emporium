@@ -23,6 +23,7 @@ import { dogGeometry, leadEnds } from './dogs3d';
 import { CROWD_VIEW } from './character';
 import { BED_Y, BOATHOUSE, JETTY, WATER_Y, WESTLAKE_RECT, bridgeY } from './westlake';
 import { BOATS, BOAT_Y, DOGS, HULL, PARK_PEOPLE, PICNICS, moment } from './parklife';
+import { RAMBLE_DOGS } from './parkcrowd';
 import { TREE } from './palette';
 
 const CREAM = toon('#ece4d0');
@@ -309,7 +310,8 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
     false
   );
   // The dogs: coat coloured per dog (white here), dark nose and collar
-  const dogsShown = DOGS.filter((d) => !(low && PARK_PEOPLE[d.walker].trim));
+  // (and the woodland walk's, Phase 7: parkcrowd.ts, each with its walker)
+  const dogsShown = [...DOGS.map((d) => ({ ...d, person: PARK_PEOPLE[d.walker] })), ...RAMBLE_DOGS].filter((d) => !(low && d.person.trim));
   const dogs = inst(
     dogGeometry(),
     dogsShown.length,
@@ -374,7 +376,7 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
       m4.compose(v.set(dp.x, dy + Math.abs(Math.sin(ph)) * 0.025, dp.z), q.setFromEuler(e), sv.setScalar(d.size));
       dogs.setMatrixAt(k, m4);
       // The lead: from the walker's hand to the collar
-      PARK_PEOPLE[d.walker].at(t, wm);
+      d.person.at(t, wm);
       leadEnds(leadPos, k, wm, dp, d.size, wm.y, dy);
     });
     for (const mesh of [rowHull, rowInside, swanMesh, oars, dogs]) mesh.instanceMatrix.needsUpdate = true;

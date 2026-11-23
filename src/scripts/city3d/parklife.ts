@@ -47,9 +47,10 @@ import {
   type Pt,
 } from './westlake';
 import { HALL, inCivic } from './civic';
+import { BUILT, baked } from './baked';
 
 /** What a person in the park is doing at a moment: where, facing (0 is +z), standing (or seat) height, the crowd clip, how fast */
-export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic' | 'row' | 'pedal' | 'shoot' | 'swing';
+export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic' | 'row' | 'pedal' | 'shoot' | 'swing' | 'serve';
 export interface Moment {
   x: number;
   z: number;
@@ -166,6 +167,22 @@ function walkerAt(w: Walker, t: number, out: Moment, ahead = 0, side = 0) {
   return out;
 }
 
+/** A dog on its lead ahead of walker `w` (`LEAD`) */
+function dogAt(w: Walker) {
+  const m = moment();
+  return (t: number, o: { x: number; z: number; ry: number; speed: number }) => {
+    walkerAt(w, t, m, LEAD.ahead, LEAD.side);
+    return Object.assign(o, { x: m.x, z: m.z, ry: m.ry, speed: m.speed });
+  };
+}
+/** One person out along an open path and back (`off` either side of its middle), `frac` of the way round at t = 0, and their dog if they walk one (the woodland walk's, parkcrowd.ts) */
+export function lanePerson(id: string, pts: Pt[], off: number, pace: number, frac: number, trim: boolean, dog: boolean) {
+  const loop = loopOf(thin(pts, off));
+  const w: Walker = { lane: { id, loop, dir: 1, pace, count: 1, dogs: [] }, u0: frac * loop.len };
+  const person: ParkPerson = { id, trim, at: (t, out) => walkerAt(w, t, out) };
+  return { person, dog: dog ? dogAt(w) : null };
+}
+
 /* ---------- Picnics ---------- */
 
 export interface Picnic {
@@ -176,8 +193,9 @@ export interface Picnic {
   /** Who's sitting round it: where and facing */
   people: { x: number; z: number; ry: number }[];
 }
-/** In the glades: on the big block's lawns, well off the paths, the water, the stadium and every tree; seeded */
-export const PICNICS: Picnic[] = (() => {
+/** In the glades: on the big block's lawns, well off the paths, the water, the stadium and every tree; seeded, worked out once at the build (baked) */
+export const PICNICS: Picnic[] = baked('park-picnics', BUILT ? undefined : () => {
+  const cm = (v: number) => Math.round(v * 1000) / 1000;
   let s = 4242;
   const r = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
   const out: Picnic[] = [];
@@ -196,10 +214,10 @@ export const PICNICS: Picnic[] = (() => {
       const [x, z] = [p[0] + Math.sin(a) * 0.95, p[1] + Math.cos(a) * 0.75];
       return { x, z, ry: Math.atan2(p[0] - x, p[1] - z) };
     });
-    out.push({ at: p, ry, half: [0.9, 0.7], people });
+    out.push({ at: [cm(p[0]), cm(p[1])], ry: cm(ry), half: [0.9, 0.7], people: people.map((q) => ({ x: cm(q.x), z: cm(q.z), ry: cm(q.ry) })) });
   }
   return out;
-})();
+});
 
 /* ---------- Boats ---------- */
 
@@ -314,27 +332,14 @@ export interface Dog {
   size: number;
   at(t: number, out: { x: number; z: number; ry: number; speed: number }): { x: number; z: number; ry: number; speed: number };
 }
-const COATS = ['#c8915a', '#2b2622', '#f2ede3', '#8a6a4a', '#d9c39a', '#5b4636'];
+export const COATS = ['#c8915a', '#2b2622', '#f2ede3', '#8a6a4a', '#d9c39a', '#5b4636'];
 export const DOGS: Dog[] = (() => {
   const out: Dog[] = [];
   let k = 0;
   WALKERS.forEach((w, i) => {
     const n = WALKERS.filter((v, j) => v.lane === w.lane && j < i).length;
     if (!w.lane.dogs.includes(n)) return;
-    const m = moment();
-    out.push({
-      walker: i,
-      coat: COATS[k % COATS.length],
-      size: [1, 0.8, 1.15, 0.9][k++ % 4],
-      at: (t, o) => {
-        walkerAt(w, t, m, LEAD.ahead, LEAD.side);
-        o.x = m.x;
-        o.z = m.z;
-        o.ry = m.ry;
-        o.speed = m.speed;
-        return o;
-      },
-    });
+    out.push({ walker: i, coat: COATS[k % COATS.length], size: [1, 0.8, 1.15, 0.9][k++ % 4], at: dogAt(w) });
   });
   return out;
 })();
