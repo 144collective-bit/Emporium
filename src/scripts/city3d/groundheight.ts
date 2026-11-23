@@ -49,7 +49,7 @@ import { rollsAt } from './rolls';
 import { harbourY } from './harbour';
 import { vergeY } from './verges';
 import { onSouthGround, southLift } from './southground';
-import { skyFloorAt } from './southsky';
+import { lobbyFloorAt, skyFloorAt } from './southsky';
 import { recBridgeY } from './rec';
 import { GARAGE_SITE } from './solids';
 import { PLAN, inPoly, type Pt } from './streetplan';
@@ -105,6 +105,8 @@ export const GROUND_LAYERS: GroundLayer[] = [
   // Endswood's sky network (southsky.ts, docs/south-plan.md Phase 2c), when `yNow` is up there: the galleries, bridges,
   // the podium deck, the cores' landings and The Core's stair
   { id: 'sky', how: 'take', at: (x, z, yNow) => skyFloorAt(x, z, yNow) },
+  // Endswood's lobbies (southsky.ts, docs/brutalist-plan.md Phase 6): a block's hall and its doorway, on its base
+  { id: 'lobby', how: 'take', at: (x, z) => lobbyFloorAt(x, z) },
   // Northgate Air Base's visitors' centre (airbase.ts, docs/military-plan.md Phase 6): its stair, landing and roof
   // terrace when `yNow` is on the way up or up there
   { id: 'visitors', how: 'take', at: (x, z, yNow) => visitorsFloorAt(x, z, yNow) },

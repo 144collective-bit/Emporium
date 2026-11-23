@@ -5,7 +5,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARCH_X, BLOCKS, BLOCK_SOLIDS, BRIDGES, BRIDGE_CLEAR, BUNKER, CORES, COURTS, DECKS, DESIRE_LINES, GALLERIES, GRASS, PLAY,
-  BLOCKS_RECT, CAGE, CAGES, DECK_SHOPS, DECK_SHOP_NAMES, PERCH, PIERS, RAMPART, TOP_FLOOR, TWIN_CORE, TWIN_CORE_HALF, roofY, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
+  BLOCKS_RECT, CAGE, CAGES, DECK_SHOPS, LOBBIES, LOBBY, lobbyAt, lobbyProps, DECK_SHOP_NAMES, PERCH, PIERS, RAMPART, TOP_FLOOR, TWIN_CORE, TWIN_CORE_HALF, roofY, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
 } from '../src/scripts/city3d/southblocks';
 import { EDGE_Z, FOOTPATHS, LOT9_EDGE, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, UNDERHILL } from '../src/scripts/city3d/south';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
@@ -13,6 +13,8 @@ import { cross, distTo, inside, selfCrossings } from '../src/scripts/city3d/stre
 import { southLift } from '../src/scripts/city3d/southground';
 import { MOUTH_PATHS } from '../src/scripts/city3d/circus';
 import { DECK_COLUMNS } from '../src/scripts/city3d/southyard';
+import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SKY_LIFTS, lobbyFloorAt, lobbyLiftDoor, skyLiftDoors } from '../src/scripts/city3d/southsky';
 
 const STREETS = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp');
 /** How far a point is from the nearest street's sidewalk's outer edge (negative: on the street or its sidewalk) */
@@ -204,7 +206,8 @@ test('the solids: every footprint covered (the arch open), nothing solid on a st
     const zs = foot.map((p) => p[1]);
     for (let x = Math.min(...xs); x < Math.max(...xs); x += 0.7)
       for (let z = Math.min(...zs); z < Math.max(...zs); z += 0.7) {
-        if (!inside(foot, [x, z]) || underArch([x, z])) continue;
+        // (but the lobbies' halls and doorways, cut out of it: docs/brutalist-plan.md Phase 6, and a hand's breadth round them)
+        if (!inside(foot, [x, z]) || underArch([x, z]) || LOBBIES.some((l) => [l.poly, l.doorPoly].some((h) => inside(h, [x, z]) || h.some((p, i) => distTo([p, h[(i + 1) % h.length]], [x, z]) < 0.2)))) continue;
         assert.ok(BLOCK_SOLIDS.some((b) => x >= b[0] - 1e-6 && x <= b[2] + 1e-6 && z >= b[1] - 1e-6 && z <= b[3] + 1e-6), `${id} not solid at ${x.toFixed(1)}, ${z.toFixed(1)}`);
       }
   }
@@ -356,5 +359,38 @@ test("the shops under the podium deck (docs/brutalist-plan.md Phase 5): ten unit
     const out: Pt = [mid[0] + sh.n[0] * 2.4, mid[1] + sh.n[1] * 2.4];
     assert.ok(inside(deck.poly, out), `${sh.id} not under the deck`);
     for (const [x, z] of DECK_COLUMNS) assert.ok(Math.hypot(x - out[0], z - out[1]) > 0.8, `${sh.id} behind a column`);
+  }
+});
+
+test('the lobbies (docs/brutalist-plan.md Phase 6): a hall in every block but The Core, walked into through its door, walled in, its lift doors calling its lift', () => {
+  assert.equal(LOBBIES.length, BLOCKS.length - 1);
+  const solid = (p: Pt, r = 0.2) => SOLIDS.some((b) => p[0] > b[0] - r && p[0] < b[2] + r && p[1] > b[1] - r && p[1] < b[3] + r);
+  for (const l of LOBBIES) {
+    const blk = blockById(l.of);
+    // (its hall inside its block, a little in from its outline)
+    for (const p of l.poly) assert.ok(inside(blk.foot, p) && inBlock(p), `${l.id}'s corner outside ${l.of}`);
+    const at = (u: number, o: number): Pt => [l.door[0] + l.t[0] * u + l.n[0] * o, l.door[1] + l.t[1] * u + l.n[1] * o];
+    const mid = at(0, -LOBBY.wall - l.d / 2);
+    // (in from outside: from a step out of the door, through it, to the hall's middle, nothing solid in the way; on its floor)
+    const outside = at(0, 0.9);
+    assert.ok(!inBlock(outside) && !solid(outside, 0.3), `${l.id}'s door opens onto something solid at ${outside.map((v) => v.toFixed(1))}`);
+    assert.ok(offStreet(outside) > -1.6, `${l.id}'s door opens onto the street`);
+    for (let k = 0; k <= 40; k++) {
+      const p: Pt = [outside[0] + ((mid[0] - outside[0]) * k) / 40, outside[1] + ((mid[1] - outside[1]) * k) / 40];
+      assert.ok(!solid(p), `${l.id}: solid on the way in at ${p.map((v) => v.toFixed(2))}`);
+    }
+    assert.equal(lobbyAt(mid[0], mid[1])?.id, l.id);
+    assert.equal(lobbyFloorAt(mid[0], mid[1]), l.base);
+    // (walled in: past its back wall, its side walls, and the front beside the door, all solid)
+    for (const p of [at(0, -LOBBY.wall - l.d - 0.4), at(l.w / 2 + 0.4, -LOBBY.wall - l.d / 2), at(-l.w / 2 - 0.4, -LOBBY.wall - l.d / 2), at(l.w / 2 - 0.5, -0.1), at(-l.w / 2 + 0.5, -0.1)])
+      assert.ok(solid(p, 0), `${l.id}: open wall at ${p.map((v) => v.toFixed(2))}`);
+    // (its bench and stairs solid, inside the hall)
+    const { bench, stairs } = lobbyProps(l);
+    for (const q of [...bench, ...stairs]) assert.ok(inside(l.poly, [q[0] + (mid[0] - q[0]) * 0.02, q[1] + (mid[1] - q[1]) * 0.02]), `${l.id}'s bench or stairs outside its hall`);
+    // (its lift doors: a lift that exists, its prompt at the ground in the hall)
+    assert.ok(SKY_LIFTS.some((q) => q.id === l.lift), `${l.id}'s lift ${l.lift}`);
+    const ld = lobbyLiftDoor(l);
+    assert.ok(inside(l.poly, ld) && !solid(ld, 0.25), `${l.id}'s lift door`);
+    assert.ok(skyLiftDoors(l.base).some((d) => d.id === `sky-lift:${l.lift}` && Math.hypot(d.x - ld[0], d.z - ld[1]) < 0.01), `${l.id}'s lift prompt`);
   }
 });

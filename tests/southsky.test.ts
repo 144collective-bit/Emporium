@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { REACH, SKY_LIFTS, SKY_SHAPES, STAIR, UP_FROM, cageLevels, coreFloors, floorName, liftArrival, liftFloorName, liftFloorOf, skyFloorAt, skyLiftDoors, skyUp, skyWall, type SkyShape } from '../src/scripts/city3d/southsky';
-import { BLOCKS_RECT, BRIDGES, CAGE, CAGES, PERCH, TOP_FLOOR, CORES as CORES_ALL, GALLERIES, blockById, floorY, inBlock, type Pt } from '../src/scripts/city3d/southblocks';
+import { BLOCKS_RECT, BRIDGES, CAGE, CAGES, LOBBIES, PERCH, TOP_FLOOR, CORES as CORES_ALL, GALLERIES, blockById, floorY, inBlock, type Pt } from '../src/scripts/city3d/southblocks';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
 import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
@@ -126,7 +126,8 @@ test('a lift in every core: its door at its foot off the street and clear of any
     assert.equal(liftFloorOf(l, 0.15), 0);
   }
   // (the prompts by your height: the doors at the foot, the landings up there)
-  assert.equal(skyLiftDoors(0.15).length, SKY_LIFTS.length);
+  // (and at the foot, the lobbies' lift doors too: each calls its block's lift, docs/brutalist-plan.md Phase 6)
+  assert.equal(skyLiftDoors(0.15).length, SKY_LIFTS.length + LOBBIES.length);
   assert.equal(skyLiftDoors(L3).length, SKY_LIFTS.filter((l) => l.floors.includes(3)).length);
   assert.equal(skyLiftDoors(L3 + 1.5).length, 0);
   assert.equal(floorName(0), 'Ground');
