@@ -14,7 +14,15 @@ import { SITE2 } from './kartcircuit2';
 import {
   APRON2,
   BENCHES2,
+  BRIEF_BENCHES2,
+  CABIN2,
+  CANOPY_POSTS2,
   CLUB,
+  DESK2,
+  HELMET_RACK2,
+  HIRE_CANOPY2,
+  HIRE_KARTS2,
+  SCREEN2,
   COUNTER2,
   ENGINE_RACK2,
   FITTER2,
@@ -52,6 +60,11 @@ const WHITE = toon('#e8e6f0');
 const ENGINE = toon('#4a4a5c');
 const PARTS = ['#e23b3b', '#ffd23f', '#2aabee', '#1fbf6b'].map((c) => toon(c));
 const LIGHT = neon('#f4f1ff', 0.5, 1.1);
+const HIRE = toon('#ffd23f');
+const GLASS = toon('#9fd3ff');
+const SCREEN_C = toon('#14122a');
+const SCREEN_LINE = neon('#4fd6ff', 0.6, 1.2);
+const PAINT = toon('#e8e4f8');
 
 const unitCyl = (r: number, h: number, seg = 10) => new THREE.CylinderGeometry(r, r, h, seg);
 
@@ -210,6 +223,103 @@ function stacks(b: Batch, low: boolean) {
   });
 }
 
+/** A hire kart parked: the yellow livery, a black bumper all round, the seat, the wheel */
+function hireKart(b: Batch, u: number, v: number, ry: number) {
+  const [x, z] = W2(u, v);
+  const at = (g: THREE.BufferGeometry) => g.rotateY(ry).translate(x, 0, z);
+  b.add(at(new THREE.BoxGeometry(1.3, 0.1, 0.75).translate(0, 0.16, 0)), HIRE);
+  b.add(at(new THREE.BoxGeometry(1.5, 0.12, 0.9).translate(0, 0.1, 0)), INK);
+  b.add(at(new THREE.BoxGeometry(0.34, 0.36, 0.42).translate(-0.2, 0.38, 0)), INK);
+  b.add(at(new THREE.BoxGeometry(0.32, 0.14, 0.62).translate(0.5, 0.26, 0)), HIRE);
+  b.add(at(unitCyl(0.12, 0.03, 8).rotateZ(1.1).translate(0.18, 0.5, 0)), INK);
+  for (const [a, d] of [
+    [-0.45, 0.42],
+    [-0.45, -0.42],
+    [0.45, 0.42],
+    [0.45, -0.42],
+  ])
+    b.add(at(unitCyl(0.17, 0.16, 8).rotateX(Math.PI / 2).translate(a, 0.17, d)), TYRE);
+}
+
+/** 4b: the canopy over the hire karts (posts, roof, fascia, the bays painted under it), the karts */
+function hireCanopy(b: Batch) {
+  const c = HIRE_CANOPY2;
+  for (const [u, v] of CANOPY_POSTS2) boxU(b, { u0: u - 0.1, v0: v - 0.1, u1: u + 0.1, v1: v + 0.1 }, 0, c.h, STEEL);
+  boxU(b, { u0: c.u0 - 0.2, v0: c.v0 - 0.4, u1: c.u1 + 0.2, v1: c.v1 + 0.2 }, c.h, c.h + 0.18, ROOF);
+  boxU(b, { u0: c.u0 - 0.2, v0: c.v0 - 0.45, u1: c.u1 + 0.2, v1: c.v0 - 0.35 }, c.h - 0.4, c.h + 0.18, HIRE);
+  // (the bays' lines on the apron)
+  for (const v of [134.6, 138.2, 141.8]) boxU(b, { u0: c.u0 + 0.6, v0: v - 0.05, u1: c.u1 - 0.6, v1: v + 0.05 }, PAVING, PAVING + 0.012, PAINT);
+}
+
+/** 4b: the sign-on cabin: clad walls, the doorway, windows, its roof and fascia; inside, the desk, the benches, the screen */
+function cabin(b: Batch) {
+  const c = CABIN2;
+  const [d0, d1] = c.door;
+  flatU(b, { u0: c.u0, v0: c.v0, u1: c.u1, v1: c.v1 }, FLOOR, FLOOR_C);
+  boxU(b, { u0: c.u0, v0: c.v1 - WALL, u1: c.u1, v1: c.v1 }, 0, c.h, CLAD);
+  boxU(b, { u0: c.u0, v0: c.v0, u1: c.u0 + WALL, v1: c.v1 }, 0, c.h, CLAD);
+  boxU(b, { u0: c.u1 - WALL, v0: c.v0, u1: c.u1, v1: c.v1 }, 0, c.h, CLAD);
+  boxU(b, { u0: c.u0, v0: c.v0, u1: d0, v1: c.v0 + WALL }, 0, c.h, CLAD);
+  boxU(b, { u0: d1, v0: c.v0, u1: c.u1, v1: c.v0 + WALL }, 0, c.h, CLAD);
+  boxU(b, { u0: d0, v0: c.v0, u1: d1, v1: c.v0 + WALL }, 2.3, c.h, CLAD);
+  // (windows on the front, a hair proud of the wall)
+  for (const [a, e] of [
+    [58.2, 60.6],
+    [61, 63],
+  ])
+    boxU(b, { u0: a, v0: c.v0 - 0.03, u1: e, v1: c.v0 }, 1.1, 2.2, GLASS);
+  boxU(b, { u0: c.u0 - 0.2, v0: c.v0 - 0.5, u1: c.u1 + 0.2, v1: c.v1 + 0.2 }, c.h, c.h + 0.2, ROOF);
+  boxU(b, { u0: c.u0 - 0.2, v0: c.v0 - 0.55, u1: c.u1 + 0.2, v1: c.v0 - 0.45 }, c.h - 0.4, c.h + 0.2, HIRE);
+}
+function cabinInside(b: Batch) {
+  boxU(b, DESK2, 0, 1.0, CLAD_DARK);
+  boxU(b, { u0: DESK2.u0 - 0.05, v0: DESK2.v0 - 0.05, u1: DESK2.u1 + 0.05, v1: DESK2.v1 + 0.05 }, 1.0, 1.06, WOOD);
+  for (const bench of BRIEF_BENCHES2) {
+    boxU(b, bench, 0.38, 0.46, WOOD);
+    for (const v of [bench.v0 + 0.2, bench.v1 - 0.3]) boxU(b, { u0: bench.u0 + 0.1, v0: v, u1: bench.u1 - 0.1, v1: v + 0.1 }, 0, 0.38, STEEL);
+  }
+  // The screen on the east wall: a circuit's outline and its flags (no words)
+  const s = SCREEN2;
+  boxU(b, { u0: s.u - 0.04, v0: s.v0, u1: s.u, v1: s.v1 }, s.y0, s.y1, SCREEN_C);
+  const loop: [number, number][] = [
+    [0.15, 0.3],
+    [0.5, 0.2],
+    [0.85, 0.35],
+    [0.8, 0.75],
+    [0.45, 0.8],
+    [0.2, 0.65],
+  ];
+  for (let k = 0; k < loop.length; k++) {
+    const [a, c] = [loop[k], loop[(k + 1) % loop.length]];
+    const [va, ya] = [s.v0 + 0.4 + a[0] * (s.v1 - s.v0 - 0.8), s.y0 + 0.2 + a[1] * (s.y1 - s.y0 - 0.4)];
+    const [vc, yc] = [s.v0 + 0.4 + c[0] * (s.v1 - s.v0 - 0.8), s.y0 + 0.2 + c[1] * (s.y1 - s.y0 - 0.4)];
+    const [x, za] = W2(s.u - 0.05, va);
+    const zc = W2(s.u, vc)[1];
+    const len = Math.hypot(zc - za, yc - ya);
+    b.add(new THREE.BoxGeometry(0.02, 0.05, len).rotateX(Math.atan2(yc - ya, zc - za) * -1).translate(x, (ya + yc) / 2, (za + zc) / 2), SCREEN_LINE);
+  }
+  for (const [k, mat] of [
+    [0, toon('#1fbf6b')],
+    [1, toon('#ffd23f')],
+    [2, toon('#e23b3b')],
+  ] as const) {
+    const [x, z] = W2(s.u - 0.05, s.v0 + 0.5 + k * 0.5);
+    b.box(x - 0.01, s.y1 - 0.45, z - 0.18, 0.02, 0.25, 0.36, mat);
+  }
+  // The helmet rack on the front wall outside: two rails of pegs, a helmet on each
+  const r = HELMET_RACK2;
+  boxU(b, r, 0, 0.1, STEEL);
+  for (const y of [0.95, 1.55]) {
+    boxU(b, { ...r, v0: r.v1 - 0.06 }, y - 0.04, y, STEEL);
+    let k = 0;
+    for (let u = r.u0 + 0.3; u < r.u1 - 0.2; u += 0.48) {
+      const [x, z] = W2(u, r.v0 + 0.12);
+      b.add(new THREE.SphereGeometry(0.17, 10, 8).scale(1, 0.95, 1.1).translate(x, y + 0.14, z), [CLUB_A, HIRE, CLUB_B, WHITE][k++ % 4]);
+      b.box(x - 0.12, y + 0.08, z - 0.2, 0.24, 0.1, 0.05, INK);
+    }
+  }
+}
+
 /** 4a: registered with the track's district (kartgrounds2-3d.ts) */
 export function registerVenue({ low }: { low: boolean }) {
   const rectW = (r: URect, m = 0): [number, number, number, number] => [SITE2.x0 + r.u0 - m, SITE2.z0 + r.v0 - m, SITE2.x0 + r.u1 + m, SITE2.z0 + r.v1 + m];
@@ -228,6 +338,19 @@ export function registerVenue({ low }: { low: boolean }) {
     const b = new Batch();
     shed(b, TYRESTORE2, 1, CLUB_B);
     b.detail(() => tyreStoreInside(b));
+    b.build(into);
+  });
+  // 4b: the hire-kart garage
+  site('riverside hire canopy', rectW(HIRE_CANOPY2, 1), (into) => {
+    const b = new Batch();
+    hireCanopy(b);
+    b.detail(() => HIRE_KARTS2.forEach((k) => hireKart(b, k.u, k.v, k.ry)));
+    b.build(into);
+  });
+  site('riverside sign-on cabin', rectW(CABIN2, 1), (into) => {
+    const b = new Batch();
+    cabin(b);
+    b.detail(() => cabinInside(b));
     b.build(into);
   });
   // The stacks: by the sheds, and along the pit lane

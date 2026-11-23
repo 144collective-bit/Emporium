@@ -77,3 +77,32 @@ test('the solids: every shed wall, fitting and stack, in the site, none on the t
     assert.ok(trackDistance((x0 + x1) / 2 - SITE2.x0, (z0 + z1) / 2 - SITE2.z0) > CLEAR2);
   }
 });
+
+test("4b, the hire-kart garage: on its land, the karts under the canopy clear of its posts, the cabin's things inside it, its doorway clear", async () => {
+  const { BRIEF_BENCHES2, CABIN2, CANOPY_POSTS2, DESK2, HELMET_RACK2, HIRE_CANOPY2, HIRE_KARTS2, SCREEN2 } = await import('../src/scripts/city3d/kartvenue2');
+  const canopy: URect = HIRE_CANOPY2;
+  const cab: URect = CABIN2;
+  for (const r of [canopy, cab, HELMET_RACK2]) {
+    assert.ok(inside(r, HIRE2_LAND), 'on its land');
+    for (const [u, v] of corners(r)) assert.ok(trackDistance(u, v) > CLEAR2 + 3);
+    assert.ok(!overlap(r, TYRESTORE2) && !overlap(r, WORKSHOP2));
+  }
+  assert.ok(!overlap(canopy, cab), 'the canopy and the cabin apart');
+  assert.equal(HIRE_KARTS2.length, 8);
+  for (const [i, k] of HIRE_KARTS2.entries()) {
+    const foot: URect = { u0: k.u - 0.45, v0: k.v - 0.75, u1: k.u + 0.45, v1: k.v + 0.75 };
+    assert.ok(inside(foot, canopy), `kart ${i} under the canopy`);
+    for (const [u, v] of CANOPY_POSTS2) assert.ok(!overlap(foot, { u0: u - 0.12, v0: v - 0.12, u1: u + 0.12, v1: v + 0.12 }), `kart ${i} on a post`);
+    for (const o of HIRE_KARTS2.slice(i + 1)) assert.ok(!overlap(foot, { u0: o.u - 0.45, v0: o.v - 0.75, u1: o.u + 0.45, v1: o.v + 0.75 }), 'karts apart');
+  }
+  const inner: URect = { u0: cab.u0 + WALL, v0: cab.v0 + WALL, u1: cab.u1 - WALL, v1: cab.v1 - WALL };
+  for (const r of [DESK2, ...BRIEF_BENCHES2]) {
+    assert.ok(inside(r, inner), 'inside the cabin');
+    assert.ok(r.u1 <= CABIN2.door[0] - 0.5 || r.u0 >= CABIN2.door[1] + 0.5 || r.v0 > cab.v0 + 1.5, 'the doorway kept clear');
+  }
+  assert.ok(SCREEN2.v0 > inner.v0 && SCREEN2.v1 < inner.v1 && SCREEN2.u <= inner.u1);
+  assert.ok(CABIN2.door[1] - CABIN2.door[0] >= 1.5, 'a doorway to walk through');
+  assert.ok(HELMET_RACK2.u1 <= CABIN2.door[0], 'the helmet rack beside the doorway, not in it');
+  // (a kart, a post and the cabin's walls among the solids)
+  assert.ok(VENUE2_SOLIDS.length >= 50 + CANOPY_POSTS2.length + HIRE_KARTS2.length);
+});
