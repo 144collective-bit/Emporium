@@ -297,8 +297,7 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
      water, people at the tables by day. A place: spot, pin, directory
      entry, a panel (coming soon), its door, `PLACES` and `LIVE_PLACES`
      with its marquee line and live line, its footprint on the world map.
-7. **Life, night and performance** (built, waiting on the owner's
-   sign-off; the owner's go, 2026-11-23, with the recommended picks: a
+7. **Life, night and performance** (signed off 2026-11-23; the owner's go, 2026-11-23, with the recommended picks: a
    brass band, most evenings, the café busy by day with a waiter).
    parkcrowd.ts (DOM-free, out of the boot): the band (`BAND`: three
    cornets, a trombone, a drummer and a tuba seated in a horseshoe facing
