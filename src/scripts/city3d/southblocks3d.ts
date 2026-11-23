@@ -29,7 +29,7 @@ import { PLANT } from './palette';
 import { shift } from './streetfaces';
 import {
   ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
-  PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
+  DECK_SHOPS, DECK_SHOP_NAMES, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
 import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors } from './southsky';
@@ -664,8 +664,20 @@ function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from:
       // A sodium lamp over it on a bracket, orange at night (the brutalist plan's grit)
       const lamp: Pt = [f[0] + n[0] * 0.25, f[1] + n[1] * 0.25];
       b.add(plain(new THREE.BoxGeometry(0.3, 0.1, 0.18).translate(lamp[0], base + 1.62, lamp[1])), SODIUM);
-      // ...near only: a puddle at its foot, a tag scrawled low on the wall by it
+      // ...near only: a puddle at its foot, a tag scrawled low on the wall by it, and the estate's noticeboard beside it
+      // (the brutalist plan's Phase 5: a cork board in a steel frame on two posts, its notices pinned up)
       b.detail(() => {
+        const nb: Pt = [f[0] + n[0] * 0.35 + t[0] * -1.35, f[1] + n[1] * 0.35 + t[1] * -1.35];
+        const ry = -Math.atan2(t[1], t[0]);
+        for (const s0 of [-0.42, 0.42]) b.add(plain(new THREE.BoxGeometry(0.06, 1.05, 0.06).translate(nb[0] + t[0] * s0, base + 0.52, nb[1] + t[1] * s0)), RAIL);
+        b.add(plain(new THREE.BoxGeometry(0.96, 0.6, 0.05).rotateY(ry).translate(nb[0], base + 0.82, nb[1])), RAIL);
+        b.add(plain(new THREE.BoxGeometry(0.86, 0.5, 0.052).rotateY(ry).translate(nb[0], base + 0.82, nb[1])), CORK);
+        const hn = Math.abs(Math.round(door.x * 7 + door.z * 3));
+        for (let q = 0; q < 5; q++) {
+          const [u, v] = [-0.3 + ((hn + q * 3) % 7) * 0.1, 0.64 + ((hn + q * 5) % 4) * 0.08];
+          const m = q % 3 === 0 ? DISH : TAG_PAINT[(hn + q) % TAG_PAINT.length];
+          b.add(plain(new THREE.BoxGeometry(0.16, 0.2, 0.054).rotateY(ry).translate(nb[0] + t[0] * u, base + v, nb[1] + t[1] * u)), m);
+        }
         const h = Math.abs(Math.round(door.x * 13 + door.z * 7));
         const c0: Pt = [f[0] + n[0] * (0.9 + (h % 3) * 0.2) + t[0] * (((h % 5) - 2) * 0.3), f[1] + n[1] * (0.9 + (h % 3) * 0.2) + t[1] * (((h % 5) - 2) * 0.3)];
         flat(b, Array.from({ length: 10 }, (_, i): Pt => {
@@ -837,6 +849,8 @@ const centre = (ring: Pt[]): Pt => [ring.reduce((s, p) => s + p[0], 0) / ring.le
 /* ---------- The bridges, the podium deck, Bunker Sound's door ---------- */
 
 const PUDDLE = toon('#1b2230');
+/** The noticeboards' cork */
+const CORK = toon('#8b6a45');
 /** The towers' door lamps: sodium orange, off by day */
 const SODIUM = neon('#ff9a3c', 0.08, 1.7);
 const TAG_PAINT = ['#d94fb0', '#38c6d9', '#e6c13a', '#e0e0e0'].map((c) => toon(c));
@@ -898,7 +912,7 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | n
 /* ---------- The blocks' names on their bridges (the brutalist plan's polish: painted, stencilled, worn) ---------- */
 
 /** The names a bridge's end can lead to: the blocks' own (made up), each a row of one painted texture */
-const SIGN_NAMES = [...BLOCKS.map((q) => q.name.toUpperCase()), PERCH.name.toUpperCase()];
+const SIGN_NAMES = [...BLOCKS.map((q) => q.name.toUpperCase()), PERCH.name.toUpperCase(), 'TO LET'];
 /**
  * (half-size and opaque, on the concrete's own colour: the names are small, and a sheet with no see-through parts bakes
  * to the lighter texture format; it stood the full-tier texture budget over at first: docs/brutalist-plan.md)
@@ -1089,6 +1103,164 @@ function drawStair(b: Batch) {
     along(b, at(s1, o0 + w - 0.05), at(s1 + landing, o0 + w - 0.05), 0.07, top, top + 0.9, ACCENT.mustard);
     along(b, at(s1 + landing - 0.05, o0 + 0.2), at(s1 + landing - 0.05, o0 + w), 0.07, top, top + 0.9, ACCENT.mustard);
   });
+}
+
+/* ---------- Street-level grit (docs/brutalist-plan.md Phase 5) ---------- */
+
+/** The shops' neon over their fronts: the two names (the owner's picks), pink and cyan tubes on a dark board */
+const SHOP_ROW = 48;
+const SHOP_TEX = canvasTex(256, SHOP_ROW * DECK_SHOP_NAMES.length, (c) => {
+  c.fillStyle = '#121019';
+  c.fillRect(0, 0, 256, SHOP_ROW * DECK_SHOP_NAMES.length);
+  DECK_SHOP_NAMES.forEach((name, i) => {
+    const y = i * SHOP_ROW + SHOP_ROW / 2;
+    c.font = `800 26px ${FONT_DISPLAY}`;
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    const tube = i ? '#5ff2ff' : '#ff6fd0';
+    c.shadowColor = tube;
+    c.shadowBlur = 8;
+    c.fillStyle = tube;
+    c.fillText(name.toUpperCase(), 128, y, 240);
+    c.shadowBlur = 0;
+    c.fillStyle = '#ffffff';
+    c.fillText(name.toUpperCase(), 128, y, 240);
+  });
+});
+/** (dim by day, lit at night, the tubes small and bright: minimal bloom) */
+const SHOP_NEON = lit(new THREE.MeshBasicMaterial({ map: SHOP_TEX }), 0.55, 1.15);
+/** A roller shutter's steel, a puddle that catches the sodium lamps at night */
+const SHUTTER = toon('#7d8189');
+const PUDDLE_SHINE = lit(toon('#1b2230', { emissive: '#7a4a24' }), 0, 0.18);
+
+/** A quad from p0 to p1 (p0 on the left seen from in front), y0 to y1, facing n, a band v0..v1 of a texture */
+function texQuad(b: Batch, p0: Pt, p1: Pt, y0: number, y1: number, n: Pt, v0: number, v1: number, m: THREE.Material) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute([p0[0], y0, p0[1], p1[0], y0, p1[1], p1[0], y1, p1[1], p0[0], y1, p0[1]], 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute([n[0], 0, n[1], n[0], 0, n[1], n[0], 0, n[1], n[0], 0, n[1]], 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute([0, v0, 1, v0, 1, v1, 0, v1], 2));
+  const front = (p1[0] - p0[0]) * n[1] - (p1[1] - p0[1]) * n[0] > 0;
+  g.setIndex(front ? [0, 1, 2, 0, 2, 3] : [0, 2, 1, 0, 3, 2]);
+  b.add(g, m);
+}
+
+/**
+ * The units under the podium deck (southblocks.ts `DECK_SHOPS`): the two open ones (The Wash House, Deck Stores) a
+ * glazed front lit warm at night, a door, a dark fascia and their neon; the rest roller shutters down, the box over
+ * them, ribs, tags and (one) a To Let board, near
+ */
+function drawShops(b: Batch, low: boolean) {
+  const k = kit(b, WORLD);
+  for (const sh of DECK_SHOPS) {
+    const { a, c, n, base } = sh;
+    const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    const t: Pt = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
+    const at = (u: number, out: number): Pt => [a[0] + t[0] * u + n[0] * out, a[1] + t[1] * u + n[1] * out];
+    // (read left to right from in front: from the left of someone facing it)
+    const left = (u: number, out: number, w: number): [Pt, Pt] => {
+      const m = at(u, out);
+      const l: Pt = [-n[1], n[0]];
+      return [[m[0] + l[0] * w, m[1] + l[1] * w], [m[0] - l[0] * w, m[1] - l[1] * w]];
+    };
+    k.all(() => {
+      if (sh.name) {
+        quad(b, at(0.1, 0.014), at(len - 0.1, 0.014), base + 0.05, base + 1.02, n, GLASS);
+        quad(b, at(len - 0.8, 0.022), at(len - 0.2, 0.022), base, base + 1.0, n, DOOR);
+        quad(b, at(0, 0.016), at(len, 0.016), base + 1.04, base + 1.38, n, CONC_DARK);
+        const row = DECK_SHOP_NAMES.indexOf(sh.name as (typeof DECK_SHOP_NAMES)[number]);
+        const H = SHOP_ROW * DECK_SHOP_NAMES.length;
+        const [p0, p1] = left(len / 2, 0.026, Math.min(1.6, len / 2 - 0.15));
+        texQuad(b, p0, p1, base + 1.07, base + 1.35, n, 1 - ((row + 1) * SHOP_ROW) / H, 1 - (row * SHOP_ROW) / H, SHOP_NEON);
+      } else {
+        quad(b, at(0.05, 0.02), at(len - 0.05, 0.02), base, base + 1.06, n, SHUTTER);
+        along(b, at(0, 0.1), at(len, 0.1), 0.2, base + 1.06, base + 1.28, CONC_DARK);
+      }
+      // A strip light under the deck's soffit in front of each unit, tired, the odd one dead
+      const h = hashOf(sh.id);
+      if (h % 5) along(b, at(len * 0.25, 1.6), at(len * 0.75, 1.6), 0.08, DECKS[0].y - 0.36, DECKS[0].y - 0.31, h % 3 ? STRIP_TIRED : STRIP);
+    });
+    if (low) continue;
+    b.detail(() => {
+      if (sh.name) {
+        // (mullions across the glazing)
+        for (let u = 0.1 + 0.9; u < len - 0.9; u += 0.9) along(b, at(u, 0.02), at(u + 0.04, 0.02), 0.04, base + 0.05, base + 1.02, CONC_DARK);
+        return;
+      }
+      // The shutter's ribs, its tags (most of them), the To Let board on the one to let
+      for (let y = base + 0.08; y < base + 1.04; y += 0.09) along(b, at(0.05, 0.026), at(len - 0.05, 0.026), 0.012, y, y + 0.015, CONC_DARK);
+      const h = hashOf(sh.id);
+      if (h % 4) {
+        const paint = TAG_PAINT[h % TAG_PAINT.length];
+        for (let i = 0; i < 9; i++) {
+          const u = 0.4 + i * 0.22 + (h % 3) * 0.1;
+          const [v0, v1] = [0.25 + ((h + i * 3) % 5) * 0.07, 0.3 + ((h + i * 7) % 5) * 0.07];
+          if (u < len - 0.3) quad(b, at(u, 0.034), at(u + 0.18, 0.034), base + Math.min(v0, v1), base + Math.max(v0, v1) + 0.08, n, paint);
+        }
+      }
+      if (sh.toLet) {
+        const row = SIGN_NAMES.indexOf('TO LET');
+        const H = SIGN_ROW * SIGN_NAMES.length;
+        const [p0, p1] = left(len / 2, 0.04, 0.55);
+        texQuad(b, p0, p1, base + 0.62, base + 0.82, n, 1 - ((row + 1) * SIGN_ROW) / H, 1 - (row * SIGN_ROW) / H, SIGN);
+      }
+    });
+  }
+}
+
+/**
+ * Cables strung between neighbouring blocks (the estate's own wiring, sagging), a pair between each two blocks within
+ * reach of each other; not on phones
+ */
+const CABLES: { a: [number, number, number]; c: [number, number, number] }[] = (() => {
+  const out: { a: [number, number, number]; c: [number, number, number] }[] = [];
+  const hung = BLOCKS.filter((q) => q.id !== 'twin-core');
+  const pts = (f: Pt[]) => f.flatMap((p, j) => {
+    const q = f[(j + 1) % f.length];
+    const l = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    return Array.from({ length: Math.max(1, Math.ceil(l)) }, (_, k): Pt => [p[0] + ((q[0] - p[0]) * k) / Math.ceil(l || 1), p[1] + ((q[1] - p[1]) * k) / Math.ceil(l || 1)]);
+  });
+  for (let i = 0; i < hung.length; i++)
+    for (let j = i + 1; j < hung.length; j++) {
+      const [A, B] = [pts(hung[i].foot), pts(hung[j].foot)];
+      let best = { d: Infinity, p: A[0], q: B[0] };
+      for (const p of A) for (const q of B) {
+        const d = Math.hypot(q[0] - p[0], q[1] - p[1]);
+        if (d < best.d) best = { d, p, q };
+      }
+      if (best.d < 6 || best.d > 28) continue;
+      const y = Math.min(topOf(hung[i]), topOf(hung[j])) - 2.4;
+      for (const [dy, side] of [[0, 0.6], [-1.6, -0.6]] as const) {
+        const l = best.d || 1;
+        const r: Pt = [(-(best.q[1] - best.p[1]) / l) * side, ((best.q[0] - best.p[0]) / l) * side];
+        out.push({ a: [best.p[0] + r[0], y + dy, best.p[1] + r[1]], c: [best.q[0] + r[0], y + dy - 0.3, best.q[1] + r[1]] });
+      }
+    }
+  return out;
+})();
+function drawCable(b: Batch, cb: (typeof CABLES)[number]) {
+  const { a, c } = cb;
+  const l = Math.hypot(c[0] - a[0], c[2] - a[2]);
+  const sag = 0.05 * l;
+  const at = (f: number): [number, number, number] => [a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f - sag * 4 * f * (1 - f), a[2] + (c[2] - a[2]) * f];
+  for (let k = 0; k < 10; k++) rod(b, at(k / 10), at((k + 1) / 10), 0.022, RAIL, 4);
+  // (its brackets on the walls)
+  for (const p of [a, c]) b.add(plain(new THREE.BoxGeometry(0.12, 0.16, 0.12).translate(p[0], p[1], p[2])), RAIL);
+}
+
+/** Puddles in a court (a few, hashed), catching the sodium lamps at night; near only */
+function courtPuddles(b: Batch, poly: Pt[], id: string, y: number) {
+  const [x0, z0, x1, z1] = rectOf(poly, 0);
+  const h0 = hashOf(id);
+  for (let x = x0 + 3; x < x1 - 3; x += 5.5)
+    for (let z = z0 + 3; z < z1 - 3; z += 5.5) {
+      const h = Math.abs(Math.round(x * 13 + z * 7 + h0));
+      if (h % 3 || !insidePoly(poly, [x, z])) continue;
+      const [rx, rz] = [0.5 + (h % 4) * 0.2, 0.3 + (h % 3) * 0.15];
+      flat(b, Array.from({ length: 10 }, (_, i): Pt => {
+        const q = (i / 10) * Math.PI * 2;
+        return [x + Math.cos(q) * rx, z + Math.sin(q) * rz];
+      }), y + 0.012, PUDDLE_SHINE);
+    }
 }
 
 /* ---------- The Perch (docs/brutalist-plan.md Phase 3) ---------- */
@@ -1363,6 +1535,7 @@ function registerYard(low: boolean, scene: THREE.Scene | null) {
     site(`south-blocks ${c.id}`, rectOf(c.poly, 1), (into) => {
       const b = new Batch();
       drawCourt(b, c.poly, c.id);
+      if (!low) b.detail(() => courtPuddles(b, c.poly, c.id, ON + 0.004));
       for (const t of [...BIN_STORES, ...BIKE_SHEDS].filter((q) => rectHas(rectOf(c.poly, 4), q.at))) (t.kind === 'bins' ? drawBins(b, t, low) : drawShed(b, t));
       b.build(into, { cast: true, receive: true });
     });
@@ -1497,6 +1670,17 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
     site(`south-blocks deck ${d.id}`, rectOf(d.poly, 1), (into) => {
       const b = new Batch();
       drawDeck(b, d.poly, d.y, Math.min(...BLOCKS.filter((q) => q.id === 'teasel' || q.id === 'fennel').map((q) => q.base)));
+      // (the shops under it, docs/brutalist-plan.md Phase 5)
+      drawShops(b, low);
       b.build(into, opts);
     });
+  // Cables strung between the blocks (Phase 5), not on phones
+  if (!low)
+    CABLES.forEach((cb, i) =>
+      site(`south-blocks cable ${i}`, [Math.min(cb.a[0], cb.c[0]) - 1, Math.min(cb.a[2], cb.c[2]) - 1, Math.max(cb.a[0], cb.c[0]) + 1, Math.max(cb.a[2], cb.c[2]) + 1], (into) => {
+        const b = new Batch();
+        drawCable(b, cb);
+        b.build(into, { cast: false, receive: false, lift: false });
+      })
+    );
 }
