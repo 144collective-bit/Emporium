@@ -784,6 +784,8 @@ export interface Piece {
   color: string | ColorKey;
   /** Darker or lighter than the outfit colour (lapels, ribbing) */
   shade?: number;
+  /** Blended this far (0 to 1) into another of the outfit's colours (a character's painted buzz, softened into his skin) */
+  blend?: { key: ColorKey; t: number };
   mat?: Mat;
   /** Small details left out of the light (phone) crowd */
   detail?: boolean;
@@ -5194,7 +5196,9 @@ export function items(q: Detail, hero = false): Item[] {
           (id): Item => ({
             id: `character-${id}`,
             when: (o) => o.character === id,
-            pieces: heads!.parts(id, q as 2 | 3).map((h) => P('head', one(h.geos), h.color, { ...(h.shade ? { shade: h.shade } : {}), ...(h.detail ? { detail: true } : {}), ...(h.rigid ? { bone: 'head' as BoneName } : {}) })),
+            pieces: heads!.parts(id, q as 2 | 3).map((h) =>
+              P('head', one(h.geos), h.color, { ...(h.shade ? { shade: h.shade } : {}), ...(h.detail ? { detail: true } : {}), ...(h.rigid ? { bone: 'head' as BoneName } : {}), ...(h.blend ? { blend: { key: h.blend.key as ColorKey, t: h.blend.t } } : {}) })
+            ),
           })
         )
       : []),
