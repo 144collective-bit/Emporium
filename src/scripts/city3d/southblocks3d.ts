@@ -29,10 +29,10 @@ import { PLANT } from './palette';
 import { shift } from './streetfaces';
 import {
   ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
-  DECK_SHOPS, DECK_SHOP_NAMES, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
+  DECK_SHOPS, DECK_SHOP_NAMES, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
-import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors } from './southsky';
+import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
 import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, COLUMN_R, DECK_COLUMNS, DECK_PROPS, FRAME, SANDPIT, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
 import { COURTS, DESIRE_LINES, GRASS, PLAY, landingPosts } from './southblocks';
 import { BANK, COVER, ROAD, STONE } from './palette';
@@ -1263,6 +1263,104 @@ function courtPuddles(b: Batch, poly: Pt[], id: string, y: number) {
     }
 }
 
+/* ---------- The lobbies (docs/brutalist-plan.md Phase 6) ---------- */
+
+/** The halls' floor (terrazzo, worn), their walls (painted concrete, scuffed) and the plywood over a broken pane */
+const TERRAZZO = toon('#8f8a80');
+const HALL_WALL = toon('#9a9a8c');
+const PLY_BOARD = toon('#a3804f');
+
+/**
+ * A lobby (southblocks.ts `LOBBIES`): its floor, ceiling and walls seen from inside (the front's glass from outside is
+ * the block's own), the doorway's frame and reveals; inside, near: the post boxes and the noticeboard on its side walls,
+ * a bench and the lift doors on its back wall, the stairs up in its corner, strip lights (one flickering, one dead),
+ * and its grit (the owner's pick, rough: tags, litter, a boarded pane, a dented post box); never threatening
+ */
+function drawLobby(b: Batch, l: (typeof LOBBIES)[number], low: boolean) {
+  const k = kit(b, WORLD);
+  const { w, d, base, t, n } = l;
+  const wall = HALL.wall;
+  const at = (u: number, o: number): Pt => [l.door[0] + t[0] * u + n[0] * o, l.door[1] + t[1] * u + n[1] * o];
+  const top = base + GROUND_H - 0.04;
+  const back = -wall - d;
+  const nIn: Pt = [-n[0], -n[1]];
+  const ry = -Math.atan2(t[1], t[0]);
+  const h = hashOf(l.id);
+  k.all(() => {
+    flat(b, l.poly, base + 0.012, TERRAZZO);
+    flat(b, l.doorPoly, base + 0.012, TERRAZZO);
+    flat(b, l.poly, top, CONC_DARK, false);
+    // (its walls' inner faces: the back, the two sides, and the front either side of the door)
+    quad(b, at(-w / 2, back), at(w / 2, back), base, top, n, HALL_WALL);
+    quad(b, at(-w / 2, -wall), at(-w / 2, back), base, top, t, HALL_WALL);
+    quad(b, at(w / 2, back), at(w / 2, -wall), base, top, [-t[0], -t[1]], HALL_WALL);
+    quad(b, at(-w / 2, -wall), at(-HALL.door / 2, -wall), base + 1.02, top, nIn, HALL_WALL);
+    quad(b, at(HALL.door / 2, -wall), at(w / 2, -wall), base + 1.02, top, nIn, HALL_WALL);
+    quad(b, at(-w / 2, -wall), at(-HALL.door / 2, -wall), base, base + 1.02, nIn, GLASS);
+    quad(b, at(HALL.door / 2, -wall), at(w / 2, -wall), base, base + 1.02, nIn, GLASS);
+    // (the doorway's reveals through the wall, its frame on the face, a dark mat on the step)
+    for (const sx of [-1, 1]) {
+      quad(b, at((sx * HALL.door) / 2, 0.02), at((sx * HALL.door) / 2, -wall), base, base + 1.15, [-t[0] * sx, -t[1] * sx], CONC);
+      along(b, at((sx * HALL.door) / 2 + sx * 0.05, 0.03), at((sx * HALL.door) / 2 + sx * 0.05, 0.11), 0.1, base, base + 1.2, RAIL);
+    }
+    along(b, at(-HALL.door / 2 - 0.1, 0.07), at(HALL.door / 2 + 0.1, 0.07), 0.08, base + 1.15, base + 1.25, RAIL);
+    flat(b, [at(-0.5, 0.6), at(0.5, 0.6), at(0.5, 0.02), at(-0.5, 0.02)], base + 0.016, DOOR);
+    // Its lights: strip lights on the ceiling (lit warm at night through the glass), the second one dead
+    along(b, at(-1.4, back / 2 - 0.4), at(-0.2, back / 2 - 0.4), 0.09, top - 0.04, top - 0.01, h % 2 ? STRIP_TIRED : STRIP);
+  });
+  if (low) return;
+  b.detail(() => {
+    // The post boxes: a steel bank of little doors on the left wall, one hanging open, one dented in
+    const pb = at(-w / 2 + 0.06, back + 1.6);
+    b.add(plain(new THREE.BoxGeometry(0.1, 0.62, 1.4).rotateY(ry).translate(pb[0], base + 0.62, pb[1])), SHUTTER);
+    for (let r = 0; r < 4; r++)
+      for (let c = 0; c < 6; c++) {
+        const q = at(-w / 2 + 0.115, back + 1.6 - 0.58 + c * 0.23);
+        const open = (h + r * 7 + c) % 13 === 0;
+        b.add(plain(new THREE.BoxGeometry(0.02, 0.11, 0.18).rotateY(ry + (open ? 0.9 : 0)).translate(q[0], base + 0.38 + r * 0.15, q[1])), (h + r + c) % 9 === 0 ? CONC_DARK : RAIL);
+      }
+    // The noticeboard on the right wall, notices pinned up, one torn off and hanging
+    const nb = at(w / 2 - 0.05, back + 2.6);
+    b.add(plain(new THREE.BoxGeometry(0.06, 0.46, 0.8).rotateY(ry).translate(nb[0], base + 0.8, nb[1])), RAIL);
+    b.add(plain(new THREE.BoxGeometry(0.065, 0.38, 0.7).rotateY(ry).translate(nb[0] - t[0] * 0.005, base + 0.8, nb[1] - t[1] * 0.005)), CORK);
+    for (let q = 0; q < 5; q++) {
+      const p = at(w / 2 - 0.09, back + 2.35 + q * 0.12);
+      b.add(plain(new THREE.BoxGeometry(0.01, 0.12, 0.1).rotateY(ry).translate(p[0], base + 0.72 + ((h + q * 3) % 3) * 0.08, p[1])), q % 2 ? DISH : TAG_PAINT[(h + q) % TAG_PAINT.length]);
+    }
+    // The bench on the back wall, worn slats on concrete ends
+    const { bench, stairs } = lobbyProps(l);
+    const bc: Pt = [bench.reduce((a, p) => a + p[0], 0) / 4, bench.reduce((a, p) => a + p[1], 0) / 4];
+    b.add(plain(new THREE.BoxGeometry(1.4, 0.06, 0.42).rotateY(ry).translate(bc[0], base + 0.42, bc[1])), PLY_BOARD);
+    for (const u of [-0.6, 0.6]) b.add(plain(new THREE.BoxGeometry(0.1, 0.4, 0.4).rotateY(ry).translate(bc[0] + t[0] * u, base + 0.2, bc[1] + t[1] * u)), CONC);
+    // The lift doors on the back wall (they call the block's lift: southsky.ts `lobbyLiftDoor()`), a lit strip over them
+    const ld = lobbyLiftDoor(l);
+    const lw: Pt = [ld[0] - n[0] * 0.53, ld[1] - n[1] * 0.53];
+    for (const u of [-0.24, 0.24]) quad(b, [lw[0] + t[0] * (u - 0.23), lw[1] + t[1] * (u - 0.23)], [lw[0] + t[0] * (u + 0.23), lw[1] + t[1] * (u + 0.23)], base, base + 1.05, n, SHUTTER);
+    quad(b, [lw[0] - t[0] * 0.5, lw[1] - t[1] * 0.5], [lw[0] + t[0] * 0.5, lw[1] + t[1] * 0.5], base + 1.08, base + 1.13, n, STRIP);
+    // The stairs up in the corner: a flight rising to the ceiling along the right wall
+    const s0 = stairs;
+    const sc: Pt = [s0.reduce((a, p) => a + p[0], 0) / 4, s0.reduce((a, p) => a + p[1], 0) / 4];
+    for (let i = 0; i < 8; i++) {
+      const o = back + 0.1 + i * 0.26;
+      const p = at(w / 2 - 0.55, o);
+      b.add(plain(new THREE.BoxGeometry(1, (i + 1) * 0.17, 0.26).rotateY(ry).translate(p[0], base + ((i + 1) * 0.17) / 2, p[1])), CONC);
+    }
+    along(b, at(w / 2 - 1.08, back + 0.1), at(w / 2 - 1.08, back + 2.2), 0.05, base + 0.9, base + 0.96, RAIL);
+    void sc;
+    // Its grit: tags on the walls, litter on the floor, a pane boarded over by the door
+    for (let i = 0; i < 7; i++) {
+      const u = -w / 2 + 0.5 + i * 0.2;
+      const [v0, v1] = [0.28 + ((h + i * 3) % 5) * 0.06, 0.32 + ((h + i * 7) % 5) * 0.06];
+      quad(b, at(u, back + 0.012), at(u + 0.16, back + 0.012), base + Math.min(v0, v1), base + Math.max(v0, v1) + 0.07, n, TAG_PAINT[(h + i) % TAG_PAINT.length]);
+    }
+    for (let i = 0; i < 5; i++) {
+      const p = at(-1 + ((h + i * 5) % 9) * 0.25, back + 0.6 + ((h + i * 3) % 7) * 0.35);
+      b.add(plain(new THREE.BoxGeometry(0.12, 0.03, 0.08).rotateY(ry + i).translate(p[0], base + 0.03, p[1])), i % 2 ? DISH : BAG);
+    }
+    quad(b, at(HALL.door / 2 + 0.15, -wall - 0.02), at(HALL.door / 2 + 1.1, -wall - 0.02), base + 0.15, base + 0.95, nIn, PLY_BOARD);
+  });
+}
+
 /* ---------- The Perch (docs/brutalist-plan.md Phase 3) ---------- */
 
 /** Its floor slab's depth, its glass band's height over its floor, its ceiling under its roof */
@@ -1673,6 +1771,13 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       // (the shops under it, docs/brutalist-plan.md Phase 5)
       drawShops(b, low);
       b.build(into, opts);
+    });
+  // The lobbies (Phase 6): each its own site, out of the sun's shadow (they're inside the blocks)
+  for (const l of LOBBIES)
+    site(`south-blocks ${l.id}`, rectOf([...l.poly, ...l.doorPoly], 1), (into) => {
+      const b = new Batch();
+      drawLobby(b, l, low);
+      b.build(into, { cast: false, receive: false, lift: false });
     });
   // Cables strung between the blocks (Phase 5), not on phones
   if (!low)
