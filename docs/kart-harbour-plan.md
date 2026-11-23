@@ -160,7 +160,11 @@ Each phase merges on its own and leaves the city working; the new park is behind
    - **What waits for later phases:** the ceremony on its podium (results after a breath until Phase 4), its marshals
      and their flags (Phase 4's race control), the course's boards, braking markers and arrows (Phase 5). The cups
      keep today's circuit until the switch.
-4. **The venue, behind the switch**, a step a night: 4a workshops and the tyre store; 4b the hire-kart garage;
+4. **The venue, behind the switch**, a step a night: 4a workshops and the tyre store (done, 2026-11-23: `kartvenue2.ts`,
+   drawn by `kartvenue2-3d.ts` with the track's district: on a concrete apron along the south side, the tuning shed with
+   three bays behind roller doors half up, benches and vices under tool walls, karts on stands and a trolley, an
+   engine rack and a parts counter; the tyre store with its racks and fitting machine; loose stacks by the sheds and
+   along the pit lane; the corners' tyre walls in the club's colours, cyan, white and pink; solids for all of it); 4b the hire-kart garage;
    4c the paddock (transporters, awnings, vans, trailers, the kart wash, weighbridge, scrutineering); 4d race control
    and safety (the tower, start gantry, marshal posts, tractor, medical cabin); 4e the visitors' side (grandstand,
    banks, café deck, kiosk, gate, toilets, banners) and the clubhouse, podium, screens and crowd moved over.
