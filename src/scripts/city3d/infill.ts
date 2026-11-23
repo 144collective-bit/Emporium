@@ -30,7 +30,7 @@ import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './wor
 import type { Idle } from './landmarks';
 import { ROOF_TONES, corniceAt, roofTone, type CorniceKind } from './rooftones';
 import { WINDOW_TYPE, paneAt, type Light, type Pane, type WallKindName } from './windows';
-import { packRoomUv, roomCode } from './rooms';
+import { DAY_BIT, packRoomUv, roomCode } from './rooms';
 import { ROOMS_MAT } from './rooms3d';
 
 /* ---------- The wall atlas ---------- */
@@ -1220,6 +1220,45 @@ function towerSkin(b: Batch, F: Frame, a0: number, a1: number, c0: number, c1: n
 }
 /** A curtain wall's panes across a band (the atlas paints a mullion every 24 of its 384 pixels) */
 const CURTAIN_PANES = 16;
+
+/**
+ * A diner's long window modelled (docs/buildings-plan.md Phase 4): chrome mullions on the painted ones (every 42 of the
+ * band's 256 pixels), a chrome sill and head along it on every wall, and on desktops a room behind each pane, lit warm
+ * by day and night as the paint is (the counter and its booths seen through). Each wall in a frame turned to it, its
+ * band laid from its own `u0` (the diner's walls start their bands at different places: `[front, left, right, back]`).
+ */
+function dinerSkin(b: Batch, F: Frame, w: number, d: number, starts: [number, number, number, number], chrome: THREE.Material) {
+  const step = (SHOP_W * DINER_MULLION) / 256;
+  // (the window's foot and head: the band's 16 to 62 of its 100 pixels from the top)
+  const [y0, y1] = [S + SHOP_H * (1 - 62 / 100), S + SHOP_H * (1 - 16 / 100)];
+  const walls: [number, number, number, number, number, number, number, number][] = [
+    [0, 0, 1, 0, 0, 1, w, starts[0]],
+    [0, -d, 0, 1, -1, 0, d, starts[1]],
+    [w, 0, 0, -1, 1, 0, d, starts[2]],
+    [w, -d, -1, 0, 0, -1, w, starts[3]],
+  ];
+  walls.forEach(([pu, pv, du, dv, nu, nv, L, u0], i) => {
+    const T = new THREE.Matrix4().makeBasis(new THREE.Vector3(du, 0, dv), new THREE.Vector3(0, 1, 0), new THREE.Vector3(nu, 0, nv)).setPosition(pu, 0, pv);
+    const k = kit(b, { ...F, M: F.M.clone().multiply(T) });
+    k.wbox(0, L, y0 - 0.045, y0, 0.05, chrome);
+    k.wbox(0, L, y1, y1 + 0.04, 0.04, chrome);
+    const first = (((Math.ceil(u0 * (256 / DINER_MULLION) - 1e-6) - u0 * (256 / DINER_MULLION)) * DINER_MULLION) / 256) * SHOP_W;
+    const edges: number[] = [];
+    for (let x = first; x < L - 0.03; x += step) if (x > 0.03) edges.push(x);
+    for (const x of edges) k.wbox(x - 0.015, x + 0.015, y0, y1, 0.035, chrome);
+    if (LOW) return;
+    // (the front's door, a chrome frame across its middle: no room there)
+    const door: [number, number] | null = i === 0 ? [w * 0.5 - 0.37, w * 0.5 + 0.37] : null;
+    const cuts = [0, ...edges, L];
+    for (let j = 0; j + 1 < cuts.length; j++) {
+      const [x0, x1] = [cuts[j] + 0.016, cuts[j + 1] - 0.016];
+      if (x1 - x0 < 0.15 || (door && x1 > door[0] && x0 < door[1])) continue;
+      roomQuad(k, x0, x1, y0, y1, 1 + DAY_BIT);
+    }
+  });
+}
+/** The diner band's mullions: one every this many of its 256 pixels */
+const DINER_MULLION = 42;
 /** How far a room's quad stands off the painted glass (nothing flush), inside the window's frame */
 const ROOM_OUT = 0.005;
 
@@ -1640,6 +1679,7 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     k.lbox(-0.04, w + 0.04, top - 0.1, top - 0.05, -d + 0.1, 0.05, glow(PAL.cyan));
     k.lbox(0, w, top, top + 0.06, -d, 0, ROOF);
     });
+    dinerSkin(b, F, w, d, [u0, 0.2, 0.2, 0.5], chrome);
     // The door: a chrome frame on the front
     k.lbox(w * 0.5 - 0.35, w * 0.5 + 0.35, S, S + 1.15, 0, 0.04, chrome);
     k.lbox(w * 0.5 - 0.27, w * 0.5 + 0.27, S + 0.05, S + 1.08, 0.02, 0.05, toon('#3e5a8f'));

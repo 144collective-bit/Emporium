@@ -154,11 +154,35 @@ in their sites (and in the site worker).
   The Block 0.38M to 0.46M triangles; with phones kept painted, the
   phone's geometry after the views is 111.6 MB before and after.
 
-### Phase 4: the glass and the extras
+### Phase 4: the glass and the extras (built, waiting on the owner's sign-off)
 
 Mullion fins and spandrels on the offices' towers; the diners; and, on
 desktops only, rooms behind the glass (interior mapping) if the owner
-wants it after seeing the rest.
+wants it after seeing the rest (the owner's pick: yes).
+
+- **The towers** (`towerSkin()` in infill.ts): each glass wall in a frame
+  turned to it, as its band runs. A fin on every painted mullion (every
+  half cell: where the band's u is on one of its 16 panes' edges; every
+  other one on phones), a spandrel over each floor's painted dark band.
+- **The diners** (`dinerSkin()`): chrome mullions on the painted ones
+  (every 42 of the band's 256 pixels), a chrome sill and head along the
+  long window on all four walls.
+- **Rooms behind the glass, desktops only** (rooms.ts, DOM-free and
+  tested; rooms3d.ts): a quad 5 mm off each bare window's painted glass
+  (a window with blinds or curtains keeps its paint, so near and far
+  agree), each tower pane and each diner pane, in one material
+  (`ROOMS_MAT`, a `MeshBasicMaterial` with `onBeforeCompile`: batching and
+  fog as any other). Its shader casts the view into a box behind the wall
+  (interior mapping) and draws the back wall (a sofa or desk along its
+  foot, a picture over it), the sides, floor and ceiling in flat colours
+  with ink where they meet, and the glass's sky over it (more at a
+  glancing look). By day it's well under the street's light; at night it
+  takes the painted window's own light (`paneAt()` of that window's atlas
+  cell: its band's seed, the band's row on its floor, its column), or
+  goes dark; a diner's is warm day and night. A Batch keeps only position,
+  normal and uv, so the window's size and its light ride in the uv's whole
+  part (`packRoomUv()`); the colours are written as on screen and turned
+  to linear light at the end, as the atlas's are.
 
 ## Numbers
 
