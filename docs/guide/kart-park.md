@@ -5,6 +5,11 @@ keep it up to date when what it describes changes.
 
 ## The kart park (3D walk mode)
 
+- **The next move** (the owner's ask, 2026-11-23, for the owner's sign-off): to the south bank west of the Docks, on
+  a new longer figure-of-eight circuit with a crossover bridge, built up as a real kart venue with night racing, a
+  river bus stop at its gate, records reset: `docs/kart-harbour-plan.md`. Until its switch, what's below describes the
+  park as it stands.
+
 - **The move west and the upgrade** (the owner's call, 2026-11) are
   planned in `docs/kart-west-plan.md` in eight phases: the move, nothing
   clipping, the facility, the live crowd and the podium, driving, your
