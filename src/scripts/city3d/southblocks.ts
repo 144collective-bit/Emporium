@@ -850,12 +850,22 @@ export const FLAT = (() => {
     ceil: floorY(KITE.base, FLAT_FLOOR + 1) - 0.06,
     /** The whole flat's outline (its walls inside the tower: hollow for the camera) */
     outline: rect(-5.5, 3, -0.3, -5.8),
+    /** Its floors, laid round what's in the rooms (walked only where they are: the sofa, the counter and the bed stop you) */
     rooms: {
       door: rect(-0.6, 0.6, 0.35, -0.55),
-      living: rect(-5.4, 0.75, -0.35, -5.7),
+      living: rect(-4.75, 0.75, -0.35, -4.65),
       hall: rect(0.65, 2.9, -0.35, -3.05),
-      bedroom: rect(0.95, 2.9, -2.95, -5.7),
+      bedroom: rect(0.95, 2.9, -2.95, -3.95),
+      bedside: rect(0.95, 1.25, -3.9, -5.7),
     },
+    /** What's in the rooms, in (u0, u1, o0, o1, height): southblocks3d.ts draws them */
+    things: {
+      sofa: [-3.7, -0.7, -4.7, -5.65, 0.42],
+      table: [-2.7, -1.7, -3.4, -4.0, 0.28],
+      counter: [-5.45, -4.8, -0.8, -5.65, 0.55],
+      bed: [1.3, 2.95, -4.0, -5.75, 0.36],
+      telly: [-3.0, -1.4, -0.42, -0.5, 0.62],
+    } as Record<string, [number, number, number, number, number]>,
     /** Where he wakes there (the owner's pick: a choice on its card), facing out of the windows */
     wake: (() => {
       const p = at(-2.4, -2.6);

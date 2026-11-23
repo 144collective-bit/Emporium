@@ -108,7 +108,10 @@ import type { TubeUI } from './tube-ui';
 import type { Tube } from './tube3d';
 import { HALL_Y, PLAT_DOOR, PLAT_Y, SOUTH_STATIONS, lineAt } from './southline';
 import type { SkyLiftUI } from './skylift-ui';
-import { skyLiftDoors } from './southsky';
+import { flatDoors, setFlatOpen, skyLiftDoors } from './southsky';
+import { FLAT } from './southblocks';
+import type { FlatUI } from './flat-ui';
+import { wakeAt } from './tycoon';
 import { YARD_TREES } from './southyard';
 import { FLOOR, PLANTERS, PLANTER_H, PLAZA, PLAZA_LAMPS as CIRCUS_LAMPS } from './circus';
 const CIRCUS_MID = [PLAZA.x, PLAZA.z] as const;
@@ -1053,6 +1056,23 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     ),
     'the stash'
   );
+  // Degen's flat's card (flat-ui.ts, at its door in Kite Point: docs/brutalist-plan.md Phase 7a): loaded when it first opens
+  let flatUI: FlatUI | null = null;
+  const loadFlat = lazy(
+    () =>
+      import('./flat-ui').then(({ createFlatUI }) =>
+        (flatUI = createFlatUI(root, {
+          game,
+          opened: () => {
+            walk.releaseMouse();
+            close();
+            tycoon?.closeCard();
+          },
+          owned: () => setFlatOpen(true),
+        }))
+      ),
+    'the flat'
+  );
   const loadRiverBus = lazy(
     () =>
       import('./riverbus-ui').then(({ createRiverBusUI }) =>
@@ -1303,7 +1323,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...CABLE_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
+    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...CABLE_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...flatDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     openPlace: (id) => {
       // (Degen's front and back doors, home.ts: a fade in or out of the room inside)
       // (in his room, home.ts `HOME_USES`: the wardrobe is the fitting room, the trunk the stash)
@@ -1316,6 +1336,11 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         walk.releaseMouse();
         return tycoon?.openCard();
       }
+      // (Degen's flat's door, Kite Point: its card, to buy it or choose where he wakes)
+      if (id === 'flat:door')
+        return void loadFlat()
+          .then((ui) => ui.open())
+          .catch(() => game.toast('Flat stuck · try again'));
       if (id === 'home:stash')
         return void loadStash()
           .then((ui) => ui.open())
@@ -1549,6 +1574,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
   function startWalking(spawn?: { x: number; z: number; yaw: number; y?: number }, seat?: { x: number; z: number; ry: number; h: number }) {
     if (walking) return;
+    // (Degen's flat's door opens once it's his: the save's, docs/brutalist-plan.md Phase 7a)
+    setFlatOpen(!!tycoon?.save.flat);
     // (unless the owner has closed it for now: live settings)
     const shut = live.closed('walk');
     if (shut) return tycoon?.toast(shut, 3500);
@@ -1582,6 +1609,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     monoUI?.close();
     skyLiftUI?.close();
     stashUI?.close();
+    flatUI?.close();
     mp?.walkChanged(false);
     document.body.classList.remove('is-walking');
     close();
@@ -1631,7 +1659,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !shown : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || cableUI?.skip() || cableUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || flatUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || cableUI?.skip() || cableUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -2526,6 +2554,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     async wake() {
       if (root.dataset.mode !== 'explore' || live.closed('walk')) return false;
       const there = new URLSearchParams(location.search).has('spawn');
+      // (in his flat in Kite Point if it's his and he chose it, docs/brutalist-plan.md Phase 7a: its block's chunk and
+      // what's round it built first; standing, by the front windows)
+      if (!there && tycoon && wakeAt(tycoon.save) === 'flat') {
+        setFlatOpen(true);
+        await Promise.race([districts.load('south-blocks'), new Promise((r) => setTimeout(r, 10000))]);
+        works.want(FLAT.wake.x, FLAT.wake.z, 25);
+        wokeAt = performance.now();
+        street = { ready: false, at: 0 };
+        startWalking({ ...FLAT.wake, y: FLAT.y - SLAB });
+        return true;
+      }
       // (unless the owner has closed his house for now: then in the yard outside it)
       const home = live.place('home');
       const inside = !there && !(home && !home.open);
