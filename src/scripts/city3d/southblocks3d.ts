@@ -1409,6 +1409,13 @@ function drawFlat(b: Batch, low: boolean) {
     box(th.bed, CONC_DARK);
     box([th.bed[0] + 0.05, th.bed[1] - 0.05, th.bed[2] - 0.05, th.bed[3] + 0.35, 0.1], DUVET, y + th.bed[4]);
     box(th.telly, RAIL);
+    // (its windows along the front: a low sill, mullions every 1.4 and a head, the doorway clear)
+    for (const [a, c] of [[u0, -0.65], [0.65, u1]] as [number, number][]) {
+      along(b, at(a, -0.34), at(c, -0.34), 0.08, y, y + 0.22, CONC);
+      along(b, at(a, -0.34), at(c, -0.34), 0.08, ceil - 0.16, ceil, CONC);
+      for (let u = a + 0.05; u <= c - 0.05; u += 1.4) along(b, at(u - 0.03, -0.34), at(u + 0.03, -0.34), 0.06, y + 0.22, ceil - 0.16, RAIL);
+    }
+    for (const u of [-0.65, 0.65]) along(b, at(u, -0.05), at(u, -0.36), 0.1, y, ceil, CONC);
     // (his lights: a strip over the living room, one over the bed)
     along(b, at(-3.4, -2.6), at(-1.0, -2.6), 0.1, ceil - 0.04, ceil - 0.01, STRIP);
     along(b, at(1.5, -4.6), at(2.5, -4.6), 0.1, ceil - 0.04, ceil - 0.01, STRIP);
