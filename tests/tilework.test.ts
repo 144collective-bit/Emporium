@@ -113,3 +113,45 @@ test("tiles that let go come back a tile at a frame when the frame's time is sho
   assert.equal(works.stats().rebuilt, 3);
   assert.equal(works.stats().released, 0);
 });
+
+test('a site across tiles that let go runs once for them all, and a tile shows again once every one of its sites is back', () => {
+  const runs: string[] = [];
+  const at = (into: THREE.Object3D, x: number) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1).translate(x, 0.5, 15), paint);
+    m.userData.batched = true;
+    m.userData.lod = 'near';
+    into.add(m);
+  };
+  site('home', [13, 13, 17, 17], (into) => {
+    runs.push('home');
+    at(into, 15);
+  });
+  // A wide site with a piece on each of three tiles side by side, far east, and a small one on the middle tile
+  site('wide', [610, 13, 680, 17], (into) => {
+    runs.push('wide');
+    for (const x of [615, 645, 675]) at(into, x);
+  });
+  site('small', [643, 13, 647, 17], (into) => {
+    runs.push('small');
+    at(into, 646);
+  });
+  const scene = new THREE.Scene();
+  const works = createTileWork(scene, { budget: 0, compile: () => {} });
+  const tiled = tileBatch(scene, [scene, ...works.boot(tilesNear(15, 15, 40))]);
+  works.attach(tiled);
+  works.want(645, 15, 60);
+  assert.deepEqual(runs.sort(), ['home', 'small', 'wide']);
+  tiled.update(15, 30, 15, 100);
+  works.step(0, 15, 30, 15, 0.016, 100);
+  assert.equal(works.stats().released, 3);
+  // No time in the frame: the wide site comes back on all three tiles in one run; the middle tile waits on the small one
+  works.step(0, 650, 30, 15, 0.016, 100);
+  assert.equal(runs.filter((r) => r === 'wide').length, 2);
+  assert.equal(works.stats().rebuilt, 2);
+  assert.equal(works.stats().released, 1);
+  works.step(0, 650, 30, 15, 0.016, 100);
+  assert.equal(runs.filter((r) => r === 'wide').length, 2);
+  assert.equal(runs.filter((r) => r === 'small').length, 2);
+  assert.equal(works.stats().rebuilt, 3);
+  assert.equal(works.stats().released, 0);
+});

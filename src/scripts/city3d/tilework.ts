@@ -76,7 +76,7 @@ const TOP = 24;
 /** The fastest the camera is taken to move over the ground, in tiles a second (an aircraft's cruise) */
 const MAX_SPEED = 40;
 
-/** The most released tiles built again in one frame, time allowing (`step()`) */
+/** How many of the nearest released tiles have their sites built again in one frame, time allowing (`step()`) */
 const REBUILD_AT_ONCE = 4;
 
 export function createTileWork(
@@ -180,6 +180,34 @@ export function createTileWork(
     rebuilt += keys.length;
   }
 
+  /** The sites the tiles in `keys` let go (the first tile's first), each run once for all of them it lost pieces in, the
+   * first now and the rest while the frame's time (`ms` from `t0`) lasts; a tile is restored once all its sites are */
+  function rebuildSites(keys: string[], t0: number, ms: number) {
+    const jobs = new Map<string, Set<string>>();
+    for (const k of keys)
+      for (const id of tiled!.lostSites(k)) {
+        if (!jobs.has(id)) jobs.set(id, new Set());
+        jobs.get(id)!.add(k);
+      }
+    let n = 0;
+    for (const [id, tiles] of jobs) {
+      if (n++ && performance.now() - t0 >= ms) break;
+      run(byId.get(id)!, (t, lod) => tiles.has(t) && lod === 'near');
+      for (const k of tiles)
+        if (tiled!.siteBack(k, id)) {
+          released.delete(k);
+          rebuilt++;
+        }
+    }
+    // (a tile let go with nothing of a site's in it: restored as it is)
+    for (const k of keys)
+      if (!tiled!.lostSites(k).length && released.has(k)) {
+        tiled!.restored(k);
+        released.delete(k);
+        rebuilt++;
+      }
+  }
+
   /** Build again what the tiles in `keys` let go past the haze, but their near pieces (they're still far) */
   function regain(keys: string[]) {
     const want = new Set(keys);
@@ -269,13 +297,13 @@ export function createTileWork(
         const back = toReturn(tiled.held(x, y, z), horizon);
         for (let i = 0; i < back.length && (i === 0 || performance.now() - t0 < ms); i++) regain([back[i]]);
       }
-      // Tiles coming back into reach first: they're needed soonest. A tile at a time, nearest first, the first one now
-      // and up to four in this frame's time (four at once took 270-320 ms of one frame on memcheck's phone, coming to a
-      // view whose tiles had let go: south-rampart, crest-drive; the rest come in the frames after)
-      if (released.size) {
-        const back = toRebuild(releasedNear(x, y, z), far);
-        for (let i = 0; i < Math.min(back.length, REBUILD_AT_ONCE) && (i === 0 || performance.now() - t0 < ms); i++) rebuild([back[i]]);
-      }
+      // Tiles coming back into reach first: they're needed soonest. A site at a time, the nearest tile's first, each run
+      // once for every one of the nearest few (`REBUILD_AT_ONCE`) it let go in: the first now, the rest in this frame's
+      // time, then the frames after. A tile's near pieces show once all its sites are back (tilebatch.ts `siteBack()`).
+      // (Four whole tiles at once took 270-320 ms of one frame on memcheck's phone, coming to a view whose tiles had let
+      // go; a tile at a time still ran a big site, such as Degen's home at 156 ms, with its tile's others in one frame,
+      // and a site across four tiles four times over)
+      if (released.size) rebuildSites(toRebuild(releasedNear(x, y, z), far).slice(0, REBUILD_AT_ONCE), t0, ms);
       const [fx, fz] = focusOf(look ? look[0] : x, look ? look[1] : z, vel.x, vel.z);
       // (a site waiting past the haze waits on: built now, it would be let go at once)
       const inReach = (s: Site) => !Number.isFinite(horizon) || rectDistance(x, z, s.rect) <= horizon + HORIZON_OUT;

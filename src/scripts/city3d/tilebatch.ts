@@ -88,6 +88,8 @@ export interface TileBatches {
   release(tile: string): number;
   /** Mark a tile's near pieces built again */
   restored(tile: string): void;
+  /** One of the sites a tile let go has run again for it; true once they all have (the tile's restored then) */
+  siteBack(tile: string, site: string): boolean;
   /** The tiles holding near pieces that could be let go, and those that let them go */
   /** What the pieces held take, by level and whether they can be let go (for the ?fps console) */
   bytesBy(): Record<string, number>;
@@ -521,6 +523,14 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       if (!t) return;
       t.released = false;
       t.lost.clear();
+    },
+    siteBack(key, site) {
+      const t = tiles.get(key);
+      if (!t) return true;
+      t.lost.delete(site);
+      if (t.lost.size) return false;
+      t.released = false;
+      return true;
     },
     held(x, y, z) {
       const out: { key: string; d: number; bytes: number; near: boolean; released: boolean; all: number; gone: boolean }[] = [];
