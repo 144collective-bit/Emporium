@@ -1290,6 +1290,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Made further down too, like sfx
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
+    step: (e) => sound.step(e),
+    rain: () => env.rain,
     // Your business's places, and the metro's station doors
     places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...CABLE_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     openPlace: (id) => {

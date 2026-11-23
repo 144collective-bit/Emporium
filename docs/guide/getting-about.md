@@ -170,6 +170,18 @@ keep it up to date when what it describes changes.
     per car model, `BIKE_VOICE` in mybike.ts, the kart `kart`, the hire
     boat `boat`; the kart is a single speed, `motorOf(..., 1)`).
 
+    **Degen's footsteps** (docs/sound-plan.md Phase 1): `footsteps.ts`
+    (DOM-free, tested in `tests/footsteps.test.ts`, loaded the first time
+    he's on foot) gives a step as each foot comes down (the motion capture's
+    foot locking, animator.ts `feet[i].locked`, or the procedural walk's
+    stance), by gait and weight, a landing, a scuff and a slide's scrape, on
+    what's underfoot (`surfaceAt()`: groundheight.ts's layers as `groundAt()`
+    asks them, `LAYER_SURFACE`; a street's asphalt, `onStreet()`; the open
+    ground's cover, `COVER_SURFACE`), wet in the rain out of doors; walk.ts
+    calls it each frame on foot and hands the steps to `step()` (WalkDeps
+    `step`, `rain`), which sound.ts synthesises through its own bus. A
+    limiter on sound.ts's master holds every loud moment under clipping.
+
     The south's (docs/south-plan.md Phase 6e): Bunker Sound's beat (`studio`) and
     St Aldwyn's bell (`bell`) back with their buildings, the village's birds and
     owl (the park's layer, `VILLAGE_BIRDS`), the High Road's shoppers (the Neon

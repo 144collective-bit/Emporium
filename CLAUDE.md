@@ -57,7 +57,7 @@ it and has been retired completely. Build only on what's here.
 | Working on | Read |
 |---|---|
 | Downtown, the outer districts, traffic's routes, the ring highway's line, the street plan, the world's size, the river, the wall, the polish and performance plans' status | `docs/guide/city-layout.md` |
-| Places, the world map, waypoints, taxis, the river bus, the metro, sound by district | `docs/guide/getting-about.md` |
+| Places, the world map, waypoints, taxis, the river bus, the metro, sound by district, Degen's footsteps (the sound plan, `docs/sound-plan.md`) | `docs/guide/getting-about.md` |
 | The Trenches (streets, projects, commons, grit, street walls, Trench Avenue's places, corner shops, riverside, waterfront, Night Market, The Block) | `docs/guide/trenches.md` |
 | Westlake Park, Stadium Road (the stadium's removed), the north side's gardens, the civic quarter (City Hall, the police headquarters, the courthouse) | `docs/guide/westlake.md` |
 | Uptown, its towers, plaza, boulevard, Sector 7 Tower, the Sky Wheel, Uptown North | `docs/guide/uptown.md` |

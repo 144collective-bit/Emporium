@@ -67,39 +67,59 @@ The same tricks for every recording:
 
 ## The phases
 
-### Phase 1: the sound kit and footsteps
+### Phase 1: footsteps (built, waiting on the owner's sign-off)
 
-**The kit** (needed by every phase after it):
+The owner's call for this phase (2026-11-23): **synthesised steps only**, so
+the audio pack's loader (`soundbank.ts`), its `audio` budget line and
+`CREDITS.md` move to the first phase that has recordings; the steps' events
+already name a take per surface, ready for recorded takes to slot in.
 
-- `soundbank.ts`: fetches the audio pack on the first Sound tap (after the
-  synth, through `lazy()`), decodes each file once and keeps it. It plays
-  takes with the variation above, through a voice pool with the cap.
-- **Buses:** Effects, Vehicles, Footsteps and Ambience, then a limiter (a
-  compressor on the master) so loud moments never clip.
-- The `audio` budget line and `CREDITS.md`.
+- **When:** `footsteps.ts` (DOM-free, tested in `tests/footsteps.test.ts`,
+  loaded the first time he's on foot, its own chunk). A step is a foot coming
+  down: the motion capture's foot locking onto the ground (animator.ts
+  `feet[i].locked` going on), or the procedural walk's going into its stance
+  (locomotion.ts `feet[i].stance`) until the capture's in, so every step lands
+  when a foot does, at any speed and in any clip. No two steps of a foot closer
+  than `STEPS.gap`, nor of both than `STEPS.pair`; the idle's weight shifting
+  (under `STEPS.idle`) is silent, and so is anything else posing his legs (a
+  vault, a moment, the dance, a fist's whole-body move).
+- **How:** the gait by his speed against movesim.ts `GAITS` (creep crouched,
+  walk, jog, sprint), its `weight` softer crouched; a **landing** from a fall
+  over `STEPS.land`, heavier the harder (to `LAND_ROLL`), the feet locking with
+  it quiet; a **scuff** pulling up from a run or turning on the spot; a
+  **slide**'s scrape as it starts.
+- **On what:** `surfaceAt(x, z, y)` asks groundheight.ts's layers in their
+  order, as `groundAt()` does, and the one that answers says what it is
+  (`LAYER_SURFACE`: the jetty's, the rec bridge's and the waterfront deck's
+  boards, the swing and Liberty bridges' metal, the turntable's, the mall's, the
+  Skywalk's and Palm Court's tile, the tunnels' and the decks' concrete, the
+  civic steps' and terraces' paving, the circuit's asphalt, his house's
+  floorboards, home.ts `inHouse()`); on open ground, a street's paved width is
+  asphalt (`onStreet()`, PLAN's streets at street level in cells), else the
+  cover that has most of it (ground.ts `coverAt()`, `COVER_SURFACE`: grass, dirt,
+  gravel, paving, concrete); a block's slab is paving.
+- **Wet** in the rain (over `STEPS.dryUnder`) out of doors, never under a
+  roof (the house, the tunnels, the mall); a splash now and then on hard ground.
+- **Takes:** each event names one of `STEPS.takes` takes (never the last one
+  played on that surface) and a detune, from a seeded generator.
+- **The sound** (sound.ts `step()`, through its own bus, at most 4 at once):
+  the heel and then the ball of the foot, closer together and the ball harder
+  the faster he goes, a rustle of clothes at a run; on asphalt and paving a
+  rubber sole's dull thud with a little grit, tile's click, the boards' hollow
+  knock, metal's ring, gravel's scatter of crunching grains, dirt's dull thud,
+  grass's swish; wet, a slap and a hiss (a squelch on grass); a landing's two
+  feet and thump; a scuff's drag; a slide's scrape. Each take pitched its own
+  way. A limiter on the master now holds every loud moment under clipping.
+- Only Degen's steps (the owner's call: the crowd's later), one set of trainer
+  steps (shoes from the wardrobe later). Not in the Fight Club's ring (a fight
+  has its own sounds).
+- **Levels** (rendered offline, the background muted): a walking step peaks
+  about 8 dB over the town's hum, a sprint's a few dB more, a creep's well
+  under; a gunshot stays about 10 dB over a step; a hard landing is the
+  loudest of them.
 
-**Footsteps** (about 400 KB of the pack):
-
-- `footsteps.ts` (DOM-free, tested in `tests/footsteps.test.ts`): finds each
-  foot plant from the posed skeleton (a foot coming down to the ground and
-  stopping), so every step lands exactly when a foot does in the motion
-  capture, at any speed and in any clip. Out of it come the foot, the gait
-  (walk, jog, sprint, crouch), how hard the foot came down, and the surface.
-- **The surface** under the foot, from what's already there: `coverAt()`'s
-  ground (paving and concrete, gravel, dirt, grass and lawns), the street's
-  asphalt, and the layers walk mode stands on (the waterfront's boards, metal
-  stairs and gantries, inside floors: the mall's tile, Degen's house, the
-  Fight Club's canvas). When it rains, every hard surface has a wet version,
-  with a splash in puddles.
-- **The sounds:** a heel and toe for each step, harder for a sprint and soft
-  for a crouch; a scuff when he turns sharply on the spot; a land for jumps,
-  vaults and drops (heavier for a longer fall); a slide's scrape; and quiet
-  cloth rustles under it all while he moves.
-- Only Degen's steps in this phase (the owner's call: the crowd's can come
-  later), in one set of trainer steps (shoes from the wardrobe later).
-
-Checks: the footsteps tests; `npm run smoke` before and after (walk.ts
-changes); by ear on every surface, at every gait, on a phone and a desktop.
+Checks: the footsteps tests; `npm run smoke` after (walk.ts changed); by ear
+on every surface, at every gait, on a phone and a desktop (the owner's).
 
 ### Phase 2: guns
 
@@ -174,5 +194,6 @@ About 400 KB.
 
 ## Status
 
-- Plan written, 2026-11-23, with the owner's answers above; waiting on the
-  owner's go for Phase 1. Nothing built.
+- Plan written, 2026-11-23, with the owner's answers above.
+- Phase 1 (footsteps, synthesised) built, 2026-11-23, waiting on the owner's
+  sign-off.

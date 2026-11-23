@@ -22,6 +22,7 @@ import { showAt } from './stripmarks';
 import type { Sfx } from './combat';
 import type { Ambience } from './ambience';
 import type { Voice } from './vehicleids';
+import type { Step, Surface } from './footsteps';
 
 /** `given`: the context made in the visitor's tap (soundlazy.ts: this module loads after it, and iOS starts audio only in the tap) */
 export function createSound(given?: AudioContext) {
@@ -30,6 +31,13 @@ export function createSound(given?: AudioContext) {
   /** Two seconds of white noise, made once and reused by every short sound */
   let white: AudioBuffer;
   let sfxBus: GainNode;
+  /** Degen's footsteps (docs/sound-plan.md Phase 1: footsteps.ts says when and on what, `step()` plays it) */
+  let stepBus: GainNode;
+  /** When each footstep playing now ends: no more than `STEP_VOICES` at once */
+  const stepEnds: number[] = [];
+  const STEP_VOICES = 4;
+  /** Each take's pitch (footsteps.ts `STEPS.takes` of them) */
+  const STEP_TAKES = [1, 0.93, 1.06, 0.97];
   let echoIn: GainNode;
   let rainGain: GainNode;
   let buzzGain: GainNode;
@@ -180,7 +188,14 @@ export function createSound(given?: AudioContext) {
     ctx = given ?? new AudioContext();
     master = ctx.createGain();
     master.gain.value = 0;
-    master.connect(ctx.destination);
+    // (a limiter on everything, the sound plan's Phase 1: the loud moments held under clipping, the rest untouched)
+    const limiter = ctx.createDynamicsCompressor();
+    limiter.threshold.value = -4;
+    limiter.knee.value = 2;
+    limiter.ratio.value = 20;
+    limiter.attack.value = 0.003;
+    limiter.release.value = 0.2;
+    master.connect(limiter).connect(ctx.destination);
 
     white = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
     const w = white.getChannelData(0);
@@ -189,6 +204,9 @@ export function createSound(given?: AudioContext) {
     sfxBus = ctx.createGain();
     sfxBus.gain.value = 0.9;
     sfxBus.connect(master);
+    stepBus = ctx.createGain();
+    stepBus.gain.value = 3.6;
+    stepBus.connect(master);
     echoIn = ctx.createGain();
     echoIn.gain.value = 0.35;
     const delay = ctx.createDelay(0.5);
@@ -746,6 +764,107 @@ export function createSound(given?: AudioContext) {
     return src;
   }
 
+
+  /**
+   * A grain of the shared noise through a filter, rising over `attack` and dying over `decay` (seconds) at `at`: the
+   * footsteps' heel, toe, crunch, swish and splash are all made of these
+   */
+  function grain(at: number, type: BiquadFilterType, freq: number, q: number, peak: number, attack: number, decay: number, out: AudioNode) {
+    if (peak <= 0.0002) return;
+    const src = burst();
+    const f = ctx!.createBiquadFilter();
+    f.type = type;
+    f.frequency.value = freq;
+    f.Q.value = q;
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(peak, at + Math.max(0.001, attack));
+    g.gain.exponentialRampToValueAtTime(0.0001, at + attack + decay);
+    src.connect(f).connect(g).connect(out);
+    src.start(at, Math.random() * 1.5);
+    src.stop(at + attack + decay + 0.03);
+  }
+  /** A short tone sliding from `f0` to `f1` (a board's hollow knock, a plate's ring, the heel's thump) */
+  function ping(at: number, wave: OscillatorType, f0: number, f1: number, peak: number, decay: number, out: AudioNode) {
+    if (peak <= 0.0002) return;
+    const o = ctx!.createOscillator();
+    o.type = wave;
+    o.frequency.setValueAtTime(f0, at);
+    o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), at + decay);
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, at);
+    g.gain.exponentialRampToValueAtTime(peak, at + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, at + decay);
+    o.connect(g).connect(out);
+    o.start(at);
+    o.stop(at + decay + 0.02);
+  }
+
+  /**
+   * One footfall on a surface at `at`: `k` how hard (its level), `p` the take's pitch. A rubber sole's dull thud on
+   * the hard ground with a little grit; boards knock hollow, metal rings, tile clicks; gravel crunches in a scatter of
+   * grains, dirt thuds dully, grass swishes. `wet`: a slap and a hiss on top
+   */
+  function footfall(at: number, sf: Surface, k: number, p: number, wet: number, out: AudioNode) {
+    switch (sf) {
+      case 'asphalt':
+        grain(at, 'lowpass', 520 * p, 0.8, 0.7 * k, 0.002, 0.05, out);
+        grain(at, 'bandpass', 1900 * p, 1.1, 0.22 * k, 0.001, 0.03, out);
+        grain(at + 0.004, 'highpass', 4800 * p, 0.7, 0.07 * k, 0.001, 0.025, out);
+        break;
+      case 'paving':
+        grain(at, 'lowpass', 640 * p, 0.9, 0.46 * k, 0.002, 0.045, out);
+        grain(at, 'bandpass', 2400 * p, 1.6, 0.2 * k, 0.001, 0.028, out);
+        grain(at + 0.003, 'highpass', 5600 * p, 0.7, 0.04 * k, 0.001, 0.02, out);
+        break;
+      case 'concrete':
+        grain(at, 'lowpass', 560 * p, 1, 0.5 * k, 0.002, 0.055, out);
+        grain(at, 'bandpass', 2100 * p, 1.4, 0.18 * k, 0.001, 0.03, out);
+        break;
+      case 'tile':
+        grain(at, 'lowpass', 700 * p, 1, 0.5 * k, 0.002, 0.04, out);
+        grain(at, 'bandpass', 3200 * p, 3, 0.32 * k, 0.001, 0.022, out);
+        ping(at, 'triangle', 1150 * p, 950 * p, 0.03 * k, 0.03, out);
+        break;
+      case 'wood':
+        ping(at, 'sine', 150 * p, 92 * p, 0.1 * k, 0.11, out);
+        grain(at, 'bandpass', 480 * p, 2.2, 0.2 * k, 0.002, 0.07, out);
+        grain(at, 'bandpass', 1800 * p, 1.4, 0.1 * k, 0.001, 0.03, out);
+        break;
+      case 'metal':
+        grain(at, 'bandpass', 2600 * p, 2, 0.22 * k, 0.001, 0.03, out);
+        ping(at, 'sine', 410 * p, 404 * p, 0.035 * k, 0.32, out);
+        ping(at, 'sine', 1130 * p, 1118 * p, 0.022 * k, 0.24, out);
+        ping(at, 'sine', 2270 * p, 2250 * p, 0.01 * k, 0.16, out);
+        grain(at, 'lowpass', 380 * p, 1, 0.3 * k, 0.002, 0.05, out);
+        break;
+      case 'gravel': {
+        grain(at, 'lowpass', 340 * p, 0.8, 0.5 * k, 0.003, 0.06, out);
+        const n = 7 + Math.floor(Math.random() * 5);
+        for (let i = 0; i < n; i++) grain(at + Math.random() * (0.05 + 0.06 * k), 'bandpass', (1800 + Math.random() * 3400) * p, 2.5, (0.12 + Math.random() * 0.16) * k, 0.001, 0.012 + Math.random() * 0.02, out);
+        break;
+      }
+      case 'dirt': {
+        grain(at, 'lowpass', 300 * p, 0.8, 0.75 * k, 0.003, 0.07, out);
+        for (let i = 0; i < 3; i++) grain(at + Math.random() * 0.05, 'bandpass', (900 + Math.random() * 900) * p, 2, 0.1 * k, 0.002, 0.03, out);
+        break;
+      }
+      default:
+        // (grass: a soft thud under the blades' swish, drawn out a little as the foot presses in)
+        grain(at, 'lowpass', 240 * p, 0.8, 0.45 * k, 0.004, 0.06, out);
+        grain(at, 'bandpass', 3600 * p, 0.6, 0.17 * k, 0.018, 0.11, out);
+        grain(at + 0.01, 'highpass', 6000 * p, 0.6, 0.06 * k, 0.02, 0.08, out);
+    }
+    if (wet > 0) {
+      // (a wet sole's slap, and the hiss of water pushed off; on grass a squelch)
+      if (sf === 'grass' || sf === 'dirt') grain(at + 0.01, 'bandpass', 900 * p, 3, 0.1 * k * wet, 0.008, 0.06, out);
+      else {
+        grain(at, 'bandpass', 1400 * p, 1.8, 0.16 * k * wet, 0.001, 0.035, out);
+        grain(at + 0.008, 'highpass', 3800 * p, 0.7, 0.07 * k * wet, 0.006, 0.09, out);
+      }
+    }
+  }
+
   function hat(t: number, open = false, out: AudioNode = beatGain) {
     const src = burst();
     const hp = ctx!.createBiquadFilter();
@@ -1297,6 +1416,64 @@ export function createSound(given?: AudioContext) {
       e.depth.gain.setTargetAtTime(lump, t, 0.1);
       e.am.gain.setTargetAtTime(1 - lump, t, 0.1);
       e.g.gain.setTargetAtTime(on2 ? gain : 0, t, on2 ? 0.15 : 0.25);
+    },
+    /**
+     * One of Degen's footsteps (footsteps.ts decides when, on what and how hard: docs/sound-plan.md Phase 1): the heel
+     * and then the ball of the foot, closer together and the ball harder the faster he goes, the clothes' rustle at a
+     * run; a landing's two feet and its thump; a scuff's drag; a slide's scrape; a splash in a puddle. Each take
+     * pitched its own way and detuned a touch, so no two steps in a row sound the same. Silent unless sound is on.
+     */
+    step(e: Step) {
+      if (!ctx || !on) return;
+      const t = ctx.currentTime;
+      for (let i = stepEnds.length - 1; i >= 0; i--) if (stepEnds[i] <= t) stepEnds.splice(i, 1);
+      if (stepEnds.length >= STEP_VOICES) return;
+      const p = STEP_TAKES[e.take % STEP_TAKES.length] * (1 + e.detune * 0.035);
+      const k = 0.35 + 0.65 * e.weight;
+      const out = stepBus;
+      const sf = e.surface;
+      // (the drag's colour: the hard ground's scrape, grass's swish, dirt's and gravel's lower)
+      const drag = sf === 'grass' ? 3400 : sf === 'dirt' ? 850 : sf === 'gravel' ? 1500 : sf === 'wood' ? 1100 : 1700;
+      const crunch = (from: number, over: number, n: number, peak: number) => {
+        for (let i = 0; i < n; i++) grain(from + Math.random() * over, 'bandpass', (1700 + Math.random() * 3200) * p, 2.5, peak * (0.6 + Math.random() * 0.6), 0.001, 0.014 + Math.random() * 0.02, out);
+      };
+      let end = t + 0.3;
+      switch (e.kind) {
+        case 'step': {
+          const gap = e.gait === 'sprint' ? 0.034 : e.gait === 'jog' ? 0.05 : e.gait === 'creep' ? 0.1 : 0.072;
+          const heel = e.gait === 'sprint' ? 0.75 : e.gait === 'creep' ? 0.55 : 1;
+          const ball = e.gait === 'sprint' ? 0.9 : e.gait === 'creep' ? 0.45 : 0.55;
+          footfall(t, sf, k * heel, p, e.wet, out);
+          footfall(t + gap * (0.85 + 0.3 * Math.random()), sf, k * ball, p * 1.08, e.wet * 0.5, out);
+          if (e.gait === 'jog' || e.gait === 'sprint') grain(t + 0.01, 'highpass', 5200, 0.6, 0.03 * k, 0.025, 0.08, out);
+          break;
+        }
+        case 'land':
+          ping(t, 'sine', 105 * p, 40, 0.1 * k, 0.17, out);
+          footfall(t, sf, k * 1.2, p * 0.95, e.wet, out);
+          footfall(t + 0.016 + Math.random() * 0.01, sf, k * 1.0, p * 1.03, e.wet, out);
+          grain(t + 0.01, 'highpass', 4800, 0.6, 0.05 * k, 0.03, 0.12, out);
+          if (sf === 'gravel') crunch(t, 0.12, 12, 0.14 * k);
+          end = t + 0.45;
+          break;
+        case 'scuff':
+          grain(t, 'bandpass', drag * p, 0.9, 0.2 * k, 0.03, 0.13, out);
+          grain(t, 'lowpass', 400 * p, 0.8, 0.14 * k, 0.01, 0.08, out);
+          if (sf === 'gravel' || sf === 'dirt') crunch(t, 0.14, 8, 0.1 * k);
+          break;
+        case 'slide':
+          grain(t, 'bandpass', drag * p, 0.8, 0.24 * k, 0.04, 0.5, out);
+          grain(t, 'lowpass', 320 * p, 0.8, 0.18 * k, 0.03, 0.42, out);
+          if (sf === 'gravel' || sf === 'dirt') crunch(t, 0.45, 18, 0.1 * k);
+          end = t + 0.6;
+          break;
+      }
+      if (e.splash) {
+        grain(t + 0.004, 'bandpass', 1700 * p, 1.2, 0.22 * k, 0.002, 0.15, out);
+        grain(t + 0.01, 'highpass', 3200, 0.7, 0.1 * k, 0.01, 0.2, out);
+        for (let i = 0; i < 3; i++) ping(t + 0.03 + Math.random() * 0.12, 'sine', 2300 + Math.random() * 1800, 1500, 0.025 * k, 0.03, out);
+      }
+      stepEnds.push(end);
     },
     /**
      * Your car's tyres sliding: `level` 0..1 how hard (0 or a negative value is silent). A hiss of

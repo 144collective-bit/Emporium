@@ -43,6 +43,7 @@ import type { Interest } from './gaze';
 import { GAITS, STAIRS, climbAhead, newMove, startSlide, stepMove, stepSlide, type Slide } from './movesim';
 import { slidePose } from './poses';
 import type { Over } from './vault';
+import type { Footsteps, Step } from './footsteps';
 import { springVel } from './inertia';
 import type { MoData } from './mocap';
 import type { Sfx } from './combat';
@@ -319,6 +320,10 @@ export interface WalkDeps {
   engine(revs: number, voice?: Voice): void;
   /** Your car's tyres sliding, 0..1 (sound.ts) */
   tyres(level: number): void;
+  /** One of Degen's footsteps (footsteps.ts says when and on what; sound.ts plays it) */
+  step(e: Step): void;
+  /** The rain right now, 0-1 (the sky's): his steps wet in it */
+  rain(): number;
   /** Your business's places on foot (your stall, your units): where to stand, and the prompt's label */
   places(): { id: string; x: number; z: number; label: string }[];
   /** Open one of them (tycoon-ui.ts) */
@@ -509,6 +514,10 @@ export function createWalk(d: WalkDeps) {
   const vel = new THREE.Vector2();
   let vy = 0;
   let grounded = true;
+  /** His footsteps (footsteps.ts, docs/sound-plan.md Phase 1), loaded the first time he's on foot; each foot down this frame */
+  let steps: Footsteps | null = null;
+  let stepsLoading = false;
+  const stepFeet = [false, false];
   let coyote = 0;
   let jumpBuffer = 0;
   let jumpHeld = false;
@@ -2927,6 +2936,29 @@ export function createWalk(d: WalkDeps) {
     }
     // The peek: the upper body out over the hips towards where you look, the head kept level (less so with his cheek on a stock)
     if (peek && anim) anim.addLean(hero.rig, peek * PEEK.lean, wrap(lookFace - drawFace), PEEK.level * (1 - 0.6 * (gunInHand ? combat.cheek : 0)));
+    // His footsteps (footsteps.ts, docs/sound-plan.md Phase 1): a step as each foot comes down (the motion capture's
+    // foot locking, or the procedural walk's going into its stance), on what's underfoot; nothing while something else
+    // poses his legs (a slide scrapes, a vault and a moment are silent); a landing and a scuff of their own
+    if (!steps && !stepsLoading) {
+      stepsLoading = true;
+      import('./footsteps').then(
+        (m) => (steps = m.createFootsteps()),
+        () => (stepsLoading = false),
+      );
+    }
+    if (steps) {
+      if (lastPos.distanceToSquared(pos) > 4) steps.reset();
+      let legs: boolean[] | null = null;
+      if (!slide && !over && !moments.posing && !dancing && wholeAmt < 0.5) {
+        const fs = animator ? (mocapW > 0.5 ? animator.feet : null) : loco.feet;
+        if (fs) {
+          stepFeet[0] = 'locked' in fs[0] ? fs[0].locked : fs[0].stance;
+          stepFeet[1] = 'locked' in fs[1] ? fs[1].locked : fs[1].stance;
+          legs = stepFeet;
+        }
+      }
+      for (const e of steps.update({ dt, x: pos.x, y: pos.y, z: pos.z, speed, face, grounded, vy: grounded ? fall : vy, crouch: crouchAmt, sliding: !!slide, feet: legs, rain: d.rain() })) d.step(e);
+    }
     lastPos.copy(pos);
     placeRoot(hero.g, pos.x, pos.y + momentDy, pos.z, animator ? drawFace : face, SCALE, animator ? root0 : loco.root);
     hero.ring.position.set(pos.x, ground + 0.02, pos.z);
