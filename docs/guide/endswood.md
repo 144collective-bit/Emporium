@@ -94,7 +94,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   dumped mattresses, sofas and trolleys at the bin stores; bikes in the sheds; netting under the links; dishes on the
   roofs; tired and dead link lights); pipes and kit (brutalist plan Phase 4: ducts up one end and the rubbish chute
   down the other, `drawEndKit()`; air-con units, washing on the galleries, water tanks and aerials, `drawFlatKit()`,
-  near only); the glass
+  near only); street-level grit (Phase 5: the shops under the podium deck, `DECK_SHOPS` in southblocks.ts, The Wash House
+  and Deck Stores lit with their neon and eight shuttered units, `drawShops()`; cables between the blocks, `CABLES`;
+  court puddles that catch the sodium light; noticeboards by the lift doors); the glass
   and the slots dark glass by day, lit warm at night (`lit()` toons); the podium deck on its columns; Bunker Sound's door
   with its neon. Built with `lift: false` (kit.ts `Batch.build()`): they stand level on their plinths, not on the
   rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in solids.ts. Bench views `south-blocks` and
