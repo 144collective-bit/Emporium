@@ -111,6 +111,8 @@ export const FURNITURE: HoleFurniture[] = /* @__PURE__ */ HOLES.map(furnish);
 export type GolfClip = 'walk' | 'look' | 'golf' | 'putt';
 /** One stretch of a golfer's round: from `t0` to `t1` (seconds into its loop) going from `a` to `b` (still if the same), facing `ry` while still */
 export interface Leg {
+  /** The hole it's played on (`HOLES`' index; the walk on to the next tee is the hole just played) */
+  hole: number;
   t0: number;
   t1: number;
   a: Pt;
@@ -245,17 +247,19 @@ export function roundOf(nine: 0 | 1, g: number, n: number): { legs: Leg[][]; loo
   // (where each stands now, and when the group's next together)
   const pos: Pt[] = Array.from({ length: n }, (_, k) => teePt(HOLES[first], -3.4, (k - (n - 1) / 2) * 1.1));
   let T = 0;
+  /** The hole being played */
+  let cur = first;
   const still = (k: number, until: number, ry: number) => {
     const last = legs[k].at(-1);
     const from = last ? last.t1 : 0;
-    if (until > from + 1e-6) legs[k].push({ t0: from, t1: until, a: pos[k], b: pos[k], clip: 'look', ry });
+    if (until > from + 1e-6) legs[k].push({ t0: from, t1: until, a: pos[k], b: pos[k], clip: 'look', ry, hole: cur });
   };
   const walk = (k: number, via: Pt[], start: number) => {
     let t = start;
     for (const p of via) {
       const d = Math.hypot(p[0] - pos[k][0], p[1] - pos[k][1]);
       if (d < 0.05) continue;
-      legs[k].push({ t0: t, t1: t + d / GOLF_PACE, a: pos[k], b: p, clip: 'walk', ry: facing(p[0] - pos[k][0], p[1] - pos[k][1]) });
+      legs[k].push({ t0: t, t1: t + d / GOLF_PACE, a: pos[k], b: p, clip: 'walk', ry: facing(p[0] - pos[k][0], p[1] - pos[k][1]), hole: cur });
       t += d / GOLF_PACE;
       pos[k] = p;
     }
@@ -270,6 +274,7 @@ export function roundOf(nine: 0 | 1, g: number, n: number): { legs: Leg[][]; loo
     for (let k = 0; k < n; k++) still(k, T, look(k));
   };
   for (let i = first; i < first + 9; i++) {
+    cur = i;
     const h = HOLES[i];
     const f = FURNITURE[i];
     const balls = ballsOf(h, f, g + nine * 10, n);
@@ -286,7 +291,7 @@ export function roundOf(nine: 0 | 1, g: number, n: number): { legs: Leg[][]; loo
       for (const k of order) {
         for (let j = 0; j < n; j++) if (j !== k) still(j, T, toward(pos[j], pos[k]));
         still(k, T, addressRy(balls[k][s], balls[k][s + 1]));
-        legs[k].push({ t0: T, t1: T + SWING_T, a: pos[k], b: pos[k], clip: 'golf', ry: addressRy(balls[k][s], balls[k][s + 1]) });
+        legs[k].push({ t0: T, t1: T + SWING_T, a: pos[k], b: pos[k], clip: 'golf', ry: addressRy(balls[k][s], balls[k][s + 1]), hole: cur });
         T += SWING_T + BEAT;
         still(k, T, addressRy(balls[k][s], balls[k][s + 1]));
       }
@@ -301,13 +306,13 @@ export function roundOf(nine: 0 | 1, g: number, n: number): { legs: Leg[][]; loo
     for (const k of order) {
       for (let j = 0; j < n; j++) if (j !== k) still(j, T, toward(pos[j], pos[k]));
       still(k, T, addressRy(on[k], f.pin));
-      legs[k].push({ t0: T, t1: T + PUTT_T, a: pos[k], b: pos[k], clip: 'putt', ry: addressRy(on[k], f.pin) });
+      legs[k].push({ t0: T, t1: T + PUTT_T, a: pos[k], b: pos[k], clip: 'putt', ry: addressRy(on[k], f.pin), hole: cur });
       T += PUTT_T;
       // (the tap-in from beside the cup)
       const tap: Pt = [f.pin[0] + (on[k][0] - f.pin[0]) * (0.5 / Math.hypot(on[k][0] - f.pin[0], on[k][1] - f.pin[1])), f.pin[1] + (on[k][1] - f.pin[1]) * (0.5 / Math.hypot(on[k][0] - f.pin[0], on[k][1] - f.pin[1]))];
       T = walk(k, [addressAt(tap, f.pin)], T);
       for (let j = 0; j < n; j++) if (j !== k) still(j, T, toward(pos[j], pos[k]));
-      legs[k].push({ t0: T, t1: T + PUTT_T, a: pos[k], b: pos[k], clip: 'putt', ry: addressRy(tap, f.pin) });
+      legs[k].push({ t0: T, t1: T + PUTT_T, a: pos[k], b: pos[k], clip: 'putt', ry: addressRy(tap, f.pin), hole: cur });
       T += PUTT_T;
       // (holed out: a step back off the line, to their own side of the green)
       const away = (k * Math.PI * 2) / n + 0.4;
@@ -340,7 +345,7 @@ export const GOLFERS: Golfer[] = /* @__PURE__ */ (() => {
 })();
 
 /** Where a golfer is `t` seconds in, and what they're doing */
-export function golferAt(p: Golfer, t: number, out: { x: number; z: number; ry: number; clip: GolfClip; speed: number; since?: number }) {
+export function golferAt(p: Golfer, t: number, out: { x: number; z: number; ry: number; clip: GolfClip; speed: number; since?: number; hole?: number }) {
   const u = (((t + p.offset) % p.loop) + p.loop) % p.loop;
   let lo = 0;
   let hi = p.legs.length - 1;
@@ -358,7 +363,18 @@ export function golferAt(p: Golfer, t: number, out: { x: number; z: number; ry: 
   out.speed = l.clip === 'walk' ? GOLF_PACE : 0;
   // (how long into a swing or a putt: its row plays from its start)
   out.since = l.clip === 'golf' || l.clip === 'putt' ? u - l.t0 : undefined;
+  out.hole = l.hole;
   return out;
+}
+
+/** The hole Degen's playing (golfgame.ts sets it while a round's on, -1 otherwise): the crowd's golfers on it step off
+ * the course till he's done with it, so nobody's in his way (golflife3d.ts) */
+export const PLAYING = { hole: -1 };
+/** Is a golfer kept off the course now (on the hole being played) */
+export function offCourse(p: Golfer, t: number, at = { x: 0, z: 0, ry: 0, clip: 'look' as GolfClip, speed: 0, hole: -1 }) {
+  if (PLAYING.hole < 0) return false;
+  golferAt(p, t, at);
+  return at.hole === PLAYING.hole;
 }
 
 /* ---------- The carts, the mower, the ducks ---------- */

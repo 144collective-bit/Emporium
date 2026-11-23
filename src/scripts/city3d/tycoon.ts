@@ -310,6 +310,7 @@ export const ENTRIES = {
   soldBack: { name: 'Sold to the market', in: true },
   borrowed: { name: 'Loans', in: true },
   karting: { name: 'Kart prizes', in: true },
+  golf: { name: 'Golf prizes', in: true },
   missions: { name: 'Missions', in: true },
   soldLand: { name: 'Plots refunded', in: true },
   bought: { name: 'Stock bought', in: false },
@@ -381,9 +382,17 @@ export interface Counters {
   streetChains: number;
   /** Times he's gone out of his house's front or side door (Getting started's first step, docs/spawn-plan.md) */
   leftHome: number;
+  /** Golf (docs/golf-game-plan.md Phase 3): holes finished, birdies, eagles, holes in one; rounds of nine or more
+   * finished, and those under par */
+  golfHoles: number;
+  birdies: number;
+  eagles: number;
+  aces: number;
+  golfRounds: number;
+  underPar: number;
 }
 export type CounterId = keyof Counters;
-export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'fistDowns', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains', 'streetSpars', 'partnersBeaten', 'streetChains', 'leftHome'];
+export const COUNTER_IDS: CounterId[] = ['sold', 'earned', 'contracts', 'dummies', 'drones', 'fistDowns', 'driven', 'bought', 'land', 'built', 'upgrades', 'missions', 'kartRaces', 'podiums', 'kartWins', 'cleanLaps', 'overtakes', 'bouts', 'fightWins', 'kos', 'chains', 'streetSpars', 'partnersBeaten', 'streetChains', 'leftHome', 'golfHoles', 'birdies', 'eagles', 'aces', 'golfRounds', 'underPar'];
 export const newCounters = (): Counters => Object.fromEntries(COUNTER_IDS.map((k) => [k, 0])) as unknown as Counters;
 /** A mission you've taken on: the counters as they stood when you did */
 export interface ActiveMission {
@@ -461,7 +470,7 @@ export const recordKey = (course: string, cls: string) => `${course}:${cls}`;
 export const emptyKarts = (): KartSave => ({ model: DEFAULT_KART.model, paint: DEFAULT_KART.paint, owned: [], mods: {}, records: {}, boards: {}, series: null, trophies: {}, challenge: null, parBeaten: [], old: {}, splits: {}, look: { ...DEFAULT_LOOK } });
 
 export interface TycoonSave {
-  v: 14;
+  v: 15;
   dorras: number;
   till: number;
   /** When it was last brought up to date (ms since 1970) */
@@ -521,15 +530,75 @@ export interface TycoonSave {
   stash: Stash;
   /** When the flyers handed out at your stall run out (ms; 0 none out: the inventory plan's Phase 5, boosts.ts `FLYERS`) */
   flyers: number;
-  /** The daily prize cap (save v13, catalog.ts PRIZE_CAP): the day (`dayKey()`), and the cup races and purses paid on it */
+  /** The daily prize cap (save v13, catalog.ts PRIZE_CAP): the day (`dayKey()`), and the cup races, purses and golf rounds (v15) paid on it */
   prizes: Prizes;
+  /** Golf at Knob Hill (save v15, docs/golf-game-plan.md Phase 3): a round on the go, the bests */
+  golf: GolfSave;
 }
 export interface Prizes {
   day: string;
   races: number;
   bouts: number;
+  rounds: number;
 }
-export const emptyPrizes = (): Prizes => ({ day: '', races: 0, bouts: 0 });
+export const emptyPrizes = (): Prizes => ({ day: '', races: 0, bouts: 0, rounds: 0 });
+/** A round of golf as the save keeps it (golfgame-sim.ts `Round`: kept to carry on later) */
+export interface SavedRound {
+  seed: number;
+  holes: number[];
+  at: number;
+  card: (number | null)[];
+  play: { hole: number; strokes: number; ball: { x: number; y: number; z: number }; from: { x: number; y: number; z: number }; holed: boolean };
+  wind: { dir: number; speed: number };
+  shots: number;
+}
+export interface GolfSave {
+  round: SavedRound | null;
+  /** Each hole's fewest strokes (0 none yet), and the fewest for each nine and the eighteen */
+  holes: number[];
+  front: number;
+  back: number;
+  full: number;
+}
+export const GOLF_HOLES = 18;
+export const emptyGolf = (): GolfSave => ({ round: null, holes: Array(GOLF_HOLES).fill(0), front: 0, back: 0, full: 0 });
+/** A saved round, or null if it doesn't hold together (a hole out of the course, a card the wrong length, a ball off the map) */
+export function cleanRound(v: unknown): SavedRound | null {
+  const o = obj(v);
+  const holes = Array.isArray(o.holes) ? o.holes : [];
+  if (!holes.length || holes.length > GOLF_HOLES || !holes.every((h) => Number.isInteger(h) && h >= 0 && h < GOLF_HOLES)) return null;
+  const card = Array.isArray(o.card) ? o.card : [];
+  if (card.length !== holes.length || !card.every((c) => c === null || (Number.isInteger(c) && c >= 1 && c <= 20))) return null;
+  const at = Math.round(num(o.at, 0, holes.length - 1, -1));
+  const pl = obj(o.play);
+  const pt = (q: unknown) => {
+    const b = obj(q);
+    return { x: num(b.x, -2000, 2000, NaN), y: num(b.y, -100, 100, NaN), z: num(b.z, -2000, 2000, NaN) };
+  };
+  const [ball, from] = [pt(pl.ball), pt(pl.from)];
+  const w = obj(o.wind);
+  if (at < 0 || pl.hole !== holes[at] || ![ball.x, ball.y, ball.z, from.x, from.y, from.z].every(Number.isFinite)) return null;
+  return {
+    seed: Math.round(num(o.seed, 1, 0x7fffffff, 1)),
+    holes: holes as number[],
+    at,
+    card: card as (number | null)[],
+    play: { hole: holes[at] as number, strokes: Math.round(num(pl.strokes, 0, 20, 0)), ball, from, holed: false },
+    wind: { dir: num(w.dir, -100, 100, 0), speed: num(w.speed, 0, 20, 0) },
+    shots: Math.round(num(o.shots, 0, 1e4, 0)),
+  };
+}
+export function cleanGolf(v: unknown): GolfSave {
+  const o = obj(v);
+  const g = emptyGolf();
+  g.round = cleanRound(o.round);
+  const hs = Array.isArray(o.holes) ? o.holes : [];
+  g.holes = g.holes.map((_, i) => Math.round(num(hs[i], 0, 20, 0)));
+  g.front = Math.round(num(o.front, 0, 200, 0));
+  g.back = Math.round(num(o.back, 0, 200, 0));
+  g.full = Math.round(num(o.full, 0, 400, 0));
+  return g;
+}
 /** How many steps Getting started has (guide.ts's GUIDE) */
 export const GUIDE_STEPS = 8;
 
@@ -546,7 +615,7 @@ function guideStepOf(gd: Record<string, unknown>) {
 
 export function newSave(now: number): TycoonSave {
   return {
-    v: 14,
+    v: 15,
     dorras: START_DORRAS,
     till: 0,
     at: now,
@@ -580,6 +649,7 @@ export function newSave(now: number): TycoonSave {
     stash: {},
     flyers: 0,
     prizes: emptyPrizes(),
+    golf: emptyGolf(),
   };
 }
 const emptyLot = (): Lot => ({ kind: null, stock: {}, slots: [], job: null });
@@ -652,7 +722,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   }
   const mul = (p: PlaceId) => LEVEL_CAPACITY[(levels[p] ?? 1) - 1];
   const s: TycoonSave = {
-    v: 14,
+    v: 15,
     dorras: Math.floor(num(o.dorras, 0, 1e12, START_DORRAS)),
     till: Math.floor(num(o.till, 0, 1e12, 0)),
     at: num(o.at, 0, now, now),
@@ -691,6 +761,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     stash: {},
     flyers: 0,
     prizes: emptyPrizes(),
+    golf: emptyGolf(),
   };
   cleanGame(s, o, now);
   // (v11: a save from before the inventory carries the rifle and the first gun it bought)
@@ -1759,7 +1830,7 @@ export const dayKey = (now: number) => {
 /** The day's prize count, brought to today (a new day starts at zero) */
 export function prizesToday(s: TycoonSave, now: number): Prizes {
   const day = dayKey(now);
-  if (s.prizes.day !== day) s.prizes = { day, races: 0, bouts: 0 };
+  if (s.prizes.day !== day) s.prizes = { day, races: 0, bouts: 0, rounds: 0 };
   return s.prizes;
 }
 /** What a prize pays as the day's n-th (from 0) of its kind: in full under the cap, PRIZE_CAP.share past it */
@@ -1767,7 +1838,7 @@ export const cappedPrize = (prize: number, n: number, cap: number) => (n < cap ?
 /** How many of today's cup races and purses still pay in full */
 export const prizesLeft = (s: TycoonSave, now: number) => {
   const p = s.prizes.day === dayKey(now) ? s.prizes : emptyPrizes();
-  return { races: Math.max(0, PRIZE_CAP.races - p.races), bouts: Math.max(0, PRIZE_CAP.bouts - p.bouts) };
+  return { races: Math.max(0, PRIZE_CAP.races - p.races), bouts: Math.max(0, PRIZE_CAP.bouts - p.bouts), rounds: Math.max(0, PRIZE_CAP.rounds - p.rounds) };
 };
 /**
  * A finished kart race or time trial: pay the place (a cup's prizes), count it, keep the fastest lap
@@ -2121,7 +2192,9 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   s.backup = num(o.backup, 0, now, 0);
   // (the daily prize cap, v13: today's count kept, any other day's starts over; a save from before it starts at zero)
   const pz = obj(o.prizes);
-  if (typeof pz.day === 'string' && pz.day === dayKey(now)) s.prizes = { day: pz.day, races: Math.round(num(pz.races, 0, 1e6, 0)), bouts: Math.round(num(pz.bouts, 0, 1e6, 0)) };
+  if (typeof pz.day === 'string' && pz.day === dayKey(now)) s.prizes = { day: pz.day, races: Math.round(num(pz.races, 0, 1e6, 0)), bouts: Math.round(num(pz.bouts, 0, 1e6, 0)), rounds: Math.round(num(pz.rounds, 0, 1e6, 0)) };
+  // (golf, v15: a save from before it has played no golf)
+  s.golf = cleanGolf(o.golf);
   // Getting about (growth plan Phase 8): the places you've walked to, only ones that are on the map
   s.visited = [...new Set((Array.isArray(o.visited) ? o.visited : []).filter((id): id is string => typeof id === 'string' && MAP_PLACES.includes(id)))];
 }

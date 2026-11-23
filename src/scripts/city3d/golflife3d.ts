@@ -20,7 +20,7 @@ import { site } from './tilework';
 import { CROWD_VIEW } from './character';
 import { GOLF_RECT, golfLift } from './golflift';
 import { HOLES, type Pt } from './golf';
-import { CART, CARTS, DUCKS, FLAG, FURNITURE, GOLFERS, cartAt, duckAt, golferAt, mowerAt, type HoleFurniture } from './golflife';
+import { CART, CARTS, DUCKS, FLAG, FURNITURE, GOLFERS, PLAYING, cartAt, duckAt, golferAt, mowerAt, type HoleFurniture } from './golflife';
 import { golfWater } from './golflift';
 import { addPeople } from './life';
 import type { ParkPerson } from './parklife';
@@ -219,10 +219,12 @@ export function registerGolfLife({ low, scene, tick }: { low: boolean; scene: TH
         trim: g.trim,
         at(t, out) {
           golferAt(g, t, at);
-          out.x = at.x;
-          out.z = at.z;
+          // (on the hole Degen's playing: off the course till he's done with it, golflife.ts `PLAYING`)
+          const away = PLAYING.hole >= 0 && at.hole === PLAYING.hole;
+          out.x = away ? -1e5 : at.x;
+          out.z = away ? -1e5 : at.z;
           out.ry = at.ry;
-          out.y = golfLift(at.x, at.z);
+          out.y = away ? 0 : golfLift(at.x, at.z);
           out.clip = at.clip;
           out.speed = at.speed;
           out.since = at.since;

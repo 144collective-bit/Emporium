@@ -2384,23 +2384,31 @@ export function createWalk(d: WalkDeps) {
   /* ---------- Golf (docs/golf-game-plan.md): Play golf at Knob Hill's door; the round is golfgame.ts's own chunk ---------- */
   let golf: GolfGame | null = null;
   const loadGolf = lazy(() => import('./golfgame'), 'golf');
+  /** Where he stood at the door when he asked to play: he's put back there after */
+  const golfFrom = { x: GOLF_CLUBHOUSE.spawn.x, z: GOLF_CLUBHOUSE.spawn.z };
   function startGolf() {
     void loadGolf().then((m) => {
       if (!active || golf?.active || drive.active || fly.active || karts.active) return;
       if (combat.armed) combat.toggleHolster();
-      golf ??= m.createGolfGame({ scene: d.scene, camera, root, hero, scale: SCALE, toast: (text, ms) => d.game.toast(text, ms), end: endGolf });
+      golfFrom.x = pos.x;
+      golfFrom.z = pos.z;
+      golf ??= m.createGolfGame({ scene: d.scene, camera, root, hero, scale: SCALE, toast: (text, ms) => d.game.toast(text, ms), game: d.game, prizes: () => !live.closed('prizes'), end: endGolf });
       keys.clear();
       near = null;
       prompt.hidden = true;
-      golf.start([0]);
+      golf.open();
     });
   }
-  /** The round over (or quit): Degen back on foot by the clubhouse's door */
+  /** The round over (or quit): Degen back on foot at the clubhouse's door, where he asked to play */
   function endGolf() {
-    const s = GOLF_CLUBHOUSE.spawn;
+    const s = golfFrom;
     pos.set(s.x, groundAt(s.x, s.z), s.z);
     vel.set(0, 0);
     vy = 0;
+    // (facing the door again, the camera behind him)
+    const door = GOLF_CLUBHOUSE.door;
+    face = Math.atan2(door.x - s.x, door.z - s.z);
+    yaw = face - Math.PI;
     keys.clear();
     d.touched();
   }
@@ -2408,7 +2416,8 @@ export function createWalk(d: WalkDeps) {
   /** In a round: the game has the keys and the camera; Degen stands where it puts him */
   function golfFrame(dt: number, t: number) {
     golf!.frame(dt, t);
-    pos.set(golf!.at.x, golf!.at.y, golf!.at.z);
+    // (the menu up: he stands where he is; a round on: where the game puts him)
+    if (golf!.playing) pos.set(golf!.at.x, golf!.at.y, golf!.at.z);
     combat.update(dt, t, false);
     if (near) {
       near = null;

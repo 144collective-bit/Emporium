@@ -11,8 +11,13 @@
  *   time on its way back down sets the accuracy: on the line straight, early a hook, late a slice (`METER`).
  * - **The swing**: his `golf` or `putt` pose (acts.ts, the crowd's rows on his figure) from the top of the backswing,
  *   the ball off at the strike, flying and rolling along the shot's path as the sim gave it, the camera following.
- * - **Between shots** the camera flies to where it stopped (the owner's call); a penalty says so in a pop.
- * - **The hole done**: its card (the strokes, the score's name against par), Again or Done.
+ * - **Between shots** the camera flies to where it stopped (the owner's call); a penalty says so in a pop. On the
+ *   green the slope's shown (`paintSlopes()`: a chevron a tile pointing downhill, longer where it's steeper).
+ * - **The menu** (Play golf at the door, `open()`, Phase 3): Continue a round left part-way (it's kept on the save
+ *   after every shot), a hole on its own (picked), the front nine, the back nine or all eighteen; the bests.
+ * - **The hole done**: its card (the strokes, the score's name against par, the XP), Next hole; the round done: its
+ *   card (the strokes against par, the Dorras, under the day's cap, the XP), Again or Done (golfscore.ts pays them).
+ * - **The crowd's golfers** keep off the hole being played (golflife.ts `PLAYING`).
  *
  * A club is in his right hand while the round's on (the owner's call: golf is the one exception to "his hands hold
  * only weapons"). The HUD and the card are built here, styled by golf.css (the arcade kit).
@@ -22,10 +27,12 @@ import { FX, toon } from './kit';
 import { placeRoot } from './locomotion';
 import { golfPose, puttPose, GOLF, PUTT, GOLF_SECONDS, PUTT_SECONDS } from './acts';
 import type { Pose } from './skeleton';
-import { HOLES, surfaceAt, type Pt, type Surface } from './golf';
+import { HOLES, onGreen, surfaceAt, type Pt, type Surface } from './golf';
 import { golfLift } from './golflift';
-import { FURNITURE } from './golflife';
-import { CLUBS, PUTT_MAX, TRACE, STEP, groundAt, lieTake, newRound, playShot, roundOver, windOn, type ClubId, type Round, type ShotResult } from './golfgame-sim';
+import { FURNITURE, PLAYING } from './golflife';
+import { dropRound, finishGolfHole, finishGolfRound, keepRound, parWords, type RoundResult } from './golfscore';
+import type { SavedRound, TycoonSave } from './tycoon';
+import { CLUBS, PUTT_MAX, TRACE, STEP, groundAt, lieTake, newRound, playShot, roundOver, slopeAt, toPar, windOn, type ClubId, type Round, type ShotResult } from './golfgame-sim';
 
 export interface GolfDeps {
   scene: THREE.Scene;
@@ -35,14 +42,22 @@ export interface GolfDeps {
   /** Degen's size (walk.ts SCALE) */
   scale: number;
   toast(text: string, ms?: number): void;
+  /** The city's save (the game's GameDeps: `save()`, then `commit()`) */
+  game: { save(): TycoonSave; commit(): void };
+  /** Whether prizes pay (the owner's live `prizes` switch) */
+  prizes(): boolean;
   /** The round's over or quit: walk mode takes him back */
   end(): void;
 }
 export interface GolfGame {
   readonly active: boolean;
+  /** A round's on (not the menu) */
+  readonly playing: boolean;
   /** Where Degen is (walk mode keeps its own place there, so the city round him is drawn) */
   readonly at: { x: number; y: number; z: number };
-  start(holes: number[]): void;
+  /** The clubhouse's menu: carry on a round, play a hole, a nine or the eighteen */
+  open(): void;
+  start(holes: number[], saved?: SavedRound | null): void;
   frame(dt: number, t: number): void;
   /** A key down or up: true if the round took it */
   key(code: string, down: boolean, repeat: boolean): boolean;
@@ -66,12 +81,13 @@ export const scoreName = (strokes: number, par: number) => (strokes === 1 ? 'Hol
 /** A distance on the HUD (metres: a tile is about 1.8 m) */
 const metres = (tiles: number) => `${Math.round(tiles * 1.8)} m`;
 
-type Phase = 'aim' | 'meter' | 'swing' | 'fly' | 'settle' | 'move' | 'card';
+type Phase = 'menu' | 'aim' | 'meter' | 'swing' | 'fly' | 'settle' | 'move' | 'card';
 
-/** The club picked first for a distance from a lie: the shortest that gets there, the putter on the green */
+/** The club picked first for a distance from a lie: the shortest that gets there (the driver only off a tee), the putter on the green */
 export function pickClub(d: number, lie: Surface | null): ClubId {
   if (lie === 'green') return 'putter';
-  const clubs = CLUBS.filter((c) => c.id !== 'putter').sort((a, b) => a.carry - b.carry);
+  // (the driver off a tee only: anywhere else the 3 wood is the longest picked; W still reaches the driver)
+  const clubs = CLUBS.filter((c) => c.id !== 'putter' && (c.id !== 'driver' || lie === 'tee')).sort((a, b) => a.carry - b.carry);
   for (const c of clubs) if (c.carry * lieTake(lie, c.id) >= d * 0.97) return c.id;
   return clubs[clubs.length - 1].id;
 }
@@ -99,8 +115,43 @@ export function createGolfGame(d: GolfDeps): GolfGame {
   const aimLine = new THREE.Line(aimGeo, new THREE.LineDashedMaterial({ color: '#00eaff', dashSize: 0.8, gapSize: 0.6, transparent: true, opacity: 0.8, fog: false }));
   aimLine.frustumCulled = false;
   // (on the FX layer: the ink's pre-pass draws none of them, kit.ts `fx()`)
-  for (const o of [ball, trail, ring, aimLine]) o.layers.set(FX);
-  group.add(ball, trail, ring, aimLine);
+  // The green's slope while putting: a chevron every tile pointing downhill, longer where it's steeper
+  const SLOPES_MAX = 400;
+  const chevron = new THREE.BufferGeometry();
+  chevron.setAttribute('position', new THREE.Float32BufferAttribute([-0.13, 0, -0.14, 0, 0, 0.2, 0.13, 0, -0.14, 0, 0, -0.04], 3));
+  chevron.setIndex([0, 1, 3, 3, 1, 2]);
+  const slopes = new THREE.InstancedMesh(chevron, new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, fog: false }), SLOPES_MAX);
+  slopes.frustumCulled = false;
+  slopes.count = 0;
+  slopes.visible = false;
+  let slopesOn = -1;
+  function paintSlopes(hole: number) {
+    if (slopesOn === hole) return;
+    slopesOn = hole;
+    const h = HOLES[hole];
+    const [cx, cz] = h.line.at(-1)!;
+    const R = Math.max(...h.green) + 1;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const v = new THREE.Vector3();
+    const sc = new THREE.Vector3();
+    const up = new THREE.Vector3(0, 1, 0);
+    let n = 0;
+    for (let x = cx - R; x <= cx + R && n < SLOPES_MAX; x += 1)
+      for (let z = cz - R; z <= cz + R && n < SLOPES_MAX; z += 1) {
+        if (onGreen(h, x, z) > 0.92) continue;
+        const [gx, gz] = slopeAt(x, z);
+        const steep = Math.hypot(gx, gz);
+        // (flat ground shows a small dot of a chevron; the steeper, the longer)
+        const k = 0.45 + Math.min(1, steep * 25) * 0.9;
+        q.setFromAxisAngle(up, Math.atan2(-gx, -gz));
+        slopes.setMatrixAt(n++, m.compose(v.set(x, golfLift(x, z) + 0.06, z), q, sc.set(k, 1, k)));
+      }
+    slopes.count = n;
+    slopes.instanceMatrix.needsUpdate = true;
+  }
+  group.add(ball, trail, ring, aimLine, slopes);
+  for (const o of [ball, trail, ring, aimLine, slopes]) o.layers.set(FX);
   // The club: its grip in his right fist, the shaft on down the hand's way, the head at its foot (wardrobe.ts's crowd club)
   const club = new THREE.Group();
   club.add(new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.006, 0.74, 5).translate(-0.02, -0.35, -0.006), toon('#c9ccd4')));
@@ -110,7 +161,7 @@ export function createGolfGame(d: GolfDeps): GolfGame {
   const hud = document.createElement('div');
   hud.className = 'golf-hud mk-skin';
   hud.hidden = true;
-  hud.innerHTML = `<div class="golf-hud-left"><p class="golf-hole"><b data-golf-hole>Hole 1</b><span data-golf-par>Par 4</span></p><p class="golf-name" data-golf-name></p><p class="golf-stroke" data-golf-stroke>Stroke 1</p></div>
+  hud.innerHTML = `<div class="golf-hud-left"><p class="golf-hole"><b data-golf-hole>Hole 1</b><span data-golf-par>Par 4</span></p><p class="golf-name" data-golf-name></p><p class="golf-stroke" data-golf-stroke>Stroke 1</p><p class="golf-round" data-golf-round></p></div>
 <div class="golf-hud-mid"><p class="golf-club"><span class="golf-key">W/S</span><b data-golf-club>Driver</b></p><p class="golf-to" data-golf-to>To the pin</p><p class="golf-lie" data-golf-lie></p></div>
 <div class="golf-hud-right"><p class="golf-wind"><i class="golf-arrow" data-golf-arrow></i><b data-golf-wind>0</b></p><button type="button" class="golf-quit" data-golf-quit>Quit</button></div>
 <div class="golf-meter" data-golf-meter><i class="golf-meter-zero"></i><i class="golf-meter-full"></i><i class="golf-meter-power" data-golf-power hidden></i><i class="golf-meter-mark" data-golf-mark></i><p class="golf-meter-tip" data-golf-tip>Space: swing</p></div>
@@ -118,8 +169,17 @@ export function createGolfGame(d: GolfDeps): GolfGame {
   const card = document.createElement('section');
   card.className = 'shop race-result golf-card mk-skin';
   card.hidden = true;
-  card.innerHTML = `<header class="shop-head"><h2 class="shop-title" data-golf-card-title>Hole 1</h2></header><div class="race-result-body"><p class="golf-card-score" data-golf-card-score></p><p class="golf-card-line" data-golf-card-line></p></div><div class="golf-card-take"><button type="button" class="mk-btn" data-golf-again>Again</button><button type="button" class="mk-btn" data-golf-done>Done</button></div>`;
-  root.append(hud, card);
+  card.innerHTML = `<header class="shop-head"><h2 class="shop-title" data-golf-card-title>Hole 1</h2></header><div class="race-result-body"><p class="golf-card-score" data-golf-card-score></p><p class="golf-card-line" data-golf-card-line></p><p class="golf-card-take-line" data-golf-card-take></p></div><div class="golf-card-take"><button type="button" class="mk-btn" data-golf-next>Next hole</button><button type="button" class="mk-btn" data-golf-again>Again</button><button type="button" class="mk-btn" data-golf-done>Done</button></div>`;
+  // The clubhouse's menu: carry on a round left, a hole on its own (picked), a nine or all eighteen
+  const menu = document.createElement('section');
+  menu.className = 'shop golf-menu mk-skin';
+  menu.hidden = true;
+  menu.innerHTML = `<header class="shop-head"><h2 class="shop-title">Knob Hill</h2><button type="button" class="shop-close" data-golf-menu-close aria-label="Close the golf menu"><svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg></button></header>
+<div class="golf-menu-body"><button type="button" class="mk-btn golf-continue" data-golf-continue hidden>Continue</button>
+<div class="golf-pick"><button type="button" class="golf-step" data-golf-prev aria-label="The hole before">‹</button><p class="golf-pick-name"><b data-golf-pick-hole>Hole 1</b><span data-golf-pick-line></span></p><button type="button" class="golf-step" data-golf-next-hole aria-label="The next hole">›</button></div>
+<button type="button" class="mk-btn" data-golf-one>Play hole</button><button type="button" class="mk-btn" data-golf-front>Front nine</button><button type="button" class="mk-btn" data-golf-back>Back nine</button><button type="button" class="mk-btn" data-golf-full>All eighteen</button>
+<p class="golf-bests" data-golf-bests></p></div>`;
+  root.append(hud, card, menu);
   const $ = <T extends HTMLElement>(el: HTMLElement, sel: string) => el.querySelector<T>(sel)!;
   const el = {
     hole: $(hud, '[data-golf-hole]'),
@@ -139,6 +199,14 @@ export function createGolfGame(d: GolfDeps): GolfGame {
     cardTitle: $(card, '[data-golf-card-title]'),
     cardScore: $(card, '[data-golf-card-score]'),
     cardLine: $(card, '[data-golf-card-line]'),
+    cardTake: $(card, '[data-golf-card-take]'),
+    next: $(card, '[data-golf-next]'),
+    again: $(card, '[data-golf-again]'),
+    round: $(hud, '[data-golf-round]'),
+    cont: $(menu, '[data-golf-continue]'),
+    pickHole: $(menu, '[data-golf-pick-hole]'),
+    pickLine: $(menu, '[data-golf-pick-line]'),
+    bests: $(menu, '[data-golf-bests]'),
   };
   const set = (e: HTMLElement, text: string) => {
     if (e.textContent !== text) e.textContent = text;
@@ -158,6 +226,11 @@ export function createGolfGame(d: GolfDeps): GolfGame {
   let shot: ShotResult | null = null;
   /** Which of the round's holes the shot was played on (the sim moves the round on when a hole's done) */
   let shotOn = 0;
+  /** What the save made of the hole and the round the last shot finished */
+  let holeDone: ReturnType<typeof finishGolfHole> | null = null;
+  let roundDone: RoundResult | null = null;
+  /** The hole picked on the menu */
+  let pick = 0;
   /** The swing's pose clock, the flight's clock, the camera's move between shots */
   let swingT = 0;
   let flyT = 0;
@@ -204,6 +277,9 @@ export function createGolfGame(d: GolfDeps): GolfGame {
     meterT = 0;
     ball.position.set(b.x, b.y + 0.05, b.z);
     ball.visible = true;
+    // (the crowd's golfers off this hole while it's played; the green's slope shown for a putt)
+    PLAYING.hole = round!.play.hole;
+    if (lieNow() === 'green') paintSlopes(round!.play.hole);
     paintHud();
   }
 
@@ -247,6 +323,10 @@ export function createGolfGame(d: GolfDeps): GolfGame {
     set(el.par, `Par ${h.par}`);
     set(el.name, h.name);
     set(el.stroke, `Stroke ${round.play.strokes + 1}`);
+    // (in a round of more than one: which of them, and the score so far)
+    const many = round.holes.length > 1;
+    el.round.hidden = !many;
+    if (many) set(el.round, `${round.at + 1} of ${round.holes.length} · ${parWords(toPar(round))}`);
     set(el.club, CLUBS.find((c) => c.id === clubId)!.name);
     set(el.to, `To the pin ${metres(pinDist())}`);
     const lie = lieNow();
@@ -271,6 +351,7 @@ export function createGolfGame(d: GolfDeps): GolfGame {
     aimGeo.attributes.position.needsUpdate = true;
     aimLine.computeLineDistances();
     ring.visible = aimLine.visible = phase === 'aim' || phase === 'meter';
+    slopes.visible = putting() && slopesOn === round!.play.hole && (phase === 'aim' || phase === 'meter');
   }
 
   /** The meter's reading at its clock: up past the top and back down to its end */
@@ -294,19 +375,33 @@ export function createGolfGame(d: GolfDeps): GolfGame {
     const s = { club: clubId, aim, power, accuracy };
     shotOn = round.at;
     shot = playShot(round, s, pinOf);
+    // On the save: the hole done counted, the round done paid, or the round kept to carry on
+    const save = d.game.save();
+    holeDone = null;
+    roundDone = null;
+    if (round.at !== shotOn) holeDone = finishGolfHole(save, round.holes[shotOn], round.card[shotOn] ?? 0);
+    if (roundOver(round)) {
+      roundDone = finishGolfRound(save, { holes: round.holes, card: round.card.map((c) => c ?? 20), now: Date.now(), prizes: d.prizes() });
+      dropRound(save);
+    } else keepRound(save, round as unknown as SavedRound);
+    d.game.commit();
     phase = 'swing';
     swingT = putting() ? SWING_FROM.putt : SWING_FROM.golf;
     flyT = 0;
     trail.geometry.setDrawRange(0, 0);
   }
 
-  function start(list: number[]) {
-    holes = list;
-    round = newRound(holes, (Date.now() & 0x7fffffff) | 1);
+  function start(list: number[], saved?: SavedRound | null) {
+    holes = saved ? saved.holes : list;
+    round = saved ? (JSON.parse(JSON.stringify(saved)) as Round) : newRound(holes, (Date.now() & 0x7fffffff) | 1);
+    if (!saved) {
+      keepRound(d.game.save(), round as unknown as SavedRound);
+      d.game.commit();
+    }
     active = true;
     scene.add(group);
     hero.hands[1].add(club);
-    hud.hidden = card.hidden = true;
+    hud.hidden = card.hidden = menu.hidden = true;
     hud.hidden = false;
     root.classList.add('is-golfing');
     held.clear();
@@ -317,10 +412,14 @@ export function createGolfGame(d: GolfDeps): GolfGame {
   }
   function stop() {
     if (!active) return;
+    // (a round left part-way is kept: Continue on the menu carries it on)
+    if (round && !roundOver(round) && phase !== 'menu') d.toast('Round kept · Continue at the clubhouse door', 3000);
     active = false;
+    PLAYING.hole = -1;
+    slopes.visible = false;
     scene.remove(group);
     club.removeFromParent();
-    hud.hidden = card.hidden = true;
+    hud.hidden = card.hidden = menu.hidden = true;
     root.classList.remove('is-golfing');
     held.clear();
     d.end();
@@ -332,22 +431,97 @@ export function createGolfGame(d: GolfDeps): GolfGame {
     const i = shotOn;
     const h = HOLES[round.holes[i]];
     const strokes = round.card[i] ?? 0;
-    set(el.cardTitle, `Hole ${h.n} · ${h.name}`);
-    set(el.cardScore, scoreName(strokes, h.par));
-    set(el.cardLine, `${strokes} stroke${strokes === 1 ? '' : 's'} · par ${h.par}`);
+    const over = roundOver(round);
+    const r = roundDone;
+    if (over && r && round.holes.length > 1) {
+      // The round's card: its strokes against par, what it paid
+      set(el.cardTitle, r.kind === 'front' ? 'The front nine' : r.kind === 'back' ? 'The back nine' : r.kind === 'full' ? 'All eighteen' : 'The round');
+      set(el.cardScore, parWords(r.toPar));
+      set(el.cardLine, `${r.strokes} strokes · par ${r.par}${r.best ? ' · your best' : ''}`);
+    } else {
+      set(el.cardTitle, `Hole ${h.n} · ${h.name}`);
+      set(el.cardScore, scoreName(strokes, h.par));
+      set(el.cardLine, `${strokes} stroke${strokes === 1 ? '' : 's'} · par ${h.par}${holeDone?.best ? ' · your best here' : ''}`);
+    }
+    // (what it earned: the hole's XP, and at the round's end its Dorras, under the day's cap)
+    const xp = (holeDone?.xp ?? 0) + (r?.xp ?? 0);
+    const levels = (holeDone?.levels ?? 0) + (r?.levels ?? 0);
+    const paid = r ? (r.prize > 0 ? `${r.prize.toLocaleString()} Dorras${r.capped ? ' (daily cap)' : ''} · ` : '') : '';
+    set(el.cardTake, `${paid}+${xp} XP${levels > 0 ? ' · Level up' : ''}`);
+    el.next.hidden = over;
+    el.again.hidden = !over;
     card.hidden = false;
     phase = 'card';
   }
-  card.querySelector('[data-golf-again]')!.addEventListener('click', () => {
+  el.next.addEventListener('click', () => {
+    if (!round || roundOver(round)) return;
+    // On to the next tee: the camera flies there
     card.hidden = true;
+    camFrom.copy(camera.position);
+    camFromLook.copy(camLook);
+    hero.g.visible = false;
+    ready();
+    moveT = 0;
+    phase = 'move';
+  });
+  el.again.addEventListener('click', () => {
+    card.hidden = true;
+    const list = holes;
     stop();
-    start(holes);
+    start(list);
   });
   card.querySelector('[data-golf-done]')!.addEventListener('click', () => stop());
+
+  /* ----- The menu ----- */
+  function paintMenu() {
+    const g = d.game.save().golf;
+    el.cont.hidden = !g.round;
+    if (g.round) set(el.cont, `Continue · hole ${HOLES[g.round.play.hole].n}`);
+    const h = HOLES[pick];
+    set(el.pickHole, `Hole ${h.n}`);
+    set(el.pickLine, `${h.name} · par ${h.par}${g.holes[pick] ? ` · best ${g.holes[pick]}` : ''}`);
+    const best = (n: number, what: string) => (n ? `${what} ${n}` : '');
+    set(el.bests, [best(g.front, 'Front nine'), best(g.back, 'Back nine'), best(g.full, 'Eighteen')].filter(Boolean).join(' · ') || 'No rounds yet');
+  }
+  function open() {
+    if (active) return;
+    active = true;
+    phase = 'menu';
+    round = null;
+    menu.hidden = false;
+    root.classList.add('is-golfing');
+    paintMenu();
+    // (the mouse freed for the menu)
+    if (document.pointerLockElement) document.exitPointerLock();
+  }
+  const closeMenu = () => {
+    menu.hidden = true;
+    active = false;
+    root.classList.remove('is-golfing');
+    d.end();
+  };
+  menu.querySelector('[data-golf-menu-close]')!.addEventListener('click', closeMenu);
+  menu.querySelector('[data-golf-prev]')!.addEventListener('click', () => {
+    pick = (pick + HOLES.length - 1) % HOLES.length;
+    paintMenu();
+  });
+  menu.querySelector('[data-golf-next-hole]')!.addEventListener('click', () => {
+    pick = (pick + 1) % HOLES.length;
+    paintMenu();
+  });
+  const go = (list: number[], saved?: SavedRound | null) => {
+    active = false;
+    start(list, saved);
+  };
+  el.cont.addEventListener('click', () => go([], d.game.save().golf.round));
+  menu.querySelector('[data-golf-one]')!.addEventListener('click', () => go([pick]));
+  menu.querySelector('[data-golf-front]')!.addEventListener('click', () => go([...Array(9).keys()]));
+  menu.querySelector('[data-golf-back]')!.addEventListener('click', () => go([...Array(9).keys()].map((i) => i + 9)));
+  menu.querySelector('[data-golf-full]')!.addEventListener('click', () => go([...Array(18).keys()]));
   hud.querySelector('[data-golf-quit]')!.addEventListener('click', () => stop());
 
   function frame(dt: number) {
-    if (!active || !round) return;
+    if (!active || phase === 'menu' || !round) return;
     if (popT > 0 && (popT -= dt) <= 0) el.pop.hidden = true;
     const k = 1 - Math.exp(-6 * dt);
     if (phase === 'aim' || phase === 'meter') {
@@ -461,6 +635,8 @@ export function createGolfGame(d: GolfDeps): GolfGame {
 
   function key(code: string, down: boolean, repeat: boolean): boolean {
     if (!active) return false;
+    // (the menu's buttons take the mouse; walking keys wait)
+    if (phase === 'menu') return true;
     const aimKeys = ['KeyA', 'KeyD', 'ArrowLeft', 'ArrowRight'];
     if (aimKeys.includes(code)) {
       if (down) held.add(code);
@@ -505,10 +681,14 @@ export function createGolfGame(d: GolfDeps): GolfGame {
     get active() {
       return active;
     },
+    get playing() {
+      return active && phase !== 'menu';
+    },
     at,
     start,
     frame: (dt) => frame(dt),
     key,
-    quit: stop,
+    open,
+    quit: () => (phase === 'menu' && active ? closeMenu() : stop()),
   };
 }

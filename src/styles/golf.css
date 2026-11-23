@@ -237,3 +237,78 @@
     font-size: 18px;
   }
 }
+/* The round's line: which hole of how many, the score so far */
+.golf-round {
+  font-size: 12px;
+  color: #00eaff;
+}
+.golf-round[hidden] {
+  display: none;
+}
+.golf-card-take-line {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #e6c46a;
+}
+.golf-card-take [hidden] {
+  display: none;
+}
+/* The clubhouse's menu (Play golf): on the gun store's .shop panel (global.css), Continue first, a hole picked with
+   its arrows, the nines and the eighteen, the bests */
+.golf-menu {
+  z-index: 6;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas: none;
+  width: min(380px, calc(100% - 32px));
+}
+.golf-menu > * {
+  grid-column: 1 / -1;
+}
+.golf-menu .shop-head {
+  justify-content: space-between;
+}
+.golf-menu[hidden] {
+  display: none;
+}
+.golf-menu-body {
+  display: grid;
+  gap: 8px;
+}
+.golf-menu-body [hidden] {
+  display: none;
+}
+.golf-pick {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.golf-pick-name {
+  display: grid;
+  margin: 0;
+  text-align: center;
+}
+.golf-pick-name b {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+.golf-pick-name span {
+  font-size: 12px;
+  opacity: 0.85;
+}
+.golf-step {
+  width: 36px;
+  height: 36px;
+  border: 1px solid #ffffff44;
+  border-radius: 10px;
+  background: #ffffff14;
+  color: inherit;
+  font-size: 20px;
+  cursor: pointer;
+}
+.golf-bests {
+  margin: 2px 0 0;
+  font-size: 12px;
+  text-align: center;
+  opacity: 0.8;
+}

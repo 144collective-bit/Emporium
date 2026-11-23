@@ -3,7 +3,7 @@
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { BESIDE, CARTS, CART_LOOPS, CART_PACE, DUCKS, FLAG, FURNITURE, GOLFERS, GROUPS, MARKERS, MOW_HOLE, MOW_LOOP, cartAt, duckAt, golferAt, mowerAt, onLoop } from '../src/scripts/city3d/golflife';
+import { BESIDE, PLAYING, offCourse, CARTS, CART_LOOPS, CART_PACE, DUCKS, FLAG, FURNITURE, GOLFERS, GROUPS, MARKERS, MOW_HOLE, MOW_LOOP, cartAt, duckAt, golferAt, mowerAt, onLoop } from '../src/scripts/city3d/golflife';
 import { HOLES, LAKES, TEE, fairwayIn, fromPaths, inCourse, inLake, lakeAt, onGreen, onTee, surfaceAt, teeOf } from '../src/scripts/city3d/golf';
 import { GOLF_CLUBHOUSE } from '../src/scripts/city3d/golflift';
 
@@ -197,4 +197,18 @@ test("the golfers' look, swing and putt, and the course's sound: the club in han
   const mid = ambienceAt(560, -560, 0, 0);
   assert.ok(mid.park > 0.7, `birds over the course: ${mid.park}`);
   assert.ok(mid.crest > 0.6, `the sprinklers over the course: ${mid.crest}`);
+});
+
+test("the crowd's golfers keep off the hole being played, and every leg knows its hole", () => {
+  for (const p of GOLFERS) for (const l of p.legs) assert.ok(l.hole >= 0 && l.hole < 18, `${p.id}: a leg on no hole`);
+  const p = GOLFERS[0];
+  const at = { x: 0, z: 0, ry: 0, clip: 'look' as const, speed: 0 } as Parameters<typeof golferAt>[2];
+  golferAt(p, 100, at);
+  assert.equal(PLAYING.hole, -1);
+  assert.ok(!offCourse(p, 100));
+  PLAYING.hole = at.hole!;
+  assert.ok(offCourse(p, 100));
+  PLAYING.hole = (at.hole! + 1) % 18;
+  assert.ok(!offCourse(p, 100));
+  PLAYING.hole = -1;
 });

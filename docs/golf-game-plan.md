@@ -18,6 +18,7 @@ Nothing is built until the owner signs off a phase; keep this plan up to date. T
 | Between shots | The camera flies to the ball |
 | Phase 1 | Go (2026-11-22); built, signed off (2026-11-23: "1") |
 | Phase 2 | Go (2026-11-23); built, signed off (2026-11-23: "3", hold before Phase 3) |
+| Phase 3 | Go (2026-11-23: "1"); built, waiting for the owner's sign-off |
 
 ## What it is
 
@@ -125,6 +126,18 @@ with the smoke's pictures. The crowd's groups now start part-way round their nin
 All eighteen (a hole, a nine or the round), the putting camera and the green's slope shown, the penalties' drops, the
 card, the save (the round kept and carried on), the other groups keeping off your hole, the rewards (XP, Dorras under
 the daily cap), the ledger, missions and badges.
+
+**Built** (2026-11-23; `docs/guide/golf.md`): Play golf opens the clubhouse's menu: Continue a round left
+part-way, a hole on its own (picked with its arrows: its name, par and your best), the front nine, the back nine or
+all eighteen, the bests. The round's kept on the save after every shot (save v15's `golf`), so Quit or Esc keeps it
+for Continue. Each hole done shows its card (its score's name, its XP, Next hole: the camera flies to the next
+tee); the round done, its card (the strokes against par, its Dorras by each hole's score: an ace 2,000, an eagle
+900, a birdie 400, a par 150, a bogey 60, under the day's cap (the first 4 rounds in full, then 35%), its XP, your
+best, Again or Done). The HUD says which hole of how many and the score so far. On the green the slope's shown, a
+chevron a tile pointing downhill. The crowd's golfers on the hole you're playing step off the course till you're
+done with it. Missions (Tee off, Birdie, Nine holes) and badges (Golfer, Birdie hunter, Hole in one, Under par). In
+the boot: the save's golf, counters, ledger and cap, the missions (770.6 KB). Fixed on the way: Degen stands back
+where he was at the door after a round, facing it; the driver's picked first only off a tee.
 
 ### Phase 4: phones, pads and polish
 

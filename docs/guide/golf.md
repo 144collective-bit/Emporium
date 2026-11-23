@@ -138,3 +138,16 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   hooks: `golfFrame()` in `update()`, `modeNow()`'s `golf` (keymap.ts `golf`: aim A / D, club W / S, swing Space,
   the camera V (behind the ball or high over the hole), quit Esc; the jobs `club` and `swing`), walkkeys.ts's `golf` branch, Esc's `quitGolf()`, `endGolf()` standing
   Degen back at the door. The smoke's `golf` scene plays a shot (`npm run smoke -- golf`).
+  Phase 3 (the round) built: Play golf opens the clubhouse's **menu** (`open()`: Continue a round left part-way, a
+  hole picked with its arrows, the front nine, the back nine, all eighteen; the bests); the round kept on the save
+  after every shot (golfscore.ts `keepRound()`, `dropRound()`; tycoon.ts `golf.round`, v15); each hole's **card**
+  (its score's name, its XP, Next hole) and the round's (its strokes against par, `parWords()`, the Dorras under the
+  day's cap, the XP, Again or Done); **`golfscore.ts`** (DOM-free, on `DOM_FREE`, the game's chunk's; tested in
+  `tests/golfscore.test.ts`): `finishGolfHole()` (counters, the hole's best, `GOLF_XP`), `finishGolfRound()`
+  (`HOLE_PRIZES` by each hole against par, `PRIZE_CAP.rounds`, the ledger's `golf`, `roundKind()` and its best, XP),
+  `keepRound()`, `dropRound()`; the HUD's round line (which hole of how many, the score so far); the green's slope
+  for a putt (`paintSlopes()`: a chevron a tile, downhill, longer where steeper); the crowd's golfers off the hole
+  being played (golflife.ts `PLAYING`, `offCourse()`, each `Leg`'s `hole`; golflife3d.ts puts them off the course);
+  the driver picked first off a tee only (`pickClub()`); Degen put back where he stood at the door, facing it
+  (walk.ts `golfFrom`). Missions `tee-off`, `birdie`, `nine-holes` and badges `golf-18`, `birdies-10`, `ace-1`,
+  `under-par` (missions.ts).

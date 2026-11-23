@@ -39,6 +39,7 @@ export const MISSIONS: Mission[] = [
   { id: 'one-two-three', name: 'One, two, three', blurb: 'Land a chain of three on a dummy.', level: 1, goal: counter('streetChains', 1), reward: 300, xp: 60 },
   { id: 'bare-hands', name: 'Bare hands', blurb: 'Knock down 3 dummies with your fists.', level: 1, goal: counter('fistDowns', 3), reward: 400, xp: 80 },
   { id: 'first-lap', name: 'First lap', blurb: 'Finish a race at the kart park.', level: 1, goal: counter('kartRaces', 1), reward: 500, xp: 100 },
+  { id: 'tee-off', name: 'Tee off', blurb: 'Finish a hole at Knob Hill.', level: 1, goal: counter('golfHoles', 1), reward: 300, xp: 60 },
   // Tier 2
   { id: 'shopkeeper', name: 'Shopkeeper', blurb: 'Sell 150 things.', level: 3, goal: counter('sold', 150), reward: 900, xp: 150 },
   { id: 'courier-king', name: 'Courier king', blurb: 'Deliver 5 contracts.', level: 3, goal: counter('contracts', 5), reward: 1200, xp: 180 },
@@ -49,6 +50,8 @@ export const MISSIONS: Mission[] = [
   { id: 'landlord', name: 'Landlord', blurb: 'Buy 2 units, lots or shops.', level: 3, goal: counter('land', 2), reward: 800, xp: 100 },
   { id: 'podium', name: 'Podium', blurb: 'Finish a kart race in the top three.', level: 3, goal: counter('podiums', 1), reward: 1200, xp: 160 },
   { id: 'clean-sheet', name: 'Clean sheet', blurb: 'Drive 5 clean laps at the kart park.', level: 3, goal: counter('cleanLaps', 5), reward: 900, xp: 140 },
+  { id: 'birdie', name: 'Birdie', blurb: 'Make a birdie at Knob Hill.', level: 3, goal: counter('birdies', 1), reward: 900, xp: 140 },
+  { id: 'nine-holes', name: 'Nine holes', blurb: 'Finish a round of nine at Knob Hill.', level: 3, goal: counter('golfRounds', 1), reward: 1200, xp: 160 },
   // Tier 3
   { id: 'in-training', name: 'Tycoon in training', blurb: 'Take 25,000 Dorras.', level: 5, goal: counter('earned', 25000), reward: 2000, xp: 250 },
   { id: 'tuner', name: 'Tuner', blurb: 'Buy 3 upgrades.', level: 5, goal: counter('upgrades', 3), reward: 1200, xp: 150 },
@@ -159,6 +162,10 @@ export const BADGES: Badge[] = [
   b('podiums-10', 'Podium regular', 'Ten podiums at the kart park.', 'podiums', 10, 500),
   b('kart-wins-25', 'Kart king', 'Won 25 kart races.', 'kartWins', 25, 2500),
   b('overtakes-50', 'Overtaker', 'Passed 50 karts at the kart park.', 'overtakes', 50, 400),
+  b('golf-18', 'Golfer', 'Finished 18 holes of golf.', 'golfHoles', 18, 200),
+  b('birdies-10', 'Birdie hunter', 'Made 10 birdies.', 'birdies', 10, 500),
+  b('ace-1', 'Hole in one', 'Holed a tee shot.', 'aces', 1, 1000),
+  b('under-par', 'Under par', 'Went round in under par.', 'underPar', 1, 800),
   b('driven-1k', 'Round the block', 'Drove 1,000 tiles.', 'driven', 1000, 100),
   b('driven-10k', 'High mileage', 'Drove 10,000 tiles.', 'driven', 10000, 800),
   b('land-3', 'Landowner', 'Bought 3 units, lots or shops.', 'land', 3, 200),
@@ -213,5 +220,11 @@ export const COUNTER_NAMES: Record<CounterId, string> = {
   partnersBeaten: 'sparring partners beaten',
   streetChains: 'chains of three on a dummy',
   leftHome: 'times out of the house',
+  golfHoles: 'holes of golf finished',
+  birdies: 'birdies',
+  eagles: 'eagles',
+  aces: 'holes in one',
+  golfRounds: 'rounds of golf finished',
+  underPar: 'rounds under par',
 };
 export type { Counters };

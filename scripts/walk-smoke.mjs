@@ -397,7 +397,10 @@ await scene('karts', '-338.8,-46.9', async (t) => {
 // way up, accuracy on the way down), the ball off and the next shot to play, Esc out
 await scene('golf', '528,-497.6', async (t) => {
   await t.prompt('Play golf');
-  await t.until('the round', () => !!document.querySelector('.city.is-golfing'), null, 120000);
+  await t.until('the golf menu', () => !!document.querySelector('.golf-menu:not([hidden]) [data-golf-one]'), null, 120000);
+  await t.step('the menu');
+  await t.click('.golf-menu [data-golf-front]');
+  await t.until('the round', () => !!document.querySelector('.golf-hud:not([hidden])'), null, 120000);
   await t.step('on the 1st tee');
   const stroke = () => t.page.evaluate(() => document.querySelector('[data-golf-stroke]')?.textContent ?? '');
   await t.page.keyboard.press('Space');
@@ -414,7 +417,15 @@ await scene('golf', '528,-497.6', async (t) => {
     await t.page.waitForTimeout(1500);
   }
   if (await t.has('.city.is-golfing')) throw new Error('the round did not end on Esc');
-  await t.step('quit the round');
+  await t.step(`quit the round, ${await t.page.evaluate(() => document.querySelector('.city-stats')?.textContent?.match(/at -?[\d.]+, -?[\d.]+/)?.[0] ?? '')}`);
+  // (the round left part-way is kept: the menu offers to carry it on)
+  await t.page.waitForTimeout(1500);
+  await t.prompt('Play golf');
+  await t.until('Continue on the menu', () => !!document.querySelector('.golf-menu:not([hidden]) [data-golf-continue]:not([hidden])'), null, 120000);
+  await t.step(`the menu offers ${await t.page.evaluate(() => document.querySelector('[data-golf-continue]')?.textContent ?? '')}`);
+  await t.click('.golf-menu [data-golf-menu-close]');
+  await t.until('the menu closed', () => !document.querySelector('.city.is-golfing'), null, 60000);
+  await t.step('the menu closed');
 });
 
 // Flying: beside your aircraft in Hangar 1 (airfield.ts HANGAR_SPOT), in, rolling out under power
