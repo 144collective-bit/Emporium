@@ -1131,7 +1131,7 @@ const SHOP_TEX = canvasTex(256, SHOP_ROW * DECK_SHOP_NAMES.length, (c) => {
 const SHOP_NEON = lit(new THREE.MeshBasicMaterial({ map: SHOP_TEX }), 0.55, 1.15);
 /** A roller shutter's steel, a puddle that catches the sodium lamps at night */
 const SHUTTER = toon('#7d8189');
-const PUDDLE_SHINE = lit(toon('#1b2230', { emissive: '#ff9a3c' }), 0, 0.22);
+const PUDDLE_SHINE = lit(toon('#1b2230', { emissive: '#7a4a24' }), 0, 0.18);
 
 /** A quad from p0 to p1 (p0 on the left seen from in front), y0 to y1, facing n, a band v0..v1 of a texture */
 function texQuad(b: Batch, p0: Pt, p1: Pt, y0: number, y1: number, n: Pt, v0: number, v1: number, m: THREE.Material) {
@@ -1175,6 +1175,9 @@ function drawShops(b: Batch, low: boolean) {
         quad(b, at(0.05, 0.02), at(len - 0.05, 0.02), base, base + 1.06, n, SHUTTER);
         along(b, at(0, 0.1), at(len, 0.1), 0.2, base + 1.06, base + 1.28, CONC_DARK);
       }
+      // A strip light under the deck's soffit in front of each unit, tired, the odd one dead
+      const h = hashOf(sh.id);
+      if (h % 5) along(b, at(len * 0.25, 1.6), at(len * 0.75, 1.6), 0.08, DECKS[0].y - 0.36, DECKS[0].y - 0.31, h % 3 ? STRIP_TIRED : STRIP);
     });
     if (low) continue;
     b.detail(() => {
