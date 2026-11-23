@@ -555,6 +555,41 @@ const podium = (): Deck => {
 };
 export const DECKS: Deck[] = [podium()];
 
+/* ---------- The shops under the podium deck (docs/brutalist-plan.md Phase 5; run from Phase 7) ---------- */
+
+/** A unit on a block's ground floor facing the court under the deck: its front from a to c, facing n (to the court) */
+export interface DeckShop {
+  id: string;
+  /** Its name over the front (fixed made-up copy, the owner's picks), or null: shuttered */
+  name: string | null;
+  /** A shuttered one with a To Let board on it */
+  toLet?: boolean;
+  of: string;
+  a: Pt;
+  c: Pt;
+  n: Pt;
+  base: number;
+}
+/** The two open shops' names (the owner's picks, 2026-11-23): a launderette and a corner shop */
+export const DECK_SHOP_NAMES = ['The Wash House', 'Deck Stores'] as const;
+/** Five units a side, under the deck's length (`PODIUM_X`), on Teasel House's and Fennel House's gallery sides */
+export const DECK_SHOPS: DeckShop[] = (() => {
+  const out: DeckShop[] = [];
+  for (const blk of [TEASEL, FENNEL]) {
+    const s = SIDE[blk.galleries!];
+    const face = shift(blk.spine!, s * (blk.depth! / 2));
+    const ends = [alongToX(face, PODIUM_X[0] + 1.5), alongToX(face, PODIUM_X[1] - 1.5)].sort((p, q) => p - q);
+    const w = (ends[1] - ends[0]) / 5;
+    for (let i = 0; i < 5; i++) {
+      const [pa, pc] = [pointAt(face, ends[0] + i * w + 0.15), pointAt(face, ends[0] + (i + 1) * w - 0.15)];
+      const n: Pt = [-pa.dir[1] * s, pa.dir[0] * s];
+      const k = out.length;
+      out.push({ id: `deck-shop-${k}`, name: blk === TEASEL && i < 2 ? DECK_SHOP_NAMES[i] : null, toLet: blk === TEASEL && i === 3, of: blk.id, a: pa.p, c: pc.p, n, base: blk.base });
+    }
+  }
+  return out;
+})();
+
 export const BRIDGES: Bridge[] = [
   // The Rampart to the towers' core, at the third, sixth and ninth floors
   ...[3, 6, 9].map((f) => bridge(`rampart-core-${f}`, { core: 'rampart-3' }, { block: 'twin-core' }, f)),

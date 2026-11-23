@@ -55,7 +55,7 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 4. **Pipes and kit on the walls.** Done (2026-11-23, below). Bundles of ducts snaking up the ends of a few blocks (bends, joints, brackets),
    air-con units under windows, satellite dishes, water tanks and aerials on the roofs, rubbish chutes, washing lines
    along the galleries. Instanced, near only; phones a trimmed set.
-5. **Street-level grit.** Cables strung over the estate's lanes and between the blocks, shuttered fronts under the
+5. **Street-level grit.** Done (2026-11-23, below). Cables strung over the estate's lanes and between the blocks, shuttered fronts under the
    podium deck, neon over the shops there (made-up names), bins, puddles that shine in the rain, the estate's
    noticeboards. The tube's trains already run under; nothing new overhead.
 6. **The lobbies.** Each block's ground-floor hall walked into from its door: post boxes, a noticeboard, a bench, the
@@ -149,6 +149,20 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 - Existing materials only (no new draws far off); phones keep the ducts and chutes, the rest is off. The stadium's
   removal (2026-11-22) made the room in the boot and the textures first.
 
+## What Phase 5 did (2026-11-23)
+
+- **The shops under the podium deck** (southblocks.ts `DECK_SHOPS`, `DECK_SHOP_NAMES`, tested): ten units on Teasel's
+  and Fennel's gallery-side ground floors facing the court under the deck. The owner's names: **The Wash House** (the
+  launderette) and **Deck Stores** (the corner shop), each a glazed front lit warm at night, a door, a dark fascia and
+  its neon (southblocks3d.ts `drawShops()`, `SHOP_TEX`: pink and cyan tubes, minimal bloom); the other eight roller
+  shutters down (the owner's pick: tagged), one with a To Let board. Tired strip lights under the deck's soffit, the
+  odd one dead. They become places to run in Phase 7.
+- **Cables** strung between neighbouring blocks (`CABLES`, a sagging pair between each two blocks 6 to 28 apart), not
+  on phones.
+- **Puddles** in the courts that catch the sodium lamps at night (`courtPuddles()`, `PUDDLE_SHINE`), near only.
+- **The noticeboards**: a cork board in a steel frame on two posts by every core's lift door, notices pinned up, near.
+- Bins were the grit's already (Phase 2's polish).
+
 ## The owner's decisions (2026-11-21)
 
 - **The concrete:** a cool grey, each block's own accent kept bold as a stripe on its end; after the first look, darker
@@ -157,5 +171,5 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 - **The flats:** a flat of Degen's own to live in (and wake in, if chosen); no flats let out.
 - **The shops under the deck:** a launderette and a corner shop.
 - **The order:** the look first (phases 1 to 5), then the places (6 to 8).
-- Still to pick, at their phases: the shops' names, which block the flat is in (Claude to
-  suggest made-up names and a block when each phase starts).
+- The shops' names (2026-11-23): The Wash House and Deck Stores; the empty units shuttered and tagged.
+- Still to pick, at its phase: which block the flat is in (Claude to suggest a block when Phase 7 starts).

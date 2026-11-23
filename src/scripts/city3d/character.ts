@@ -47,6 +47,7 @@ const tmp = new THREE.Color();
 function colorOf(p: Piece, o: Outfit, out = new THREE.Color()) {
   if (p.color.startsWith('#')) return out.set(p.color);
   out.set(outfitColor(o, p.color as ColorKey));
+  if (p.blend) out.lerp(tmp.set(outfitColor(o, p.blend.key)), p.blend.t);
   if (!p.shade) return out;
   // (a detail's shade, lifted on near-black cloth so it still shows: shadeRGB() in wardrobe.ts)
   const c = out.getRGB(rgb, THREE.SRGBColorSpace);
