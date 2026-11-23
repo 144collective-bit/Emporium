@@ -49,12 +49,12 @@ test('cappedPrize: in full under the cap, the share past it; prizesLeft counts d
   assert.equal(cappedPrize(0, 9, 6), 0);
   assert.ok(PRIZE_CAP.share > 0 && PRIZE_CAP.share < 1 && PRIZE_CAP.races >= 1 && PRIZE_CAP.bouts >= 1);
   const s = rich();
-  assert.deepEqual(prizesLeft(s, T0), { races: PRIZE_CAP.races, bouts: PRIZE_CAP.bouts });
-  assert.deepEqual(prizesToday(s, T0), { day: dayKey(T0), races: 0, bouts: 0 });
+  assert.deepEqual(prizesLeft(s, T0), { races: PRIZE_CAP.races, bouts: PRIZE_CAP.bouts, rounds: PRIZE_CAP.rounds });
+  assert.deepEqual(prizesToday(s, T0), { day: dayKey(T0), races: 0, bouts: 0, rounds: 0 });
   s.prizes.races = 2;
   s.prizes.bouts = 99;
-  assert.deepEqual(prizesLeft(s, T0), { races: PRIZE_CAP.races - 2, bouts: 0 });
-  assert.deepEqual(prizesLeft(s, T0 + DAY), { races: PRIZE_CAP.races, bouts: PRIZE_CAP.bouts }, 'another day starts afresh');
+  assert.deepEqual(prizesLeft(s, T0), { races: PRIZE_CAP.races - 2, bouts: 0, rounds: PRIZE_CAP.rounds });
+  assert.deepEqual(prizesLeft(s, T0 + DAY), { races: PRIZE_CAP.races, bouts: PRIZE_CAP.bouts, rounds: PRIZE_CAP.rounds }, 'another day starts afresh');
 });
 
 test("the daily cap on race prizes: the day's first cup races pay in full, the rest the share; a new day starts over", () => {
@@ -68,7 +68,7 @@ test("the daily cap on race prizes: the day's first cup races pay in full, the r
     assert.equal(r.capped, false);
   }
   assert.equal(s.dorras, d + full * PRIZE_CAP.races);
-  assert.deepEqual(prizesLeft(s, T0), { races: 0, bouts: PRIZE_CAP.bouts });
+  assert.deepEqual(prizesLeft(s, T0), { races: 0, bouts: PRIZE_CAP.bouts, rounds: PRIZE_CAP.rounds });
   d = s.dorras;
   const r = race(s, T0 + 10 * MIN);
   assert.equal(r.prize, part);
@@ -92,7 +92,7 @@ test("the daily cap on race prizes: the day's first cup races pay in full, the r
   const next = race(s, T0 + DAY);
   assert.equal(next.prize, full);
   assert.equal(next.capped, false);
-  assert.deepEqual(s.prizes, { day: dayKey(T0 + DAY), races: 1, bouts: 0 });
+  assert.deepEqual(s.prizes, { day: dayKey(T0 + DAY), races: 1, bouts: 0, rounds: 0 });
 });
 
 test('a series prize and the daily challenge are never capped', () => {
@@ -148,15 +148,17 @@ test("the daily cap on purses: the day's first bouts won pay in full, the rest t
   s.at = T0 + 2 * DAY;
   const own = finishFight(s, { kind: 'bout', bot: 'hard', won: true, hits: 10, kos: 0, bestChain: 1, seconds: 80 });
   assert.equal(own.prize, FIGHT_BOTS.hard.prize);
-  assert.deepEqual(s.prizes, { day: dayKey(T0 + 2 * DAY), races: 0, bouts: 1 });
+  assert.deepEqual(s.prizes, { day: dayKey(T0 + 2 * DAY), races: 0, bouts: 1, rounds: 0 });
 });
 
 test("save v13: today's prize count is kept, another day's or an older save's starts at zero, junk is cleaned", () => {
   const s = rich();
   assert.equal(s.v, 15);
   assert.deepEqual(s.prizes, emptyPrizes());
-  const today = cleanSave({ ...s, prizes: { day: dayKey(T0), races: 3.7, bouts: -1 } }, T0);
-  assert.deepEqual(today.prizes, { day: dayKey(T0), races: 4, bouts: 0 });
+  const today = cleanSave({ ...s, prizes: { day: dayKey(T0), races: 3.7, bouts: -1, rounds: 2.2 } }, T0);
+  assert.deepEqual(today.prizes, { day: dayKey(T0), races: 4, bouts: 0, rounds: 2 });
+  const older = cleanSave({ ...s, prizes: { day: dayKey(T0), races: 1, bouts: 1 } }, T0);
+  assert.equal(older.prizes.rounds, 0, "a v14 count has no rounds yet: zero");
   const other = cleanSave({ ...s, prizes: { day: dayKey(T0 - DAY), races: 5, bouts: 2 } }, T0);
   assert.deepEqual(other.prizes, emptyPrizes());
   const junk = cleanSave({ ...s, prizes: 'lots' }, T0);
