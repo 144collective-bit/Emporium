@@ -426,7 +426,11 @@ keep it up to date when what it describes changes.
     96 and 64 in the stability plan's Phase 3a; `?budget=MB` in the address
     overrides it, for testing), furthest first (`toRelease()`); it's drawn
     far until the site runs again and puts them back, before it's near
-    (`toRebuild()`, `REBUILD_LEAD`). The room they took is reused
+    (`toRebuild()`, `REBUILD_LEAD`), a tile at a time, nearest first: the
+    first now, up to `REBUILD_AT_ONCE` (4) in the frame's time, the rest
+    the frames after (tilework.ts `step()`; four at once took 270-350 ms
+    of one frame on memcheck's phone, coming to `south-rampart` and
+    `crest-drive`: 204 and 119 ms since, 2026-11-23). The room they took is reused
     (`BatchedMesh.optimize()`) before a mesh grows. The places, the
     landmarks and downtown's monolithic builders are built at the boot and
     never let go.

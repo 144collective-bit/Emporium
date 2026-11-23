@@ -79,3 +79,37 @@ test('a place asked for is built before it is shown, and near forms come back af
   // b, never built and never asked for, still waits
   assert.equal(works.stats().waiting, 1);
 });
+
+test("tiles that let go come back a tile at a frame when the frame's time is short, together when there's time", () => {
+  const runs: string[] = [];
+  const block = (id: string, x: number, z: number) =>
+    site(id, [x - 2, z - 2, x + 2, z + 2], (into) => {
+      runs.push(id);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1).translate(x, 0.5, z), paint);
+      m.userData.batched = true;
+      m.userData.lod = 'near';
+      into.add(m);
+    });
+  block('home', 15, 15);
+  // Three sites on three tiles side by side, far east
+  for (const [i, x] of [615, 645, 675].entries()) block(`east${i}`, x, 15);
+  const scene = new THREE.Scene();
+  const works = createTileWork(scene, { budget: 0, compile: () => {} });
+  const tiled = tileBatch(scene, [scene, ...works.boot(tilesNear(15, 15, 40))]);
+  works.attach(tiled);
+  works.want(645, 15, 60);
+  assert.equal(runs.length, 4);
+  // From home they're far: all three let go
+  tiled.update(15, 30, 15, 100);
+  works.step(0, 15, 30, 15, 0.016, 100);
+  assert.equal(works.stats().released, 3);
+  // A jump to them with no time in the frame: one comes back now, the next the frame after, nearest first
+  works.step(0, 650, 30, 15, 0.016, 100);
+  assert.equal(works.stats().rebuilt, 1);
+  works.step(0, 650, 30, 15, 0.016, 100);
+  assert.equal(works.stats().rebuilt, 2);
+  // With time to spare the rest come back in one frame
+  works.step(1e6, 650, 30, 15, 0.016, 100);
+  assert.equal(works.stats().rebuilt, 3);
+  assert.equal(works.stats().released, 0);
+});
