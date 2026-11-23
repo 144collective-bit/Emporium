@@ -105,3 +105,19 @@ test("the hill roads' walls hold their ground: topped just over the bank right b
     assert.ok(top - behind < 0.6, `a wall on ${w.road} standing ${(top - behind).toFixed(2)} over its bank at ${mx.toFixed(1)}, ${mz.toFixed(1)}`);
   }
 });
+
+test("the hill roads' walls run up to a drive's kerbs, clear of it and its piers, their ends returned (J2 part 2)", async () => {
+  const { DRIVE_CHEEKS, DRIVE_CLEAR } = await import('../src/scripts/city3d/landscape');
+  const { nearestDrive, MANSIONS } = await import('../src/scripts/city3d/mansions');
+  const { DRIVE_PIERS } = await import('../src/scripts/city3d/crestland');
+  const along = (e: { a: Pt; b: Pt }) => Array.from({ length: 11 }, (_, i): Pt => [e.a[0] + ((e.b[0] - e.a[0]) * i) / 10, e.a[1] + ((e.b[1] - e.a[1]) * i) / 10]);
+  for (const w of WALLS) for (const p of along(w)) assert.ok((nearestDrive(...p)?.d ?? 99) > DRIVE_CLEAR - 0.06, `a wall over a drive at ${p}`);
+  assert.ok(DRIVE_CHEEKS.length > 0, 'no wall reaches a drive');
+  for (const c of [...WALLS, ...DRIVE_CHEEKS]) {
+    for (const p of along(c)) {
+      assert.ok((nearestDrive(...p)?.d ?? 99) > DRIVE_CLEAR - 0.06, `a cheek over a drive at ${p}`);
+      for (const q of DRIVE_PIERS as unknown as { x: number; z: number }[]) assert.ok(Math.hypot(p[0] - q.x, p[1] - q.z) > 0.45, `a wall through a pier at ${p}`);
+    }
+  }
+  assert.ok(MANSIONS.length > 5);
+});

@@ -185,7 +185,7 @@ sets the order (rule 2).
   - [ ] The Docks
   - [ ] The airport
   - [ ] The Neon Mile
-  - [ ] Crestmont
+  - [x] Crestmont's hill drives (J2, parts 1 and 2; the estates' and the Flats' gateways still to check)
   - [ ] Sunridge
   - [ ] Lot 9
   - [ ] Northgate Air Base
@@ -264,7 +264,8 @@ sets the order (rule 2).
       keep to Phase 1's concrete (`docs/brutalist-plan.md`).
 - [x] **J2 (R2), part 1: the hill drives' paving stops at the road's edge** (2026-11-23, pass 4): drawn from
       where both its edges clear the asphalt (mansions.ts `driveStart()`, tested), no longer over the edge line.
-- [ ] **J2 (R2), part 2: the hill roads' walls at a drive's mouth**: today a whole 1.5 piece of wall is left out
+- [x] **J2 (R2), part 2: the hill roads' walls at a drive's mouth** (2026-11-23, pass 5: clipped to `DRIVE_CLEAR`,
+      returned up the drive to its gate pier as `DRIVE_CHEEKS`, tested; walls are drawn only, no solids): today a whole 1.5 piece of wall is left out
       each side (landscape.ts `WALLS`, `onMansion()`), so the wall stops square well short of the drive. Run each
       wall up to the drive's kerb and finish its end (a cheek returning along the drive, its coping round the
       corner). Walls are solids: check the walk through the mouth stays clear (R2's rule 6) and the snapshot holds.
@@ -423,3 +424,9 @@ session.)
   and its kerbs from where both edges clear the asphalt (mansions.ts `driveStart()`, tested); the walls are part 2.
   Checks: typecheck, lint, test (with the new test), test:wide, build, texture bake, budget (texFull 4918.2 of
   4955), smoke 150 steps, none failed.
+- 2026-11-23, pass 5 (02:07): J2 part 2. The hill roads' walls left a whole piece out each side of a drive, stopping
+  square short of it; now clipped to `DRIVE_CLEAR` (just past the drive's kerbs) and returned up the drive to its
+  gate pier (`DRIVE_CHEEKS`; mansions.ts `onPad()`, `nearestDrive()`; tested: no wall over a drive or through a
+  pier). Walls are drawn only. After shots at the same two drives: the walls turn in to the piers. Checks:
+  typecheck, lint, test (with the new test), test:wide, build, texture bake, budget (texFull 4918.2 of 4955);
+  smoke 148 steps ok, the station flake once more (L1), passed run alone.

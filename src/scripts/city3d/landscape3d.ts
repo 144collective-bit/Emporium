@@ -11,7 +11,7 @@ import { Batch, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { TILE } from './tiles';
 import { SWAY } from './dusk';
-import { JACARANDAS, PALMS, WALLS, hillPlanting, type Edge, type Palm, type Plant } from './landscape';
+import { DRIVE_CHEEKS, JACARANDAS, PALMS, WALLS, hillPlanting, type Edge, type Palm, type Plant } from './landscape';
 import { crown, trunk } from './palms3d';
 import { TERRAIN_RECT } from './terrain';
 import { drawnAt } from './drawn';
@@ -74,7 +74,7 @@ function byTile(low: boolean) {
   // (phones: every other palm, Phase 11)
   PALMS.forEach((p, i) => (!low || i % 2 === 0) && at(p.x, p.z).palms.push(p));
   for (const j of JACARANDAS) at(j.x, j.z).jacarandas.push(j);
-  for (const e of WALLS) at((e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2).edges.push(e);
+  for (const e of [...WALLS, ...DRIVE_CHEEKS]) at((e.a[0] + e.b[0]) / 2, (e.a[1] + e.b[1]) / 2).edges.push(e);
   // (and every tile over the hills: their oaks and scrub are laid when the first of those sites is built, `hillsIn()`)
   for (let i = Math.floor(TERRAIN_RECT[0] / TILE); i * TILE < TERRAIN_RECT[2]; i++) for (let j = Math.floor(TERRAIN_RECT[1] / TILE); j * TILE < TERRAIN_RECT[3]; j++) at(i * TILE + 1, j * TILE + 1);
   return tiles;
