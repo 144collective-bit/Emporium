@@ -61,7 +61,6 @@ const RED = toon('#e23b3b');
 const TUNNEL_IN = toon('#2b2550');
 const CEILING = toon('#141226');
 const PORTAL = toon('#4a3f7a');
-const TYRE = toon('#17151f');
 const CLUB_A = toon(CLUB.a);
 const CLUB_B = toon(CLUB.b);
 const soft = (c: string) => neon(c, 0.5, 1.3);
