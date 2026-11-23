@@ -5,7 +5,7 @@
 import { test } from 'node:test';
 import { onSouthGround, southLift } from '../src/scripts/city3d/southground';
 import { SKY_LIFTS, skyFloorAt } from '../src/scripts/city3d/southsky';
-import { floorY } from '../src/scripts/city3d/southblocks';
+import { LOBBIES, floorY } from '../src/scripts/city3d/southblocks';
 import { BRIDGE as REC_BRIDGE, recBridgeY } from '../src/scripts/city3d/rec';
 import assert from 'node:assert/strict';
 import { GROUND_LAYERS, SLAB, STREET, UNDER, baseAt, createGroundHeight } from '../src/scripts/city3d/groundheight';
@@ -208,6 +208,8 @@ test('every layer answers alone where it stands, and nowhere on the open street 
     civic: [CITYHALL_SPAWN.x, (PORTICO[1] + PORTICO[3]) / 2, 0],
     circuit: [sample(12)[0], sample(12)[1], 0],
     banks: [sample(12)[0], sample(12)[1], 0],
+    // (an Endswood block's lobby: the Rampart's hall, docs/brutalist-plan.md Phase 6)
+    lobby: [LOBBIES[0].poly.reduce((a, p) => a + p[0], 0) / 4, LOBBIES[0].poly.reduce((a, p) => a + p[1], 0) / 4, LOBBIES[0].base],
     // (the air base's visitors' centre: up on its roof's terrace)
     visitors: [(VISITOR_TERRACE[0] + VISITOR_TERRACE[2]) / 2, (VISITOR_TERRACE[1] + VISITOR_TERRACE[3]) / 2, VISITOR_CENTRE_H],
   };

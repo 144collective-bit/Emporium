@@ -1266,7 +1266,7 @@ function courtPuddles(b: Batch, poly: Pt[], id: string, y: number) {
 /* ---------- The lobbies (docs/brutalist-plan.md Phase 6) ---------- */
 
 /** The halls' floor (terrazzo, worn), their walls (painted concrete, scuffed) and the plywood over a broken pane */
-const TERRAZZO = toon('#8f8a80');
+const TERRAZZO = toon('#938d82');
 const HALL_WALL = toon('#9a9a8c');
 const PLY_BOARD = toon('#a3804f');
 
