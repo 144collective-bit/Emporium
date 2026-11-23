@@ -430,3 +430,6 @@ session.)
   pier). Walls are drawn only. After shots at the same two drives: the walls turn in to the piers. Checks:
   typecheck, lint, test (with the new test), test:wide, build, texture bake, budget (texFull 4918.2 of 4955);
   smoke 148 steps ok, the station flake once more (L1), passed run alone.
+- 2026-11-23, pass 6 (03:07): the board's next Ready card, Exits 1 (the exits plan's Phase 1, owner-signed): the
+  standard as rules and tests, `exitstd.ts` (DOM-free) and `tests/exitstd.test.ts`. Nothing in the city reads it
+  yet. Checks: typecheck, lint, test, test:wide, build and budget (no texture or drawing change; smoke not needed).
