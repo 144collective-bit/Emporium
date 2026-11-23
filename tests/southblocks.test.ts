@@ -5,13 +5,14 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   ARCH_X, BLOCKS, BLOCK_SOLIDS, BRIDGES, BRIDGE_CLEAR, BUNKER, CORES, COURTS, DECKS, DESIRE_LINES, GALLERIES, GRASS, PLAY,
-  BLOCKS_RECT, CAGE, CAGES, PERCH, PIERS, RAMPART, TOP_FLOOR, TWIN_CORE, TWIN_CORE_HALF, roofY, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
+  BLOCKS_RECT, CAGE, CAGES, DECK_SHOPS, DECK_SHOP_NAMES, PERCH, PIERS, RAMPART, TOP_FLOOR, TWIN_CORE, TWIN_CORE_HALF, roofY, TEASEL, blockById, coreById, cover, floorY, inBlock, outward, stepShape, storeysOf, topOf, type Pt,
 } from '../src/scripts/city3d/southblocks';
 import { EDGE_Z, FOOTPATHS, LOT9_EDGE, PATH_HALF, SOUTH_BLOCKS, SOUTH_STREETS, UNDERHILL } from '../src/scripts/city3d/south';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { cross, distTo, inside, selfCrossings } from '../src/scripts/city3d/streetfaces';
 import { southLift } from '../src/scripts/city3d/southground';
 import { MOUTH_PATHS } from '../src/scripts/city3d/circus';
+import { DECK_COLUMNS } from '../src/scripts/city3d/southyard';
 
 const STREETS = PLAN.streets.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp');
 /** How far a point is from the nearest street's sidewalk's outer edge (negative: on the street or its sidewalk) */
@@ -338,5 +339,22 @@ test("no landing post stands in a link's doorway; each core keeps two or more (J
     assert.ok(posts.length >= 2, `${c.id}: only ${posts.length} posts left`);
     // (and before the fix one was there: the rule is doing something)
     assert.ok(landingPosts(c.foot).some((p) => inDoorway(c.link!, p)) || posts.length === 4, `${c.id}: nothing to clear`);
+  }
+});
+
+test("the shops under the podium deck (docs/brutalist-plan.md Phase 5): ten units on Teasel's and Fennel's gallery sides, under the deck, two of them open", () => {
+  assert.equal(DECK_SHOPS.length, 10);
+  assert.deepEqual(DECK_SHOPS.filter((q) => q.name).map((q) => q.name), [...DECK_SHOP_NAMES]);
+  assert.equal(DECK_SHOPS.filter((q) => q.toLet).length, 1);
+  const deck = DECKS[0];
+  for (const sh of DECK_SHOPS) {
+    const len = Math.hypot(sh.c[0] - sh.a[0], sh.c[1] - sh.a[1]);
+    assert.ok(len > 2.5 && len < 5, `${sh.id} ${len.toFixed(2)} wide`);
+    const mid: Pt = [(sh.a[0] + sh.c[0]) / 2, (sh.a[1] + sh.c[1]) / 2];
+    // (its front on its block's face, the court in front of it, under the deck)
+    assert.ok(inBlock(mid, 0.05) && !inBlock([mid[0] + sh.n[0] * 0.3, mid[1] + sh.n[1] * 0.3]), `${sh.id} not on its block's face`);
+    const out: Pt = [mid[0] + sh.n[0] * 2.4, mid[1] + sh.n[1] * 2.4];
+    assert.ok(inside(deck.poly, out), `${sh.id} not under the deck`);
+    for (const [x, z] of DECK_COLUMNS) assert.ok(Math.hypot(x - out[0], z - out[1]) > 0.8, `${sh.id} behind a column`);
   }
 });

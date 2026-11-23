@@ -6,7 +6,8 @@ keep it up to date when what it describes changes.
 ## The kart park (3D walk mode)
 
 - **The next move** (the owner's ask, 2026-11-23, signed off: Riverside Raceway): to the south bank west of the Docks, on
-  a new longer figure-of-eight circuit with a crossover bridge, built up as a real kart venue with night racing, a
+  a new winding circuit about 2.2 times today's with a tunnel under a hill (`kartcircuit2.ts`, `npm run kart-fit`; Phases 0
+  and 1 done), built up as a real kart venue with night racing, a
   river bus stop at its gate, records and trophies reset: `docs/kart-harbour-plan.md`. Until its switch, what's below describes the
   park as it stands.
 

@@ -50,25 +50,27 @@ for the circuit and shaped round it: the spectator banks rise from the river sid
 the river bus pier. The public side faces north to the river (gate, plaza, grandstand, café deck); the working side
 faces south (paddock, workshops, hire garage, car park, transporters).
 
-### The circuit: a figure of eight, about 1.5 times today's lap
+### The circuit: winding, a tunnel, about 2.2 times today's lap (the owner's picks after Phase 0)
 
-- **Its shape:** two loops joined at a crossover, one section passing over another on a **bridge** with ramps either
-  side. The lap reads clearly from the grandstand and from the air.
-- **Its parts:**
-  - **The riverside straight** along the north edge, the water beside it, the fastest part of the lap.
-  - **The Docks hairpin** at the east end, framed by stacked containers on the Docks' side.
-  - **The crossover**: up over the bridge, down the far ramp. Gentle gradients, a crest and a dip either side.
-  - **A fast sweeper** through the south loop, past the paddock.
-  - **A chicane** before the pit straight, to slow the field past the pits.
-  - **The pit straight** in front of race control, the start gantry over it.
-- **Its numbers** (checked by tests, as `exitstd.ts` checks the exits): the lap about 1.5 times today's length, the
-  track about as wide as today's (narrower than a road, a kart's track), every corner's radius and the run-off's
-  width to a standard, the bridge's clearance over the track under it (karts, a driver's head and the marshal's
-  view), the ramps' grade gentle enough for karts at speed, and nothing self-crossing but the bridge.
-- **Raced both ways** as today, if the crossover works in reverse (it does on a figure of eight), so the cups keep
-  their two directions.
-- **The AI and the sim:** `kart-sim.ts` takes the new centre line, its heights (the bridge) and its racing lines; the
-  items mode's item boxes are laid out again round the new lap; the crowd's cheering and the marshals' flags follow.
+The owner saw three concepts in Phase 0 and asked for more: "a more diverse and exciting course. Winding roads, tunnel,
+it needs to be more complex", then "make the track slightly wider". The approved layout (concept 4, now
+`kartcircuit2.ts`, drawn by `npm run kart-fit` as `docs/kart-shots/riverside.webp`):
+
+- **Its parts, raced forward:** the pit straight east along the south, in front of race control; the **Docks
+  wiggles** north up the east side and a **hairpin** at the top; the **riverside straight** west along the north, the
+  grandstand and the river beside it; the **winding descent** onto the hill and the **hill-top switchbacks**, raised
+  over the tunnel; west to the **keyhole hairpin** in the north-west corner and the **esses** down the west side; the
+  **carousel** round the south-west, then north-east through the **tunnel** under the hill (under the switchbacks
+  twice); the **chicane** and back onto the pit straight.
+- **The tunnel replaces the crossover bridge:** the lap crosses itself twice, both under the hill, the hill-top run
+  `HILL_TOP` (3.4) over the tunnel's floor, a clear height `TUNNEL_CLEAR` (2.6) inside and the rest its roof.
+- **Its numbers** (`tests/kartcircuit2.test.ts`): the lap 791.5 (today's 351.3: about 2.25 times, longer than the 1.5
+  first picked, the owner's call for more complexity); the track **5.2 wide** (`TRACK2_W`, today's 4.4), kerbs 0.5 and
+  run-off 3 (`CLEAR2` 6.1 from its middle); no corner under `MIN_RADIUS2` 5 (tightest 6.1; today's 4.4); no ramp over
+  `MAX_SLOPE2` 0.15 (steepest 0.134; today's limit 0.3); every two runs at least 12.2 apart (closest 13.8) unless one
+  passes over the other; inside the site with its run-off, clear of the Docks, the streets and every solid.
+- **The site** grew to fit: 175 by 155 (`SITE2`: x -585 to -410, z 145 to 300).
+- **Raced both ways** as today; the AI's lines, the items mode's boxes, the crowd and marshals follow (Phase 3).
 
 ### The venue: built up like a real kart park
 
@@ -117,13 +119,18 @@ changed.
 
 Each phase merges on its own and leaves the city working; the new park is behind `?karts=new` until Phase 8.
 
-0. **The survey and the drawing** (this plan, then a drawing): the land measured (done above), the circuit sketched to
-   scale on it with the site's parts, `npm run kart-fit` (a script like `exits-fit`) drawing it over the map. The
-   owner looks at the drawing before Phase 1.
-1. **The new circuit as data** (`kartcircuit2.ts`, DOM-free): the centre line, its widths and heights (the
-   crossover's bridge and ramps), its start, pit lane and both directions. Tests: the lap about 1.5 times today's;
-   every radius, width, run-off and grade to the standard; the bridge's clearance; nothing crossing but the bridge;
-   the racing lines inside the track both ways.
+0. **The survey and the drawing** (done, 2026-11-23): the land measured, four concepts drawn to scale for the owner,
+   the fourth approved (above); `npm run kart-fit` draws it from the circuit's data.
+1. **The new circuit as data** (the centre line, its width and heights, done 2026-11-23): `kartcircuit2.ts`
+   (DOM-free, on `DOM_FREE`), `CIRCUIT2` sampled every `STEP2`, the hill-top run raised over the tunnel; tested (the
+   lap's length, width, radius, slope, the tunnel's two passes and clearance, spacing, the site, streets and solids).
+   **Phase 1b** (done, 2026-11-23): `COURSES2` both ways (Riverside Raceway and its reverse, the same surface), the
+   start line on the pit straight in front of race control (`START2_U`), the corners found from the curvature and
+   numbered in race order (24 each way, lefts and rights mirrored), the grid (`gridSlots2()`, eight two abreast behind
+   the line), the pit lane (`PIT2_LANE`, off the pit straight before the line and back on before the Docks wiggles,
+   its straight along the garages `PIT2_STRAIGHT` clear of the run-off) and a racing line each way (in to the apexes,
+   out wide either side, on the track with room for a kart, about 4% shorter than the middle); tested, and drawn by
+   `npm run kart-fit`.
 2. **The site and its ground** (`kartpark2.ts`): the park's rect on the land, the ground held level and shaped
    round it (banks, the approach to the river), its solids, its land kept clear of the outskirts' trees, the riverside
    road's edge and the service road. Behind the switch.
