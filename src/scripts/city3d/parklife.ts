@@ -34,7 +34,6 @@ import {
   onOverlook,
   LOOP_OUT,
   MALL,
-  PARK_TREES,
   GARDEN_SITE,
   Z0,
   inLake,
@@ -187,7 +186,6 @@ export const PICNICS: Picnic[] = (() => {
     const p: Pt = [x0 + r() * (x1 - x0), z0 + r() * (z1 - z0)];
     if (!inPark(p, 4) || onPath(p, 3.2) || inCivic(p, 4) || inLake(p[0], p[1], LOOP_OUT + 3.5) || nearRock(p, 2.5) || onGrand(p[0], p[1], -3) || onOverlook(p[0], p[1], 3)) continue;
     if (p[0] > GARDEN_SITE[0] - 5 && p[0] < GARDEN_SITE[2] + 5 && p[1] > GARDEN_SITE[1] - 5 && p[1] < GARDEN_SITE[3] + 5) continue;
-    if (PARK_TREES.some((t) => Math.hypot(t.x - p[0], t.z - p[1]) < 3.2)) continue;
     if (out.some((o) => Math.hypot(o.at[0] - p[0], o.at[1] - p[1]) < 16)) continue;
     const ry = r() * Math.PI;
     const n = 2 + Math.floor(r() * 2);

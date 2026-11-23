@@ -28,6 +28,7 @@ import { TILE, tileOf } from './tiles';
 import { registerFringes } from './fringes3d';
 import { registerBridges } from './parkbridges3d';
 import { registerGrandTerrace } from './grandterrace3d';
+import { registerParkTrees } from './parktrees3d';
 import { registerCivic } from './civic3d';
 import { BANK, ORNATE, OUTCROP, PLANT, STONE as PAL_STONE } from './palette';
 
@@ -220,6 +221,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerBridges(low);
   // The grand terrace at the west lobe's tip (grandterrace3d.ts, Phase 3b)
   registerGrandTerrace(low);
+  // The park's planting: its trees, shrub beds, reeds and lilies (parktrees3d.ts, Phase 5)
+  registerParkTrees(low);
   // The rock outcrops on the knolls and at the point (docs/westlake-plan.md Phase 1)
   registerRocks(low);
   // The civic square at its south end (civic3d.ts, docs/civic-plan.md)

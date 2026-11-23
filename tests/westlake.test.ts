@@ -2,6 +2,7 @@
 // highway and its slip lanes, the Parkway, the avenues and everything that was there; the lake, its loop, the paths,
 // the gates, trees, lamps and benches where they belong; the stadium's old site kept clear for the garden.
 import { test } from 'node:test';
+import { PARK_TREES } from '../src/scripts/city3d/parktrees';
 import assert from 'node:assert/strict';
 import {
   BENCHES,
@@ -12,7 +13,6 @@ import {
   LAKE_WALLS,
   LOOP_OUT,
   PARK_LAMPS,
-  PARK_TREES,
   PATHS,
   GARDEN_SITE,
   WESTLAKE_SOLIDS,
@@ -28,7 +28,6 @@ import {
   LAKE_INLET,
   LAKE_POLY,
   ROCKS,
-  PARK_TREES as TREES_FOR_ROCKS,
   lakeCoreLine,
   lakeDist,
   RIM,
@@ -154,7 +153,9 @@ test('trees, lamps and benches: on the park, off the paths, the water and the ga
     const p: Pt = [t.x, t.z];
     assert.ok(inPark(p, 1), `a tree off the park at ${p}`);
     assert.ok(!onPath(p, 1), `a tree on a path at ${p}`);
-    assert.ok(!inLake(t.x, t.z, LOOP_OUT + 2), `a tree in the lake at ${p}`);
+    // (but the willows, by the water between its rim and the loop, Phase 5)
+    if (t.kind === 'willow') assert.ok(!inLake(t.x, t.z, RIM.w + 0.5) && inLake(t.x, t.z, LOOP_OUT), `a willow off the water at ${p}`);
+    else assert.ok(!inLake(t.x, t.z, LOOP_OUT + 2), `a tree in the lake at ${p}`);
     assert.ok(!onSite(p, 2), `a tree on the garden's site at ${p}`);
   }
   for (let i = 0; i < PARK_TREES.length; i++)
@@ -222,7 +223,7 @@ test('the rock outcrops: on the park, off the paths and the water, apart, solid,
     assert.ok(!onPath(p, k.r * 0.7), `a rock on a path at ${p}`);
     assert.ok(!inLake(k.x, k.z, k.r * 0.5 + RIM.w), `a rock in the water at ${p}`);
     assert.ok(SOLIDS.some((b) => k.x > b[0] && k.x < b[2] && k.z > b[1] && k.z < b[3]), `a rock not solid at ${p}`);
-    for (const t of TREES_FOR_ROCKS) assert.ok(Math.hypot(t.x - k.x, t.z - k.z) > k.r + 1, `a tree in a rock at ${p}`);
+    for (const t of PARK_TREES) assert.ok(Math.hypot(t.x - k.x, t.z - k.z) > k.r + 1, `a tree in a rock at ${p}`);
     for (const b of BENCHES) assert.ok(Math.hypot(b.at[0] - k.x, b.at[1] - k.z) > k.r + 0.9, `a bench against a rock at ${p}`);
     for (const l of PARK_LAMPS) assert.ok(Math.hypot(l[0] - k.x, l[1] - k.z) > k.r + 0.7, `a lamp in a rock at ${p}`);
   }

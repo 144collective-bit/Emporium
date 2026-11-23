@@ -2,10 +2,11 @@
 // the lake that never meet; and the land it needed (westlake.ts): the boathouse and its jetty on the lake's north
 // shore. (The courts on the strips went with the strips: Uptown, uptown.ts.)
 import { test } from 'node:test';
+import { PARK_TREES } from '../src/scripts/city3d/parktrees';
 import assert from 'node:assert/strict';
 import { BOATS, DOGS, HULL, LANES, LEAD, PARK_PEOPLE, PICNICS, moment } from '../src/scripts/city3d/parklife';
 import { onBridge } from '../src/scripts/city3d/westlake';
-import { BOATHOUSE, JETTY, PARK_TREES, PATHS, BENCHES, inLake, inPark, onJetty, onPath, distToLine, LOOP_OUT, lakeLine } from '../src/scripts/city3d/westlake';
+import { BOATHOUSE, JETTY, PATHS, BENCHES, inLake, inPark, onJetty, onPath, distToLine, LOOP_OUT, lakeLine } from '../src/scripts/city3d/westlake';
 import { SOLIDS } from '../src/scripts/city3d/solids';
 
 /** The lawn's slab: a walker on a bridge stands over it */

@@ -29,9 +29,7 @@ keep it up to date when what it describes changes.
     Mall (`MALL`) from City Hall's back door (the civic quarter, below) to
     the stadium's forecourt, the ways
     in from `GATES`; `onPath()`); the gates' piers
-    (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
-    avenue, clumps from a seeded noise; `clump` ones,
-    every other, left out on phones), `PARK_LAMPS` and `BENCHES`;
+    (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_LAMPS` and `BENCHES` (the trees are parktrees.ts's since Phase 5);
     the paths as re-laid in `docs/westlake-plan.md` Phase 2 (the rounded,
     wandering `RING_WALK` and `ringLine()`, the Mall's `promenade` and
     `PROMENADE_HALF`, the Great Lawn `LAWN`, `onLawn()` and its walks, the
@@ -41,6 +39,9 @@ keep it up to date when what it describes changes.
     (`docs/westlake-plan.md` Phase 3b: `WATER_Y`, `BED_Y`, `LAKE_PARTS`,
     `LAKE_HOLE`; `GRAND`, `grandY()`, `onGrand()`, `GRAND_CUT`,
     `GRAND_SOLIDS`; ground layer `grand`; drawn by `grandterrace3d.ts`);
+    the park's planting (`docs/westlake-plan.md` Phase 5: `parktrees.ts`
+    `PARK_TREES`, `SHRUBS`, `REEDS`, `LILIES`, out of the boot, drawn by
+    `parktrees3d.ts` with the park's chunk);
     the formal garden made ornate (`docs/westlake-plan.md` Phase 4:
     gardens.ts `PERGOLA`, `PERGOLA_COLUMNS`; gardens3d.ts `balustrade()`,
     `pergola()`, `patternBed()`, the carved `fountain()`);
@@ -55,8 +56,8 @@ keep it up to date when what it describes changes.
     `GARDEN_SITE` (the stadium's old site, kept for the formal garden); step 3's
     land: the boathouse (`BOATHOUSE`, solid) and its jetty (`JETTY`,
     `onJetty()`: walk.ts lets you out along it, at its deck's height). Its
-    trees and lamps are placed
-    at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
+    lamps are placed at the boot with the town's (`addLamp()` in
+    index.ts); its trees come with its chunk (parktrees3d.ts, Phase 5).
   - `westlake3d.ts` draws the rest as sites: the paths (a stretch a
     site: the main walks paved, the rest pale gravel), the lake's stone rim (in quarters), the
     gates (stone piers, caps, lanterns; the Mall's north gate with iron posts, a beam

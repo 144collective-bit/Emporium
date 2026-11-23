@@ -44,7 +44,6 @@ import {
   MALL,
   PROMENADE_HALF,
   PARK_LAMPS,
-  PARK_TREES,
   PATHS,
   PIER,
   ZS,
@@ -61,7 +60,7 @@ import {
   type Rect,
 } from './westlake';
 import type { Box } from './solids';
-import { inCivic, inSquare } from './civic';
+import { HALL, inCivic, inSquare } from './civic';
 
 /** The lawns' slab (world.ts SLAB): everything here stands on it */
 const SLAB = 0.15;
@@ -291,11 +290,12 @@ export const PLANTER = { h: 0.42, wall: 0.12 };
 /** Is a spot clear for a planter of radius r: on the park, off every path, the lake, the lamps, benches, trees and courts */
 function plantable(p: Pt, r: number, others: Pt[]) {
   if (onPath(p, r + 0.25) || inCivic(p, r + 0.6)) return false;
+  // (off the promenade's avenue: its two rows of elms either side, parktrees.ts, Phase 5)
+  if (p[1] < HALL.rear[1] && p[1] > GARDEN_SITE[3] && [1.75, 4.7].some((o) => Math.abs(Math.abs(p[0] - MALL.x) - (PROMENADE_HALF + o)) < r + 1)) return false;
   if (inLake(p[0], p[1], r + 0.5) || nearTerrace(p, r + 0.5) || nearRock(p, r + 0.5) || onGrand(p[0], p[1], -r - 0.5) || onOverlook(p[0], p[1], r + 0.5)) return false;
   if (inRect(GARDEN_SITE, p, r + 0.5) || inRect(BOATHOUSE.rect, p, r + 1)) return false;
   if (PARK_LAMPS.some(([x, z]) => Math.hypot(x - p[0], z - p[1]) < r + 0.6)) return false;
   if (BENCHES.some((b) => hyp(b.at, p) < r + 1)) return false;
-  if (PARK_TREES.some((t) => Math.hypot(t.x - p[0], t.z - p[1]) < r + 0.9)) return false;
   if (GATES.some((g) => hyp(g.at, p) < r + 2.5)) return false;
   if (WALLS.some((w) => w.some((q) => hyp(q, p) < r + WALL.w / 2 + 0.4))) return false;
   return others.every((o) => hyp(o, p) > 2 * r + 0.6);
@@ -311,8 +311,7 @@ export const MALL_BEDS: Rect[] = baked('mall-beds', BUILT ? undefined : () => {
         !inCivic([x, z], 1.5) &&
         PATHS.every((q) => q.id === 'mall' || q.id === 'promenade' || distToLine(q.pts, [x, z], q.loop) > q.half + 1.6) &&
         PARK_LAMPS.every(([lx, lz]) => !inRect(r, [lx, lz], 0.4)) &&
-        BENCHES.every((b) => !inRect(r, b.at, 0.6)) &&
-        PARK_TREES.every((t) => !inRect(r, [t.x, t.z], 0.5));
+        BENCHES.every((b) => !inRect(r, b.at, 0.6));
       if (clear) out.push(r);
     }
   return out;

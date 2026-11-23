@@ -21,7 +21,7 @@ import type { LifeSfx } from './life';
 import { createPost } from './post';
 import { buildWall } from './wall3d';
 import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
-import { PARK_LAMPS, PARK_TREES } from './westlake';
+import { PARK_LAMPS } from './westlake';
 import { CITYHALL_LAND, CITYHALL_PICK, CITYHALL_SPAWN, CITYHALL_TIP, COURT as COURT_LOT, COURT_PICK, COURTHOUSE_SPAWN, POLICE as POLICE_LOT, POLICE_PICK, POLICE_SPAWN, SQUARE_LAMPS, SQUARE_TREES, TOWER_C as CITYHALL_TOWER, CIVIC_IDLE, FLOOD_POOLS, civicDay, flagCeremony } from './civic';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
@@ -434,7 +434,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)
-  PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
+  // (the park's trees come with its chunk: parktrees3d.ts, docs/westlake-plan.md Phase 5)
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
   // The civic square's (civic.ts, docs/civic-plan.md)
   for (const [x, z] of SQUARE_TREES) addTree(x, z, 1, false);

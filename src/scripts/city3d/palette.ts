@@ -78,6 +78,16 @@ export const TREE = {
   /** A planted median's columnar tree (Uptown's, the ring's) and its slimmer trunk */
   column: '#24603a',
   columnTrunk: '#5a4232',
+  /** Westlake Park's planting (docs/westlake-plan.md Phase 5): the elms' and oaks' deeper greens, the planes' lighter,
+   * the willows' pale yellow-green, its bark; the reeds and the lily pads in the coves */
+  elm: '#2b8a55',
+  oak: '#2e7a45',
+  plane: '#5aa864',
+  willow: '#8cbf5a',
+  bark: '#5b4434',
+  reed: '#6f9a48',
+  lily: '#3d8f55',
+  lilyFlower: '#f2d6e6',
 } as const;
 
 /** The roads' paint (the polish plan's Phase 10): asphalt, the lane lines, zebras, the yellow centre line */

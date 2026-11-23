@@ -3,6 +3,7 @@
 // every gate and walk; the formal garden on the stadium's old site with its walks, parterres and fountains; planters
 // clear of everything; terraces stepping down to the water that you can walk out on.
 import { test } from 'node:test';
+import { PARK_TREES } from '../src/scripts/city3d/parktrees';
 import { EDGES, KERBS } from '../src/scripts/city3d/gardenedges';
 import { PERGOLA, PERGOLA_COLUMNS } from '../src/scripts/city3d/gardens';
 import assert from 'node:assert/strict';
@@ -35,7 +36,6 @@ import {
   LAKE_C,
   MALL,
   PARK_LAMPS,
-  PARK_TREES,
   PATHS,
   TERRACES,
   WATER_Y,

@@ -234,7 +234,30 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    diamonds of colour on lawn, not grids on soil), a carved central
    fountain where the two round places are, urns, benches. Tested: the
    garden inside its site, the Mall through it.
-5. **Trees and land.** A great park's planting: the Mall's elms; groves of
+5. **Trees and land** (built, waiting on the owner's sign-off; the
+   owner's call: the trees out of the boot, with the park's chunk).
+   `parktrees.ts` (DOM-free, on `DOM_FREE`, baked: `park-trees`,
+   `park-shrubs`, `park-reeds`, `park-lilies`, to the centimetre):
+   `PARK_TREES` by kind (elms in two rows either side of the promenade and
+   either side of the Mall north of the garden; groves of oaks and planes
+   across the lawns where a slow noise is high, glades where it's low; a
+   denser wood of oaks among pines round the woodland walk; pines towards
+   the highway; willows between the rim and the loop, leaning over the
+   water), clear of the boot's things (picnics, planters, beds, benches,
+   lamps, the ring street's edge row); `SHRUBS`, beds of uneven length
+   just inside the wall, wandering in and out, breaking its line; `REEDS`
+   at the embankment's foot in the coves and up the arm, `LILIES` on the
+   water off them. Drawn by `parktrees3d.ts` (a site a tile; phones leave
+   out every other grove tree and the lilies' flowers): elms with a vase of
+   a crown, oaks broad and low on thick trunks, planes round and light,
+   willows with a crown and a veil of hanging strands, pines in tiers.
+   palette.ts `TREE.elm`, `oak`, `plane`, `willow`, `bark`, `reed`,
+   `lily`, `lilyFlower`. The old `PARK_TREES` in westlake.ts went; index.ts
+   no longer plants them at the boot, and the planters, the Mall's beds,
+   the picnics and the ring street's edge row no longer read them (the
+   trees keep off those instead; the planters keep off the avenue's rows).
+   Boot 774.5 of 775 KB.
+   (As planned:) A great park's planting: the Mall's elms; groves of
    big spreading trees (several kinds, sizes and shapes, from the
    palette), a dense woodland in the ramble, willows leaning over the
    water, a great open meadow (the Great Lawn: kept clear, ringed by

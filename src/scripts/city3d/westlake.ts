@@ -1024,28 +1024,7 @@ function rng(seed: number) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-/** Smooth noise 0-1 (clumps of trees and the glades between) */
-function noise(x: number, z: number) {
-  const h = (i: number, j: number) => {
-    const v = Math.sin(i * 127.1 + j * 311.7) * 43758.5453;
-    return v - Math.floor(v);
-  };
-  const [i, j] = [Math.floor(x), Math.floor(z)];
-  const [u, v] = [x - i, z - j];
-  const [su, sv] = [u * u * (3 - 2 * u), v * v * (3 - 2 * v)];
-  return h(i, j) * (1 - su) * (1 - sv) + h(i + 1, j) * su * (1 - sv) + h(i, j + 1) * (1 - su) * sv + h(i + 1, j + 1) * su * sv;
-}
 
-export interface ParkTree {
-  x: number;
-  z: number;
-  s: number;
-  pine: boolean;
-  /** Left out on phones (the trim: half the lawns' clumps) */
-  clump: boolean;
-}
-
-/** Where a tree may stand: on the park, off the paths, the lake and its loop, the stadium's site, the gates and the civic quarter */
 /* ---------- Rock outcrops (docs/westlake-plan.md Phase 1) ---------- */
 
 export interface Rock {
@@ -1110,27 +1089,7 @@ export const treeFree = (p: Pt) =>
   !onLawn(p, -1.5) &&
   inPark(p, 1.6) && !inCivic(p, 2.2) && !onPath(p, 1.4) && !inLake(p[0], p[1], LOOP_OUT + 2.6) && !inRect(GARDEN_SITE, p, 3) && !nearTerrace(p, 1.5) && !inRect(BOATHOUSE.rect, p, 2.2) && GATES.every((g) => Math.hypot(p[0] - g.at[0], p[1] - g.at[1]) > 4);
 
-export const PARK_TREES: ParkTree[] = (() => {
-  const r = rng(808);
-  const out: ParkTree[] = [];
-  const put = (x: number, z: number, s: number, pine: boolean, clump: boolean) => {
-    if (treeFree([x, z]) && out.every((t) => Math.hypot(t.x - x, t.z - z) > 2.2)) out.push({ x, z, s, pine, clump });
-  };
-  // The promenade: a double avenue either side, evenly spaced (docs/westlake-plan.md Phase 2)
-  for (let z = HALL.rear[1] - 2.25; z > GARDEN_SITE[3] + 1; z -= 4.5)
-    for (const side of [-1, 1]) for (const out of [1.75, 4.7]) put(MALL.x + side * (PROMENADE_HALF + out), z, 1.1, false, false);
-  // The lawns: clumps where the noise is high, glades where it's low; pines towards the highway
-  for (let x = X0; x < X1; x += 3.2)
-    for (let z = Z0; z < ZS; z += 3.2) {
-      const n = noise(x / 22, z / 22);
-      if (n < 0.36 || r() > (n - 0.36) * 2.6) continue;
-      const jx = x + (r() - 0.5) * 2.6;
-      const jz = z + (r() - 0.5) * 2.6;
-      const pine = r() < (jx < -170 || jz < -140 ? 0.55 : 0.15);
-      put(jx, jz, 0.85 + r() * 0.5, pine, true);
-    }
-  return out;
-})();
+/* (the park's trees are parktrees.ts's: out of the boot, docs/westlake-plan.md Phase 5) */
 
 /** Lamps along the paths: [x, z, ry] (the arm reaching over the path: ry turns +x towards it) */
 export const PARK_LAMPS: [number, number, number][] = baked('park-lamps', BUILT ? undefined : () => {

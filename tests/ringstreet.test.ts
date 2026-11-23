@@ -2,13 +2,14 @@
 // sidewalks, by the kerb, evenly spaced, clear of every junction, shelter, alley mouth, door and solid; the planted
 // median on the median only, short of every crossing street, round what's solid on it, no tree under the el.
 import { test } from 'node:test';
+import { PARK_TREES } from '../src/scripts/city3d/parktrees';
 import assert from 'node:assert/strict';
 import { EDGE_TREE_GAP, HEDGE, JUNCTION_CLEAR, KERB_IN, MALL_SIDE_LAMPS, MALL_STRETCH, PARK_EDGE_TREES, PARK_SIDE_LAMPS, RING_LAMPS, RING_MEDIAN, RING_SIDES, STRIP_TREES, STRIP_TREE_GAP } from '../src/scripts/city3d/ringstreet';
 import { LOOP, MALL_LAMPS, ZEBRA as COURT_ZEBRA } from '../src/scripts/city3d/mall';
 import { vergeY } from '../src/scripts/city3d/verges';
 import { onSlab } from '../src/scripts/city3d/streetplan';
 import { AXIS_X, LANE_HALF, UPTOWN_LAMPS, E as UPTOWN_E, W as UPTOWN_W } from '../src/scripts/city3d/uptown';
-import { GATES, PARK_LAMPS, PARK_TREES, ZS, inPark, onPath } from '../src/scripts/city3d/westlake';
+import { GATES, PARK_LAMPS, ZS, inPark, onPath } from '../src/scripts/city3d/westlake';
 import { PLANTERS } from '../src/scripts/city3d/gardens';
 import { PLAN, distToStreet, type Pt } from '../src/scripts/city3d/streetplan';
 import { SOLIDS } from '../src/scripts/city3d/solids';
