@@ -157,6 +157,7 @@ import { hazeHorizon } from './tileplan';
 import { createTileWork } from './tilework';
 // (the site worker imports this module, the city's chunk, and starts with sitework.ts's `serveSites()`)
 import { meshesOf, startSiteWorker } from './sitework';
+import { addSolids } from './solids';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
@@ -535,6 +536,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   if (river) {
     KARTS2.surfaceAt = river.riversideSurfaceAt;
     KARTS2.wall = river.riversideWall;
+    // (its venue's sheds, racks, benches and stacks: kartvenue2.ts)
+    addSolids((await import('./kartvenue2')).VENUE2_SOLIDS);
   }
   scatterOutskirts(Q.trees, 0.6, tier === 'low' ? 0.5 : 1, river ? river.KART2_RECTS : []);
   buildTrees(tier === 'low');

@@ -11,6 +11,7 @@ const DOM_FREE = [
   'src/scripts/city3d/kartcourse2.ts',
   'src/scripts/city3d/kart-track.ts',
   'src/scripts/city3d/kartswitch.ts',
+  'src/scripts/city3d/kartvenue2.ts',
   'src/scripts/city3d/kartcircuit2.ts',
   'src/scripts/city3d/exitstd.ts',
   'src/scripts/city3d/clock.ts',
