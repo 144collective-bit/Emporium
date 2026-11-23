@@ -315,7 +315,12 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    night. Sound (lazy, sound.ts / ambience.ts): the band's march while it
    plays (`band`), the café's murmur and cups by day (`cafe`), the grand
    terrace's fountain. The picnics baked to keep the boot at 774.6 of
-   775 KB; `?bench` gains `park-terrace`.
+   775 KB; `?bench` gains `park-terrace`. Draw calls a frame at noon
+   (`__draws()`, before → after; headless, so counts, not speed): desktop
+   the park 270 → 270, the terrace 187 → 187, the bandstand 240 → 232,
+   the café 287 → 305 (its diners); phones 187 → 191, 125 → 135,
+   144 → 156, 217 → 215. The band's chairs and instruments are one batch,
+   drawn only while it plays and near.
    (As planned:) The park's people on their new
    lanes, joggers and dog walkers through the ramble, the boats on the new
    shore; the lamps and the bandstand lit at night (under the bloom's
