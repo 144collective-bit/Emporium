@@ -264,7 +264,7 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    trees), reeds and lily pads in the lake's coves, shrub beds breaking the
    wall's straight edge (the no ruler-straight edges rule). Instanced, a
    kind a mesh, the clumps trimmed on phones.
-6. **The bandstand and the café** (built, waiting on the owner's sign-off;
+6. **The bandstand and the café** (signed off 2026-11-23;
    the owner's sites, 2026-11-23: the bandstand at the Great Lawn's south
    end facing the lake, the café on the east shore by the stone bridge,
    its terrace over the water). westlake.ts: `BANDSTAND` on the lawn,
