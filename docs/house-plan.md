@@ -41,14 +41,23 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    roof and terrace with it; the compound's things round it moved to fit; every room re-laid in the bigger floors with
    space to breathe (`homerooms.ts`), the stair hall's place kept clear for Phase 2 (the fades stay until then);
    `npm test`, `npm run test:wide`, the smoke run; shots.
-2. **The turned stair, walked.** In a stair hall off the front door: a flight up along the wall to a half landing, a
-   turn, a flight on up to the landing upstairs; walnut treads, black steel stringers and rail, a window on the half
-   landing. The ground under him rises with the treads (as `southsky.ts`'s stair: the ground under a point), the walls
-   he meets are the floor's he is nearest, the camera kept under the ceilings over him; `home:up` and `home:down` go.
-   The smoke run walks up and down it (`scripts/walk-smoke.mjs`), run before and after (`walk.ts`, `keymap.ts`).
-3. **The den's and the roof's steps, walked.** The steps down under the stair to the den, the steps up from the
-   landing through the hatch to the terrace, walked as the stair; `home:cellar`, `home:cellarup`, `home:roof`,
-   `home:roofdown` go. The smoke run walks both.
+2. **The turned stair, walked.** *Built, waiting for the owner's sign-off.* In the stair hall in the front east
+   corner (`STAIR` in `home.ts`, 1.9 by 2.4): the first flight up the east wall toward the front, the half landing
+   across the front wall under the stair's own window (in the front, as it is outside: `houseWindows()`, the window
+   east of the door now stops at the stair hall), the turn, the second flight back beside the first up to the landing;
+   six risers a flight, walnut treads with a nosing over black risers, black steel stringers, a plastered spine between
+   the flights with a handrail over it, a black balustrade on the room's side and round the well upstairs, a handrail
+   on brackets up the east wall; under the second flight fluted walnut on the room's side, and the den's door under its
+   high end (`home:cellar` stands there now). The ground under him rises with the treads (`stairY()`, through
+   `homeFloorY()`, groundheight.ts's `home` layer), its rails stop him (`stairRails()`: the side always, the first
+   flight's foot open only from the room's floor, the second's head only from the landing's, the spine), the camera's
+   ceilings open over the well (`homeCamera()`). While he wakes and the street loads, its foot waits as the doors do
+   (`STAIR_GATE`, `home:stairs`). `home:up` and `home:down` are gone. The roof's steps rise steep from the landing over
+   the first flight to the hatch (`ROOF_STEPS`), still a fade till Phase 3. `tests/home.test.ts` walks it up and down;
+   the smoke run walks it up (`hometerrace`) and down (`homestairs`).
+3. **The den's and the roof's steps, walked.** The den's door under the second flight opens on steps down under the
+   stair (a flight under each, as it turns), the roof's steep steps from the landing up through the hatch (`ROOF_STEPS`),
+   walked as the stair; `home:cellar`, `home:cellarup`, `home:roof`, `home:roofdown` go. The smoke run walks both.
 4. **The modern villa outside.** Dark stone at the base to the ground floor's sills, pale render over it; deep window
    reveals with black steel frames and stone sills; timber soffits under the roof's edge and a steel coping on the
    parapet; a glass balcony off the bedroom over the front door; downpipes, vents and a canopy over the front door;
