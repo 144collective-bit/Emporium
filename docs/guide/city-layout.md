@@ -89,7 +89,7 @@ keep it up to date when what it describes changes.
     downtown, `fineOf()` in `infill.ts`, and their side walls where they
     face a street or a lane, `sideFronts()`, `sideOpen()` in `facade.ts`;
     Phase 3 the kits' buildings in The Trenches' rows and tenements, built
-    in their sites, on desktops only):
+    in their sites, their sides on desktops only):
     the painted windows get real frames, sills and lintels
     near, by their window type (windows.ts: hoods on the round-headed
     ones, shutters on stucco, a post between a pair, the casements'
