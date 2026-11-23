@@ -17,7 +17,7 @@ Nothing is built until the owner signs off a phase; keep this plan up to date. T
 | How long a round | The player's pick each time: a hole, the front nine, the back nine or all eighteen; a round left is carried on later |
 | Between shots | The camera flies to the ball |
 | Phase 1 | Go (2026-11-22); built, signed off (2026-11-23: "1") |
-| Phase 2 | Go (2026-11-23); built, waiting for the owner's sign-off |
+| Phase 2 | Go (2026-11-23); built, signed off (2026-11-23: "3", hold before Phase 3) |
 
 ## What it is
 
