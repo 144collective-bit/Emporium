@@ -593,8 +593,12 @@ function drawTower(b: Batch, t: Block, low: boolean) {
     for (const f of SKY_FLOORS) {
       const y = floorY(base, f);
       out.forEach((p, j) => quad(b, p, out[(j + 1) % out.length], y - 0.12, y + 0.14, outward(out, j), CONC));
-      flat(b, out, y + 0.14, CONC);
-      flat(b, out, y - 0.12, CONC_DARK, false);
+      // (its top and underside a band round the walls, not across the tower: Degen's flat is inside, Phase 7a)
+      out.forEach((p, j) => {
+        const band = [p, out[(j + 1) % out.length], ring[(j + 1) % ring.length], ring[j]];
+        flat(b, band, y + 0.14, CONC);
+        flat(b, band, y - 0.12, CONC_DARK, false);
+      });
     }
     // The plant room: a plain concrete box set back on the roof, its corners cut as the tower's, and its beacon
     prism(b, grow(ring, -TOWER_HALF * 0.3), top, top + PLANT_H, CONC, ROOF);
