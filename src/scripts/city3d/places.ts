@@ -1,3 +1,4 @@
+import { LAKEHOUSE_SPAWN } from './westlake';
 /*
  * The places you can get about between (docs/growth-plan.md Phase 8;
  * DOM-free, tested in tests/travel.test.ts): every place on the map with the
@@ -105,6 +106,8 @@ export const PLACES: Place[] = [
   // Northgate Air Base's visitors' centre outside its main gate (airbase.ts, docs/military-plan.md): in its car park,
   // facing its door
   { id: 'northgate', kind: 'spot', spot: 'northgate', at: VISITOR_SPAWN },
+  // Westlake Park's Lakehouse Café (westlake.ts, docs/westlake-plan.md Phase 6): on the inlet walk, facing its door
+  { id: 'lakehouse', kind: 'spot', spot: 'lakehouse', at: LAKEHOUSE_SPAWN },
   // Endswood Estate's (endsplaces.ts): in front of the tenants' hall, St Aldwyn's west door and Bunker Sound's
   ...ENDS_PLACE_IDS.map((id): Place => ({ id, kind: 'spot', spot: id, at: ENDS_SPAWNS[id] })),
   // City Hall (civic.ts): on the civic square at its steps' foot, facing them

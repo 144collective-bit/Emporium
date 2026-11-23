@@ -11,7 +11,7 @@
  * - `SHRUBS`: shrub beds just inside the park's wall, in clumps of uneven length, breaking its straight line.
  * - `REEDS`, `LILIES`: reeds at the embankment's foot in the coves and up the arm, lily pads on the water off them.
  */
-import { BENCHES, BIG, BOATHOUSE, GARDEN_SITE, JETTY, LAKE_ARM, LAKE_C, LAKE_COVES, MALL, PARK_LAMPS, PROMENADE_HALF, RIM, Z0, inPark, inset, lakeAt, lakeDist, lakeLine, nearTerrace, onBridge, onGrand, onLawn, onOverlook, onPath, treeFree, type Pt } from './westlake';
+import { BENCHES, BIG, BOATHOUSE, GARDEN_SITE, JETTY, LAKE_ARM, LAKE_C, LAKE_COVES, MALL, PARK_LAMPS, PROMENADE_HALF, RIM, Z0, inPark, inset, nearStands, lakeAt, lakeDist, lakeLine, nearTerrace, onBridge, onGrand, onLawn, onOverlook, onPath, treeFree, type Pt } from './westlake';
 import { HALL } from './civic';
 import { BUILT, baked } from './baked';
 import { MALL_BEDS, PLANTERS, WALL } from './gardens';
@@ -76,6 +76,7 @@ export const PARK_TREES: ParkTree[] = baked('park-trees', BUILT ? undefined : ()
   const put = (x: number, z: number, s: number, kind: TreeKind, clump: boolean, gap = 2.4, lean = 0) => {
     const p: Pt = [x, z];
     if (kind !== 'willow' && !treeFree(p)) return;
+    if (nearStands(p, 1.5)) return;
     if (!clearOfThings(p, 0)) return;
     if (out.some((t) => Math.hypot(t.x - x, t.z - z) < Math.max(gap, (t.s + s) * 1.05))) return;
     out.push({ x: cm(x), z: cm(z), s: cm(s), kind, lean: cm(lean), clump });
@@ -149,7 +150,7 @@ export const SHRUBS: ShrubBed[] = baked('park-shrubs', BUILT ? undefined : () =>
       }
       if (!cur) continue;
       const p: Pt = [a[0] + ((c[0] - a[0]) * t) / l, a[1] + ((c[1] - a[1]) * t) / l];
-      if (!inPark(p, 0.6) || onPath(p, 1.1) || !clearOfThings(p, -0.4) || PARK_TREES.some((tr) => Math.hypot(tr.x - p[0], tr.z - p[1]) < 1.3)) continue;
+      if (!inPark(p, 0.6) || nearStands(p, 0.8) || onPath(p, 1.1) || !clearOfThings(p, -0.4) || PARK_TREES.some((tr) => Math.hypot(tr.x - p[0], tr.z - p[1]) < 1.3)) continue;
       // (wandering in and out from the wall)
       const off = (r() - 0.5) * 1.2;
       cur.shrubs.push({ x: cm(p[0] + nx * off), z: cm(p[1] + nz * off), r: cm(0.5 + r() * 0.45) });
@@ -170,7 +171,7 @@ export const REEDS: Pt[] = baked('park-reeds', BUILT ? undefined : () => {
     const inCove = spots.some((s) => Math.abs(Math.atan2(Math.sin(a - s), Math.cos(a - s))) < 0.18);
     const inArm = p[1] < -78 && p[0] > -82;
     if (!(inCove || inArm) || r() < 0.55) continue;
-    if (onBridge(p[0], p[1], -2) || nearTerrace(p, 2) || onGrand(p[0], p[1], -2)) continue;
+    if (onBridge(p[0], p[1], -2) || nearTerrace(p, 2) || onGrand(p[0], p[1], -2) || nearStands(p, 1)) continue;
     out.push([cm(p[0]), cm(p[1])]);
   }
   return out;

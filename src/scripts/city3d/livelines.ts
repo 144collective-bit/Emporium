@@ -52,6 +52,7 @@ export const LIVE_IDS = [
   'solenne',
   'lot9',
   'northgate',
+  'lakehouse',
   'pier',
   'nightmarket',
   'trenches',
@@ -231,6 +232,11 @@ export function liveLine(id: string, t = Date.now()): string | null {
       if (between(h, 8, 18)) return "Office open till six · Laundry's on";
       if (between(h, 18, 2)) return 'Fire pit lit · Radio on';
       return 'Lights out · Dogs asleep';
+    case 'lakehouse':
+      if (between(h, 8, 11)) return 'Coffee on the deck · Swans about';
+      if (between(h, 11, 17)) return 'Tables over the water · Opening soon';
+      if (between(h, 17, 21)) return 'Lanterns on the deck · Bandstand nearby';
+      return 'Shutters down · The lake to itself';
     case 'northgate':
       if (between(h, 9, 17)) return "Gates shut · Visitors' centre opening soon";
       if (between(h, 17, 22)) return 'Fence lights on · Gates shut';

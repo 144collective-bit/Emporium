@@ -17,7 +17,7 @@ import { BASIN, CHANNEL, DRY_DOCK } from './docks';
 import { SHIP } from './docksport';
 import { PLAN, type Pt } from './streetplan';
 import { PLACES, placeName, type Place } from './places';
-import { PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
+import { BANDSTAND, LAKEHOUSE, PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
 import { TRACKS } from './metro';
 import { LINE, LINE_COLOUR } from './southline';
 import { MONO } from './monorail';
@@ -311,6 +311,9 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       if (q.loop) ctx.closePath();
       ctx.stroke();
     }
+    // (its places: the Lakehouse Café's pavilion and the bandstand, docs/westlake-plan.md Phase 6)
+    rect(LAKEHOUSE.rect, C.tower);
+    rect([BANDSTAND.c[0] - BANDSTAND.r, BANDSTAND.c[1] - BANDSTAND.r, BANDSTAND.c[0] + BANDSTAND.r, BANDSTAND.c[1] + BANDSTAND.r], C.tower);
     // The civic square, paved, and City Hall's footprint at its head (civic.ts)
     rect(CIVIC_SQUARE, C.path);
     for (const r of [FRONT_RANGE, PORTICO, CITY_HALL.back, POLICE_HQ, COURT_BODY, COURT_PORTICO]) rect(r, C.tower);

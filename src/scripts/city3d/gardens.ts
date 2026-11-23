@@ -51,6 +51,7 @@ import {
   inLake,
   onGrand,
   onOverlook,
+  nearStands,
   nearRock,
   inset,
   nearTerrace,
@@ -292,7 +293,7 @@ function plantable(p: Pt, r: number, others: Pt[]) {
   if (onPath(p, r + 0.25) || inCivic(p, r + 0.6)) return false;
   // (off the promenade's avenue: its two rows of elms either side, parktrees.ts, Phase 5)
   if (p[1] < HALL.rear[1] && p[1] > GARDEN_SITE[3] && [1.75, 4.7].some((o) => Math.abs(Math.abs(p[0] - MALL.x) - (PROMENADE_HALF + o)) < r + 1)) return false;
-  if (inLake(p[0], p[1], r + 0.5) || nearTerrace(p, r + 0.5) || nearRock(p, r + 0.5) || onGrand(p[0], p[1], -r - 0.5) || onOverlook(p[0], p[1], r + 0.5)) return false;
+  if (inLake(p[0], p[1], r + 0.5) || nearTerrace(p, r + 0.5) || nearRock(p, r + 0.5) || onGrand(p[0], p[1], -r - 0.5) || onOverlook(p[0], p[1], r + 0.5) || nearStands(p, r + 0.5)) return false;
   if (inRect(GARDEN_SITE, p, r + 0.5) || inRect(BOATHOUSE.rect, p, r + 1)) return false;
   if (PARK_LAMPS.some(([x, z]) => Math.hypot(x - p[0], z - p[1]) < r + 0.6)) return false;
   if (BENCHES.some((b) => hyp(b.at, p) < r + 1)) return false;

@@ -264,9 +264,30 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    trees), reeds and lily pads in the lake's coves, shrub beds breaking the
    wall's straight edge (the no ruler-straight edges rule). Instanced, a
    kind a mesh, the clumps trimmed on phones.
-6. **The bandstand and the café** (the owner's sites, 2026-11-23: the
-   bandstand at the Great Lawn's south end facing the lake, the café on
-   the east shore by the stone bridge, its terrace over the water).
+6. **The bandstand and the café** (built, waiting on the owner's sign-off;
+   the owner's sites, 2026-11-23: the bandstand at the Great Lawn's south
+   end facing the lake, the café on the east shore by the stone bridge,
+   its terrace over the water). westlake.ts: `BANDSTAND` on the lawn,
+   `LAKEHOUSE` (the pavilion east of the inlet walk, its `deck` out over
+   the inlet's water from the near bank across the walk, `onCafeDeck()`,
+   walkable: walk.ts, groundheight.ts `cafe-deck`), `LAKEHOUSE_DOOR`,
+   `LAKEHOUSE_SPAWN`, `nearStands()` (the trees, rocks, lamps, benches,
+   planters and picnics keep off both), solids; parkstands.ts (out of the
+   boot) the bandstand's benches and the café's tables. The café is a place,
+   `lakehouse`: lib/city.ts `SpotId`, CityMap.astro (its name, the
+   directory, panel 56 "Tea on the water", coming soon, Walk in), index.ts
+   (its pick spot and the Walk in), places.ts `PLACES`, live.ts
+   `LIVE_PLACES`, livelines.ts (its line by the hour), walk.ts's door, the
+   world map's footprint (and the bandstand's). Drawn by parkstands3d.ts:
+   the bandstand (an octagonal stone base with steps on its lake side, iron
+   columns, a lace frieze, a railing, an ogee roof of eight panels with a
+   lantern and a gold finial) and the café (stone piers and glazed bays lit
+   softly at night, a hipped roof with a glass lantern, a striped awning,
+   the deck on corbels down the embankment with its balustrade and
+   lanterns, tables with chairs and parasols). The ring walk is baked now
+   (`park-ring`) to keep the boot in its budget: 774.6 of 775 KB. The band
+   and the café's people are Phase 7's (life).
+   (As planned:)
    - **The bandstand:** an octagonal Victorian bandstand (a carved stone
      base, iron columns, an ornate roof with a finial) on its own lawn, a
      ring of benches round it; a band some evenings (seated players, the

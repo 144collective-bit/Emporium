@@ -522,6 +522,41 @@ export function terraceY(x: number, z: number) {
 /** What a terrace covers (its footprint's corners), for keeping benches, lamps and trees off */
 export const nearTerrace = (p: Pt, m = 0) => terraceOf(p[0], p[1], -m) !== null;
 
+/* ---------- The bandstand and the Lakehouse Café (docs/westlake-plan.md Phase 6) ---------- */
+
+/** The bandstand at the Great Lawn's south end, facing the lake: an octagon on a stone base, `r` across its corners */
+export const BANDSTAND = { c: [-93, -108] as Pt, r: 3.2, base: 0.9, roof: 3.9, top: 5.6 };
+/**
+ * The Lakehouse Café on the inlet's east side by the stone bridge (a place, coming soon): its pavilion of stone and
+ * glass (`rect`, `h` to its eaves, `top` its lantern), its front west to the inlet walk with its door; across the walk
+ * its terrace of tables out over the inlet's water on a stone deck at the lawn's level (`deck`, walkable: `onCafeDeck()`)
+ */
+export const LAKEHOUSE = { rect: [-59.0, -29.2, -52.2, -20.8] as Rect, h: 3.0, top: 4.6, deck: [-69, -28.2, -64.6, -23.8] as Rect, deckY: 0.05 };
+export const LAKEHOUSE_DOOR = { x: LAKEHOUSE.rect[0] - 0.4, z: (LAKEHOUSE.rect[1] + LAKEHOUSE.rect[3]) / 2, label: 'The Lakehouse Café' };
+export const LAKEHOUSE_SPAWN = { x: LAKEHOUSE.rect[0] - 1.6, z: (LAKEHOUSE.rect[1] + LAKEHOUSE.rect[3]) / 2, yaw: -Math.PI / 2 };
+/** Is a point near the bandstand (its benches' ring), the café's pavilion, its strip of tables or its deck (`m` more round them) */
+export function nearStands(p: Pt, m = 0) {
+  if (Math.hypot(p[0] - BANDSTAND.c[0], p[1] - BANDSTAND.c[1]) < 7 + m) return true;
+  const [x0, z0, x1, z1] = LAKEHOUSE.rect;
+  if (p[0] > x0 - 2 - m && p[0] < x1 + m && p[1] > z0 - m && p[1] < z1 + m) return true;
+  const [d0, e0, d1, e1] = LAKEHOUSE.deck;
+  return p[0] > d0 - m && p[0] < d1 + m && p[1] > e0 - m && p[1] < e1 + m;
+}
+/** Is a point on the café's deck over the water (`m` in from its edges) */
+export const onCafeDeck = (x: number, z: number, m = 0) => x > LAKEHOUSE.deck[0] + m && x < LAKEHOUSE.deck[2] - m && z > LAKEHOUSE.deck[1] + m && z < LAKEHOUSE.deck[3] - m;
+/** The bandstand, the café's pavilion and its deck's railing, solid */
+const STAND_SOLIDS: [number, number, number, number, number][] = (() => {
+  const out: [number, number, number, number, number][] = [];
+  const [cx, cz] = BANDSTAND.c;
+  const R = BANDSTAND.r * 0.92;
+  out.push([cx - R, cz - R, cx + R, cz + R, 0.15 + BANDSTAND.base]);
+  out.push([...LAKEHOUSE.rect, 0.15 + LAKEHOUSE.top]);
+  const [x0, z0, x1, z1] = LAKEHOUSE.deck;
+  // (the railing round the deck's three sides over the water; open on the bank's side)
+  for (const r of [[x0 - 0.1, z0 - 0.1, x1, z0 + 0.1], [x0 - 0.1, z1 - 0.1, x1, z1 + 0.1], [x0 - 0.1, z0, x0 + 0.1, z1]] as [number, number, number, number][]) out.push([...r, 0.15 + 1.0]);
+  return out;
+})();
+
 /* ---------- The overlook (docs/westlake-plan.md Phase 3c) ---------- */
 
 /**
@@ -720,7 +755,7 @@ function smooth(ctrl: Pt[], step = 1.5): Pt[] {
  * rounded (but those by the civic quarter, which it passes close), wandering a little either
  * side where it has room, straight past the civic quarter and the gates (so their walks meet it as before)
  */
-const RING_BASE: Pt[] = (() => {
+function ringBase(): Pt[] {
   // (each corner a curve, about 10 round, but those by the civic quarter, which the ring passes close)
   const poly = inset(BIG, RING_IN);
   const n = poly.length;
@@ -742,8 +777,9 @@ const RING_BASE: Pt[] = (() => {
     }
   }
   return resample(out, 480);
-})();
-export const RING_WALK: Pt[] = (() => {
+}
+export const RING_WALK: Pt[] = baked('park-ring', BUILT ? undefined : () => {
+  const RING_BASE = ringBase();
   const n = RING_BASE.length;
   const nrm = normals(RING_BASE);
   let s0 = 0;
@@ -758,9 +794,9 @@ export const RING_WALK: Pt[] = (() => {
   });
   return RING_BASE.map((p, i) => {
     const w = 1.2 * amp[i] * Math.sin((along[i] / 52) * Math.PI * 2 + 0.7);
-    return [p[0] + nrm[i][0] * w, p[1] + nrm[i][1] * w] as Pt;
+    return [Math.round((p[0] + nrm[i][0] * w) * 1000) / 1000, Math.round((p[1] + nrm[i][1] * w) * 1000) / 1000] as Pt;
   });
-})();
+});
 /** The Mall's promenade: from City Hall's back door to the formal garden, wide and paved, a double avenue either side */
 export const PROMENADE_HALF = 3.6;
 /** The Great Lawn north of the lake: the open meadow, a walk round it (its middle, its half widths across and along) */
@@ -1068,7 +1104,7 @@ export const ROCKS: Rock[] = baked('park-rocks', BUILT ? undefined : () => {
       const p: Pt = [x, z];
       // (by the water the stones come to its rim and to the loop's edge)
       const [wet, walk] = shore ? [rr * 0.5 + RIM.w + 0.1, rr * 0.7 + 0.2] : [rr + 0.5, rr + 0.5];
-      if (!inPark(p, 2) || onLawn(p, -1) || onGrand(x, z, -2) || onOverlook(x, z, rr + 0.3) || onPath(p, walk) || inLake(x, z, wet) || inCivic(p, 2) || inRect(GARDEN_SITE, p, 2) || nearTerrace(p, rr + 0.5)) continue;
+      if (!inPark(p, 2) || nearStands(p, rr + 0.5) || onLawn(p, -1) || onGrand(x, z, -2) || onOverlook(x, z, rr + 0.3) || onPath(p, walk) || inLake(x, z, wet) || inCivic(p, 2) || inRect(GARDEN_SITE, p, 2) || nearTerrace(p, rr + 0.5)) continue;
       if (inRect(BOATHOUSE.rect, p, rr + 1.5) || inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], p, rr + 1.2)) continue;
       if (GATES.some((g) => Math.hypot(x - g.at[0], z - g.at[1]) < 5)) continue;
       // (a rock may lean on its neighbour, not sit inside it)
@@ -1083,6 +1119,7 @@ export const nearRock = (p: Pt, m = 0) => ROCKS.some((k) => Math.hypot(p[0] - k.
 export const ROCK_SOLIDS: [number, number, number, number, number][] = ROCKS.map((k) => [k.x - k.r * 0.75, k.z - k.r * 0.75, k.x + k.r * 0.75, k.z + k.r * 0.75, k.h]);
 
 export const treeFree = (p: Pt) =>
+  !nearStands(p, 1.5) &&
   !onOverlook(p[0], p[1], 1.5) &&
   !onGrand(p[0], p[1], -2.5) &&
   !nearRock(p, 1.2) &&
@@ -1124,7 +1161,7 @@ export const PARK_LAMPS: [number, number, number][] = baked('park-lamps', BUILT 
   }
   // Not on another path where paths meet, nor two on top of each other, nor by the boathouse and its jetty
   // (and none in the formal garden, which has its own, nor on a terrace)
-  const clear = (l: [number, number, number]) => !onOverlook(l[0], l[1], 0.6) && !onGrand(l[0], l[1], -0.8) && !onBridge(l[0], l[1], -0.8) && !nearRock([l[0], l[1]], 0.8) && !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
+  const clear = (l: [number, number, number]) => !nearStands([l[0], l[1]], 0.8) && !onOverlook(l[0], l[1], 0.6) && !onGrand(l[0], l[1], -0.8) && !onBridge(l[0], l[1], -0.8) && !nearRock([l[0], l[1]], 0.8) && !inCivic([l[0], l[1]], 0.6) && !inRect(GARDEN_SITE, [l[0], l[1]], 1) && !nearTerrace([l[0], l[1]], 0.6) && !inRect(BOATHOUSE.rect, [l[0], l[1]], 0.8) && !inRect([JETTY.x - JETTY.half, JETTY.z0, JETTY.x + JETTY.half, JETTY.z1], [l[0], l[1]], 1.2);
   return out.filter((l, i) => clear(l) && !onPath([l[0], l[1]], 0.25) && out.slice(0, i).every((o) => Math.hypot(o[0] - l[0], o[1] - l[1]) > 3));
 });
 
@@ -1143,7 +1180,7 @@ export const BENCHES: { at: Pt; ry: number }[] = baked('park-benches', BUILT ? u
   for (let z = HALL.rear[1] - 6.5; z > GARDEN_SITE[3] + 3; z -= 5)
     for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (PROMENADE_HALF + 0.45), z], ry: side > 0 ? -Math.PI / 2 : Math.PI / 2 });
   // (none where another path comes in, nor on a terrace)
-  return out.filter((b) => !onOverlook(b.at[0], b.at[1], 0.5) && !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6) && !nearRock(b.at, 1) && !onGrand(b.at[0], b.at[1], -0.8)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || q.id === 'promenade' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
+  return out.filter((b) => !nearStands(b.at, 0.8) && !onOverlook(b.at[0], b.at[1], 0.5) && !nearTerrace(b.at, 0.8) && !inCivic(b.at, 0.6) && !nearRock(b.at, 1) && !onGrand(b.at[0], b.at[1], -0.8)).filter((b) => Math.abs(b.at[0] - JETTY.x) > JETTY.half + 1.6 || b.at[1] > JETTY.z1 + 1 || b.at[1] < JETTY.z0 - 1.5).filter((b) => PATHS.every((q) => q.id === 'loop' || q.id === 'mall' || q.id === 'promenade' || distToLine(q.pts, b.at, q.loop) > q.half + 0.8));
 });
 
 /** Each gate's two stone piers (x0, z0, x1, z1, height): solid, the path between them */
@@ -1166,7 +1203,7 @@ const OVERLOOK_SOLIDS: [number, number, number, number, number][] = OVERLOOK_RAI
   const q = OVERLOOK_RAIL[i];
   return [Math.min(p[0], q[0]) - 0.15, Math.min(p[1], q[1]) - 0.15, Math.max(p[0], q[0]) + 0.15, Math.max(p[1], q[1]) + 0.15, 0.15 + 1.0];
 });
-export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID, ...ROCK_SOLIDS, ...GRAND_SOLIDS, ...OVERLOOK_SOLIDS];
+export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID, ...ROCK_SOLIDS, ...GRAND_SOLIDS, ...OVERLOOK_SOLIDS, ...STAND_SOLIDS];
 
 /** The lake as walls for cars (drive-sim.ts): strips across it, a tile deep, each its width there */
 export const LAKE_WALLS: [number, number, number, number, number][] = (() => {

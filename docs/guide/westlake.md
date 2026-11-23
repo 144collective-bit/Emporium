@@ -39,6 +39,9 @@ keep it up to date when what it describes changes.
     (`docs/westlake-plan.md` Phase 3b: `WATER_Y`, `BED_Y`, `LAKE_PARTS`,
     `LAKE_HOLE`; `GRAND`, `grandY()`, `onGrand()`, `GRAND_CUT`,
     `GRAND_SOLIDS`; ground layer `grand`; drawn by `grandterrace3d.ts`);
+    the bandstand and The Lakehouse Café, a place `lakehouse` (Phase 6:
+    westlake.ts `BANDSTAND`, `LAKEHOUSE`, `onCafeDeck()`, `nearStands()`;
+    parkstands.ts its benches and tables; drawn by parkstands3d.ts);
     the park's planting (`docs/westlake-plan.md` Phase 5: `parktrees.ts`
     `PARK_TREES`, `SHRUBS`, `REEDS`, `LILIES`, out of the boot, drawn by
     `parktrees3d.ts` with the park's chunk);

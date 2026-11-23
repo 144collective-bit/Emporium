@@ -2,6 +2,10 @@
 // highway and its slip lanes, the Parkway, the avenues and everything that was there; the lake, its loop, the paths,
 // the gates, trees, lamps and benches where they belong; the stadium's old site kept clear for the garden.
 import { test } from 'node:test';
+import { BANDSTAND_BENCHES, CAFE_TABLES } from '../src/scripts/city3d/parkstands';
+import { BANDSTAND, LAKEHOUSE, LAKEHOUSE_DOOR, LAKEHOUSE_SPAWN, onCafeDeck, nearStands } from '../src/scripts/city3d/westlake';
+import { PLACES } from '../src/scripts/city3d/places';
+import { LIVE_PLACES } from '../src/scripts/city3d/live';
 import { PARK_TREES } from '../src/scripts/city3d/parktrees';
 import assert from 'node:assert/strict';
 import {
@@ -329,4 +333,29 @@ test('the overlook (docs/westlake-plan.md Phase 3c): at the point, its balustrad
   for (const [x, z] of PARK_LAMPS) assert.ok(!onOverlook(x, z), 'a lamp on the overlook');
   for (const b of BENCHES) assert.ok(!onOverlook(b.at[0], b.at[1]), 'a bench on the overlook');
   assert.ok(onOverlook(...lakeAt((150 * Math.PI) / 180, 1.5)) && !onOverlook(OVERLOOK.tip[0] + 20, OVERLOOK.tip[1]));
+});
+
+test('the bandstand and the Lakehouse Café (docs/westlake-plan.md Phase 6): on the lawn and the east shore, off every walk, solid; the café a place', () => {
+  // The bandstand inside the Great Lawn's walk, its benches round it on the lawn, off the walks
+  assert.ok(onLawn(BANDSTAND.c, BANDSTAND.r + 1), 'the bandstand on the Great Lawn');
+  for (const b of BANDSTAND_BENCHES) assert.ok(onLawn(b.at, 0.6) && !onPath(b.at, 0.6), `a bench off the lawn at ${b.at}`);
+  // The café's pavilion on the land off every walk; its deck over the water, its landward edge on the bank
+  const [x0, z0, x1, z1] = LAKEHOUSE.rect;
+  for (let x = x0; x <= x1; x += 0.7)
+    for (let z = z0; z <= z1; z += 0.7) {
+      assert.ok(!onPath([x, z], 0.1) && !inLake(x, z, 0.5) && inPark([x, z], 0.5), `the pavilion on a walk or the water at ${x}, ${z}`);
+    }
+  const d = LAKEHOUSE.deck;
+  assert.ok(inLake(d[0] + 0.5, (d[1] + d[3]) / 2) && !inLake(d[2] - 0.2, (d[1] + d[3]) / 2), 'the deck from the bank out over the water');
+  for (const t of CAFE_TABLES) assert.ok(onCafeDeck(t[0], t[1], 0.4) || (!onPath(t, 0.4) && !inLake(t[0], t[1], 0.4)), `a table off the deck and the strip at ${t}`);
+  for (const p of [BANDSTAND.c, [(x0 + x1) / 2, (z0 + z1) / 2] as Pt]) assert.ok(SOLIDS.some((b) => p[0] > b[0] && p[0] < b[2] && p[1] > b[1] && p[1] < b[3]), `not solid at ${p}`);
+  // Nothing else on them
+  for (const t of PARK_TREES) assert.ok(!nearStands([t.x, t.z], 1), `a tree on a stand at ${t.x}, ${t.z}`);
+  for (const [x, z] of PARK_LAMPS) assert.ok(!nearStands([x, z], 0.5), 'a lamp on a stand');
+  for (const k of ROCKS) assert.ok(!nearStands([k.x, k.z], k.r), 'a rock on a stand');
+  // The café a place: its door at its front, its spawn on the walk facing it, in the places and the live places
+  assert.ok(Math.abs(LAKEHOUSE_DOOR.x - x0) < 0.6 && LAKEHOUSE_DOOR.z > z0 && LAKEHOUSE_DOOR.z < z1);
+  assert.ok(LAKEHOUSE_SPAWN.x < x0 && !inLake(LAKEHOUSE_SPAWN.x, LAKEHOUSE_SPAWN.z, 0.5));
+  assert.ok(PLACES.some((p) => p.id === 'lakehouse'), 'not in the places');
+  assert.ok(LIVE_PLACES.some((p) => p.id === 'lakehouse'), 'not in the live places');
 });
