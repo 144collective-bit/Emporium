@@ -234,7 +234,7 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    diamonds of colour on lawn, not grids on soil), a carved central
    fountain where the two round places are, urns, benches. Tested: the
    garden inside its site, the Mall through it.
-5. **Trees and land** (built, waiting on the owner's sign-off; the
+5. **Trees and land** (built, signed off 2026-11-23; the
    owner's call: the trees out of the boot, with the park's chunk).
    `parktrees.ts` (DOM-free, on `DOM_FREE`, baked: `park-trees`,
    `park-shrubs`, `park-reeds`, `park-lilies`, to the centimetre):
@@ -264,7 +264,9 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    trees), reeds and lily pads in the lake's coves, shrub beds breaking the
    wall's straight edge (the no ruler-straight edges rule). Instanced, a
    kind a mesh, the clumps trimmed on phones.
-6. **The bandstand and the café.**
+6. **The bandstand and the café** (the owner's sites, 2026-11-23: the
+   bandstand at the Great Lawn's south end facing the lake, the café on
+   the east shore by the stone bridge, its terrace over the water).
    - **The bandstand:** an octagonal Victorian bandstand (a carved stone
      base, iron columns, an ornate roof with a finial) on its own lawn, a
      ring of benches round it; a band some evenings (seated players, the
