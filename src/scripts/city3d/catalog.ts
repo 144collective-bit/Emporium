@@ -270,6 +270,9 @@ export const CHALLENGE_PRIZE = 2500;
 export const PAR_LAPS: Record<string, Record<ClassId, number>> = {
   circuit: { street: 34, sport: 29.5, neon: 27 },
   'circuit-reverse': { street: 34, sport: 29, neon: 26.5 },
+  // Riverside Raceway (docs/kart-harbour-plan.md, Phase 3)
+  riverside: { street: 78.5, sport: 64.5, neon: 56.5 },
+  'riverside-reverse': { street: 78.5, sport: 64.5, neon: 57 },
 };
 
 /* ---------- Guns (the Armoury) ---------- */

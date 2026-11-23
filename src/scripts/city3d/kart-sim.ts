@@ -30,7 +30,8 @@
  *   placed by where they are. Prizes and records are paid by tycoon.ts
  *   (`finishKartRace`), not here.
  */
-import { COURSES, GRID, RESET_AT, KERB, LAPS, TRACK_HALF, enclosed, gridSlots, groundAt, type Cond, type CourseId } from './kartcircuit';
+import { RESET_AT, LAPS, type Cond, type RaceCourseId } from './kartcircuit';
+import { courseOf, trackOf } from './kart-track';
 import { F, KART_BODY, KART_R, along, at, frame, locate, wrapS } from './kartpark';
 import { KART_CLASSES, type ClassId } from './catalog';
 import { KART_SPECS, type KartId } from './mykart';
@@ -54,7 +55,7 @@ export const RESET_T = 0.9;
 
 export { CUPS, CUP_IDS, cup, type Cup, type CupId, type CupRace } from './kart-cups';
 import { CUPS, type CupId } from './kart-cups';
-import { AI_USE, BOXES, ITEM, clearAhead, drawItem, type ItemId } from './kartitems';
+import { AI_USE, ITEM, clearAhead, drawItem, type ItemId } from './kartitems';
 
 /** How long things last (seconds) */
 export const T = {
@@ -198,7 +199,7 @@ export type KartEvent =
   | { kind: 'blocked'; kart: number };
 
 export interface RaceSetup {
-  course: CourseId;
+  course: RaceCourseId;
   /** A cup, or a time trial (alone) */
   cup: CupId | 'time';
   /** The engine class (a cup's own when racing a cup) */
@@ -235,8 +236,6 @@ const G = 22;
 /** How fast a kart turns at full lock (radians/s at speed), and the speed over which turning eases off */
 const TURN = 1.75;
 const TURN_EASE = 28;
-/** The rivals keep this far inside the track's edges */
-const LANE = TRACK_HALF - KART_R - 0.2;
 /** How hard the rivals brake (tiles/s²) when planning for a corner ahead */
 const PLAN_BRAKE = 9;
 
@@ -255,8 +254,13 @@ export function cornerSpeed(handling: number, k: number, margin: number) {
 }
 
 export function createKartSim(setup: RaceSetup) {
-  const course = COURSES[setup.course];
+  const course = courseOf(setup.course);
   const c = course;
+  // The track's own numbers (today's circuit's or Riverside Raceway's: kart-track.ts)
+  const track = trackOf(setup.course);
+  const { half: TRACK_HALF, kerb: KERB, resetAt: RESET_AT, grid: GRID, gridSlots, groundAt, enclosed, boxes: BOXES } = track;
+  /** The rivals keep this far inside the track's edges */
+  const LANE = TRACK_HALF - KART_R - 0.2;
   const r = rng(setup.seed);
   const laps = setup.laps ?? course.laps ?? LAPS;
   const cond: Cond = setup.cond ?? 'day';

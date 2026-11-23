@@ -47,7 +47,9 @@
  */
 import { CUPS, CUP_IDS, type CupId } from './kart-sim';
 import { ITEM_NAMES } from './kartitems';
-import { CIRCUIT, CONDS, COURSES, COURSE_IDS, type Cond, type CourseId } from './kartcircuit';
+import { CIRCUIT, CONDS, COURSE_IDS, RIVER_COURSE_IDS, type Cond, type Course, type RaceCourseId } from './kartcircuit';
+import { courseOf } from './kart-track';
+import { KARTS2 } from './kartswitch';
 import { F } from './kartpark';
 import { DECAL_NAMES, KART_DECALS, KART_SPECS, LOOK_COLOURS, PLAYER_KARTS, type KartId, type KartLook } from './mykart';
 import { CHALLENGE_PRIZE, CLASS_IDS, KART_CATALOG, KART_CLASSES, KART_MODS, KART_MOD_IDS, MOD_LEVELS, PRIZE_CAP, SERIES_PRIZES, type ClassId, type KartModId } from './catalog';
@@ -125,8 +127,9 @@ const kartName = (id: KartId) => KART_SPECS[id]?.name ?? '';
 /* ---------- The minimap: the circuit drawn once from its samples, in world numbers (x east, z south: north up) ---------- */
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
-const MAP = (() => {
-  const c = CIRCUIT;
+/** The courses the menu offers: today's circuit's, or Riverside Raceway's behind `?karts=new` (kartswitch.ts) */
+const courseIds = (): RaceCourseId[] => (KARTS2.on ? RIVER_COURSE_IDS : COURSE_IDS);
+const mapOf = (c: Course) => {
   const n = c.x.length;
   let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
   for (let i = 0; i < n; i++) {
@@ -160,7 +163,7 @@ const MAP = (() => {
   return `<svg viewBox="${vb}" aria-hidden="true"><path class="kart-map-track" d="${loop}"/><path class="kart-map-line" d="${loop}"/>${
     deck ? `<path class="kart-map-deck" d="${deck}"/><path class="kart-map-track" d="${deck}"/><path class="kart-map-line" d="${deck}"/>` : ''
   }<path class="kart-map-start" d="${start}"/><g data-kart-dots></g></svg>`;
-})();
+};
 
 /** The four stat bars and the mod that raises each */
 const STATS: { key: 'speed' | 'accel' | 'handling' | 'weight'; label: string; mod: KartModId | null }[] = [
@@ -232,8 +235,19 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   const resultBody = result.querySelector<HTMLElement>('[data-kart-result-body]')!;
   const nextBtn = result.querySelector<HTMLButtonElement>('[data-kart-next]')!;
 
-  mapEl.innerHTML = MAP;
-  const dotsEl = mapEl.querySelector<SVGGElement>('[data-kart-dots]')!;
+  mapEl.innerHTML = mapOf(CIRCUIT);
+  let dotsEl = mapEl.querySelector<SVGGElement>('[data-kart-dots]')!;
+  /** The minimap's course (today's circuit's outline first; a race on Riverside Raceway draws its own) */
+  let mapFor: RaceCourseId = 'circuit';
+  function setMap(id: RaceCourseId) {
+    const key = id.startsWith('riverside') ? 'riverside' : 'circuit';
+    if ((mapFor.startsWith('riverside') ? 'riverside' : 'circuit') === key) return;
+    mapFor = id;
+    mapEl.innerHTML = mapOf(courseOf(key));
+    dotsEl = mapEl.querySelector<SVGGElement>('[data-kart-dots]')!;
+    dots = [];
+    dotAt = [];
+  }
   /** The dots on the map, one per kart, and where each was last put (tenths of a tile) */
   let dots: SVGCircleElement[] = [];
   let dotAt: string[] = [];
@@ -249,11 +263,11 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
   let askDrop = false;
   /** The time trial's class, and the board being looked at */
   let trialCls: ClassId = 'street';
-  let boardCourse: CourseId = COURSE_IDS[0];
+  let boardCourse: RaceCourseId = courseIds()[0];
   let boardCls: ClassId = 'street';
   /** The single race being set up: whose rivals, which way round, the conditions */
   let singleCup: CupId = 'rookie';
-  let singleCourse: CourseId = COURSE_IDS[0];
+  let singleCourse: RaceCourseId = courseIds()[0];
   let singleCond: Cond = 'day';
   /** Items on or off (docs/kart-west-plan.md Phase 7: pure racing by default) */
   let singleItems = false;
@@ -318,8 +332,8 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
     const locked = lv < c.level;
     return `<button type="button" data-kart-single-cup="${id}" aria-pressed="${id === singleCup}"${locked ? ' disabled' : ''}>${esc(c.name.replace(' Cup', ''))}${locked ? `<small>Lv ${c.level}</small>` : `<small class="is-cls">${esc(KART_CLASSES[c.cls].name)}</small>`}</button>`;
   }).join('')}</div>
-  <div class="seg kart-seg" role="group" aria-label="Way round"><span class="seg-label">Way</span>${COURSE_IDS.map(
-    (id) => `<button type="button" data-kart-single-course="${id}" aria-pressed="${id === singleCourse}">${COURSES[id].reverse ? 'Reverse' : 'Forward'}</button>`
+  <div class="seg kart-seg" role="group" aria-label="Way round"><span class="seg-label">Way</span>${courseIds().map(
+    (id) => `<button type="button" data-kart-single-course="${id}" aria-pressed="${id === singleCourse}">${courseOf(id).reverse ? 'Reverse' : 'Forward'}</button>`
   ).join('')}</div>
   <div class="seg kart-seg" role="group" aria-label="Conditions"><span class="seg-label">When</span>${COND_IDS.map(
     (id) => `<button type="button" data-kart-single-cond="${id}" aria-pressed="${id === singleCond}">${esc(CONDS[id].name)}</button>`
@@ -329,8 +343,8 @@ export function createKartUI(root: HTMLElement, d: KartUIDeps): KartUI {
 </section>`;
 
     // The time trial: pick a class, then a course
-    const rows = COURSE_IDS.map((id) => {
-      const c = COURSES[id];
+    const rows = courseIds().map((id) => {
+      const c = courseOf(id);
       const rec = s.karts.records[recordKey(id, trialCls)];
       return `<div class="kart-course">
   <div class="kart-course-info">
@@ -470,7 +484,7 @@ ${challenge}
     const board = s.karts.boards[key] ?? [];
     const par = parLap(boardCourse, boardCls);
     const beaten = s.karts.parBeaten.includes(key);
-    const coursePicker = `<div class="seg kart-seg" role="group" aria-label="Course"><span class="seg-label">Course</span>${COURSE_IDS.map(
+    const coursePicker = `<div class="seg kart-seg" role="group" aria-label="Course"><span class="seg-label">Course</span>${courseIds().map(
       (id) => `<button type="button" data-kart-board-course="${id}" aria-pressed="${id === boardCourse}">${courseLabel(id)}</button>`
     ).join('')}</div>`;
     const rows = board.length
@@ -591,7 +605,7 @@ ${countersHtml(s)}
     d.game.sfx('denied');
     return false;
   }
-  function startTrial(course: CourseId, cls: ClassId) {
+  function startTrial(course: RaceCourseId, cls: ClassId) {
     if (!classOk(cls)) return;
     close();
     d.start({ course, cup: 'time', cls });
@@ -678,14 +692,14 @@ ${countersHtml(s)}
   body.addEventListener('click', (e) => {
     const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
     if (!b || b.disabled) return;
-    if (b.dataset.kartStart) startTrial(b.dataset.kartStart as CourseId, (b.dataset.kartCls as ClassId) ?? trialCls);
+    if (b.dataset.kartStart) startTrial(b.dataset.kartStart as RaceCourseId, (b.dataset.kartCls as ClassId) ?? trialCls);
     else if (b.dataset.kartSeries) startSeries(b.dataset.kartSeries as CupId);
     else if (b.hasAttribute('data-kart-single')) startSingle();
     else if (b.dataset.kartSingleCup) {
       singleCup = b.dataset.kartSingleCup as CupId;
       refocus(`[data-kart-single-cup="${singleCup}"]`);
     } else if (b.dataset.kartSingleCourse) {
-      singleCourse = b.dataset.kartSingleCourse as CourseId;
+      singleCourse = b.dataset.kartSingleCourse as RaceCourseId;
       refocus(`[data-kart-single-course="${singleCourse}"]`);
     } else if (b.dataset.kartSingleCond) {
       singleCond = b.dataset.kartSingleCond as Cond;
@@ -715,7 +729,7 @@ ${countersHtml(s)}
       trialCls = b.dataset.kartCls as ClassId;
       refocus(`[data-kart-cls="${trialCls}"]`);
     } else if (b.dataset.kartBoardCourse) {
-      boardCourse = b.dataset.kartBoardCourse as CourseId;
+      boardCourse = b.dataset.kartBoardCourse as RaceCourseId;
       refocus(`[data-kart-board-course="${boardCourse}"]`);
     } else if (b.dataset.kartBoardCls) {
       boardCls = b.dataset.kartBoardCls as ClassId;
@@ -1015,6 +1029,7 @@ ${laps}
     stepTab,
     take,
     showHud,
+    setMap,
     paintHud,
     count,
     pop,

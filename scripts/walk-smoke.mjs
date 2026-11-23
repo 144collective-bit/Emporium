@@ -41,7 +41,7 @@ const only = process.argv[2]?.split(',');
 let failed = 0;
 
 /** One scene: a fresh page at `spawn` (x,z), walking, then `play(t)`; a page error or a throw fails it */
-async function scene(name, spawn, play, init) {
+async function scene(name, spawn, play, init, query = '') {
   if (only && !only.includes(name)) return;
   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
@@ -106,7 +106,7 @@ async function scene(name, spawn, play, init) {
   let why = '';
   try {
     // (no spot given: he wakes where everyone does, in his room at home, docs/spawn-plan.md)
-    await page.goto(`http://127.0.0.1:${server.address().port}/?fps${spawn ? `&spawn=${spawn}` : ''}`);
+    await page.goto(`http://127.0.0.1:${server.address().port}/?fps${spawn ? `&spawn=${spawn}` : ''}${query}`);
     await t.click('[data-start-guest]');
     // (Single player goes straight into walking)
     await t.click('[data-start-single]');
@@ -390,6 +390,40 @@ await scene('karts', '-338.8,-46.9', async (t) => {
   if (await t.has('.city.is-karting')) throw new Error('the race did not end on Esc');
   await t.step('quit the race');
 });
+
+// The same on Riverside Raceway behind ?karts=new (docs/kart-harbour-plan.md Phase 3): the clubhouse's single race runs
+// there, on the new circuit (the header names it), driven a little, quit
+await scene(
+  'karts2',
+  '-338.8,-46.9',
+  async (t) => {
+    await t.prompt('Clubhouse');
+    await t.until('the clubhouse menu', () => !!document.querySelector('[data-karts]:not([hidden]) [data-kart-single]'));
+    await t.step('the clubhouse menu opened');
+    await t.click('[data-karts] [data-kart-single]');
+    await t.until('the race', () => !!document.querySelector('.city.is-karting'), null, 300000);
+    const named = await t.page.evaluate(() => document.querySelector('.city')?.dataset.kart ?? '');
+    if (!/Riverside/.test(named)) throw new Error(`racing on ${named}, not Riverside Raceway`);
+    await t.step('on the grid at Riverside Raceway');
+    await t.page.keyboard.down('w');
+    const clock = () => t.page.evaluate(() => document.querySelector('[data-kart-clock]')?.textContent ?? '');
+    const c0 = await clock();
+    await t.until('the race clock to run', (c) => (document.querySelector('[data-kart-clock]')?.textContent ?? '') !== c, c0, 240000);
+    await t.page.waitForTimeout(6000);
+    await t.page.keyboard.up('w');
+    await t.step(`racing, the clock at ${await clock()}`);
+    for (let i = 0; i < 4 && (await t.has('.city.is-karting')); i++) {
+      await t.page.keyboard.press('Escape');
+      await t.page.waitForTimeout(500);
+      await t.page.keyboard.press('Escape');
+      await t.page.waitForTimeout(3000);
+    }
+    if (await t.has('.city.is-karting')) throw new Error('the race did not end on Esc');
+    await t.step('quit the race');
+  },
+  undefined,
+  '&karts=new'
+);
 
 // Flying: beside your aircraft in Hangar 1 (airfield.ts HANGAR_SPOT), in, rolling out under power
 await scene('fly', '126.8,347.4', async (t) => {

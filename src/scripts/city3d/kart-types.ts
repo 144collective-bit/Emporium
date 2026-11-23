@@ -6,7 +6,7 @@
  * kartpark.ts; neither depends on anything here.
  */
 import type * as THREE from 'three';
-import type { Cond, CourseId } from './kartcircuit';
+import type { Cond, CourseId, RaceCourseId } from './kartcircuit';
 import type { ItemId } from './kartitems';
 import type { CupId, KartSim } from './kart-sim';
 import type { KartResult, SeriesResult } from './tycoon';
@@ -18,7 +18,7 @@ import type { GameDeps } from './ui';
 
 /** What starts a race: which way round, a cup or a time trial, the class; a cup's race also sets its laps and conditions. A single race races a cup's rivals at its class, on its own (no series) */
 export interface RaceStart {
-  course: CourseId;
+  course: RaceCourseId;
   cup: CupId | 'time';
   cls: ClassId;
   laps?: number;
@@ -113,7 +113,7 @@ export interface KartResultView {
   single: boolean;
   cond: Cond;
   cls: ClassId;
-  course: CourseId;
+  course: RaceCourseId;
   of: number;
   result: KartResult;
   standings: KartStanding[];
@@ -152,6 +152,8 @@ export interface KartUI {
   take(): void;
   /** The race HUD: on, then painted every frame */
   showHud(on: boolean): void;
+  /** The minimap's course (drawn when a race starts on another circuit) */
+  setMap(id: RaceCourseId): void;
   paintHud(h: KartHud): void;
   /** The big countdown digits (3, 2, 1, GO; '' hides) */
   count(text: string): void;

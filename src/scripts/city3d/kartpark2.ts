@@ -5,7 +5,8 @@
  * landuse.ts, outskirts.ts) when the park is first drawn behind `?karts=new` (Phase 3), since those are built when
  * they load and can't read the switch.
  *
- * The site's natural ground is level (0 under all of it), so the circuit lies on it as it is, but for:
+ * The site's ground is held level (0 under all of it: its open land's rolls levelled, rolls.ts `flattenRolls()`), so
+ * the circuit lies on it as it is, but for:
  * - **the hill**: an embankment carrying the raised switchbacks over the tunnel, its sides falling at `HILL_SIDE` to the
  *   level, the tunnel through it where its cover is deep enough and a cutting either side of the tunnel's mouths;
  * - **the west bank**: a grass spectator bank between the esses and the site's west edge.
@@ -13,11 +14,11 @@
  * Southfield road at the south.
  */
 
-import { CIRCUIT2, CLEAR2, KERB2, SITE2, TRACK2_HALF, TUNNEL_CLEAR, type Pt } from './kartcircuit2';
+import { CIRCUIT2, CLEAR2, HILL_TOP, KERB2, SITE2, TRACK2_HALF, TUNNEL_CLEAR, type Pt } from './kartcircuit2';
 
 export type Rect = [number, number, number, number];
 
-/** The site's level (its natural ground: 0 throughout, measured 2026-11-23) */
+/** The site's level (0 throughout, its rolls levelled) */
 export const KART2_LEVEL = 0;
 /** How steeply the hill's sides fall (rise per tile of run), and how wide its top stays flat either side of the road */
 export const HILL_SIDE = 0.45;
@@ -66,15 +67,41 @@ const HILL_SOURCES = [...RAISED.map((i) => ({ i, y: CIRCUIT2.y[i] })), ...TUNNEL
 /** The open track (all but the tunnel): where the ground is the road's own height, cut into the hill where it must be */
 const TUNNEL_SET = new Set(TUNNEL2.samples);
 const OPEN_TRACK = CIRCUIT2.u.map((_, i) => i).filter((i) => !TUNNEL_SET.has(i));
-/** The nearest open-track sample to a point within `r`, or -1 */
+
+/** A bucket grid over the site's frame (the ground's asked every tick in a race, and every frame on foot) */
+const CELL = 6;
+const [GU0, GV0, GU1, GV1] = [-20, -20, SITE2.x1 - SITE2.x0 + 20, SITE2.z1 - SITE2.z0 + 20];
+const [GW, GH] = [Math.ceil((GU1 - GU0) / CELL), Math.ceil((GV1 - GV0) / CELL)];
+function bucket<T>(items: T[], where: (t: T) => [number, number], reach: number): (u: number, v: number) => T[] {
+  const cells: T[][] = Array.from({ length: GW * GH }, () => []);
+  const r = Math.ceil(reach / CELL);
+  for (const t of items) {
+    const [u, v] = where(t);
+    const [cu, cv] = [Math.floor((u - GU0) / CELL), Math.floor((v - GV0) / CELL)];
+    for (let a = cu - r; a <= cu + r; a++) for (let b = cv - r; b <= cv + r; b++) if (a >= 0 && b >= 0 && a < GW && b < GH) cells[b * GW + a].push(t);
+  }
+  const none: T[] = [];
+  return (u, v) => {
+    const [cu, cv] = [Math.floor((u - GU0) / CELL), Math.floor((v - GV0) / CELL)];
+    return cu < 0 || cv < 0 || cu >= GW || cv >= GH ? none : cells[cv * GW + cu];
+  };
+}
+const openNear = bucket(OPEN_TRACK, (i) => [CIRCUIT2.u[i], CIRCUIT2.v[i]], CUTTING_HALF + 0.5);
+/** How far a hill source reaches before it's fallen to the level */
+const SOURCE_REACH = HILL_SHOULDER + HILL_TOP / HILL_SIDE + 0.5;
+const sourcesNear = bucket(HILL_SOURCES, ({ i }) => [CIRCUIT2.u[i], CIRCUIT2.v[i]], SOURCE_REACH);
+
+/** The nearest open-track sample to a point within `r` (at most CUTTING_HALF), or -1 */
 function openTrackNear(u: number, v: number, r: number): number {
   let [best, at] = [r, -1];
-  for (const i of OPEN_TRACK) {
+  for (const i of openNear(u, v)) {
     const d = Math.hypot(CIRCUIT2.u[i] - u, CIRCUIT2.v[i] - v);
     if (d < best) [best, at] = [d, i];
   }
   return at;
 }
+/** The hill alone at a point (the raised run's embankment and the tunnel's cover), no cutting */
+export const hillAt = (u: number, v: number) => cones(sourcesNear(u, v), u, v);
 
 /** The west bank: a grass spectator bank between the esses' run-off and the site's west edge (site frame) */
 export const WEST_BANK = { u0: 0, u1: 0, v0: 30, v1: 112, h: 0.8 };
@@ -97,7 +124,7 @@ export function kart2Ground(u: number, v: number): number {
   // (on the track and its kerbs, the road's own height: a cutting through the hill where the hill stands higher)
   const on = openTrackNear(u, v, CUTTING_HALF);
   if (on >= 0) return CIRCUIT2.y[on];
-  return Math.max(cones(HILL_SOURCES, u, v), bankAt(u, v));
+  return Math.max(hillAt(u, v), bankAt(u, v));
 }
 /** The same in the world */
 export const kart2GroundAt = (x: number, z: number) => KART2_LEVEL + kart2Ground(x - SITE2.x0, z - SITE2.z0);
