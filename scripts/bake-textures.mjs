@@ -54,7 +54,10 @@ async function richSave() {
     const out = join(dir, 'save.mjs');
     await build({
       stdin: {
+        // (the golf course's ground's maker first, as the tests and the seams report load it: the save's modules reach
+        // the course's ground, which only the build's data or golfbake.ts can give)
         contents: `
+          import './golfbake';
           import { newSave, addXp, buyUnit, buildUnit, buyLot, buildLot, buyCorner, upgradePlace, UNIT_KIND_IDS, LOT_KIND_IDS, CORNER_PLACES } from './tycoon';
           export function make(now) {
             const s = newSave(now);

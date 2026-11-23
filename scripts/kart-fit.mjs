@@ -13,7 +13,7 @@ const dir = mkdtempSync(join(tmpdir(), 'kart-fit-'));
 try {
   const out = join(dir, 'k.mjs');
   await build({
-    stdin: { contents: `export * from './kartcircuit2'; export { CIRCUIT } from './kartcircuit'; export { DOCKS_RECT } from './docks';`, resolveDir: resolve('src/scripts/city3d'), loader: 'ts' },
+    stdin: { contents: `import './golfbake';\nexport * from './kartcircuit2'; export { CIRCUIT } from './kartcircuit'; export { DOCKS_RECT } from './docks';`, resolveDir: resolve('src/scripts/city3d'), loader: 'ts' },
     outfile: out,
     bundle: true,
     format: 'esm',
