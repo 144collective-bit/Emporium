@@ -92,7 +92,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   under the long spans, `PIERS`, `drawPier()`; block names at their ends, `SIGN_TEX`); the grit (brutalist plan
   Phase 2's polish: the `brutalDeck` gallery band, `deckRow()`; boarded and burnt flats in `RECESS_LIFE`; bin bags,
   dumped mattresses, sofas and trolleys at the bin stores; bikes in the sheds; netting under the links; dishes on the
-  roofs; tired and dead link lights); the glass
+  roofs; tired and dead link lights); pipes and kit (brutalist plan Phase 4: ducts up one end and the rubbish chute
+  down the other, `drawEndKit()`; air-con units, washing on the galleries, water tanks and aerials, `drawFlatKit()`,
+  near only); the glass
   and the slots dark glass by day, lit warm at night (`lit()` toons); the podium deck on its columns; Bunker Sound's door
   with its neon. Built with `lift: false` (kit.ts `Batch.build()`): they stand level on their plinths, not on the
   rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in solids.ts. Bench views `south-blocks` and
