@@ -1,6 +1,6 @@
 # Kart park plan: moved to the south bank, a new longer circuit, a real kart venue
 
-**For the owner's sign-off.** Nothing here is built yet. Once signed, it's built a phase at a time (by a session or the
+**Signed off by the owner (2026-11-23).** Phase 0 (the drawing) next, for the owner's look before Phase 1. It's built a phase at a time (by a session or the
 improvement loop, `docs/improvement-loop-plan.md`), each phase merged on its own with its tests, before-and-after
 shots and the guide (`docs/guide/kart-park.md`) kept up to date. The new park is built behind a switch (`?karts=new`,
 read in one place) and turned on for everyone in Phase 8. Keep this plan up to date.
@@ -14,7 +14,9 @@ bank, west of the Docks. Asked and answered the same day:
   the water at the city, next to the Docks but not inside them.
 - **The circuit:** **a new, longer circuit**, the kart park redesigned. A **figure of eight with a crossover bridge**,
   **about 1.5 times** today's lap.
-- **Records:** **reset everything**: lap records and ghosts start fresh on the new circuit.
+- **Records:** **reset everything**: lap records, ghosts **and the trophies and cups won** start fresh on the new
+  circuit.
+- **The name:** **Riverside Raceway** (made-up), on its signs, place, pins and map.
 - **The surroundings, built up so it looks like a real kart park** ("stacked tyres and workshops etc."): all four:
   workshops and a tyre store, a hire-kart garage, a full paddock, race control and safety. And **night racing**.
 - **Getting there:** a **river bus stop** at the park's riverside gate. **The old site goes back to open land**, kept
@@ -103,7 +105,7 @@ Phones: fewer masts lit, the neon edges near only.
 - **The rest that names the park:** places (`PLACES`, `LIVE_PLACES`, `maptab.ts` `AREAS`), the world map, pins and
   waypoints, taxis' drop-off, fast travel and the "Kart Park" spawn (`KART_SPAWN`). The highway signs: exit 8 drops
   "Kart Park" (back to "Uptown"), and the exit nearest the new site gains it. The metro's Kart Park station on ew3 is
-  renamed for what's left there (the owner's pick, below).
+  renamed **Exit 8** (the owner's pick).
 
 ### The old site
 
@@ -136,7 +138,7 @@ Each phase merges on its own and leaves the city working; the new park is behind
    night against the bloom rule, on phones.
 6. **The river bus stop**: the route extended past the Docks, the Kart Park landing at the gate, its timetable, the
    map and pins (live: the stop can open before the switch, saying "coming soon" at the gate until Phase 8).
-7. **The records reset** (the owner's call): the kart save's records and ghosts cleared once by its migration
+7. **The records reset** (the owner's call): the kart save's records, ghosts, trophies and cups cleared once by its migration
    (`kart-records.ts` loader, `cleanSave()`'s rules: the save keeps its key and its backup), the boards empty on the
    new circuit. Tested.
 8. **The switch**: the new park on for everyone; the old site removed (open land, Kart Road gone, exit 8's sign and the
@@ -157,10 +159,13 @@ Each phase merges on its own and leaves the city working; the new park is behind
   Phase 6, `riverbus.ts`'s tests).
 - **Saves:** the records reset is a migration, not a wipe of the save; everything else in a visitor's save stays.
 
-## Still to ask the owner
+## The owner's decisions (2026-11-23)
 
-- **Trophies and cups won:** reset with the records, or kept in the clubhouse cabinet? (The answer "reset everything"
-  covered records and ghosts.)
-- **The park's name:** still "Sector 7 Kart Park", or a new one for the harbour site (made-up)?
-- **The old metro station's new name** (it stays on the line at ew3), and **which highway exit** signs the new park.
-- **Free play:** are hire karts free like everything else now (`FREE_FOR_NOW`), and does your own kart still race here?
+- The riverside west of the Docks, facing the river; a new circuit, a figure of eight with a crossover bridge, about
+  1.5 times today's lap; all four kinds of buildings (workshops and tyre store, hire-kart garage, full paddock, race
+  control and safety) and night racing; a river bus stop at the gate; the old site back to open land.
+- Records, ghosts, trophies and cups all reset.
+- Named **Riverside Raceway**; the old metro station renamed **Exit 8**.
+- The highway sign goes on the exit nearest the new site; hire karts free, as everything is for now (`FREE_FOR_NOW`),
+  and your own kart races there as today.
+- Signed off; Phase 0's drawing goes to the owner before Phase 1.
