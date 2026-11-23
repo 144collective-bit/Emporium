@@ -24,7 +24,7 @@ const SLAB = 0.15;
 
 /** When it plays: these hours (the city's), on `days` evenings in seven */
 export const BAND_HOURS = { from: 18, until: 21.5, days: 5 };
-/** Does the band play on day `day` (a count of days, stadium.ts `clockAt()`): five in seven, seeded by the day */
+/** Does the band play on day `day` (a count of days, clock.ts `clockAt()`): five in seven, seeded by the day */
 export function bandDay(day: number) {
   // (each week's run of seven a shuffle of five on and two off, so no week goes without and none has more)
   const week = Math.floor(day / 7);

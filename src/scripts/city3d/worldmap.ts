@@ -31,7 +31,7 @@ import { ESPLANADE_DECKS } from './boulevard';
 import { HIGHRISES } from './highrise';
 import { COURT_BODY, COURT_PORTICO, FRONT_RANGE, HALL as CITY_HALL, POLICE_HQ, PORTICO, SQUARE as CIVIC_SQUARE } from './civic';
 import { HIGHWAY_BOX } from './highway';
-import { FACADE as STADIUM_FACADE, STADIUM_AREA, oval as stadiumOval } from './stadium';
+import { ROAD_AREA as STADIUM_ROAD_AREA } from './stadiumroad';
 import { RESORTS } from './resorts';
 import { HARBOUR_MASTER, SHED, STACK_BLOCKS, WAREHOUSES } from './docksport';
 import { CIVIC, CLUB as GOLF_CLUB, HOTEL as CREST_HOTEL } from './crestsites';
@@ -119,10 +119,10 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
 
   const toScreen = (x: number, z: number): Pt => [(x - view.x) * view.s + w / 2, (z - view.z) * view.s + h / 2];
   const toWorld = (sx: number, sy: number): Pt => [(sx - w / 2) / view.s + view.x, (sy - h / 2) / view.s + view.z];
-  /** Fit the city (the highway and all inside it, and the stadium north of it) on screen */
+  /** Fit the city (the highway and all inside it, and Stadium Road north of it) on screen */
   const fit = () => {
     const [x0, , x1, z1] = HIGHWAY_BOX;
-    const z0 = Math.min(HIGHWAY_BOX[1], STADIUM_AREA[1]);
+    const z0 = Math.min(HIGHWAY_BOX[1], STADIUM_ROAD_AREA[1]);
     view.s = Math.min(w / (x1 - x0 + 40), h / (z1 - z0 + 40));
     view.x = (x0 + x1) / 2;
     view.z = (z0 + z1) / 2;
@@ -257,12 +257,9 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
     // its pavilion joining them (mall.ts, malllink.ts, courtinside.ts): one mall on the map
     const court = [COURT_WEST, COURT_NORTH, COURT_EAST, COURT_SOUTH] as const;
     for (const r of [MALL_CINEMA.rect, MALL_HALL.rect, MALL_MSCP.rect, ...MALL_ANCHORS.map((a) => a.rect), ...MALL_SHOPS.map((s) => s.rect), court, MALL_PAVILION, SKYWALK]) rect([...r], C.tower);
-    // The places that had no footprint (the polish plan's Phase 7), in the same muted tone: the stadium's bowl, the
-    // Neon Mile's resorts, the Docks' sheds, warehouses and stacks, Crestmont's landmarks, Sunridge's club and school,
+    // The places that had no footprint (the polish plan's Phase 7), in the same muted tone: the Neon Mile's resorts, the Docks' sheds, warehouses and stacks, Crestmont's landmarks, Sunridge's club and school,
     // Lot 9's huts inside its fence
     ctx.fillStyle = C.tower;
-    poly(stadiumOval(STADIUM_FACADE.a, STADIUM_FACADE.b, 48));
-    ctx.fill();
     for (const r of RESORTS)
       for (const p of r.parts) {
         if (p.solid === false) continue;

@@ -19,6 +19,7 @@ import trenches from '../assets/trenches-logo.png';
 import { TC_ICONS, tcIconPath } from '../data/tcicons';
 import { FLY_KEYS, KEYMAP, MODE_IDS } from '../scripts/city3d/keymap';
 import { DEFAULTS as SET_DEFAULTS } from '../scripts/city3d/settings';
+import { AREAS, DIRECTORY, soonSplit } from '../scripts/city3d/maptab';
 import { label as setLabel, rowsOf, TABS, valueOf as setValue, type Row as SetRow } from '../scripts/city3d/settings-rows';
 import { FREE_PLAY } from '../scripts/city3d/freeplay';
 import type { Spot, SpotId } from '../lib/city';
@@ -54,7 +55,6 @@ const spots: Record<SpotId, Spot> = {
   arms: { title: 'Trench Arms', sub: 'Guns & gear' },
   pier: { title: 'Pier 7', sub: 'The waterfront' },
   nightmarket: { title: 'Night Market', sub: 'Street food' },
-  stadium: { title: 'Sector 7 Stadium', sub: 'Events · coming soon' },
   tower: { title: 'Sector 7 Tower', sub: 'Sky deck' },
   palmcourt: { title: 'Palm Court', sub: 'Shopping plaza' },
   mall: { title: 'Starlight Mall', sub: 'Shopping mall' },
@@ -96,7 +96,8 @@ const spots: Record<SpotId, Spot> = {
   courthouse: { title: 'The Courthouse', sub: 'Sector 7' },
   home: { title: 'Home', sub: "Degen's place" },
 };
-const directory: SpotId[] = ['emporium', 'home', 'shop', 'workshop', 'vault', 'plan', 'signal', 'telegram', 'apartments', 'karts', 'airport', 'fightclub', 'liberty', 'harbour', 'trenches', 'club', 'bar', 'arms', 'pier', 'nightmarket', 'stadium', 'cityhall', 'police', 'courthouse', 'tower', 'palmcourt', 'mall', 'hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse', 'vellano', 'solenne', 'harbourmaster', 'sunclub', 'sunpark', 'sunschool', 'wildace', 'dragonspire', 'scarab', 'bigcity', 'gondolier', 'lagoon', 'orbit', 'sphere', 'lot9', 'endswood', 'aldwyns', 'bunker', 'brook', 'rosas', 'kestrel', 'busgarage', 'rec', 'northgate', 'lakehouse'];
+// The places, in the Map tab's order by district (maptab.ts: one source for the tab, its tests and the pins)
+const directory: readonly SpotId[] = DIRECTORY;
 const ext = { target: '_blank', rel: 'noopener noreferrer' };
 
 // The commit this was built from (set by the Worker's build in server/wrangler.jsonc)
@@ -216,10 +217,12 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
   {/* View settings, only while the 3D city is up */}
 
   {/* The mode header: which view you are in, the walk tabs while walking, and the City / Walk switch.
-       Its title and subtitle are painted by head.ts. Clear over the game, no logo (docs/controls-plan.md
-       Phase 5); in play only the hub's button and the gun's readout stay (controls.css). */}
+       Clear over the game (docs/controls-plan.md Phase 5); its left is the game's title art, small, in every mode
+       (docs/header-plan.md, the owner's later call). The mode's title and line (head.ts paints them) are for screen
+       readers only now. */}
   <header class="city-head mk-skin" data-city-head>
     <div class="city-head-id">
+      <Picture src={trenches} formats={['avif', 'webp']} fallbackFormat="webp" widths={[64, 112, 168]} sizes="56px" alt="" loading="eager" class="city-head-logo" />
       <p class="city-head-text"><b data-head-title>The Trenches</b><small data-head-sub>Loading the city</small></p>
     </div>
     {/* Emotes and phrases (multiplayer.ts, online only; T opens it): the one walk tab left, the hub has the rest */}
@@ -314,20 +317,43 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
     <div class="mk-body" data-mk-swipe>
       <div class="mk-page hub-page" data-page="map" role="tabpanel" aria-label="Map">
         <button type="button" class="mk-btn is-main hub-wide hub-3d" data-worldmap-open>World map<span class="hub-key" aria-hidden="true">M</span></button>
-        <p class="mk-label hub-label hub-3d">Places</p>
-        <ul class="hub-places dir-places hub-3d">
-            {directory.map((id) => {
-              const s = spots[id];
-              return (
-                <li>
-                  <a href="#city-title" data-dir-spot={id}>
-                    <span>{s.title}</span>
-                    <small>{s.sub}</small>
-                  </a>
-                </li>
-              );
-            })}
-          </ul>
+        {/* The places by district (docs/header-plan.md; maptab.ts): a ‹ District › picker (hubtabs-ui.ts, starting where
+            you are), then a row a place: its name and line (`[data-dir-spot]`: places.ts `placeName()` reads them, and a
+            click opens its panel), a Soon tag where it's coming soon, Go (the best way there) and ◎ (a waypoint) */}
+        <div class="map-tab hub-3d" data-map-tab>
+          <div class="set-row" data-set-row="area">
+            <span class="set-name" id="set-l-area"><span class="set-label">District</span></span>
+            <div class="set-pick" data-pick="area">
+              <button type="button" class="set-arr" data-pick-step="-1" data-mk-skip tabindex="-1" aria-hidden="true">◀</button>
+              <button type="button" class="set-val" data-pick-val role="slider" aria-labelledby="set-l-area" aria-valuetext={AREAS[0].label}>
+                <span class="set-text" data-pick-text>{AREAS[0].label}</span>
+              </button>
+              <button type="button" class="set-arr" data-pick-step="1" data-mk-skip tabindex="-1" aria-hidden="true">▶</button>
+            </div>
+          </div>
+          {AREAS.map((a) => (
+            <section class="map-area" data-map-area={a.id} aria-label={a.label}>
+              <p class="set-group map-area-head">{a.label}</p>
+              {a.places.map((id) => {
+                const s = spots[id];
+                const { line, soon } = soonSplit(s.sub);
+                return (
+                  <div class="set-row map-row" data-map-row={id} data-soon={soon ? '' : undefined}>
+                    <div class="set-name map-name" data-dir-spot={id}>
+                      <span class="set-label">{s.title}</span>
+                      <small class="set-hint">{line}{soon && <span class="map-soon-text"> · coming soon</span>}</small>
+                    </div>
+                    {soon && <i class="map-soon" aria-hidden="true">Soon</i>}
+                    <div class="map-acts">
+                      <button type="button" class="mk-btn is-small map-go" data-map-go={id}>Go</button>
+                      <button type="button" class="map-pin" data-map-pin={id} aria-label={`Waypoint: ${s.title}`} title="Waypoint">◎</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </section>
+          ))}
+        </div>
         <p class="mk-label hub-label">More</p>
           <ul class="hub-links dir-links">
             <li>
@@ -359,14 +385,14 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
           </div>
       </div>
       <div class="mk-page hub-page" data-page="bag" role="tabpanel" aria-label="Bag" hidden>
-        <p class="hub-text">Guns, gear and snacks</p>
-        {/* What you carry, read-only (inventory-ui.ts's bagHtml(), painted by index.ts when the tab shows) */}
-        <div class="hub-bag" data-hub-bag-grid></div>
+        {/* What you carry (docs/header-plan.md: inventory-ui.ts's bagHtml(), painted by index.ts when the tab shows): the
+            weapons, then only what's in the bag, Use on a snack or a boost, and the ways to get more */}
         <button type="button" class="mk-btn is-main hub-wide" data-inv-open data-hub-walk>Open your bag<span class="hub-key" aria-hidden="true">Tab</span></button>
-        <p class="mk-note" data-hub-city>Open it on foot</p>
+        <div class="hub-bag" data-hub-bag-grid></div>
       </div>
       <div class="mk-page hub-page" data-page="business" role="tabpanel" aria-label="Business" hidden>
-        {/* Your business (tycoon-ui.ts): the till, then Stall, Units, Workshop, Car and Bag. Opens on this tab from the Dorras readout, or at your stall or a unit. */}
+        {/* Your business (tycoon-ui.ts): the till on top, then Stall, Units, Workshop and Car as the settings' chips (docs/header-plan.md;
+            what you carry is the Bag tab's). Opens on this tab from the Dorras readout, or at your stall or a unit. */}
   <section class="shop stall-card mk-skin" data-biz aria-labelledby="biz-title">
     <header class="shop-head">
       <h2 id="biz-title" class="shop-title">Your business</h2>
@@ -375,7 +401,7 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
         <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
       </button>
     </header>
-    <div class="seg biz-tabs" data-biz-tabs role="group" aria-label="Your business"></div>
+    <div class="set-tabs biz-tabs" data-biz-tabs role="group" aria-label="Your business"></div>
     <div class="stall-body" data-biz-body></div>
       </section>
       </div>
@@ -392,19 +418,34 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
             <button type="button" class="walk-fp" data-account-open hidden>Log in with wallet</button>
             <p class="walk-pad" data-profile-note>Go online for a player name.</p>
           </div>
+          {/* The rifle's finish (docs/header-plan.md): a ‹ value › picker (hubtabs-ui.ts) over combat.ts's own finish
+              buttons, which stay out of sight and do the work (unlocked by lifetime score) */}
+          <p class="set-group">Rifle</p>
+          <div class="set-row" data-set-row="finish">
+            <span class="set-name" id="set-l-finish"><span class="set-label">Finish</span><small class="set-hint" data-finish-note>Equipped</small></span>
+            <div class="set-pick" data-pick="finish">
+              <button type="button" class="set-arr" data-pick-step="-1" data-mk-skip tabindex="-1" aria-hidden="true">◀</button>
+              <button type="button" class="set-val" data-pick-val role="slider" aria-labelledby="set-l-finish" aria-valuetext="Field Olive">
+                <span class="set-text" data-pick-text>Field Olive</span>
+              </button>
+              <button type="button" class="set-arr" data-pick-step="1" data-mk-skip tabindex="-1" aria-hidden="true">▶</button>
+            </div>
+          </div>
           <div class="walk-skins" data-skins>
-            <p class="walk-skins-head"><span>Rifle finish</span><span>Lifetime score <b data-lifetime>0</b></span></p>
-            <div class="walk-skins-row">
+            <p class="walk-skins-head"><span>Lifetime score</span><span><b data-lifetime>0</b></span></p>
+            <div class="walk-skins-row" hidden>
               <button type="button" data-skin="olive" aria-pressed="true"><i class="sw sw-olive"></i>Field Olive<small>Equipped</small></button>
               <button type="button" data-skin="ink" aria-pressed="false" disabled><i class="sw sw-ink"></i>Black Ink<small>2,500 pts</small></button>
               <button type="button" data-skin="neon" aria-pressed="false" disabled><i class="sw sw-neon"></i>Pulse Neon<small>10,000 pts</small></button>
             </div>
           </div>
+          <p class="set-group">Wardrobe</p>
           <div class="wardrobe" data-wardrobe>
-            <p class="walk-skins-head"><span>Wardrobe</span></p>
             <p class="walk-pad">Change your look at Drop 001.</p>
-            <button type="button" class="walk-fp" data-open-char>See your Degen</button>
-            <button type="button" class="walk-fp" data-open-fitting>Open the fitting room</button>
+            <div class="profile-wardrobe">
+              <button type="button" class="walk-fp" data-open-char>See your Degen</button>
+              <button type="button" class="walk-fp" data-open-fitting>Fitting room</button>
+            </div>
           </div>
       </div>
       <div class="mk-page hub-page hub-settings" data-page="settings" role="tabpanel" aria-label="Settings" hidden>
@@ -1123,13 +1164,6 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
     <button type="button" class="chip-link kart-walkin" data-market-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="stadium" data-marquee="Gates shut for now">
-    <p class="kicker"><span class="kicker-num">17</span> Westlake Park</p>
-    <h2 id="city-panel-title" class="city-panel-title">Sector 7 Stadium</h2>
-    <p class="city-panel-text">Two tiers round the pitch. Events coming soon.</p>
-    <button type="button" class="chip-link kart-walkin" data-stadium-walkin>Walk in</button>
-  </template>
-
   <template data-panel-tpl="tower" data-marquee="Highest view in town">
     <p class="kicker"><span class="kicker-num">18</span> Uptown</p>
     <h2 id="city-panel-title" class="city-panel-title">Sector 7 Tower</h2>
@@ -1370,7 +1404,7 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
   </template>
 
   <template data-panel-tpl="northgate" data-marquee="Seen through the wire">
-    <p class="kicker"><span class="kicker-num">51</span> North of the stadium</p>
+    <p class="kicker"><span class="kicker-num">51</span> North of Westlake</p>
     <h2 id="city-panel-title" class="city-panel-title">Northgate Air Base</h2>
     <p class="city-panel-text">A base and airfield across the north, its gates shut. The visitors' centre: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-northgate-walkin>Walk in</button>

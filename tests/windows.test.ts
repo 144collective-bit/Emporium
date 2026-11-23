@@ -8,7 +8,7 @@ import { TOWERS } from '../src/scripts/city3d/projects';
 import { TENEMENTS } from '../src/scripts/city3d/streetwall';
 import { DAY_LIT, NIGHT_LIT, NIGHT_MIX, WINDOW_TYPE, paneAt, type Pane, type WallKindName } from '../src/scripts/city3d/windows';
 
-const KINDS: WallKindName[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark', 'brickOrange', 'brickPurple', 'brickPainted', 'brickGlazed', 'panel', 'brutal'];
+const KINDS: WallKindName[] = ['brick', 'brownstone', 'stuccoTeal', 'stuccoPink', 'stuccoViolet', 'industrial', 'glassBlue', 'glassTeal', 'hotel', 'brickTan', 'brickDark', 'brickOrange', 'brickPurple', 'brickPainted', 'brickGlazed', 'panel', 'brutal', 'brutalDeck'];
 /** Every window of the atlas's bands, as infill.ts seeds them (60 + the band's place), 4 floors of 8 bays, pairs */
 const ALL: Pane[] = KINDS.flatMap((_, i) => Array.from({ length: 4 }, (_, row) => Array.from({ length: 16 }, (_, k) => paneAt(60 + i, row, k >> 1, k & 1))).flat());
 

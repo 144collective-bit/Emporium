@@ -41,7 +41,6 @@ export const LIVE_PLACES = [
   { id: 'arms', name: 'Trench Arms' },
   { id: 'pier', name: 'Pier 7' },
   { id: 'nightmarket', name: 'Night Market' },
-  { id: 'stadium', name: 'Sector 7 Stadium' },
   { id: 'tower', name: 'Sector 7 Tower' },
   { id: 'palmcourt', name: 'Palm Court' },
   { id: 'mall', name: 'Starlight Mall' },

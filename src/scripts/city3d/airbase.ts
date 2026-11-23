@@ -68,7 +68,7 @@ export const piersOf = (g: Gate): Pt[] => [
 ];
 
 /**
- * The fence, a closed line, clockwise from the south-west corner: the south side 44 north of the stadium, the east
+ * The fence, a closed line, clockwise from the south-west corner: the south side 44 north of where the stadium stood (removed 2026-11-22), the east
  * side west of Crestmont's hills (which start at x 285), the north side with the wall gate's yard running up to the
  * wall, the west side clear of the wall's floodlights
  */
@@ -179,7 +179,7 @@ export const barrierOf = (g: Gate): [Pt, Pt] => [
 export const SIGN_WALL: Rect = [MAIN_GATE.x + MAIN_GATE.half + 2, MAIN_GATE.z + 4.6, MAIN_GATE.x + MAIN_GATE.half + 12, MAIN_GATE.z + 5.1];
 export const SIGN_WALL_H = 1.5;
 
-/** The visitors' car park outside the main gate, west of the road (clear of the stadium's car park's loop, -251) */
+/** The visitors' car park outside the main gate, west of the road (clear of where the stadium's car park's loop was, -251) */
 export const VISITORS: Rect = [-90, -298, -20, -262];
 /** Its drive from the north avenue's loop (x0, z0, x1, z1: across to the road's verge) */
 export const VISITORS_DRIVE: Rect = [-20, -284, -6.2, -277];

@@ -147,7 +147,14 @@ keep it up to date when what it describes changes.
     `combat-lazy.ts`, which walk.ts holds as `combat`: the same shape,
     fetched once the first frame is drawn since the targets stand in the
     city from the start; until then it answers from the save and replays
-    what was set). A dynamic import goes through `lazy(load, what)` in
+    what was set), and your car and your aircraft (`drive.ts`, `fly.ts`
+    and what only they use, the boot's trim, 2026-11-22: 7.6 KB, the boot
+    from 774.9 to 767.3) behind `lazyFront()` (`lazyfront.ts`): the same
+    shape, fetched once the first frame is drawn, answering from `idle`
+    until then ("not driving, nothing near": every getter walk.ts reads has
+    its stand-in there, since anything else comes back as a do-nothing
+    function), everything the real one's once it's in; the hangar's
+    preview, keep and cancel wait for it (`loaded()`). A dynamic import goes through `lazy(load, what)` in
     `lazy.ts` (walk.ts's `lazyMenu()` too): a failed fetch toasts
     "Couldn't load <what> · reload" once and the next call tries again. New
     features that aren't needed until they're used come the same way. three.js is a chunk of its own (`manualChunks` in
@@ -419,7 +426,11 @@ keep it up to date when what it describes changes.
     96 and 64 in the stability plan's Phase 3a; `?budget=MB` in the address
     overrides it, for testing), furthest first (`toRelease()`); it's drawn
     far until the site runs again and puts them back, before it's near
-    (`toRebuild()`, `REBUILD_LEAD`). The room they took is reused
+    (`toRebuild()`, `REBUILD_LEAD`), a tile at a time, nearest first: the
+    first now, up to `REBUILD_AT_ONCE` (4) in the frame's time, the rest
+    the frames after (tilework.ts `step()`; four at once took 270-350 ms
+    of one frame on memcheck's phone, coming to `south-rampart` and
+    `crest-drive`: 204 and 119 ms since, 2026-11-23). The room they took is reused
     (`BatchedMesh.optimize()`) before a mesh grows. The places, the
     landmarks and downtown's monolithic builders are built at the boot and
     never let go.
@@ -500,9 +511,11 @@ keep it up to date when what it describes changes.
   distance on any tier while walking, `?horizon=0` turns it off. Tested in
   `tests/tileplan.test.ts` and `tests/tilebatch.test.ts`.
 - `?fps` in the address (`.city-stats`, built in
-  `index.ts`): fps, slowest frame, draw calls and triangles per frame, the
+  `index.ts`, its text by `readout.ts`, a chunk of its own loaded only with
+  `?fps` and `?bench`): fps, slowest frame, draw calls and triangles per frame, the
   shadow map's share (`post.shadowStat`), geometry and texture memory
-  (`sceneMemory()` in `perf.ts`), how many tile pieces were drawn and
+  (`sceneMemory()` in `perf.ts`, its own chunk since 2026-11-21, loaded only
+  with the readout, `?bench` and `__mem()`, which reads null until it's in), how many tile pieces were drawn and
   tiles are near, how many far forms are showing, how long the boot took (art, build and its own work less the waits, tiles, shaders), the sites built (at the boot, after, the slowest, waiting) and the near forms held against the budget, quality tier, pixel ratio and any
   quality stepped down. Use it on
   real devices before and after changes; it's invisible without the

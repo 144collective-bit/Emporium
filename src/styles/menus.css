@@ -955,8 +955,7 @@
   display: none;
 }
 
-/* Map: the places, then More and the links */
-.hub-places,
+/* Map: More's links (the places are rows: `.map-*`, below) */
 .hub-links {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -965,7 +964,6 @@
   padding: 0;
   list-style: none;
 }
-.hub-places a,
 .hub-links a {
   position: relative;
   display: grid;
@@ -978,19 +976,16 @@
   color: var(--m-text);
   text-decoration: none;
 }
-.hub-places a span,
 .hub-links a span {
   font: 700 13px/1.1 var(--font-pixel);
   letter-spacing: 0.03em;
   text-transform: uppercase;
 }
-.hub-places a small,
 .hub-links a small {
   color: var(--m-dim);
   font: 500 10px/1.25 var(--font-mono);
   letter-spacing: 0.04em;
 }
-.hub-places a::before,
 .hub-links a::before {
   content: "▶";
   position: absolute;
@@ -1000,16 +995,12 @@
   font-size: 9px;
   opacity: 0;
 }
-.hub-places a:hover,
 .hub-links a:hover,
-.hub-places a:focus-visible,
 .hub-links a:focus-visible {
   outline: none;
   border-color: var(--m-coin);
 }
-.hub-places a:hover::before,
 .hub-links a:hover::before,
-.hub-places a:focus-visible::before,
 .hub-links a:focus-visible::before {
   opacity: 1;
   animation: mk-blink 0.9s steps(1) infinite;
@@ -1319,6 +1310,205 @@
 .set .km {
   margin-top: 2px;
 }
+/* ==========================================================================
+   The Map, Missions and Profile tabs (docs/header-plan.md): the settings' rows and pickers, reused. Map: a
+   ‹ District › picker, then a row a place (its name opens it; Go, the best way there; ◎, a waypoint), a Soon tag
+   where it's coming soon; the district's heading only under All.
+   ========================================================================== */
+.map-tab {
+  display: grid;
+  gap: 6px;
+}
+.map-area {
+  display: grid;
+  gap: 6px;
+}
+.map-tab:not([data-all]) .map-area-head {
+  display: none;
+}
+.map-area-head {
+  margin-top: 8px;
+}
+.map-row {
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  padding-left: 12px;
+}
+.map-row::before {
+  content: none;
+}
+.map-row:has(:focus-visible) {
+  border-color: var(--m-coin);
+}
+.map-name {
+  cursor: pointer;
+}
+.map-name:hover .set-label {
+  color: var(--m-coin);
+}
+.map-soon-text {
+  display: none;
+}
+.map-soon {
+  padding: 3px 6px 2px;
+  border: 2px solid var(--m-edge);
+  color: var(--m-dim);
+  font: 700 10px/1 var(--font-pixel);
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.map-acts {
+  display: flex;
+  align-items: stretch;
+  gap: 6px;
+}
+.mk-btn.map-go {
+  min-width: 64px;
+  justify-content: center;
+}
+.map-pin {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  min-height: 34px;
+  padding: 0;
+  border: 2px solid var(--m-edge);
+  background: var(--m-cab);
+  clip-path: var(--notch-2);
+  color: var(--m-coin);
+  font: 700 15px/1 var(--font-mono);
+  cursor: pointer;
+}
+.map-pin:hover,
+.map-pin:focus-visible {
+  outline: none;
+  border-color: var(--m-coin);
+}
+/* Missions: Active · Badges · Done, the settings' sub-tabs */
+.mission-tabs {
+  margin-top: 6px;
+}
+.mission-tabs small {
+  margin-left: 4px;
+  color: inherit;
+  font: inherit;
+  opacity: 0.7;
+}
+.mission-tab {
+  display: grid;
+  gap: 8px;
+}
+/* Profile: the wardrobe's two buttons side by side */
+.mk-hub .profile-wardrobe {
+  justify-self: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.profile-wardrobe .walk-fp {
+  flex: 1 1 140px;
+}
+.set-pick[data-locked="true"] .set-text {
+  color: var(--m-dim);
+}
+/* Phones: a slimmer tab strip */
+@media (max-width: 640px) {
+  .hub-tabs button {
+    padding: 7px 10px 8px;
+    font-size: 12px;
+  }
+}
+/* (the district's value is wider than a setting's: "Out of town · Here") */
+.map-tab .set-pick {
+  grid-template-columns: 32px minmax(156px, auto) 32px;
+}
+/* Narrow phones: the row stays one line (the name wraps), its Go a touch narrower; the district's picker full width */
+@media (max-width: 380px) {
+  .map-tab .map-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    padding-left: 12px;
+  }
+  .mk-btn.map-go {
+    min-width: 54px;
+    padding-inline: 8px;
+  }
+  .map-tab .set-pick {
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+  }
+}
+@media (max-width: 340px) {
+  .map-tab .map-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .map-row .map-soon {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .map-row .map-acts {
+    grid-column: 1 / -1;
+  }
+  .map-row .map-go {
+    flex: 1;
+  }
+}
+
+/* The Bag tab (docs/header-plan.md): the weapons, then a row a thing in the bag, its count, Use on a snack or a boost */
+.hub-bag {
+  display: grid;
+  gap: 8px;
+}
+.bag-head-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bag-count {
+  color: var(--m-dim);
+}
+.bag-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.mk-hub .bag-row {
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  padding-left: 8px;
+}
+.mk-hub .bag-row::before {
+  content: none;
+}
+.bag-art {
+  display: grid;
+  place-items: center;
+  height: 32px;
+  color: var(--m-text);
+}
+.bag-art svg {
+  width: 26px;
+  height: 26px;
+  color: #fff;
+}
+/* (a gun's silhouette, as the bag's own cells draw it: pale, with an ink edge) */
+.bag-art .hb-gun {
+  width: 48px;
+  height: 20px;
+  fill: #c9c6d6;
+  stroke: #05050a;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+}
+.mk-hub .bag-use {
+  min-width: 64px;
+  justify-content: center;
+}
+@media (max-width: 380px) {
+  .mk-hub .bag-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+}
+
 /* Narrow phones: the picker under its name, full width */
 @media (max-width: 380px) {
   .set-row {
@@ -1448,12 +1638,28 @@
   transform: none;
   animation: none;
 }
-.mk-hub .stall-card .shop-title,
-.mk-hub .stall-card .shop-close {
+.mk-hub .stall-card .shop-head {
   display: none;
 }
-.mk-hub .stall-card .shop-head {
-  justify-content: flex-start;
+/* Business's sections as the settings' chips (docs/header-plan.md): one row where they fit */
+.mk-hub .biz-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.mk-hub .biz-tabs button {
+  grid-column: auto;
+}
+.set-tabs button[aria-pressed="true"] {
+  border-color: var(--m-coin);
+  background: #ffc5311a;
+  color: var(--m-coin);
+}
+/* The till's Collect: the main coin button while there's money in it */
+.mk-hub .stall-collect.is-ready {
+  border-color: var(--m-coin);
+  background: var(--m-coin);
+  color: #0c0d10;
 }
 
 /* The foot: the hints and, walking, Back to City view */
@@ -1473,21 +1679,17 @@
     display: flex;
     justify-content: flex-end;
   }
-  .hub-places,
   .hub-links {
     gap: 5px;
   }
-  .hub-places a,
   .hub-links a {
     padding: 8px 8px 9px 20px;
   }
-  .hub-places a span,
   .hub-links a span {
     font-size: 12px;
   }
 }
 @media (max-width: 340px) {
-  .hub-places,
   .hub-links {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1506,9 +1708,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .hub-places a:hover::before,
   .hub-links a:hover::before,
-  .hub-places a:focus-visible::before,
   .hub-links a:focus-visible::before {
     animation: none;
   }

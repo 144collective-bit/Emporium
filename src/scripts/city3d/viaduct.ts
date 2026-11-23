@@ -9,7 +9,7 @@
  *   inside (traffic keeps right), the anticlockwise one to the outside.
  * - **The deck** (`DECK_Y`): its surface over the ground all the way round, deep enough under it (`GIRDER`) to leave
  *   every street passing under `CLEARANCE`, the parapets `PARAPET` over it.
- * - **The exits** (`EXITS`): eight, numbered clockwise from the stadium, each at an arterial's junction today. The
+ * - **The exits** (`EXITS`): eight, numbered clockwise from the north (where the stadium was), each at an arterial's junction today. The
  *   arterials cross the ring in clusters 18 to 26 apart along its sides, far too close for a ramp to climb between
  *   them, so every exit lays its four ramps on its corner side (`side`: the way along the ring with room): a
  *   partial cloverleaf (`RAMPS`). In each of the two quadrants there (inside and outside the ring) a loop (`loop`)
@@ -143,7 +143,7 @@ export const OUTER_LANE = MEDIAN / 2 + LANE * 1.5;
 /* ---------- The exits ---------- */
 
 export interface Exit {
-  /** Numbered clockwise from the stadium (the order they were built: 6A is 9) */
+  /** Numbered clockwise from the north (the order they were built: 6A is 9) */
   n: number;
   /** Its number on the signs: `n`, but 6A at the south-west corner (between 6 and 7, every other sign keeping its own) */
   label: string;
@@ -170,7 +170,7 @@ export type Form = 'full' | 'slip' | 'none';
 
 /** Each exit's arterial crossing today, its names, the way its ramps lie and its quadrants' forms (inside, outside) */
 const EXIT_DATA: [string, string, Pt, string, 1 | -1, Form, Form][] = [
-  ['highway-ns0-1', 'ns0', [-4.5, -170], 'Stadium · Westlake Park', -1, 'slip', 'full'],
+  ['highway-ns0-1', 'ns0', [-4.5, -170], 'Westlake · Northgate', -1, 'slip', 'full'],
   // (outside, the kart park's plaza, kiosk and gate arch stood where the straight ramp would run: a slip, kept when the
   // park moved west, docs/kart-west-plan.md, its land open for a district later)
   ['highway-ns3-0', 'ns3', [64.5, -170], 'Starlight Mall · Sunridge', 1, 'slip', 'slip'],

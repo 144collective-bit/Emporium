@@ -15,12 +15,13 @@
  *   its radius a sum of a few waves; `inLake()` keeps walkers and cars out.
  * - **The paths** (`PATHS`): a walk round the big block, a loop round the
  *   lake, the Mall (a wide straight walk with trees either side, from City
- *   Hall's back door (civic.ts) to the stadium) and the ways in from the gates
+ *   Hall's back door (civic.ts) out of the north gate) and the ways in from the gates
  *   (`GATES`).
  * - **The stadium's old site** (`GARDEN_SITE`), kept clear for the formal
  *   garden (the north side's stage 3, docs/north-plan.md): the stadium moved
- *   north of the ring highway (stadium.ts), the Mall carried on to it out of
- *   the north gate (`gate-n`), under the raised highway (stadium.ts `WALK`).
+ *   north of the ring highway (removed since, 2026-11-22), the Mall carried on
+ *   out of the north gate (`gate-n`), under the raised highway to Stadium Road
+ *   (stadiumroad.ts `WALK`).
  */
 import { EW_ROADS, WALK_W } from './layout';
 import { BUILT, baked } from './baked';
@@ -721,7 +722,7 @@ const southGate = (id: string, x: number, half = 1.3): Gate => ({ id, at: [x, ZS
 const eastGate = (id: string, z: number, half = 1.3): Gate => ({ id, at: [X1, z], out: [1, 0], half });
 export const GATES: Gate[] = [
   // (the Mall's south gate went with the civic square, civic.ts: the square opens onto the avenue all along its side)
-  // (the Mall's north end, out under the raised highway to the stadium: stadium.ts WALK, docs/highway-plan.md Phase 2)
+  // (the Mall's north end, out under the raised highway to Stadium Road: stadiumroad.ts WALK, docs/highway-plan.md Phase 2)
   { id: 'gate-n', at: [MALL.x, Z0], out: [0, -1], half: MALL.half },
   southGate('gate-sw', SW_GATE_X),
   southGate('gate-lake', -96),

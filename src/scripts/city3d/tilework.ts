@@ -76,6 +76,9 @@ const TOP = 24;
 /** The fastest the camera is taken to move over the ground, in tiles a second (an aircraft's cruise) */
 const MAX_SPEED = 40;
 
+/** The most released tiles built again in one frame, time allowing (`step()`) */
+const REBUILD_AT_ONCE = 4;
+
 export function createTileWork(
   scene: THREE.Scene,
   opts: {
@@ -266,10 +269,12 @@ export function createTileWork(
         const back = toReturn(tiled.held(x, y, z), horizon);
         for (let i = 0; i < back.length && (i === 0 || performance.now() - t0 < ms); i++) regain([back[i]]);
       }
-      // Tiles coming back into reach first: they're needed soonest
+      // Tiles coming back into reach first: they're needed soonest. A tile at a time, nearest first, the first one now
+      // and up to four in this frame's time (four at once took 270-320 ms of one frame on memcheck's phone, coming to a
+      // view whose tiles had let go: south-rampart, crest-drive; the rest come in the frames after)
       if (released.size) {
         const back = toRebuild(releasedNear(x, y, z), far);
-        if (back.length) rebuild(back.slice(0, 4));
+        for (let i = 0; i < Math.min(back.length, REBUILD_AT_ONCE) && (i === 0 || performance.now() - t0 < ms); i++) rebuild([back[i]]);
       }
       const [fx, fz] = focusOf(look ? look[0] : x, look ? look[1] : z, vel.x, vel.z);
       // (a site waiting past the haze waits on: built now, it would be let go at once)

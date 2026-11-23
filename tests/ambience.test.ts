@@ -106,14 +106,13 @@ test("Sunridge: its quiet hum, its sprinklers and crickets (the suburb layer); n
 
 // The polish pass's sound phase (docs/polish-plan.md theme 3): no built-up part reads as open country, and the
 // places with a sound of their own have a layer
-test("the hum reaches every built-up part: Uptown hushed, the mall, the Docks, the airport, the kart park and the stadium; open land is open", async () => {
+test("the hum reaches every built-up part: Uptown hushed, the mall, the Docks, the airport and the kart park; open land is open", async () => {
   const { HUMS, UPTOWN_HUSH } = await import('../src/scripts/city3d/ambience');
   const { TOWER_SPAWN } = await import('../src/scripts/city3d/skydeck');
   const { INSIDE_SPAWN } = await import('../src/scripts/city3d/mallinside');
   const { HM_SPAWN } = await import('../src/scripts/city3d/docksport');
   const { AIR_SPAWN } = await import('../src/scripts/city3d/airfield');
   const { KART_SPAWN } = await import('../src/scripts/city3d/kartpark');
-  const { STADIUM_SPAWN } = await import('../src/scripts/city3d/stadium');
   const band = (name: string, x: number, z: number, lo: number, hi: number) => {
     const a = ambienceAt(x, z, 0, 0);
     assert.ok(a.city >= lo - 1e-9 && a.city <= hi + 1e-9, `${name}'s hum ${a.city} (${lo}-${hi})`);
@@ -126,15 +125,6 @@ test("the hum reaches every built-up part: Uptown hushed, the mall, the Docks, t
   band('the Docks', HM_SPAWN.x, HM_SPAWN.z, HUMS.docks.level - 0.05, 1);
   band('the airport', AIR_SPAWN.x, AIR_SPAWN.z, HUMS.airport.level - 0.05, 1);
   band("the kart park's gate", KART_SPAWN.x, KART_SPAWN.z, HUMS.karts.level - 0.05, 1);
-  band("the stadium's forecourt", STADIUM_SPAWN.x, STADIUM_SPAWN.z, HUMS.stadium.level - 0.05, 1);
-  // The stadium's crowd (the polish plan's Phase 7): on a match night only, round the ground, not across town
-  const { matchOn } = await import('../src/scripts/city3d/stadium');
-  const night = new Date(2026, 10, 11, 19, 30).getTime() / 1000;
-  const noon = new Date(2026, 10, 11, 12).getTime() / 1000;
-  assert.ok(matchOn(night * 1000) && !matchOn(noon * 1000));
-  assert.ok(ambienceAt(STADIUM_SPAWN.x, STADIUM_SPAWN.z, 0, night).stadium > 0.9);
-  assert.equal(ambienceAt(STADIUM_SPAWN.x, STADIUM_SPAWN.z, 0, noon).stadium, 0);
-  assert.equal(ambienceAt(30, 30, 0, night).stadium, 0, 'none downtown');
   const { STRIP_RECT } = await import('../src/scripts/city3d/strip');
   const { YARDS_RECT } = await import('../src/scripts/city3d/southfield');
   band('the Neon Mile', (STRIP_RECT[0] + STRIP_RECT[2]) / 2, (STRIP_RECT[1] + STRIP_RECT[3]) / 2, HUMS.strip.level - 0.05, 1);

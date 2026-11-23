@@ -97,10 +97,6 @@ export function createSound(given?: AudioContext) {
   let wallHum: GainNode | null = null;
   let compressor: GainNode | null = null;
   let nextBeep = 0;
-  /** The stadium on a match night (the polish plan's Phase 7): the crowd's murmur round the ground, a roar swelling now and then */
-  let stadiumGain: GainNode | null = null;
-  let roar: GainNode | null = null;
-  let nextRoar = 0;
   /** Endswood (docs/estate-plan.md Phase 7): the estate's own (pigeons, mopeds, the two-tone siren far off, the
    * ice-cream van), Bunker Sound's beat out of its garage door, St Aldwyn's bell on the hour */
   let endsGain: GainNode;
@@ -1756,25 +1752,6 @@ export function createSound(given?: AudioContext) {
           reverseBeep(t);
           nextBeep = t + 30 + Math.random() * 50;
         }
-      }
-      // The stadium on a match night (stadium.ts `matchOn()`): a crowd's murmur (brown noise through a band-pass), a
-      // roar swelling and dying away now and then
-      if (a.stadium > 0.02 || stadiumGain) {
-        if (!stadiumGain) {
-          stadiumGain = layer('bandpass', 420, 0.8, 0.3, 0.6, true);
-          roar = layer('bandpass', 760, 1.1, 0.5, 1.3, true);
-          nextRoar = t + 5 + Math.random() * 10;
-        }
-        stadiumGain.gain.setTargetAtTime(a.stadium * 0.07, t, 1.5);
-        if (a.stadium > 0.05 && t > nextRoar) {
-          const g = roar!.gain;
-          g.cancelScheduledValues(t);
-          g.setValueAtTime(g.value, t);
-          g.linearRampToValueAtTime(a.stadium * 0.16, t + 1.6);
-          g.linearRampToValueAtTime(a.stadium * 0.03, t + 4.5);
-          g.linearRampToValueAtTime(0, t + 6);
-          nextRoar = t + 12 + Math.random() * 25;
-        } else if (a.stadium <= 0.02 && roar) roar.gain.setTargetAtTime(0, t, 1);
       }
     },
     suspend() {

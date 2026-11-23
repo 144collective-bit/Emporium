@@ -29,7 +29,7 @@ import { inBasin, DOCKS_RECT } from './docks';
 import { inLake } from './westlake';
 import { AIRPORT_AREAS } from './airfield';
 import { KART_RECTS } from './kartfacility';
-import { STADIUM_RECTS } from './stadium';
+import { ROAD_RECTS as STADIUM_ROAD_RECTS } from './stadiumroad';
 import { CREST_RECT } from './crestmont';
 import { inTrenches } from './trenches';
 import { inSunridge } from './sunridge';
@@ -46,7 +46,7 @@ export const REACH = 40;
 
 const AREA_IX = new Map(AREA_IDS.map((id, i) => [id, i]));
 
-/** Land an area holds that isn't a street plan block (the airport, the kart park, the stadium's grounds, Crestmont's hills,
+/** Land an area holds that isn't a street plan block (the airport, the kart park, Stadium Road, Crestmont's hills,
  * Sunridge's club, park and school, Uptown's free sites, The Trenches' land along the highway, the docks' quays), later
  * ones over earlier: the blocks go over all of it */
 const inR = (r: Rect) => (x: number, z: number) => x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3];
@@ -60,7 +60,7 @@ const LAND: [string, (x: number, z: number) => boolean][] = [
   ['crestmont', inR(CREST_RECT)],
   ['airport', anyR(AIRPORT_AREAS)],
   ['karts', anyR(KART_RECTS)],
-  ['stadium', anyR(STADIUM_RECTS)],
+  ['stadium-road', anyR(STADIUM_ROAD_RECTS)],
   ['docks', inR(DOCKS_RECT)],
 ];
 

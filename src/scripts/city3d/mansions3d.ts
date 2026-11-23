@@ -23,7 +23,7 @@ import { DRAPE, bandMesh, lineMesh, type Mesh } from './crestdrape';
 /** A gate's half width in the pad's edge */
 const GATE_GAP = 0.9;
 import { COVER, PLANT, SOIL } from './palette';
-import { MANSARD, MANSIONS, MANSION_CARS, PAD_EASE, STOREY, TURRET, WALL, YARD, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
+import { MANSARD, MANSIONS, MANSION_CARS, PAD_EASE, STOREY, TURRET, WALL, YARD, driveStart, outOf, originOf, rectToWorld, toWorld, wallsOf, type MPart, type Mansion } from './mansions';
 import { POOL_LED, WINDOW, hip, poolOf, windowOf } from './estates3d';
 import { deckHip, mansard } from './roofs3d';
 import { POOL_LIGHTS, poolLights } from './crestnight';
@@ -487,9 +487,13 @@ export function registerMansions(low: boolean, scene: THREE.Scene | null) {
       const [ox, oz] = outOf(m.face);
       const L = Math.hypot(d1[0] - d0[0], d1[1] - d0[1]);
       const [px, pz] = [-oz * 1.2, ox * 1.2];
-      const at = (t: number) => [d0[0] + (d1[0] - d0[0]) * t, d0[1] + (d1[1] - d0[1]) * t];
+      // (R2, J2 part 1: the paving starts where both its edges are off the road's asphalt, so it meets the road's edge
+      // and never runs over its edge line into the lane, where the road curves or meets it at an angle)
+      const t0 = driveStart(d0, d1, px, pz);
+      const at = (t: number) => [d0[0] + (d1[0] - d0[0]) * (t0 + (1 - t0) * t), d0[1] + (d1[1] - d0[1]) * (t0 + (1 - t0) * t)];
+      const s0 = at(0) as [number, number];
       // (dense, on the grass as drawn: crestdrape.ts, so the grass never shows through it)
-      const g = meshGeometry(lineMesh(m.drive, DRAPE.drive.half, DRAPE.drive.lift));
+      const g = meshGeometry(lineMesh([s0, d1], DRAPE.drive.half, DRAPE.drive.lift));
       // (its kerbs a post every tile)
       const k = Math.max(1, Math.ceil(L));
       q.add(g, STONE);
@@ -662,3 +666,4 @@ export function meshGeometry(m: Mesh) {
   g.computeVertexNormals();
   return g;
 }
+

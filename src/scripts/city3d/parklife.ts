@@ -193,7 +193,7 @@ export interface Picnic {
   /** Who's sitting round it: where and facing */
   people: { x: number; z: number; ry: number }[];
 }
-/** In the glades: on the big block's lawns, well off the paths, the water, the stadium and every tree; seeded, worked out once at the build (baked) */
+/** In the glades: on the big block's lawns, well off the paths, the water, the formal garden and every tree; seeded, worked out once at the build (baked) */
 export const PICNICS: Picnic[] = baked('park-picnics', BUILT ? undefined : () => {
   const cm = (v: number) => Math.round(v * 1000) / 1000;
   let s = 4242;

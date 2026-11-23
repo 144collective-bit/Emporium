@@ -3,7 +3,9 @@
 Part of the project guide (`CLAUDE.md` is its index). Moved here word for word from `CLAUDE.md`;
 keep it up to date when what it describes changes.
 
-- **The exits are to be rebuilt** (the owner's ask, 2026-11-21, `docs/exits-plan.md`, for the owner's sign-off): four
+- **The exits are to be rebuilt** (the owner's ask, 2026-11-21, `docs/exits-plan.md`, signed off; Phase 1 done: the
+  standard is `exitstd.ts`, DOM-free, `EXIT_STD`, `checkRamp()`, `checkInterchanges()`, tested in
+  `tests/exitstd.test.ts`; nothing reads it until Phase 2's data): four
   interchanges, one a side, with two-lane slip ramps to one-way frontage roads, the deck widened to three lanes each
   way, exit 6A retired. Until its Phase 7 switch, what's below describes the city as it stands. The fit is drawn by
   `npm run exits-fit` (`docs/exits-shots/`).
@@ -23,7 +25,7 @@ keep it up to date when what it describes changes.
   built: the ramps' land is `rampLand()` (the outskirts' trees, the seam map
   and `inTrenches()` keep off it; `quadrantEdge()` for a district's edge),
   Westlake Park's south-west corner is cut back for exit 8 (`EXIT_NOTCH`),
-  Stadium Road comes in further north for exit 1 (stadium.ts `IN`,
+  Stadium Road comes in further north for exit 1 (stadiumroad.ts `IN`,
   `ROAD_LINE`), and the test holds every ramp clear; the fit is
   `docs/highway-exits-fit.png`. Phase 2 (the viaduct drawn and the ring
   raised) is built: no junction or slip lane with it at street level
@@ -87,8 +89,8 @@ keep it up to date when what it describes changes.
   along them, the grid's roads run on to the edge as two-lane country roads
   (`rural.ts`: `ruralSplit()` in `cityPlan()`, streets of kind `rural`
   `<id>-w/e/n/s` from an unlit join, routes.ts's `join`, to a one-way turning
-  loop near the edge, a bank avenue's up a stub inland; the two north of the
-  stadium, `ns0-n` and `ns3-n`, end at Northgate Air Base's gates instead,
+  loop near the edge, a bank avenue's up a stub inland; the two north of
+  Stadium Road, `ns0-n` and `ns3-n`, end at Northgate Air Base's gates instead,
   `gated`, at airbase.ts `GATE_ROAD_ENDS`: `docs/guide/airbase.md`; `RURAL`,
   `RURAL_RUNS`, `onRural()`), with verges, ditches, post-and-rail fences and
   field gates (`ruralfence.ts`: `FENCES`, `GATES`; `ruraldress.ts`: `riverSide()`;

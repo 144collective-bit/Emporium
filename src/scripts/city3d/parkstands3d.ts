@@ -18,7 +18,7 @@ import { bench } from './gardens3d';
 import { BANDSTAND, LAKEHOUSE, WATER_Y, type Pt } from './westlake';
 import { BANDSTAND_BENCHES, CAFE_TABLES } from './parkstands';
 import { addPeople } from './life';
-import { clockAt } from './stadium';
+import { clockAt } from './clock';
 import { CROWD_VIEW } from './character';
 import type { Tick } from './world';
 import { BAND, BAND_FLOOR, BAND_NOW, BAND_SEAT, DINERS, RAMBLE_PEOPLE, bandOn, bandPeople, listeners, waiter, type Part } from './parkcrowd';

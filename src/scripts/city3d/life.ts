@@ -1440,7 +1440,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       const turn = Math.atan2(Math.sin(p.ry - p.face), Math.cos(p.ry - p.face));
       p.face += turn * Math.min(1, dt * 9);
       const y = p.lift ? ENDS_SLAB + southLift(p.x, p.z) : p.act && seated(clipOf(p.act, 'idle')) ? (p.y ?? SLAB) - SEAT_DROP : (p.y ?? SLAB);
-      // (an idle only sometimes there, the stadium's queue on match night: out of the world the rest of the time)
+      // (an idle only sometimes there, the civic square's people by day: out of the world the rest of the time)
       if (p.when && p.home) {
         const here = p.when(hour);
         p.x = here ? p.home.x : -1e5;

@@ -365,6 +365,50 @@
     0 0 10px #000c;
 }
 
+/* ---------- The header's logo and one switch (docs/header-plan.md, the owner's picks) ----------
+   The left is the game's title art, small, in every mode; the mode's words stay for screen readers only. City and
+   Walk show as one button at every width: only the one that takes you to the other mode, its icon in coin, its word
+   beside it where there's room (the icon alone on phones, as before). */
+.city-head-logo {
+  display: block;
+  width: auto;
+  height: 32px;
+  filter: drop-shadow(0 1px 0 #000) drop-shadow(0 0 6px #000a);
+  user-select: none;
+  -webkit-user-drag: none;
+}
+@media (max-width: 640px) {
+  .city-head-logo {
+    height: 28px;
+  }
+}
+.city .city-head-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.city .city-head .city-mode-btn[aria-pressed="true"] {
+  display: none;
+}
+.city .city-head .city-mode-btn {
+  opacity: 1;
+}
+.city .city-head .city-mode-btn svg {
+  color: var(--m-coin);
+}
+@media (min-width: 641px) {
+  .city .city-head .city-mode-btn .city-mode-label {
+    position: static;
+    width: auto;
+    height: auto;
+    overflow: visible;
+    clip-path: none;
+  }
+}
+
 /* ---------- Arranging the buttons (docs/controls-plan.md Phase 6, arrange-ui.ts) ----------
    Over everything: the city dimmed under a faint grid, every button of the family where it stands (the kit's
    own look), the hotbar's and the prompt's room marked, a bar along the top (the families, Reset, Done, ×) with

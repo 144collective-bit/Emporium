@@ -59,8 +59,9 @@ import { loadCar, type Voice } from './mycar';
 import { DEFAULT_CAR } from './mycar';
 import { BIKES, DEFAULT_BIKE, loadBike } from './mybike';
 import type { Garage } from './garage';
-import { createDrive } from './drive';
-import { createFly } from './fly';
+import type { createDrive } from './drive';
+import type { createFly } from './fly';
+import { lazyFront } from './lazyfront';
 import type { HangarUI } from './hangar-ui';
 import { loadPlane } from './myplane';
 import { DECK_CAMERA, HANGAR_DOOR, HANGAR_SPOT, departuresWall, departuresY, type AircraftKind, type Pose } from './airfield';
@@ -91,7 +92,6 @@ import { SLAB, type Tick } from './world';
 import { BX as LIBERTY_X, FACES, LIBERTY_CAMERA, LOW_Y, TO_MIDDLE, footbridgeWall, footbridgeY, leavesAt, onLeaves } from './liberty';
 import { BARRIERS as SWING_BARRIERS, BARRIER_WALLS, SX as SWING_X, betweenBarriers, onSwingDeck, swingAt } from './swingbridge';
 import { LAKEHOUSE_DOOR, RIM, inLake, onBridge as onParkBridge, onCafeDeck, onGrand, onJetty, onTerrace } from './westlake';
-import { GATE } from './stadium';
 import { WALK_UNDER, viaductSurface, walkOff } from './viaground';
 import { skyDeckWall, upOnDeck } from './skydeck';
 import { MALL_CAMERA, mallWall } from './mallinside';
@@ -142,8 +142,8 @@ import { LENS, nearFor } from './lens';
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
 const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
-/** The landmarks' doors, Trench Avenue's, the stadium's gate, the Harbour Master's, Sunridge's, the resorts', the Sphere's and Crestmont's (their prompts open their panels) */
-const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS, ...SITE_DOORS, ...CORAL_DOORS, { id: 'cityhall' as const, ...CITYHALL_DOOR }, { id: 'police' as const, ...POLICE_DOOR }, { id: 'courthouse' as const, ...COURT_DOOR }, { id: 'lakehouse' as const, ...LAKEHOUSE_DOOR }];
+/** The landmarks' doors, Trench Avenue's, the Harbour Master's, Sunridge's, the resorts', the Sphere's and Crestmont's (their prompts open their panels) */
+const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS, ...SITE_DOORS, ...CORAL_DOORS, { id: 'cityhall' as const, ...CITYHALL_DOOR }, { id: 'police' as const, ...POLICE_DOOR }, { id: 'courthouse' as const, ...COURT_DOOR }, { id: 'lakehouse' as const, ...LAKEHOUSE_DOOR }];
 /** Doors with a word of their own (the viewpoints: nothing to enter) */
 const DOOR_LABEL: Partial<Record<string, string>> = { overlook: 'Look out', reservoir: 'Look out' };
 /** Prompts that say their own label (the rest say "Enter ...") */
@@ -1099,8 +1099,11 @@ export function createWalk(d: WalkDeps) {
       canvas.focus({ preventScroll: true });
     },
   }), 'the garage');
+  // The car and the aircraft are chunks of their own (docs/header-plan.md, the boot's trim), fetched once the first frame
+  // is drawn, as target practice is; until they're in, a front answers "not driving, nothing near" (lazyfront.ts)
+  const afterFirstFrame = (go: () => void) => requestAnimationFrame(() => setTimeout(go, 0));
   // Your car: get in where it is, drive, get out anywhere
-  const drive = createDrive({
+  const driveDeps: Parameters<typeof createDrive>[0] = {
     scene: d.scene,
     camera,
     root,
@@ -1146,11 +1149,31 @@ export function createWalk(d: WalkDeps) {
     tyres: d.tyres,
     bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
     reduced: d.reduced,
-  });
-
+  };
+  const drive = lazyFront<ReturnType<typeof createDrive>>(
+    () => import('./drive').then((m) => m.createDrive(driveDeps)),
+    'your car',
+    {
+      active: false,
+      state: null,
+      carState: null,
+      height: 0,
+      inCar: false,
+      away: false,
+      kartAway: false,
+      bikeAway: false,
+      vehicle: null,
+      frozen: false,
+      get model() {
+        return driveDeps.myCar().model;
+      },
+      nearCar: () => Infinity,
+    },
+    afterFirstFrame
+  );
 
   // Your aircraft: get in at the hangar (or wherever you landed it), fly, land and get out
-  const fly = createFly({
+  const flyDeps: Parameters<typeof createFly>[0] = {
     scene: d.scene,
     camera,
     root,
@@ -1166,13 +1189,28 @@ export function createWalk(d: WalkDeps) {
     sfx: d.sfx,
     aero: d.aero,
     bounds: [BOUNDS[0], BOUNDS[1], BOUNDS[2], BOUNDS[3], 0],
-  });
+  };
+  const fly = lazyFront<ReturnType<typeof createFly>>(
+    () => import('./fly').then((m) => m.createFly(flyDeps)),
+    'your aircraft',
+    {
+      active: false,
+      // (on the ground at the hangar, where an aircraft not flown yet stands: the world map's marker, never drawn while home)
+      state: { x: HANGAR_SPOT.x, y: 0, z: HANGAR_SPOT.z, yaw: HANGAR_SPOT.yaw, ground: true, gear: true } as unknown as ReturnType<typeof createFly>['state'],
+      away: false,
+      canLeave: false,
+      name: 'aircraft',
+      near: () => Infinity,
+    },
+    afterFirstFrame
+  );
   // The hangar menu: like the garage's, it frees the mouse and pauses walking while the camera looks into the hangar
   let fpBeforeHangar = false;
   const hangarUI = lazyMenu<HangarUI>(['show'], async () => (await import('./hangar-ui')).createHangarUI(root, {
-    preview: (p) => fly.preview(p),
-    keep: (p) => fly.recall(p),
-    cancel: (saved) => fly.cancel(saved),
+    // (through the aircraft's own chunk: a change made before it was in isn't lost)
+    preview: (p) => void fly.loaded().then((f) => f.preview(p)),
+    keep: (p) => void fly.loaded().then((f) => f.recall(p)),
+    cancel: (saved) => void fly.loaded().then((f) => f.cancel(saved)),
     away: () => fly.away,
     onOpen() {
       still();
@@ -3112,6 +3150,10 @@ export function createWalk(d: WalkDeps) {
   }
 
   return {
+    /** Use a snack or a boost from the hub's Bag tab (docs/header-plan.md): the hotbar's own use, where it works */
+    useItem(id: import('./catalog').ItemId) {
+      void (hotbar ? hotbar.use(id) : loadHotbar().then(() => hotbar?.use(id)));
+    },
     /** For the headless checks (index.ts `__city`, `?fps`): a race at the kart park, the kart game fetched first */
     race: (setup: RaceStart) => loadKarts().then(() => startKart(setup)),
     get active() {

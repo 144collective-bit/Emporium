@@ -7,7 +7,7 @@
  * sodium, the dead and the flickering) is lampmix.ts's, the halos and the pools of light are as they were.
  *
  * - `town`: the municipal post, a slim pole with a short arm and a boxed head (downtown, the districts round it, the
- *   Docks and the yards (their tall floodlight masts are their own), the kart park, the stadium, the airport's deck).
+ *   Docks and the yards (their tall floodlight masts are their own), the kart park, Stadium Road, the airport's deck).
  * - `uptown`: slim steel with a flat head on a long arm (Uptown, Uptown North and the mall).
  * - `lantern`: an ornate black post with a lantern on top (Crestmont).
  * - `suburb`: a short residential post with a globe (Sunridge).
