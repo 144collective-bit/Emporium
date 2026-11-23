@@ -28,6 +28,7 @@ import { departuresY } from './airfield';
 import { circuitSurfaceAt } from './kartcircuit';
 import { BANKS_AREA, bankY } from './kartfacility';
 import { KART_PARK } from './kartpark';
+import { KARTS2, KART2_LAND } from './kartswitch';
 import { footbridgeY } from './liberty';
 import { swingY } from './swingbridge';
 import { JETTY, onJetty, terraceY } from './westlake';
@@ -79,6 +80,7 @@ const SLABS = PLAN.slabs.map((poly) => ({ poly, box: [Math.min(...poly.map((p) =
 const onSlab = (x: number, z: number) => SLABS.some((s) => x > s.box[0] && x < s.box[2] && z > s.box[1] && z < s.box[3] && inPoly(s.poly, [x, z] as Pt));
 /** The garage's turntable's disc: stood on while getting into your car at home, its top over the forecourt */
 const DISC = { ...GARAGE_SITE.turntable, top: 0.07 };
+const inLand = (x: number, z: number) => x >= KART2_LAND[0] && x <= KART2_LAND[2] && z >= KART2_LAND[1] && z <= KART2_LAND[3];
 const inPark = (x: number, z: number) => x >= KART_PARK.x0 && x <= KART_PARK.x1 && z >= KART_PARK.z0 && z <= KART_PARK.z1;
 const inBanks = (x: number, z: number) => x > BANKS_AREA[0] && x < BANKS_AREA[2] && z > BANKS_AREA[1] && z < BANKS_AREA[3];
 
@@ -173,6 +175,8 @@ export const GROUND_LAYERS: GroundLayer[] = [
   { id: 'circuit', how: 'lift', at: (x, z, yNow) => (inPark(x, z) ? lift(circuitSurfaceAt(x, z, yNow)?.y ?? null) : null) },
   // Its spectators' grass banks, whose berms carry on outside the fence (kartfacility.ts)
   { id: 'banks', how: 'lift', at: (x, z) => (inPark(x, z) || inBanks(x, z) ? bankY(x, z) + STREET : null) },
+  // Riverside Raceway's ground behind `?karts=new` (kartswitch.ts): the hill, the road over it, the tunnel's floor (kartcourse2.ts)
+  { id: 'riverside', how: 'lift', at: (x, z, yNow) => (KARTS2.surfaceAt && inLand(x, z) ? lift(KARTS2.surfaceAt(x, z, yNow)) : null) },
 ];
 
 /** A layer's height over its ground (`by`), or nothing where it isn't */

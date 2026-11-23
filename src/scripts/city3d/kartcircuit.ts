@@ -186,6 +186,7 @@ export type CourseId = 'circuit' | 'circuit-reverse';
 export type RaceCourseId = CourseId | Course2Id;
 /** Riverside Raceway's two (kartcircuit2.ts's COURSE2_IDS, named here so the save needn't load the circuit to keep their records) */
 export const RIVER_COURSE_IDS: Course2Id[] = ['riverside', 'riverside-reverse'];
+export const RIVER_COURSE_NAME = 'Riverside Raceway';
 export const COURSE_IDS: CourseId[] = ['circuit', 'circuit-reverse'];
 /** A boost pad's length along the track (it spans the track's width) */
 export const PAD_LEN = 4;

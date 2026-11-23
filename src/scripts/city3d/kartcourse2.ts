@@ -8,6 +8,7 @@
 import type { Course } from './kartcircuit';
 import { COURSES2, CIRCUIT2, CLEAR2, GRID2, GRID2_LATERAL, KERB2, SITE2, TRACK2_HALF, TUNNEL_CLEAR, type Course2Id } from './kartcircuit2';
 import { TUNNEL2, hillAt, kart2GroundAt } from './kartpark2';
+export { KART2_RECTS } from './kartpark2';
 import { F, KART_W, at, frame, type Frame, type Line } from './kartpark';
 
 /** A flag of the cuttings either side of the tunnel's mouths (walled like the tunnel, open to the sky) */
@@ -156,4 +157,38 @@ export function riversideSurfaceAt(x: number, z: number, yNow: number): number |
     for (const i of TUNNEL2.samples) if (Math.hypot(c.x[i] - x, c.z[i] - z) <= TRACK2_HALF + KERB2) return c.y[i];
   }
   return kart2GroundAt(x, z);
+}
+
+/** The walled samples on the forward course (the tunnel and its cuttings), and each wall's top over the road there */
+const WALLED = (() => {
+  const c = RIVER_COURSES.riverside;
+  const edge = TRACK2_HALF + KERB2;
+  const out: { i: number; top: number }[] = [];
+  for (let i = 0; i < c.x.length; i++) {
+    if (!(c.flags[i] & F.tunnel)) continue;
+    const f = frame(c, i * c.step);
+    const beside = Math.max(kart2GroundAt(f.x + f.nx * (edge + 0.8), f.z + f.nz * (edge + 0.8)), kart2GroundAt(f.x - f.nx * (edge + 0.8), f.z - f.nz * (edge + 0.8)));
+    out.push({ i, top: c.flags[i] & F_CUT ? beside - 0.05 : Math.max(TUNNEL_CLEAR, beside) });
+  }
+  return out;
+})();
+/** How thick the walls stand past the kerbs' edge (to the hill's own ground behind them) */
+export const WALL2_T = 0.8;
+/**
+ * The tunnel's and the cuttings' walls on foot (walk.ts `blocked()`, through kartswitch.ts): someone `r` round at a
+ * height under a wall's top, against it from the road's side; over the hill above them, nothing stops you
+ */
+export function riversideWall(x: number, z: number, y: number, r: number): boolean {
+  if (x < SITE2.x0 || x > SITE2.x1 || z < SITE2.z0 || z > SITE2.z1) return false;
+  const c = RIVER_COURSES.riverside;
+  const edge = TRACK2_HALF + KERB2;
+  for (const { i, top } of WALLED) {
+    if (y >= top || (c.x[i] - x) ** 2 + (c.z[i] - z) ** 2 > (edge + WALL2_T + r + 0.6) ** 2) continue;
+    const f = frame(c, i * c.step);
+    const ahead = (x - f.x) * f.tx + (z - f.z) * f.tz;
+    if (Math.abs(ahead) > c.step * 0.6) continue;
+    const lat = Math.abs((x - f.x) * f.nx + (z - f.z) * f.nz);
+    if (lat > edge - r && lat < edge + WALL2_T + r) return true;
+  }
+  return false;
 }
