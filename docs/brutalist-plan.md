@@ -52,7 +52,7 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 3. **The twins joined at the top.** Done (2026-11-21, below). A bridge from The Core to Harrier and to Kite at their top floor, and on The Core's
    top, the lookout: a hexagonal concrete drum wider than the Core (the owner's pick), a glass band all round, lit at
    night. It's the estate's landmark from across the city (and in its far form).
-4. **Pipes and kit on the walls.** Bundles of ducts snaking up the ends of a few blocks (bends, joints, brackets),
+4. **Pipes and kit on the walls.** Done (2026-11-23, below). Bundles of ducts snaking up the ends of a few blocks (bends, joints, brackets),
    air-con units under windows, satellite dishes, water tanks and aerials on the roofs, rubbish chutes, washing lines
    along the galleries. Instanced, near only; phones a trimmed set.
 5. **Street-level grit.** Cables strung over the estate's lanes and between the blocks, shuttered fronts under the
@@ -136,6 +136,18 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
   by it but for the bridges; The Core's lift up to it by name (`SkyLift.names`, `liftFloorName()`: "The Perch").
   Phase 8 brings its seats, lounge and pin.
 - The fifteenth floor's bridges pass under its soffit (tested); the boot 774.9 KB of 775.
+
+## What Phase 4 did (2026-11-23)
+
+- **On the slabs' ends** (southblocks3d.ts `drawEndKit()`, picked by `hashOf()` the block's id): three ducts up one end
+  of most blocks beside its stripe, jogging aside at a gallery floor, over the parapet and down onto the roof; steel
+  brackets every other storey and joints every third (near only); on the other end the rubbish chute, a square duct
+  down its gallery-side corner, a hopper at each sky floor and the bin hatch at its foot (near).
+- **On the flats** (`drawFlatKit()`, near only, not on phones): an air-con unit on the odd balcony front (the wall where
+  there are none), washing on lines along the galleries just inside the front, two water tanks on legs and an aerial
+  in the middle of each roof. The dishes were the grit's (Phase 2's polish).
+- Existing materials only (no new draws far off); phones keep the ducts and chutes, the rest is off. The stadium's
+  removal (2026-11-22) made the room in the boot and the textures first.
 
 ## The owner's decisions (2026-11-21)
 

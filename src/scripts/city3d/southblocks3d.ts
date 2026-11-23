@@ -263,6 +263,142 @@ function openRuns(blk: Block, part: Pt[]): Pt[][] {
 const accentOf = (b: Block) => (b.accent ? ACCENT[b.accent] : CONC);
 const sideOf = (b: Block) => (b.galleries === 'right' ? 1 : -1);
 
+/** A rod from p to q (x, y, z), radius r, `sides` round */
+function rod(b: Batch, p: [number, number, number], q: [number, number, number], r: number, m: THREE.Material, sides = 6) {
+  const v = new THREE.Vector3(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
+  const len = v.length();
+  if (len < 1e-3) return;
+  const g = new THREE.CylinderGeometry(r, r, len, sides);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), v.normalize()));
+  g.translate((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2);
+  b.add(plain(g), m);
+}
+/** A block's id hashed to a small number (which of its ends gets the ducts, which floors the washing) */
+const hashOf = (id: string) => [...id].reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) % 9973, 7);
+
+/**
+ * Pipes and kit on the walls (docs/brutalist-plan.md Phase 4): on a block's open end, a bundle of three ducts up the
+ * face beside its stripe (jogging aside at a gallery floor, over the parapet onto the roof), brackets every other
+ * storey and joints every third (near), or, on the other end, the rubbish chute down its gallery-side corner with a
+ * hopper at each sky floor and its bin hatch at the foot. Phones: the ducts and the chute only.
+ */
+function drawEndKit(b: Batch, blk: Block, a: Pt, c: Pt, n: Pt, base: number, top: number, galleryLine: Pt[], ducts: boolean, low: boolean) {
+  const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  if (len < 4) return;
+  const t: Pt = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
+  const mid: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
+  // (which way along the face is away from the galleries)
+  const near = (q: Pt) => Math.min(...galleryLine.map((g) => Math.hypot(g[0] - q[0], g[1] - q[1])));
+  const away = near([mid[0] + t[0], mid[1] + t[1]]) > near([mid[0] - t[0], mid[1] - t[1]]) ? 1 : -1;
+  const at = (along: number, out: number): Pt => [mid[0] + t[0] * along + n[0] * out, mid[1] + t[1] * along + n[1] * out];
+  if (ducts) {
+    const o = away * (STRIPE_W / 2 + 0.75);
+    const jogY = floorY(base, SKY_FLOORS.find((f) => floorY(base, f) < top - 2) ?? 3) + 0.4;
+    const radii = [0.14, 0.1, 0.08];
+    radii.forEach((r, k) => {
+      const s0 = o + away * k * 0.34;
+      const s1 = s0 + away * 0.6;
+      const out = 0.22 + r;
+      const [p0, p1] = [at(s0, out), at(s1, out)];
+      const y0 = base + 0.35;
+      // (up, a jog aside at the gallery floor, up again, over the parapet and down onto the roof)
+      rod(b, [p0[0], y0, p0[1]], [p0[0], jogY, p0[1]], r, CONC_DARK);
+      rod(b, [p0[0], jogY, p0[1]], [p1[0], jogY + 0.6, p1[1]], r, CONC_DARK);
+      rod(b, [p1[0], jogY + 0.6, p1[1]], [p1[0], top + PARAPET + 0.35, p1[1]], r, CONC_DARK);
+      const inner = at(s1, -0.9);
+      rod(b, [p1[0], top + PARAPET + 0.35, p1[1]], [inner[0], top + PARAPET + 0.35, inner[1]], r, CONC_DARK);
+      rod(b, [inner[0], top + PARAPET + 0.35, inner[1]], [inner[0], top, inner[1]], r, CONC_DARK);
+    });
+    if (!low)
+      b.detail(() => {
+        const span = 0.34 * (radii.length - 1);
+        for (let y = base + 1.4; y < top; y += 2) {
+          const s1 = y > jogY + 0.6 ? o + away * 0.6 : o;
+          // (a bracket: a steel strap across the bundle, back to the wall)
+          const [q0, q1] = [at(s1 - away * 0.15, 0.3), at(s1 + away * (span + 0.15), 0.3)];
+          along(b, q0, q1, 0.06, y, y + 0.08, RAIL);
+          along(b, at(s1 + (away * span) / 2, 0.012), at(s1 + (away * span) / 2, 0.3), 0.06, y, y + 0.08, RAIL);
+        }
+        for (let y = base + 2.5; y < top; y += 3)
+          radii.forEach((r, k) => {
+            const s1 = (y > jogY + 0.6 ? o + away * 0.6 : o) + away * k * 0.34;
+            const p = at(s1, 0.22 + r);
+            rod(b, [p[0], y, p[1]], [p[0], y + 0.1, p[1]], r + 0.03, RAIL);
+          });
+      });
+  } else {
+    // The rubbish chute: a square duct down the gallery-side corner of the face, a hopper at each sky floor
+    const sc = -away * (len / 2 - 0.55);
+    const p = at(sc, 0.3);
+    b.add(plain(new THREE.BoxGeometry(0.5, top - base - 0.6, 0.5).rotateY(-Math.atan2(t[1], t[0])).translate(p[0], (base + 0.6 + top) / 2, p[1])), CONC_DARK);
+    if (!low)
+      b.detail(() => {
+        for (const f of SKY_FLOORS) {
+          const y = floorY(base, f);
+          if (y > top - 0.5) break;
+          const h = at(sc, 0.62);
+          b.add(plain(new THREE.BoxGeometry(0.42, 0.35, 0.22).rotateY(-Math.atan2(t[1], t[0])).translate(h[0], y + 0.55, h[1])), RAIL);
+        }
+        // (the bin hatch at its foot, a dark door)
+        quad(b, at(sc - 0.35, 0.56), at(sc + 0.35, 0.56), base, base + 0.6, n, DOOR);
+      });
+  }
+}
+
+/**
+ * The flats' kit (docs/brutalist-plan.md Phase 4), near only, not on phones: an air-con unit hung on the odd balcony
+ * front (or the wall, where there are none), washing on lines along the galleries, water tanks and an aerial on the
+ * roof
+ */
+function drawFlatKit(b: Batch, blk: Block, part: Pt[], st: Block['steps'][number], base: number, top: number, s: number) {
+  const h0 = hashOf(blk.id);
+  const len = runLength(part);
+  const back = blk.kind === 'slab' ? blk.depth! / 2 + 0.55 + 0.08 : blk.depth! / 2;
+  for (let f = 1; f < st.storeys; f++) {
+    const y = floorY(base, f);
+    for (let d = 1.5; d < len - 1; d += 2.4) {
+      if ((h0 + f * 7 + Math.round(d) * 3) % 6) continue;
+      const [p, t] = pointAlong(part, d);
+      const r: Pt = [-t[1] * -s, t[0] * -s];
+      const c: Pt = [p[0] + r[0] * (back + 0.14), p[1] + r[1] * (back + 0.14)];
+      b.add(plain(new THREE.BoxGeometry(0.55, 0.36, 0.24).rotateY(-Math.atan2(t[1], t[0])).translate(c[0], y + 0.12, c[1])), DISH);
+      b.add(plain(new THREE.CylinderGeometry(0.11, 0.11, 0.02, 8).rotateX(Math.PI / 2).rotateY(-Math.atan2(t[1], t[0]) + Math.PI / 2).translate(c[0] + r[0] * 0.125, y + 0.12, c[1] + r[1] * 0.125)), RAIL);
+    }
+  }
+  // Washing on lines along the galleries, just inside the front, on the odd stretch
+  for (const f of SKY_FLOORS.filter((q) => q < st.storeys)) {
+    const y = floorY(base, f);
+    const off = s * (blk.depth! / 2 + GALLERY_W - 0.3);
+    for (let d = 2; d < len - 3; d += 6) {
+      if ((h0 + f * 5 + Math.round(d)) % 3) continue;
+      const [p0, t] = pointAlong(part, d);
+      const [p1] = pointAlong(part, Math.min(len - 1, d + 3.2));
+      const r: Pt = [-t[1], t[0]];
+      const [a, c]: Pt[] = [[p0[0] + r[0] * off, p0[1] + r[1] * off], [p1[0] + r[0] * off, p1[1] + r[1] * off]];
+      along(b, a, c, 0.015, y + 1.28, y + 1.3, RAIL);
+      for (const q of [a, c]) b.add(plain(new THREE.BoxGeometry(0.04, 0.5, 0.04).translate(q[0], y + 1.04, q[1])), RAIL);
+      const n = Math.max(2, Math.floor(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.45));
+      for (let k = 1; k < n; k++) {
+        const q: Pt = [a[0] + ((c[0] - a[0]) * k) / n, a[1] + ((c[1] - a[1]) * k) / n];
+        const tall = 0.22 + ((h0 + k * 3 + f) % 3) * 0.08;
+        const paint = (h0 + k + f) % 5 === 0 ? DISH : TAG_PAINT[(h0 + k * 2 + f) % TAG_PAINT.length];
+        b.add(plain(new THREE.BoxGeometry(0.3, tall, 0.02).rotateY(-Math.atan2(t[1], t[0])).translate(q[0], y + 1.28 - tall / 2, q[1])), paint);
+      }
+    }
+  }
+  // Water tanks on legs, and an aerial, in the middle of the roof
+  const [m, t] = pointAlong(part, len / 2);
+  for (const k of [-1, 1]) {
+    const q: Pt = [m[0] + t[0] * k * 1.1, m[1] + t[1] * k * 1.1];
+    for (const [dx, dz] of [[-0.35, -0.35], [0.35, -0.35], [-0.35, 0.35], [0.35, 0.35]]) b.add(plain(new THREE.BoxGeometry(0.08, 0.5, 0.08).translate(q[0] + dx, top + 0.25, q[1] + dz)), RAIL);
+    b.add(plain(new THREE.CylinderGeometry(0.55, 0.55, 0.9, 10).translate(q[0], top + 0.95, q[1])), CONC_DARK);
+    b.add(plain(new THREE.CylinderGeometry(0.58, 0.58, 0.06, 10).translate(q[0], top + 1.43, q[1])), ROOF);
+  }
+  const ae: Pt = [m[0] - t[0] * 3, m[1] - t[1] * 3];
+  rod(b, [ae[0], top, ae[1]], [ae[0], top + 2.2, ae[1]], 0.035, RAIL, 4);
+  for (const [y, w] of [[1.5, 0.7], [1.8, 0.55], [2.05, 0.4]]) rod(b, [ae[0] - t[1] * w, top + y, ae[1] + t[0] * w], [ae[0] + t[1] * w, top + y, ae[1] - t[0] * w], 0.02, RAIL, 4);
+}
+
 function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
   const k = kit(b, WORLD);
   const st = blk.steps[i];
@@ -311,6 +447,12 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
       parapet(b, a, c, n, top);
       // Its colour: a bold stripe down the middle of each end, the block told apart by it
       if (tag === 'start' || tag === 'end') stripe(b, a, c, n, upper, top + PARAPET, acc);
+      // Pipes and kit on its ends (docs/brutalist-plan.md Phase 4): ducts up one end of most blocks, the rubbish chute
+      // down the other
+      if ((tag === 'start' || tag === 'end') && blk.kind !== 'tower' && !refit) {
+        const ductEnd = hashOf(blk.id) % 2 ? 'start' : 'end';
+        if (tag === ductEnd ? hashOf(blk.id) % 5 !== 0 : true) drawEndKit(b, blk, a, c, n, base, top, shift(section(blk.spine!, st.from, st.to), sideOf(blk) * (blk.depth! / 2 + GALLERY_W)), tag === ductEnd, low);
+      }
     });
     // Where it's taller than its neighbour, the parapet along that cut too
     ring.forEach((a, j) => {
@@ -390,6 +532,8 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
         }
       });
     });
+  // The flats' kit: air-con units, washing on the galleries, water tanks and an aerial (the brutalist plan's Phase 4)
+  if (!low) b.detail(() => drawFlatKit(b, blk, part, st, base, top, s));
   // Satellite dishes clustered on its roof's edge, the side away from the galleries (the brutalist plan's grit)
   if (!low)
     b.detail(() => {
