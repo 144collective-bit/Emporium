@@ -80,7 +80,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   lighter than the walls, the upstand's dark coping and closed ends (`capEnds()`), and near only the slab joints about
   every 1.2 m, a skirting 5 mm off the wall and a drip under the front; J1 part 2: the cores' landings, the bridges'
   floors (a lighter strip between the parapets, a joint under each mullion pair) and the podium deck (`drawDeck()`:
-  `DECK_FLOOR`, a jointed 1.2 grid near only, its balustrade's coping, a drip under its edge) the same); balconies with concrete fronts on the slabs' other sides (floors `DECK_FLOOR`), Teasel's
+  `DECK_FLOOR`, a jointed 1.2 grid near only, its balustrade's coping, a drip under its edge) the same; J1 part 3:
+  a core's landing posts are southblocks.ts `landingPosts()`, none in its link's doorway (`inDoorway()`, tested)); balconies with concrete fronts on the slabs' other sides (floors `DECK_FLOOR`), Teasel's
   boarded windows and hoarding, sky garden planters on the roofs (near only, not on phones); the towers' ledge rings, a
   concrete plant room box and beacon; The Perch round The Core's top two floors (`PERCH`, `TOP_FLOOR`, `drawPerch()`: a
   hexagonal drum, its glass band, its name, a glass lift inside; brutalist plan Phase 3) and the top floor's bridges to

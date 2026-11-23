@@ -327,3 +327,16 @@ test("The Perch (docs/brutalist-plan.md Phase 3): a hexagon wider than The Core 
   // (the bridges under it, the fifteenth floor's, their roofs, 1.68 over their floor, under its soffit)
   for (const br of BRIDGES.filter((q) => q.floor === 15 && q.id.startsWith('core-'))) assert.ok(Math.max(...br.ys) + 1.68 < PERCH.y0 - 0.25 - 0.005, `${br.id} into its underside`);
 });
+
+test("no landing post stands in a link's doorway; each core keeps two or more (J1 part 3)", async () => {
+  const { CORES, landingPosts, inDoorway } = await import('../src/scripts/city3d/southblocks');
+  const linked = CORES.filter((c) => c.link);
+  assert.ok(linked.length >= 10, 'the service towers have their links');
+  for (const c of linked) {
+    const posts = landingPosts(c.foot, c.link);
+    for (const p of posts) assert.ok(!inDoorway(c.link!, p), `${c.id}: a post in the doorway at ${p}`);
+    assert.ok(posts.length >= 2, `${c.id}: only ${posts.length} posts left`);
+    // (and before the fix one was there: the rule is doing something)
+    assert.ok(landingPosts(c.foot).some((p) => inDoorway(c.link!, p)) || posts.length === 4, `${c.id}: nothing to clear`);
+  }
+});

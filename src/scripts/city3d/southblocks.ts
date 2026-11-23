@@ -391,6 +391,30 @@ function sideCores(b: Block, xs: number[]): Core[] {
     return coreAt(b, id, [p[0] + right[0] * off, p[1] + right[1] * off], dir, storeysAt(b, d), gap, gap > 0 ? link : null);
   });
 }
+/** A core's landing posts: the four corners of its footprint, a little in (the ring's points furthest out each way
+ * round its middle), less any that would stand in its link's doorway, where the covered link from the gallery arrives
+ * (J1 part 3: a post dead in the opening read as slabs meeting at a point, and walked through, having no solid) */
+export function landingPosts(ring: Pt[], link: [Pt, Pt] | null = null): Pt[] {
+  const c: Pt = [ring.reduce((s, p) => s + p[0], 0) / ring.length, ring.reduce((s, p) => s + p[1], 0) / ring.length];
+  const far = [...ring].sort((p, q) => Math.hypot(q[0] - c[0], q[1] - c[1]) - Math.hypot(p[0] - c[0], p[1] - c[1]));
+  const out: Pt[] = [];
+  for (const p of far) {
+    if (out.length === 4) break;
+    if (out.every((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) > 1)) out.push(p);
+  }
+  const posts = out.map((p): Pt => [c[0] + (p[0] - c[0]) * 0.85, c[1] + (p[1] - c[1]) * 0.85]);
+  return link ? posts.filter((p) => !inDoorway(link, p)) : posts;
+}
+/** Whether a point stands in a link's doorway: across it within its half-width (and a post's), at its tower end */
+export function inDoorway(link: [Pt, Pt], p: Pt): boolean {
+  const [a, e] = link;
+  const l = Math.hypot(e[0] - a[0], e[1] - a[1]) || 1;
+  const t: Pt = [(e[0] - a[0]) / l, (e[1] - a[1]) / l];
+  const s = (p[0] - a[0]) * t[0] + (p[1] - a[1]) * t[1];
+  const o = Math.abs(-(p[0] - a[0]) * t[1] + (p[1] - a[1]) * t[0]);
+  return o < BRIDGE_HALF + 0.15 && s > l - 1.5 && s < l + 2;
+}
+
 export const CORES: Core[] = [...sideCores(RAMPART, RAMPART_CORE_XS), ...[LINNET, MARTEN, WREN, SORREL, FENNEL, TEASEL].flatMap(endCores)];
 
 /** Every block, the cores apart */
