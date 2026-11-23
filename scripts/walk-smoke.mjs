@@ -96,6 +96,17 @@ async function scene(name, spawn, play, init) {
       }
       await step(`${what} (${dist(from, await where()).toFixed(1)} tiles)`);
     },
+    /** Hold a key until the walk prompt reads `label` (a rail or wall ahead stops him if he's early) */
+    async toward(key, label, what) {
+      const from = await where();
+      await page.keyboard.down(key);
+      try {
+        await until(`${what}: the "${label}" prompt`, (l) => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').toLowerCase().includes(l), label.toLowerCase(), 30000);
+      } finally {
+        await page.keyboard.up(key);
+      }
+      await step(`${what} (${dist(from, await where()).toFixed(1)} tiles)`);
+    },
     /** The walk prompt reading `label`, then F */
     async prompt(label) {
       await until(`the "${label}" prompt`, (l) => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').toLowerCase().includes(l), label.toLowerCase(), 120000);
@@ -226,7 +237,10 @@ await scene('hometerrace', '-228,387.3,0', async (t) => {
   await t.go('s', 2.4, 'and up the second flight');
   await t.until('him up on the landing', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0) > 1.3, null, 60000);
   await t.step(`up on the landing (${(await t.page.evaluate(upNowHome)).toFixed(1)}), at ${(await t.where()).join(', ')}`);
-  await t.go('d', 0.7, 'over to the roof\'s steps');
+  // (how far past the stair's head he stops varies: east over the first flight's head, then north to its rail, where
+  // the roof's steps start)
+  await t.go('d', 1.0, 'over to the first flight\'s head');
+  await t.toward('w', 'Roof', 'up to the roof\'s steps');
   await t.prompt('Roof');
   await t.until('the way down to show (he is on the terrace)', shows(), 'Downstairs', 120000);
   await t.step(`up on the terrace, at ${(await t.where()).join(', ')}`);
