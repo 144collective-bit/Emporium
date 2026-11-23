@@ -128,7 +128,7 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
    end. Kerbs, edges, planters, lamps, benches, the people's lanes and
    the picnics refitted (gardens.ts, parklife.ts). Tested: every path joins
    another or a gate, the lanes on paths, nothing on a path.
-3. **The ornate masonry.** The park's set pieces, in a warm carved stone
+3. **The ornate masonry** (built, signed off 2026-11-23). The park's set pieces, in a warm carved stone
    (the owner's calls, 2026-11-22: in three steps, each signed off; the
    terrace on the west shore, where the walk from the promenade behind
    City Hall meets the lake; a winged figure on its fountain):
@@ -183,8 +183,8 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
      lake, the water well down, the plaza just over the water, the steps
      even and never too tall, the terrace over water and land both, nothing
      on it, no walk through it. Boot 774.8 of 775 KB.
-   - **3c, the gates, the overlook and the lamps** (built, waiting on the
-     owner's sign-off): room in the boot first (the owner's call: trim
+   - **3c, the gates, the overlook and the lamps** (built, signed off
+     2026-11-23): room in the boot first (the owner's call: trim
      again): the walks' kerbs and edges moved out of gardens.ts into
      `gardenedges.ts`, which only the park's chunk loads. The park's lamp
      (lampposts.ts `park`) an ornate black post with twin lanterns hung
