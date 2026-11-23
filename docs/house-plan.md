@@ -54,7 +54,8 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    ceilings open over the well (`homeCamera()`). While he wakes and the street loads, its foot waits as the doors do
    (`STAIR_GATE`, `home:stairs`). `home:up` and `home:down` are gone. The roof's steps rise steep from the landing over
    the first flight to the hatch (`ROOF_STEPS`), still a fade till Phase 3. `tests/home.test.ts` walks it up and down;
-   the smoke run walks it up (`hometerrace`) and down (`homestairs`).
+   the smoke run walks it up (`hometerrace`) and down (`homestairs`). The shell's floor slab is open over the well too.
+   Draw calls unchanged: 313 desktop, 198 phone. Shots: `docs/house-shots/phase-2-*.webp`.
 3. **The den's and the roof's steps, walked.** The den's door under the second flight opens on steps down under the
    stair (a flight under each, as it turns), the roof's steep steps from the landing up through the hatch (`ROOF_STEPS`),
    walked as the stair; `home:cellar`, `home:cellarup`, `home:roof`, `home:roofdown` go. The smoke run walks both.
