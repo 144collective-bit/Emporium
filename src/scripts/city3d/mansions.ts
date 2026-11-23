@@ -460,3 +460,14 @@ export function onMansion(x: number, z: number, m = 0) {
   }
   return false;
 }
+
+/** How far along a drive (0 to 1, from its road end) its paving starts: the first point where both its edges, `px, pz`
+ * either side of its middle, are off the hill road's asphalt (crestmont.ts `nearHillRoad()`) */
+export function driveStart(d0: Pt, d1: Pt, px: number, pz: number): number {
+  const L = Math.hypot(d1[0] - d0[0], d1[1] - d0[1]) || 1;
+  for (let d = 0; d < L * 0.5; d += 0.05) {
+    const [x, z] = [d0[0] + ((d1[0] - d0[0]) * d) / L, d0[1] + ((d1[1] - d0[1]) * d) / L];
+    if (!nearHillRoad(x + px, z + pz, 0.02) && !nearHillRoad(x - px, z - pz, 0.02)) return d / L;
+  }
+  return 0;
+}

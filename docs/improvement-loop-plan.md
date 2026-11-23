@@ -262,6 +262,12 @@ sets the order (rule 2).
       main the same day and re-dressed the estate's walls; the screenshot
       may predate it. Check what's left of the fault on main first, and
       keep to Phase 1's concrete (`docs/brutalist-plan.md`).
+- [x] **J2 (R2), part 1: the hill drives' paving stops at the road's edge** (2026-11-23, pass 4): drawn from
+      where both its edges clear the asphalt (mansions.ts `driveStart()`, tested), no longer over the edge line.
+- [ ] **J2 (R2), part 2: the hill roads' walls at a drive's mouth**: today a whole 1.5 piece of wall is left out
+      each side (landscape.ts `WALLS`, `onMansion()`), so the wall stops square well short of the drive. Run each
+      wall up to the drive's kerb and finish its end (a cheek returning along the drive, its coping round the
+      corner). Walls are solids: check the walk through the mouth stays clear (R2's rule 6) and the snapshot holds.
 - [ ] **J2 (R2): the cypress drives in Crestmont** (the owner's screenshot,
       2026-11-21: a drive lined with cypresses, two stone piers at its
       gate, meeting a curving two-lane road with lamps on its far side). The
@@ -412,3 +418,8 @@ session.)
   only, no solid, walked through). `landingPosts()` / `inDoorway()` (southblocks.ts, tested) leave those out.
   J1 done; R1's Endswood sweep ticked. Checks: typecheck, lint, test (with the new test), test:wide, build,
   texture bake, budget (texFull 4918.2 of 4955), smoke 150 steps, none failed.
+- 2026-11-23, pass 4 (01:08): J2 part 1. Two hill drives shot where they meet their road: the paving ran over the
+  road's edge line into the lane, and the road's wall stops square well short of each side. Part 1 draws the drive
+  and its kerbs from where both edges clear the asphalt (mansions.ts `driveStart()`, tested); the walls are part 2.
+  Checks: typecheck, lint, test (with the new test), test:wide, build, texture bake, budget (texFull 4918.2 of
+  4955), smoke 150 steps, none failed.
