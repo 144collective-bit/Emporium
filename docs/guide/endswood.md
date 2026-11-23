@@ -248,6 +248,12 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   landing, in the den), brass wall lights by the front door (`sconce()`), reading lights on swing arms over the
   bedsides, tall plants (`potted()` draws a plant 0.9 or taller as a tall one: the lounge's front corner, the bedroom,
   the landing). They reuse the palette's colours: the house's draw calls didn't change.
+  **The house rebuilt** (the owner's call, 2026-11-23) is planned in `docs/house-plan.md`. Phase 1 is built: `HOUSE`
+  is 10.4 by 7.5 (it was 9 by 6.5), its back and west wall where they were, grown east and north; the front door in the
+  middle of its front, the side door on its east wall. The east lawn starts `LAWN_SET` back from the house's front so
+  the bollards (four by the house, five by the workshop) stand clear of the drive. The rooms are re-laid in
+  `homerooms.ts` with room to breathe; the stair hall's corner (east, by the front) is kept clear for Phase 2's turned
+  stair, and the stairs are still fades.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

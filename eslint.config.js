@@ -7,6 +7,10 @@ import tseslint from 'typescript-eslint';
 
 /** The DOM-free rules files: no `document`, `window` or `localStorage` in them (a test or the server would fail to load; three.js's maths is fine in Node) */
 const DOM_FREE = [
+  'src/scripts/city3d/kartpark2.ts',
+  'src/scripts/city3d/kartcourse2.ts',
+  'src/scripts/city3d/kart-track.ts',
+  'src/scripts/city3d/kartswitch.ts',
   'src/scripts/city3d/kartcircuit2.ts',
   'src/scripts/city3d/exitstd.ts',
   'src/scripts/city3d/clock.ts',
@@ -61,6 +65,7 @@ const DOM_FREE = [
   'src/scripts/city3d/freecollide.ts',
   'src/scripts/city3d/walkpad.ts',
   'src/scripts/city3d/facade.ts',
+  'src/scripts/city3d/rooms.ts',
   'src/scripts/city3d/lens.ts',
   'src/scripts/city3d/walkkeys.ts',
   'src/scripts/city3d/walktouch.ts',

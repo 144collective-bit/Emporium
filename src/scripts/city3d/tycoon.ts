@@ -46,7 +46,7 @@ import { BIKE_CARGO, BIKE_DRIVE } from './mybike';
 import { DEFAULT_KART, DEFAULT_LOOK, KART_SPECS, PLAYER_KARTS, cleanKart, cleanKartLook, type KartId, type KartLook } from './mykart';
 import { CUPS, type CupId } from './kart-cups';
 import { PARTNER_IDS, STYLES, type PartnerId, type StyleId } from './fight-moves';
-import { COURSE_IDS } from './kartcircuit';
+import { COURSE_IDS, RIVER_COURSE_IDS } from './kartcircuit';
 import { PLACE_IDS as MAP_PLACES } from './places';
 import { CORNER_SHOPS, type CornerId } from './projects';
 import { MY_STALL_DOOR } from './nightmarket';
@@ -2031,7 +2031,8 @@ function cleanGame(s: TycoonSave, o: Record<string, unknown>, now: number) {
   const rebuilt = typeof o.v === 'number' && o.v >= 8;
   const scaled = typeof o.v === 'number' && o.v >= 9;
   const keyIn = (ids: readonly string[]) => (k: string) => /^[a-z0-9-]{1,32}:[a-z]{1,16}$/.test(k) && ids.includes(k.split(':')[0]) && CLASS_IDS.includes(k.split(':')[1] as ClassId);
-  const keyOk = scaled ? keyIn(COURSE_IDS) : () => false;
+  // (Riverside Raceway's records and boards kept from the first race on it, behind `?karts=new`: docs/kart-harbour-plan.md)
+  const keyOk = scaled ? keyIn([...COURSE_IDS, ...RIVER_COURSE_IDS]) : () => false;
   const oldOk = keyIn(OLD_COURSES);
   const cleanTime = (raw: unknown): KartTime | null => {
     const r = obj(raw);

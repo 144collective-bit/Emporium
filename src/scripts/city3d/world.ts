@@ -1305,9 +1305,10 @@ export function buildGround(scene: THREE.Scene, lots: Record<string, LotKind>, l
  * and woods in patches well away from the city, seeded tile by tile at a density per area
  * (outskirts.ts, growth plan Phases 5 and 6)
  */
-export function scatterOutskirts(count: number, sparse = 0.6, keep = 1) {
-  // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim)
-  for (const t of outskirtsTrees(count, sparse)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : rollsAt(t.x, t.z) - 0.08 * t.s * rollSlope(t.x, t.z));
+export function scatterOutskirts(count: number, sparse = 0.6, keep = 1, clear: readonly [number, number, number, number][] = []) {
+  // (`keep` < 1 leaves the rest out, the same ones whatever else changes: phones keep half, the trim; `clear`: land kept
+  // clear besides, Riverside Raceway's behind `?karts=new`)
+  for (const t of outskirtsTrees(count, sparse, clear)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : rollsAt(t.x, t.z) - 0.08 * t.s * rollSlope(t.x, t.z));
 }
 
 
