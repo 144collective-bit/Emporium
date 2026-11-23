@@ -35,7 +35,7 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
 
 ## Phases
 
-1. **The bigger house.** *Built, waiting for the owner's sign-off* (shots: `docs/house-shots/phase-1-*.webp`; draw
+1. **The bigger house.** *Signed off by the owner and live (2026-11-23)* (shots: `docs/house-shots/phase-1-*.webp`; draw
    calls 313 desktop, 198 phone, from 309 and 197; the snapshot test doesn't hold the house, so it wasn't rewritten).
    `HOUSE` 10.4 by 7.5; its shell, doors, windows (`houseWindows()`, `ROOM_WINDOWS`), curtains,
    roof and terrace with it; the compound's things round it moved to fit; every room re-laid in the bigger floors with
