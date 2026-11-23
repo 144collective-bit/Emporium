@@ -184,7 +184,9 @@ keep it up to date when what it describes changes.
   course, the overlook's path; the hill roads' asphalt every half tile over the
   higher of its bed and the grass, `ROAD_LIFT`), `tests/crestdrape.test.ts`
   holding the grass under every one; the hill roads' walls topped just over
-  the bank behind them (landscape.ts `EDGE_AT`). Made-up names only.
+  the bank behind them (landscape.ts `EDGE_AT`), running up to a drive's kerbs (`DRIVE_CLEAR`) and returned up it to
+  its gate pier (`DRIVE_CHEEKS`; mansions.ts `onPad()`, `nearestDrive()`: the improvement loop's J2 part 2). Made-up
+  names only.
 - **The premium upgrade** (the owner's answers, 2026-11-19; `docs/crestmont-plan.md`,
   "The premium upgrade", a phase at a time with the owner's sign-off). Phase 1,
   arrival and the night glow ("Gateway, streets kept"; "Glamorous"): the

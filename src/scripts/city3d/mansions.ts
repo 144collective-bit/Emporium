@@ -447,6 +447,24 @@ export const MANSION_SOLIDS: Box[] = MANSIONS.flatMap((m): Box[] => {
     return [x - hx, z - hz, x + hx, z + hz, y + 1.2];
   })
 );
+/** On a pad's level ground only (its yard and its ease, padded `m`), not its drive (landscape.ts: the road's walls run up
+ * to a drive's kerbs, J2 part 2) */
+export function onPad(x: number, z: number, m = 0) {
+  const e = PAD_EASE + m;
+  return MANSIONS.some((s) => x > s.yard[0] - e && x < s.yard[2] + e && z > s.yard[1] - e && z < s.yard[3] + e);
+}
+/** How far a point is from a mansion's drive's middle line, and that drive (its nearest) */
+export function nearestDrive(x: number, z: number): { d: number; m: Mansion } | null {
+  let best: { d: number; m: Mansion } | null = null;
+  for (const m of MANSIONS) {
+    const [a, b] = m.drive;
+    const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
+    const t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (z - a[1]) * vz) / (vx * vx + vz * vz || 1)));
+    const d = Math.hypot(x - a[0] - vx * t, z - a[1] - vz * t);
+    if (!best || d < best.d) best = { d, m };
+  }
+  return best;
+}
 /** On a pad's level ground (its yard and its ease, padded `m`) or its drive: the hills' oaks, scrub and palms keep off */
 export function onMansion(x: number, z: number, m = 0) {
   for (const s of MANSIONS) {
