@@ -30,6 +30,8 @@ import { SLAB as S, addLamp, addPool, addTree, waterMat, type Tick } from './wor
 import type { Idle } from './landmarks';
 import { ROOF_TONES, corniceAt, roofTone, type CorniceKind } from './rooftones';
 import { WINDOW_TYPE, paneAt, type Light, type Pane, type WallKindName } from './windows';
+import { DAY_BIT, packRoomUv, roomCode } from './rooms';
+import { ROOMS_MAT } from './rooms3d';
 
 /* ---------- The wall atlas ---------- */
 
@@ -1085,6 +1087,8 @@ interface Fine {
   style: FacadeStyle;
   bays: Bays;
   row: number;
+  /** The wall's kind: its band in the atlas, whose painted windows' lights a room takes (Phase 4) */
+  kind: WallKind;
   /** Its side walls' (left, then right, seen from the street) where they face a street or a lane, else null: Phase 2 */
   sides: [Bays | null, Bays | null];
 }
@@ -1111,7 +1115,7 @@ function fineOf(f: Infill, kind: WallKind, w: number, col: number): Fine | null 
     const b = baysOf(F.d, style, (col + 3 + 2 * i) % COLS);
     return b.n > 0 ? b : null;
   };
-  return { style, bays, row: Math.floor(rng(f.seed + 977)() * ROWS), sides: [side(0), side(1)] };
+  return { style, bays, row: Math.floor(rng(f.seed + 977)() * ROWS), kind, sides: [side(0), side(1)] };
 }
 
 /**
@@ -1130,7 +1134,7 @@ function sideFronts(b: Batch, F: Frame, f: Infill, fine: Fine, top: number, wall
     if (i === 0) T.makeBasis(new THREE.Vector3(0, 0, 1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(-1, 0, 0)).setPosition(0, 0, -d);
     else T.makeBasis(new THREE.Vector3(0, 0, -1), new THREE.Vector3(0, 1, 0), new THREE.Vector3(1, 0, 0)).setPosition(w, 0, 0);
     const k = kit(b, { ...F, M: F.M.clone().multiply(T) });
-    const sf: Fine = { style: fine.style, bays, row: fine.row, sides: [null, null] };
+    const sf: Fine = { style: fine.style, bays, row: fine.row, kind: fine.kind, sides: [null, null] };
     piers(k, d, sf, S, top - 0.3, wall);
     modelled(k, { ...f, floors, seed: f.seed + 31 * (i + 1) }, sf, d, S, top - 0.12, wall, trim, cream);
   });
@@ -1146,6 +1150,117 @@ function piers(k: Kit, w: number, fine: Fine, y0: number, y1: number, wall: stri
     k.wbox(w - s0, w, y0, y1, 0.05, mat);
   });
 }
+
+/**
+ * A room behind a bare window (docs/buildings-plan.md Phase 4, desktops only: rooms.ts, rooms3d.ts): a quad over the
+ * painted glass, just off the wall, its room drawn by its shader; its light the painted window's own (that cell's
+ * `paneAt()`: a pair's two sashes both bare, the first's light)
+ */
+function room(k: Kit, fine: Fine, seed: number, col: number, floor: number, u0: number, u1: number, y0: number, y1: number) {
+  const row = ROWS - 1 - ((fine.row + floor) % ROWS);
+  const p = paneAt(seed, row, col);
+  const code = roomCode(p);
+  if (code === null || (fine.style === 'pair' && roomCode(paneAt(seed, row, col, 1)) === null) || y1 - y0 < 0.1) return;
+  roomQuad(k, u0, u1, y0, y1, code);
+}
+/** A room's quad over a window's glass, u0..u1 by y0..y1 in a front's frame, its room's code in its uv (rooms.ts) */
+function roomQuad(k: Kit, u0: number, u1: number, y0: number, y1: number, code: number) {
+  const [w, h] = [u1 - u0, y1 - y0];
+  const g = new THREE.PlaneGeometry(w, h).translate((u0 + u1) / 2, (y0 + y1) / 2, ROOM_OUT);
+  const uv = g.attributes.uv as THREE.BufferAttribute;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, ...packRoomUv(uv.getX(i), uv.getY(i), w, h, code));
+  k.put(g, ROOMS_MAT);
+}
+
+/**
+ * An office tower's glass walls modelled (docs/buildings-plan.md Phase 4): a fin on each painted mullion (every half
+ * cell, the curtain wall's paint: every other one on phones), a spandrel over each floor's painted dark band, and on
+ * desktops a room behind each pane, its light the painted pane's own. Each wall drawn in a frame turned to it (its u
+ * along the wall as the band runs, its v out), the tower from `podium` to `top`, its band laid from `u0`.
+ */
+function towerSkin(b: Batch, F: Frame, a0: number, a1: number, c0: number, c1: number, podium: number, top: number, u0: number, trim: THREE.Material) {
+  const tw = CELL_W * COLS;
+  const step = tw / CURTAIN_PANES;
+  const seed = 60 + WALL_KINDS.indexOf('glassBlue');
+  const spandrel = toon('#141a33');
+  const floors = Math.round((top - podium) / FLOOR);
+  // (the four walls as the band runs along them: a start, a way along, out, a length)
+  const walls: [number, number, number, number, number, number, number][] = [
+    [a0, c1, 1, 0, 0, 1, a1 - a0],
+    [a0, c0, 0, 1, -1, 0, c1 - c0],
+    [a1, c1, 0, -1, 1, 0, c1 - c0],
+    [a1, c0, -1, 0, 0, -1, a1 - a0],
+  ];
+  for (const [pu, pv, du, dv, nu, nv, L] of walls) {
+    const T = new THREE.Matrix4().makeBasis(new THREE.Vector3(du, 0, dv), new THREE.Vector3(0, 1, 0), new THREE.Vector3(nu, 0, nv)).setPosition(pu, 0, pv);
+    const k = kit(b, { ...F, M: F.M.clone().multiply(T) });
+    // The mullions: where the band's u is on a pane's edge
+    const first = ((Math.ceil(u0 * CURTAIN_PANES - 1e-6) - u0 * CURTAIN_PANES) / CURTAIN_PANES) * tw;
+    const edges: number[] = [];
+    for (let x = first; x < L - 0.04; x += step) if (x > 0.04) edges.push(x);
+    edges.forEach((x, i) => {
+      if (!LOW || i % 2 === 0) k.wbox(x - 0.018, x + 0.018, podium, top - 0.02, 0.06, trim);
+    });
+    for (let fl = 0; fl < floors; fl++) {
+      const yT = podium + (fl + 1) * FLOOR;
+      if (yT <= top - 0.05) k.wbox(0, L, yT - 8 * (FLOOR / PX_H), yT, 0.03, spandrel);
+      if (LOW) continue;
+      // The rooms, a pane at a time between the mullions (a curtain wall paints no blinds: every pane is bare)
+      const row = ROWS - 1 - (fl % ROWS);
+      const cuts = [0, ...edges, L];
+      for (let j = 0; j + 1 < cuts.length; j++) {
+        const [x0, x1] = [cuts[j] + 0.02, cuts[j + 1] - 0.02];
+        if (x1 - x0 < 0.15) continue;
+        const pane = Math.round((((u0 + ((x0 + x1) / 2) / tw) % 1) + 1) % 1 * CURTAIN_PANES - 0.5);
+        const code = roomCode({ ...paneAt(seed, row, ((pane % CURTAIN_PANES) + CURTAIN_PANES) % CURTAIN_PANES), dressing: 'bare' })!;
+        roomQuad(k, x0, x1, podium + fl * FLOOR, Math.min(top, yT) - 8 * (FLOOR / PX_H) - 0.01, code);
+      }
+    }
+  }
+}
+/** A curtain wall's panes across a band (the atlas paints a mullion every 24 of its 384 pixels) */
+const CURTAIN_PANES = 16;
+
+/**
+ * A diner's long window modelled (docs/buildings-plan.md Phase 4): chrome mullions on the painted ones (every 42 of the
+ * band's 256 pixels), a chrome sill and head along it on every wall, and on desktops a room behind each pane, lit warm
+ * by day and night as the paint is (the counter and its booths seen through). Each wall in a frame turned to it, its
+ * band laid from its own `u0` (the diner's walls start their bands at different places: `[front, left, right, back]`).
+ */
+function dinerSkin(b: Batch, F: Frame, w: number, d: number, starts: [number, number, number, number], chrome: THREE.Material) {
+  const step = (SHOP_W * DINER_MULLION) / 256;
+  // (the window's foot and head: the band's 16 to 62 of its 100 pixels from the top)
+  const [y0, y1] = [S + SHOP_H * (1 - 62 / 100), S + SHOP_H * (1 - 16 / 100)];
+  const walls: [number, number, number, number, number, number, number, number][] = [
+    [0, 0, 1, 0, 0, 1, w, starts[0]],
+    [0, -d, 0, 1, -1, 0, d, starts[1]],
+    [w, 0, 0, -1, 1, 0, d, starts[2]],
+    [w, -d, -1, 0, 0, -1, w, starts[3]],
+  ];
+  walls.forEach(([pu, pv, du, dv, nu, nv, L, u0], i) => {
+    const T = new THREE.Matrix4().makeBasis(new THREE.Vector3(du, 0, dv), new THREE.Vector3(0, 1, 0), new THREE.Vector3(nu, 0, nv)).setPosition(pu, 0, pv);
+    const k = kit(b, { ...F, M: F.M.clone().multiply(T) });
+    k.wbox(0, L, y0 - 0.045, y0, 0.05, chrome);
+    k.wbox(0, L, y1, y1 + 0.04, 0.04, chrome);
+    const first = (((Math.ceil(u0 * (256 / DINER_MULLION) - 1e-6) - u0 * (256 / DINER_MULLION)) * DINER_MULLION) / 256) * SHOP_W;
+    const edges: number[] = [];
+    for (let x = first; x < L - 0.03; x += step) if (x > 0.03) edges.push(x);
+    for (const x of edges) k.wbox(x - 0.015, x + 0.015, y0, y1, 0.035, chrome);
+    if (LOW) return;
+    // (the front's door, a chrome frame across its middle: no room there)
+    const door: [number, number] | null = i === 0 ? [w * 0.5 - 0.37, w * 0.5 + 0.37] : null;
+    const cuts = [0, ...edges, L];
+    for (let j = 0; j + 1 < cuts.length; j++) {
+      const [x0, x1] = [cuts[j] + 0.016, cuts[j + 1] - 0.016];
+      if (x1 - x0 < 0.15 || (door && x1 > door[0] && x0 < door[1])) continue;
+      roomQuad(k, x0, x1, y0, y1, 1 + DAY_BIT);
+    }
+  });
+}
+/** The diner band's mullions: one every this many of its 256 pixels */
+const DINER_MULLION = 42;
+/** How far a room's quad stands off the painted glass (nothing flush), inside the window's frame */
+const ROOM_OUT = 0.005;
 
 /** Brick and brownstone: their windows' frames are painted cream */
 const bricky = (kind: WallKind) => kind.startsWith('brick') || kind === 'brownstone';
@@ -1177,8 +1292,12 @@ function modelled(k: Kit, f: Infill, fine: Fine, w: number, from: number, clip: 
         if (y1 <= clip) k.wbox(bays.s0, w - bays.s0, y0, y1, 0.06, band);
       }
   }
+  // (each window's painted cell in the atlas: its band's seed, the band's row on its floor, its column: rooms.ts)
+  const seed = 60 + WALL_KINDS.indexOf(fine.kind);
+  const c0 = (((Math.round((bays.start + bays.s0 / (CELL_W * COLS)) * COLS) % COLS) + COLS) % COLS);
   for (const win of windowsOf(bays, style, f.floors, clip - from, skip)) {
     const [u0, u1, y0, y1] = [win.u0, win.u1, from + win.y0, from + win.y1];
+    if (!LOW && !win.door && style !== 'recess') room(k, fine, seed, (c0 + win.bay * PANES[style].span) % COLS, win.floor, u0, u1, y0, style === 'arched' ? y1 - (u1 - u0) * 0.5 : y1);
     const pick = r();
     if (!plain) {
       if (win.head) {
@@ -1560,6 +1679,7 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
     k.lbox(-0.04, w + 0.04, top - 0.1, top - 0.05, -d + 0.1, 0.05, glow(PAL.cyan));
     k.lbox(0, w, top, top + 0.06, -d, 0, ROOF);
     });
+    dinerSkin(b, F, w, d, [u0, 0.2, 0.2, 0.5], chrome);
     // The door: a chrome frame on the front
     k.lbox(w * 0.5 - 0.35, w * 0.5 + 0.35, S, S + 1.15, 0, 0.04, chrome);
     k.lbox(w * 0.5 - 0.27, w * 0.5 + 0.27, S + 0.05, S + 1.08, 0.02, 0.05, toon('#3e5a8f'));
@@ -1661,6 +1781,7 @@ function buildingAt(b: Batch, f: Infill, crowd: Idle[], low: boolean) {
       [a1, c0],
     ])
       k.lbox(u - 0.08, u + 0.08, podium, top + 0.1, v - 0.08, v + 0.08, trimM);
+    towerSkin(b, F, a0, a1, c0, c1, podium, top, u0, trimM);
     const cyan = glow(PAL.cyan);
     k.all(() => {
       // The crown's slab a touch proud of the walls (flush with them, its foot flickers against them)
