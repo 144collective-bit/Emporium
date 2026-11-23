@@ -484,7 +484,7 @@ function drawCore(b: Batch, ring: Pt[], base: number, top: number, at: Pt, from:
     for (const y of [...cuts, Infinity]) {
       const y1 = Math.min(y, top);
       if (y1 - y0 > 0.05) {
-        prism(b, ring, y0, y1, CONC, y1 === top ? ROOF : CONC);
+        prism(b, ring, y0, y1, CONC, y1 === top ? ROOF : DECK_FLOOR);
         if (y0 > base) flat(b, ring, y0, CONC_DARK, false);
       }
       if (!Number.isFinite(y)) break;
@@ -713,6 +713,8 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | n
   const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
   k.all(() => {
     along(b, a, c, w, y - 0.2, y, CONC_DARK);
+    // (R1, J1 part 2: the floor between the parapets a lighter paving over the dark slab, 6 mm up)
+    along(b, a, c, w - 0.26, y, y + 0.006, DECK_FLOOR);
     for (const side of [-1, 1]) {
       along(b, a, c, 0.12, y, y + 0.6, CONC, side * (BRIDGE_HALF - 0.06));
       along(b, a, c, 0.04, y + 0.6, y + 1.5, GLASS, side * (BRIDGE_HALF - 0.1));
@@ -730,8 +732,11 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | n
     const t: Pt = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
     const r: Pt = [-t[1], t[0]];
     const at = (s: number, o: number): Pt => [a[0] + t[0] * s + r[0] * o, a[1] + t[1] * s + r[1] * o];
-    for (let s = 1.2; s < l - 0.3; s += 1.2)
+    for (let s = 1.2; s < l - 0.3; s += 1.2) {
       for (const side of [-1, 1]) along(b, at(s - 0.04, side * (BRIDGE_HALF - 0.1)), at(s + 0.04, side * (BRIDGE_HALF - 0.1)), 0.07, y + 0.6, y + 1.5, CONC_DARK);
+      // (the floor's joint under each mullion pair)
+      along(b, at(s, -(BRIDGE_HALF - 0.13)), at(s, BRIDGE_HALF - 0.13), 0.03, y + 0.006, y + 0.012, CONC_DARK);
+    }
     // (where, from a hash of the bridge's place: the same every time)
     const h = Math.abs(Math.round(a[0] * 7 + a[1] * 13 + y * 31));
     const puddle = (s: number, o: number, rx: number) => {
@@ -849,19 +854,48 @@ function drawPortal(b: Batch, a: Pt, c: Pt, y: number) {
 function drawDeck(b: Batch, poly: Pt[], y: number, base: number) {
   const k = kit(b, WORLD);
   k.all(() => {
-    flat(b, poly, y, PAVING);
+    flat(b, poly, y, DECK_FLOOR);
     flat(b, poly, y - 0.3, CONC_DARK, false);
     poly.forEach((a, j) => {
       const c = poly[(j + 1) % poly.length];
       const n = outward(poly, j);
       quad(b, a, c, y - 0.3, y, n, CONC);
-      // (a balustrade where it isn't against a gallery)
+      // (a balustrade where it isn't against a gallery, its coping a little wider and darker: R1)
       const mid: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
-      if (!inBlock(mid, 2.4)) along(b, a, c, 0.12, y, y + 0.6, CONC, -0.07);
+      if (!inBlock(mid, 2.4)) {
+        along(b, a, c, 0.12, y, y + 0.6, CONC, -0.07);
+        along(b, a, c, 0.18, y + 0.6, y + 0.65, CONC_DARK, -0.07);
+      }
     });
     // Its columns down to the court (southyard.ts)
     for (const [x, z] of DECK_COLUMNS) b.add(plain(new THREE.CylinderGeometry(COLUMN_R, COLUMN_R, y - 0.3 - base, 10).translate(x, (base + y - 0.3) / 2, z)), CONC);
   });
+  // R1's fine trims, near only: the paving's joints on a 1.2 grid inside its outline, a drip under its edge
+  b.detail(() => {
+    const [x0, z0, x1, z1] = rectOf(poly, 0);
+    const M = 1.2;
+    for (let x = Math.ceil(x0 / M) * M; x < x1; x += M)
+      for (let z = z0; z < z1; z += M) {
+        const z2 = Math.min(z + M, z1);
+        if (insidePoly(poly, [x, (z + z2) / 2]) && insidePoly(poly, [x, z + 0.05]) && insidePoly(poly, [x, z2 - 0.05])) along(b, [x, z], [x, z2], 0.03, y, y + 0.006, CONC_DARK);
+      }
+    for (let z = Math.ceil(z0 / M) * M; z < z1; z += M)
+      for (let x = x0; x < x1; x += M) {
+        const x2 = Math.min(x + M, x1);
+        if (insidePoly(poly, [(x + x2) / 2, z]) && insidePoly(poly, [x + 0.05, z]) && insidePoly(poly, [x2 - 0.05, z])) along(b, [x, z], [x2, z], 0.03, y, y + 0.006, CONC_DARK);
+      }
+    poly.forEach((a, j) => along(b, a, poly[(j + 1) % poly.length], 0.05, y - 0.38, y - 0.3, CONC_DARK, -0.03));
+  });
+}
+/** Whether a point is inside an outline */
+function insidePoly(ring: Pt[], [x, z]: Pt) {
+  let inside = false;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, zi] = ring[i];
+    const [xj, zj] = ring[j];
+    if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+  }
+  return inside;
 }
 
 function drawBunkerDoor(b: Batch, base: number) {

@@ -242,8 +242,10 @@ sets the order (rule 2).
 ### Jobs
 
 - [x] **J1 (R1), part 1: the galleries and balconies** (2026-11-22, pass 1; see the log). Part 2 below.
-- [ ] **J1 (R1), part 2: the bridges' decks, the cores' landings and the podium deck**, as part 1, then the
-      junction where a gallery meets a link's portal checked from on foot.
+- [x] **J1 (R1), part 2: the bridges' decks, the cores' landings and the podium deck** (2026-11-22, pass 2;
+      see the log). The junction where a gallery meets a link's portal is left for a look on foot (J1 part 3).
+- [ ] **J1 (R1), part 3:** the gallery-to-portal junction checked on foot at each block; rebuilt where it
+      still reads as slabs meeting at a point. Then J1 is done and R1's sweep starts at The Trenches.
 - [ ] **J1 (R1): a gallery walkway on Endswood's flats** (the owner's
       screenshot, 2026-11-21: looking down a gallery towards the highway).
       The deck, its upstands and the slabs either side are plain `CONC`
@@ -399,3 +401,8 @@ session.)
   test:wide, build, texture bake, budget (texFull 4918.2 of 4955, texLow 3310.2 of 3450, boot 762.1 of 775)
   pass; smoke 148 steps ok, the station's escalator step stalled once in the full run and passed run alone,
   the same on main and the branch (logged under Level 1 as flaky).
+- 2026-11-22, pass 2 (23:07, started 23:28 after pass 1 ran long): J1 part 2 (R1 on the cores' landings, the
+  bridges' floors and the podium deck, southblocks3d.ts `drawCore()`, `drawBridge()`, `drawDeck()`). Podium
+  shot from above before and after: one flat grey slab, now a jointed 1.2 grid with a capped balustrade.
+  Checks: typecheck, lint, test, test:wide, build, texture bake, budget (texFull 4918.2 of 4955, texLow
+  3310.2 of 3450) and smoke (150 steps, none failed) pass. Draws not measured (plain colours, near trims).
