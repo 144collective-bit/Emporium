@@ -177,3 +177,163 @@ function build(): Circuit2 {
 }
 
 export const CIRCUIT2: Circuit2 = build();
+
+/* ---------- Phase 1b: the courses both ways, the start, the corners, the grid, the pit lane, the racing lines ---------- */
+
+/** A kart's half width (karts.ts keeps to it), and how far in from the track's edge the racing line keeps its middle */
+export const KART2_HALF = 0.55;
+export const LINE_MARGIN = KART2_HALF + 0.35;
+/** The start / finish line crosses the pit straight here (u), in front of race control */
+export const START2_U = 128;
+/** How many race, the grid's two columns either side of the middle, and the usual laps */
+export const GRID2 = 8;
+export const GRID2_LATERAL = 1.2;
+export const LAPS2 = 3;
+
+export type Course2Id = 'riverside' | 'riverside-reverse';
+export const COURSE2_IDS: Course2Id[] = ['riverside', 'riverside-reverse'];
+export interface Course2 {
+  id: Course2Id;
+  name: string;
+  blurb: string;
+  reverse: boolean;
+  laps: number;
+  /** The centre line in race order, sampled every `step` (the reverse: the same surface the other way) */
+  x: number[];
+  z: number[];
+  y: number[];
+  u: number[];
+  v: number[];
+  L: number;
+  step: number;
+  /** Curvature at each sample (1 / radius, positive turning left as raced) */
+  k: number[];
+  /** Where the start line crosses (s) */
+  start: number;
+  /** The numbered corners' apexes (s), in race order from the line */
+  turns: { n: number; s: number; left: boolean }[];
+  /** The racing line: how far right of the centre line (negative: left) a kart aims at each sample */
+  line: number[];
+}
+
+/** Curvature along a closed line of points `step` apart (from the turn of its direction over `w` samples each side) */
+function curvature(x: number[], z: number[], step: number, w = 4): number[] {
+  const n = x.length;
+  return x.map((_, i) => {
+    const [a, b, c] = [(i - w + n) % n, i, (i + w) % n];
+    const h1 = Math.atan2(z[b] - z[a], x[b] - x[a]);
+    const h2 = Math.atan2(z[c] - z[b], x[c] - x[b]);
+    let d = h2 - h1;
+    while (d > Math.PI) d -= 2 * Math.PI;
+    while (d < -Math.PI) d += 2 * Math.PI;
+    // (x east, z south: a clockwise turn in x, z is a left turn as seen driving)
+    return -d / (w * step);
+  });
+}
+/** A closed list smoothed `passes` times over `w` samples each side */
+function smooth(a: number[], w: number, passes = 1): number[] {
+  let cur = a;
+  const n = a.length;
+  for (let p = 0; p < passes; p++) {
+    const next = new Array<number>(n).fill(0);
+    let sum = 0;
+    for (let d = -w; d <= w; d++) sum += cur[(d + n) % n];
+    for (let i = 0; i < n; i++) {
+      next[i] = sum / (2 * w + 1);
+      sum += cur[(i + w + 1) % n] - cur[(i - w + n) % n];
+    }
+    cur = next;
+  }
+  return cur;
+}
+
+function makeCourse2(id: Course2Id): Course2 {
+  const reverse = id === 'riverside-reverse';
+  const n = CIRCUIT2.x.length;
+  const order = reverse ? [0, ...Array.from({ length: n - 1 }, (_, i) => n - 1 - i)] : Array.from({ length: n }, (_, i) => i);
+  const pick = (a: number[]) => order.map((i) => a[i]);
+  const [x, z, y, u, v] = [pick(CIRCUIT2.x), pick(CIRCUIT2.z), pick(CIRCUIT2.y), pick(CIRCUIT2.u), pick(CIRCUIT2.v)];
+  const step = CIRCUIT2.step;
+  const k = curvature(x, z, step);
+  // The start: where the pit straight (the south, v past 108) crosses START2_U
+  let start = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    if (v[i] > 108 && (u[i] - START2_U) * (u[j] - START2_U) <= 0 && u[i] !== u[j]) {
+      start = (i + (START2_U - u[i]) / (u[j] - u[i])) * step;
+      break;
+    }
+  }
+  // The corners: where the smoothed curvature peaks past a radius of 30, at least 10 apart, numbered from the line
+  const ks = smooth(k, 6, 2);
+  const peaks: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = Math.abs(ks[i]);
+    if (a < 1 / 30) continue;
+    let top = true;
+    for (let d = -20; d <= 20 && top; d++) if (d && Math.abs(ks[(i + d + n) % n]) > a) top = false;
+    if (top && peaks.every((p) => Math.min(Math.abs(p - i), n - Math.abs(p - i)) * step >= 10)) peaks.push(i);
+  }
+  const L = n * step;
+  const turns = peaks
+    .map((i) => ({ s: i * step, left: ks[i] > 0 }))
+    .sort((a, b) => ((a.s - start + L) % L) - ((b.s - start + L) % L))
+    .map((t, i) => ({ n: i + 1, ...t }));
+  // The racing line: in to the apex of each corner (to its inside), out wide either side, kept on the track
+  const reach = TRACK2_HALF - LINE_MARGIN;
+  const lead = Math.round(6 / step);
+  const raw = ks.map((_, i) => {
+    const here = ks[i];
+    const around = (ks[(i - lead + n) % n] + ks[(i + lead) % n]) / 2;
+    // (inside is the left of a left turn: negative lateral; the apex pull, less where the corner is opening or closing)
+    return -Math.sign(here) * Math.min(1, Math.abs(here) * 12) + 0.6 * Math.sign(around) * Math.min(1, Math.abs(around - here) * 12);
+  });
+  const line = smooth(raw, Math.round(3 / step), 3).map((o) => Math.max(-reach, Math.min(reach, o * reach)));
+  const names: Record<Course2Id, { name: string; blurb: string }> = {
+    riverside: { name: 'Riverside Raceway', blurb: 'Winding, a tunnel under the hill, the river alongside' },
+    'riverside-reverse': { name: 'Riverside Raceway · reverse', blurb: 'The same circuit, run backwards' },
+  };
+  return { id, ...names[id], reverse, laps: LAPS2, x, z, y, u, v, L, step, k, start, turns, line };
+}
+export const COURSES2: Record<Course2Id, Course2> = { riverside: makeCourse2('riverside'), 'riverside-reverse': makeCourse2('riverside-reverse') };
+
+/** The grid: on the pit straight behind the line, two abreast and staggered; slot 0 is pole */
+export function gridSlots2(c: Course2): { s: number; lateral: number }[] {
+  return Array.from({ length: GRID2 }, (_, i) => ({ s: (c.start - 2 - Math.floor(i / 2) * 2.8 - (i % 2) * 1.3 + c.L) % c.L, lateral: (i % 2 ? -1 : 1) * GRID2_LATERAL }));
+}
+
+/** The pit lane's half width, and where it runs straight along the garages (u, v), south of the pit straight past its run-off */
+export const PIT2_HALF = 1.3;
+export const PIT2_STRAIGHT = { u0: 110, u1: 140, v: 126 } as const;
+/**
+ * The pit lane, forward: off the pit straight before the line (its west end), south and east along the garages in front of
+ * race control, back on after the line (its east end, before the Docks wiggles). Open (not a loop), sampled every STEP2.
+ */
+export const PIT2_LANE: { u: number[]; v: number[]; x: number[]; z: number[] } = (() => {
+  const P: Pt[] = [[99, 117.4], [103, 119.5], [106.5, 124], [111, 126], [126, 126], [139, 126], [145, 123.5], [149.5, 117], [152.5, 109.2]];
+  // (a Catmull-Rom through them, the ends held)
+  const ext: Pt[] = [P[0], ...P, P[P.length - 1]];
+  const dense: Pt[] = [];
+  for (let i = 1; i < ext.length - 2; i++) {
+    const [p0, p1, p2, p3] = [ext[i - 1], ext[i], ext[i + 1], ext[i + 2]];
+    for (let k = 0; k < 30; k++) {
+      const t = k / 30;
+      const [t2, t3] = [t * t, t * t * t];
+      dense.push([0, 1].map((j) => 0.5 * (2 * p1[j] + (-p0[j] + p2[j]) * t + (2 * p0[j] - 5 * p1[j] + 4 * p2[j] - p3[j]) * t2 + (-p0[j] + 3 * p1[j] - 3 * p2[j] + p3[j]) * t3)) as Pt);
+    }
+  }
+  dense.push(P[P.length - 1]);
+  const u = dense.map((p) => p[0]);
+  const v = dense.map((p) => p[1]);
+  return { u, v, x: u.map((q) => SITE2.x0 + q), z: v.map((q) => SITE2.z0 + q) };
+})();
+
+/** How far a point (in the site's frame) is from the circuit's centre line, and the nearest sample */
+export function nearestTrack2(u: number, v: number): { d: number; i: number } {
+  let best = { d: Infinity, i: 0 };
+  for (let i = 0; i < CIRCUIT2.u.length; i++) {
+    const d = Math.hypot(CIRCUIT2.u[i] - u, CIRCUIT2.v[i] - v);
+    if (d < best.d) best = { d, i };
+  }
+  return best;
+}

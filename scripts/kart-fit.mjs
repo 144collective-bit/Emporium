@@ -75,9 +75,19 @@ ${zone(126, 132, 172, 153, 'Race control', '#ffb3c7')}
 <path d="${path}" fill="none" stroke="#24222e" stroke-width="${m.TRACK2_W * P}" stroke-linejoin="round"/>
 <path d="${raised.join(' ')}" fill="none" stroke="#5a5668" stroke-width="${m.TRACK2_W * P}" stroke-linejoin="round"/>
 <path d="${path}" fill="none" stroke="#f4c542" stroke-width="2" stroke-dasharray="10 12"/>
+${(() => {
+  const c = m.COURSES2.riverside;
+  const nn = c.x.length;
+  const off = (i) => { const j = (i + 1) % nn; const [tx, tz] = [c.u[j] - c.u[i], c.v[j] - c.v[i]]; const l = Math.hypot(tx, tz) || 1; return [c.u[i] - (tz / l) * c.line[i], c.v[i] + (tx / l) * c.line[i]]; };
+  const racing = c.u.map((_, i) => { const [a, b] = off(i); return `${i ? 'L' : 'M'}${fu(a).toFixed(1)},${fv(b).toFixed(1)}`; }).join(' ') + 'Z';
+  const pit = m.PIT2_LANE.u.map((u, i) => `${i ? 'L' : 'M'}${fu(u).toFixed(1)},${fv(m.PIT2_LANE.v[i]).toFixed(1)}`).join(' ');
+  const si = Math.round(c.start / c.step) % nn;
+  const turns = c.turns.map((t) => { const i = Math.round(t.s / c.step) % nn; return `<circle cx="${fu(c.u[i])}" cy="${fv(c.v[i])}" r="9" fill="#fff" opacity="0.9"/><text x="${fu(c.u[i])}" y="${fv(c.v[i]) + 4}" font-size="11" text-anchor="middle" font-family="sans-serif" font-weight="700" fill="#1b1830">${t.n}</text>`; }).join('');
+  return `<path d="${pit}" fill="none" stroke="#9b97ad" stroke-width="${m.PIT2_HALF * 2 * P}"/><path d="${racing}" fill="none" stroke="#4fd6ff" stroke-width="2" opacity="0.9"/><rect x="${fu(c.u[si]) - 3}" y="${fv(c.v[si]) - m.TRACK2_HALF * P}" width="6" height="${m.TRACK2_W * P}" fill="#fff"/>${turns}`;
+})()}
 ${C.crossings.map((c) => `<circle cx="${fu(C.u[c.lower])}" cy="${fv(C.v[c.lower])}" r="18" fill="none" stroke="#ff5aa8" stroke-width="6"/>`).join('')}
 ${lab(128, 20, 'riverside straight')}${lab(176, 70, 'Docks wiggles')}${lab(160, 22, 'hairpin')}${lab(120, 44, 'winding descent')}${lab(120, 86, 'chicane')}${lab(12, 22, 'keyhole')}${lab(-2, 64, 'the esses')}${lab(26, 140, 'carousel')}${lab(118, 128, 'pit straight')}
-<text x="20" y="${H - 84}" font-size="20" fill="#ffd1e6" font-family="sans-serif">grey: the raised hill-top run over the tunnel; pink rings: the two passes through the tunnel</text>
+<text x="20" y="${H - 84}" font-size="20" fill="#ffd1e6" font-family="sans-serif">grey: the raised run · pink: the tunnel · blue: racing line · white: the start · numbers: corners · lilac: pit lane</text>
 <text x="20" y="${H - 52}" font-size="24" fill="#fff" font-family="sans-serif" font-weight="700">Riverside Raceway: lap ${report.lap} (today ${report.today}, ${report.times}x), track ${report.width} wide</text>
 <text x="20" y="${H - 20}" font-size="20" fill="#fff" font-family="sans-serif">tightest corner ${report.tightest} · steepest ramp ${report.steepest} · closest two runs ${report.closest} apart (${report.needed} needed) · hill ${report.hill} over the tunnel</text>
 </svg>`;
