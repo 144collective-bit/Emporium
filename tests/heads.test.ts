@@ -1,6 +1,6 @@
 // The characters' heads (docs/characters-plan.md): SlimeWhale's head on Degen's body. Degen's own head, the hats,
 // the shades, the face gear and the hood up are off while it's on (whatever the outfit says), only on single
-// figures; the eyes and lips seated on the face, the ink on them, the buzz clear of the head; the neck as Degen's,
+// figures; the eyes and lips seated on the face, the ink on them, the buzz painted on the scalp; the neck as Degen's,
 // the jaw clear of every top's collar as the head turns and nods; the figure inside its budget. Worn from the look
 // (Phase 2): `character` cleaned and kept apart from what's saved, the whole look in one tap, the character screen's rows.
 import { test } from 'node:test';
@@ -11,7 +11,7 @@ import { CHARACTERS, CHARACTER_LOOKS, DEFAULT_LOOK, PALETTE, cleanLook, type Cha
 import { SKIN_TONES } from '../src/scripts/city3d/crowdlook';
 import { CHOICES, describe as describeLook, isPlaying, pickCharacter, theirOutfit, wearsTheirOutfit } from '../src/scripts/city3d/lookrows';
 import { DEGEN_HEAD, HEAD_ROWS, headGeometry, headModel, type HeadDef } from '../src/scripts/city3d/body';
-import { CHARACTER_IDS, characterChain, characterGloves, characterParts, characterPendant, setHeadModel, SMILEX, SMILEX_HEAD, inSmilexBlock, smilex, SLIME, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
+import { CHARACTER_IDS, characterChain, characterGloves, characterParts, characterPendant, setHeadModel, SMILEX, SMILEX_HEAD, inSmilexBlock, smilex, SLIME, slimeAround, slimeHairline, SLIME_EYE_R, SLIME_EYE_Y, SLIME_HEAD, SLIME_MOUTH_Y, slimeEyes, slimeWhale } from '../src/scripts/city3d/heads';
 import { newPose, poseSkeleton, weigh, type Influence } from '../src/scripts/city3d/skeleton';
 import { dress, inside, posed, shells, type Worn } from './dress';
 
@@ -128,17 +128,38 @@ test('heads: the lips stand off the face, touching it; the ink on the face and f
   }
 });
 
-test('heads: the buzz clear of the head, on the crown, not a hat', () => {
+test("heads: SlimeWhale's buzz painted on: his own scalp above the hairline, no volume, the head whole", () => {
+  const area = (gs: THREE.BufferGeometry[]) => {
+    let A = 0;
+    const t = new THREE.Triangle();
+    for (const g of gs) {
+      const h = g.index ? g.toNonIndexed() : g;
+      const p = h.attributes.position;
+      for (let i = 0; i < p.count; i += 3) {
+        t.a.fromBufferAttribute(p, i);
+        t.b.fromBufferAttribute(p, i + 1);
+        t.c.fromBufferAttribute(p, i + 2);
+        A += t.getArea();
+      }
+    }
+    return A;
+  };
   for (const q of [3, 2] as const) {
+    const s = part(q);
+    const skull = SLIME.geometry(Math.max(6, Math.round(36 * (q === 3 ? 1 : 0.7))), q);
+    // (the scalp and the face together are the skull, to the square millimetre: nothing added, nothing lost)
+    assert.ok(Math.abs(area([s.skin[0], ...s.hair]) - area([skull])) < 1e-6, `detail ${q}: the head whole`);
     let top = -Infinity;
     let low = Infinity;
-    each(part(q).hair, (v) => {
-      assert.ok(!SLIME.inside(v.x, v.y, v.z), `detail ${q}: hair inside the head at ${v.toArray().map((n) => n.toFixed(3))}`);
+    each(s.hair, (v) => {
+      // (on the hairline or above it, and on the head itself: no higher than its crown)
+      assert.ok(v.y >= slimeHairline(slimeAround(v.x, v.y, v.z)) - 1e-4, `detail ${q}: hair below the hairline at ${v.toArray().map((n) => n.toFixed(3))}`);
       top = Math.max(top, v.y);
       low = Math.min(low, v.y);
     });
-    assert.ok(top > SLIME.top && top < SLIME.top + 0.006, `detail ${q}: close over the crown (${top.toFixed(4)})`);
-    assert.ok(low > 0.06, `detail ${q}: down to the nape, no lower`);
+    each(s.skin[0], (v) => assert.ok(v.y <= slimeHairline(slimeAround(v.x, v.y, v.z)) + 1e-4, `detail ${q}: skin above the hairline at ${v.toArray().map((n) => n.toFixed(3))}`));
+    assert.ok(top <= SLIME.top + 1e-6, `detail ${q}: no volume (${top.toFixed(4)})`);
+    assert.ok(low > 0.06 && low < 0.08, `detail ${q}: down to the nape (${low.toFixed(3)})`);
   }
 });
 

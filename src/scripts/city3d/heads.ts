@@ -15,7 +15,8 @@
  *   flat on top and at the back, a square jaw and big ears; three lime eyes
  *   bulging in a row across the brow, black pupils; wide lime lips standing
  *   off the face, closed on a dark slit; a short smirk line; a grey-brown
- *   buzz over the crown and back. Nothing is worn over it (the owner's call).
+ *   buzz over the crown and back, painted on (his skull cut at the hairline,
+ *   no volume: the owner's call, 2026-11-23). Nothing is worn over it.
  *
  * Single figures only (detail 2 on phones, 3 on desktops): the crowd never
  * wears a character's head. Its own chunk, loaded the first time a character
@@ -93,18 +94,6 @@ const LIP_R = 0.021;
 const LIP_LEN = 0.11;
 const LIP_DEPTH = 0.7;
 
-/** A point on a head's surface, `a` round it (0 is +x, PI/2 the front) at height y */
-function surfacePoint(m: HeadModel, a: number, y: number, def: HeadDef) {
-  const [, hw, fr, back, zc, n] = m.rowAt(y);
-  const e = 2 / n;
-  const c = Math.cos(a);
-  const s = Math.sin(a);
-  const x = Math.sign(c) * Math.abs(c) ** e * hw;
-  const w = Math.abs(s) ** e;
-  const z = s >= 0 ? zc + fr * w + def.features(x, y) * w ** 4 : zc - back * w;
-  return new THREE.Vector3(x, y, z);
-}
-
 /** A geometry's every vertex pushed forward by how far the face curves back at its x and height (things laid across the face) */
 function alongFace(g: THREE.BufferGeometry) {
   const p = g.attributes.position as THREE.BufferAttribute;
@@ -113,77 +102,80 @@ function alongFace(g: THREE.BufferGeometry) {
   return g;
 }
 
-/** The buzz: a shell over the crown and back from the hairline up, `gap` off the scalp, its edge tucked onto it */
-function buzz(q: 2 | 3, gap: number) {
-  const seg = q === 3 ? 40 : 26;
-  const rows = q === 3 ? 12 : 8;
-  // (high over the brow, above the ears at the sides, down to the nape at the back)
-  const hairline = (a: number) => {
-    const f = Math.sin(a);
-    return f >= 0 ? 0.172 + 0.055 * f ** 1.5 : 0.172 - 0.1 * THREE.MathUtils.smoothstep(-f, 0.15, 0.85);
+/** His hairline round the head (`a` 0 is +x, PI/2 the front, as the head's rows go round): high over the brow, above the ears at the sides, down to the nape at the back */
+export const slimeHairline = (a: number) => {
+  const f = Math.sin(a);
+  return f >= 0 ? 0.172 + 0.055 * f ** 1.5 : 0.172 - 0.1 * THREE.MathUtils.smoothstep(-f, 0.15, 0.85);
+};
+/** Where a point on his head is round it: the angle its row's superellipse puts it at (`slimeHairline()`'s `a`) */
+export function slimeAround(x: number, y: number, z: number) {
+  const [, hw, fr, back, zc, n] = SLIME.rowAt(y);
+  const u = THREE.MathUtils.clamp(x / hw, -1, 1);
+  const w = THREE.MathUtils.clamp((z - zc) / (z >= zc ? fr : back), -1, 1);
+  const p = n / 2;
+  return Math.atan2(Math.sign(w) * Math.abs(w) ** p, Math.sign(u) * Math.abs(u) ** p);
+}
+
+/**
+ * A surface cut in two along where `f` is 0 (each triangle across the line split there, its points and normals
+ * interpolated along its edges, so the two halves share the cut exactly and shade as the one surface they were):
+ * `below` where f < 0, `above` where it isn't
+ */
+function cutAlong(g: THREE.BufferGeometry, f: (x: number, y: number, z: number) => number) {
+  const src = g.index ? g.toNonIndexed() : g;
+  const P = src.attributes.position as THREE.BufferAttribute;
+  const N = src.attributes.normal as THREE.BufferAttribute;
+  const out = { below: { p: [] as number[], n: [] as number[] }, above: { p: [] as number[], n: [] as number[] } };
+  type V = { p: THREE.Vector3; n: THREE.Vector3; f: number };
+  const at = (i: number): V => {
+    const p = new THREE.Vector3().fromBufferAttribute(P, i);
+    return { p, n: new THREE.Vector3().fromBufferAttribute(N, i), f: f(p.x, p.y, p.z) };
   };
-  const top = SLIME.top - 0.0004;
-  const centre = (y: number) => SLIME.rowAt(y)[4];
-  /** The surface's outward normal at (a, y), from its neighbours */
-  const normal = (a: number, y: number) => {
-    const da = 0.004;
-    const dy = 0.0006;
-    const ta = surfacePoint(SLIME, a + da, y, SLIME_HEAD).sub(surfacePoint(SLIME, a - da, y, SLIME_HEAD));
-    const ty = surfacePoint(SLIME, a, Math.min(top, y + dy), SLIME_HEAD).sub(surfacePoint(SLIME, a, y - dy, SLIME_HEAD));
-    const n = new THREE.Vector3().crossVectors(ta, ty).normalize();
-    const p = surfacePoint(SLIME, a, y, SLIME_HEAD);
-    const out = new THREE.Vector3(p.x, (y - 0.12) * 0.5, p.z - centre(y));
-    if (n.dot(out) < 0) n.negate();
-    if (y > SLIME.top - 0.0015 || !Number.isFinite(n.x)) n.set(0, 1, 0);
-    return n;
+  // (where along the edge f really is 0: halved a dozen times, so a curved line is cut where it runs, not on a chord)
+  const q = new THREE.Vector3();
+  const mid = (a: V, b: V): V => {
+    let lo = 0;
+    let hi = 1;
+    for (let k = 0; k < 12; k++) {
+      const m = (lo + hi) / 2;
+      q.copy(a.p).lerp(b.p, m);
+      if (f(q.x, q.y, q.z) >= 0 === a.f >= 0) lo = m;
+      else hi = m;
+    }
+    const t = (lo + hi) / 2;
+    return { p: a.p.clone().lerp(b.p, t), n: a.n.clone().lerp(b.n, t).normalize(), f: 0 };
   };
-  const pos: number[] = [];
-  for (let k = 0; k < seg; k++) {
-    const a = (k / seg) * Math.PI * 2;
-    const y0 = hairline(a);
-    // The outline from the hairline up, finely (the flat top turns in over a few millimetres), and its length
-    const prof: THREE.Vector3[] = [];
-    for (let y = y0; y < top; y += y > 0.245 ? 0.0006 : 0.003) prof.push(surfacePoint(SLIME, a, y, SLIME_HEAD));
-    prof.push(surfacePoint(SLIME, a, top, SLIME_HEAD));
-    const len = [0];
-    for (let i = 1; i < prof.length; i++) len.push(len[i - 1] + prof[i].distanceTo(prof[i - 1]));
-    const L = len[len.length - 1];
-    for (let j = 0; j <= rows; j++) {
-      const s = L * (j / rows) ** 1.2;
-      let i = 1;
-      while (i < prof.length - 1 && len[i] < s) i++;
-      const f = len[i] > len[i - 1] ? (s - len[i - 1]) / (len[i] - len[i - 1]) : 0;
-      const p = prof[i - 1].clone().lerp(prof[i], f);
-      const tuck = j === 0 ? 0.15 : j === 1 ? 0.7 : 1;
-      p.addScaledVector(normal(a, p.y), 0.0005 + gap * tuck);
-      pos.push(p.x, p.y, p.z);
+  const emit = (side: 'below' | 'above', ...vs: V[]) => {
+    for (const v of vs) {
+      out[side].p.push(v.p.x, v.p.y, v.p.z);
+      out[side].n.push(v.n.x, v.n.y, v.n.z);
     }
-  }
-  const idx: number[] = [];
-  const at = (k: number, j: number) => (k % seg) * (rows + 1) + j;
-  for (let k = 0; k < seg; k++)
-    for (let j = 0; j < rows; j++) {
-      idx.push(at(k, j), at(k, j + 1), at(k + 1, j));
-      idx.push(at(k + 1, j), at(k, j + 1), at(k + 1, j + 1));
+  };
+  for (let i = 0; i < P.count; i += 3) {
+    const t = [at(i), at(i + 1), at(i + 2)];
+    const up = t.map((v) => v.f >= 0);
+    const n = up.filter(Boolean).length;
+    if (n === 0 || n === 3) {
+      emit(n ? 'above' : 'below', ...t);
+      continue;
     }
-  const apex = pos.length / 3;
-  pos.push(0, SLIME.top + 0.0005 + gap, centre(SLIME.top));
-  for (let k = 0; k < seg; k++) idx.push(at(k, rows), apex, at(k + 1, rows));
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setIndex(idx);
-  g.computeVertexNormals();
-  // (wound outwards whichever way the ring turned)
-  const p = g.attributes.position;
-  const n = g.attributes.normal;
-  let out = 0;
-  for (let i = 0; i < p.count; i++) out += n.getX(i) * p.getX(i) + n.getY(i) * (p.getY(i) - 0.12) + n.getZ(i) * (p.getZ(i) - centre(p.getY(i)));
-  if (out < 0) {
-    const ix = g.index!.array as Uint16Array | Uint32Array;
-    for (let t = 0; t < ix.length; t += 3) [ix[t + 1], ix[t + 2]] = [ix[t + 2], ix[t + 1]];
-    g.computeVertexNormals();
+    // (the one vertex alone on its side first, keeping the triangle's winding)
+    const k = up.findIndex((u) => (n === 1 ? u : !u));
+    const [a, b, c] = [t[k], t[(k + 1) % 3], t[(k + 2) % 3]];
+    const ab = mid(a, b);
+    const ac = mid(a, c);
+    const lone = n === 1 ? 'above' : 'below';
+    const rest = n === 1 ? 'below' : 'above';
+    emit(lone, a, ab, ac);
+    emit(rest, ab, b, c, ab, c, ac);
   }
-  return g;
+  const make = (o: { p: number[]; n: number[] }) => {
+    const r = new THREE.BufferGeometry();
+    r.setAttribute('position', new THREE.Float32BufferAttribute(o.p, 3));
+    r.setAttribute('normal', new THREE.Float32BufferAttribute(o.n, 3));
+    return r;
+  };
+  return { below: make(out.below), above: make(out.above) };
 }
 
 /** Where each eye's dome sits: its middle (sunk a little into the face) and its turn to follow the face round */
@@ -265,10 +257,12 @@ export function slimeWhale(q: 2 | 3) {
     }
     return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), R(14), 0.0016, 5, false);
   })();
-  const hair = buzz(q, 0.0022);
+  // The buzz (the owner's call, 2026-11-23: a shade on his head, no volume): his skull cut along the hairline, the
+  // scalp in the hair's colour and the rest in his skin, one surface
+  const { below: face, above: scalp } = cutAlong(skull, (x, y, z) => y - slimeHairline(slimeAround(x, y, z)));
   return {
     /** In the skin tone */
-    skin: [skull, ...ears],
+    skin: [face, ...ears],
     /** The ears' folds, the skin a shade darker */
     folds: earFolds,
     /** In the lime */
@@ -277,8 +271,8 @@ export function slimeWhale(q: 2 | 3) {
     ink: [...pupils, slit, smirk],
     /** In white */
     glints,
-    /** In the hair's colour */
-    hair: [hair],
+    /** In the hair's colour: painted on, the scalp itself */
+    hair: [scalp],
   };
 }
 

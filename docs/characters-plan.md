@@ -28,7 +28,9 @@ it):
   big ears. Skin a pale peach (a `PALETTE.tone` swatch); the Skin row still
   works on him.
 - **Hair:** a buzz, short and grey-brown, over the crown and back only (the
-  face's front bare). The Hair row still colours it; no other cuts.
+  face's front bare). The Hair row still colours it; no other cuts. Painted
+  on, no volume (the owner's call, 2026-11-23: "a shade on his head"): his
+  skull cut along the hairline, the scalp in the hair colour.
 - **Three eyes:** sculpted domes in a row across the brow, lime green,
   bulging past the head's outline at the sides as in the art, each with a
   flat black ink pupil and a white glint (the owner's call: domes, not flat
@@ -73,9 +75,13 @@ it):
   capsule across the muzzle, bent round the face at every height,
   `alongFace()`) in `SLIME_LIME`; the pupils (small dots a little up and in,
   as in the art), the slit along the lips' front and the smirk in
-  `SLIME_INK`; glints in white (`detail`); the buzz (a shell over the crown
-  and back from its own hairline, from the head's own outline) in the
-  `hair` key.
+  `SLIME_INK`; glints in white (`detail`); the buzz painted on in the
+  `hair` key: his skull cut in two along the hairline (`slimeHairline()`,
+  round the head by `slimeAround()`; `cutAlong()` splits each triangle
+  across the line, finding the cut on the real line by bisection, points
+  and normals interpolated), so scalp and face are one surface, no step,
+  no seam in the shading, no ink line at the hairline (a shell 3 mm off the
+  scalp until 2026-11-23).
 - **Nothing over the head:** with `Outfit.character` set, every item is
   asked about the outfit as `headless()` makes it (no hat, helmet, face
   gear, shades or chain, the hood down, unmasked) and Degen's own head
@@ -132,7 +138,8 @@ it):
   untouched); Degen's head built as it was; the neck rows Degen's; the eyes
   seated and bulging, wider together than the face; the lips touching the
   face, no deeper than their thickness; the ink never inside the head; the
-  buzz clear of the head, close over the crown; his jaw clear of six tops'
+  buzz painted on (scalp and face together the skull exactly, the scalp
+  only above the hairline, the face only below it, nothing over the crown); his jaw clear of six tops'
   collars at rest, nodding, looking up and turning; in the hood rolled
   down, no higher up his head than Degen's own chin goes there (Degen's chin
   tucks into it on a deep nod too: both heads sampled on one grid); the
