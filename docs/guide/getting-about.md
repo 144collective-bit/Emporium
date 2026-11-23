@@ -17,7 +17,7 @@ keep it up to date when what it describes changes.
     from the street plan (slabs, plazas, roads by width, the highway, the
     river, the airport and runway, the kart park's circuit, Liberty
     Bridge, the metro line; since the polish plan's Phase 7 every place's
-    footprint in the same muted tone: the stadium's bowl, the resorts, the
+    footprint in the same muted tone: the resorts, the
     Docks' sheds, warehouses and stacks, Crestmont's landmarks, Sunridge's
     club and school, Lot 9's fence and huts), the places with their pins' names
     (`placeName()`), you, your car, your aircraft when it's away, your
@@ -152,7 +152,7 @@ keep it up to date when what it describes changes.
     Sunridge's (`suburb`: sprinklers, crickets, a lawnmower); since the
     polish pass's sound phase the hum is the loudest of every built-up
     part's (`HUMS`: the town, The Trenches, Uptown and Uptown North hushed,
-    the mall, the Docks, the airport, the kart park, the stadium, each eased
+    the mall, the Docks, the airport, the kart park, each eased
     out past its land, so none reads as open country) and the places with a
     sound of their own have a layer: `waterfront` (the boardwalk, Pier 7,
     the market's deck and the town's promenades: gulls by day, a foghorn
@@ -163,9 +163,8 @@ keep it up to date when what it describes changes.
     hall; sound.ts damps the outdoor layers by it), `home` (in Degen's
     house on foot, home.ts `inHouse()`: damped further, a faint hum), `karts` (the kart
     park: engines idling, a tannoy), `airbase` (Northgate Air Base: far engines across the field, all of it inside
-    its fence and fading over 80 past it, airbase.ts `inAirbase()` / `fromFence()`) and `stadium` (a match night's crowd
-    round the ground, stadium.ts `matchOn()`: a murmur, a roar swelling now
-    and then); `sound.update()` mixes its layers
+    its fence and fading over 80 past it, airbase.ts `inAirbase()` / `fromFence()`) (the stadium's match-night crowd
+    went with it, 2026-11-22); `sound.update()` mixes its layers
     from it (and the el's rumble from `metro.rumbleAt()`), where you walk
     or where the City view looks, each new layer's graph made the first
     time it's heard. Your engine's voice is by what you're in

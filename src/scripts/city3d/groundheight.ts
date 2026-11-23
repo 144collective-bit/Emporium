@@ -4,7 +4,8 @@
  * over each other: the street, the blocks' slabs, the decks over the water, the bridges, the raised highway and the
  * airport's departures deck when you're up there, Liberty Bridge's two levels, the mall's two floors, Lot 9's tunnel
  * under the highway, Crestmont's hills, the open land's rolls, the verges' banks, the river's banks down to the water,
- * the garage's turntable, the park's jetty and terraces, Sector 7 Tower's sky deck, the civic quarter's steps, the kart park's circuit and its
+ * the garage's turntable, the park's jetty and terraces, Sector 7 Tower's sky deck, the civic quarter's steps, the air base's visitors'
+ * centre's stair and terrace, the kart park's circuit and its
  * grass banks. Each is a `GroundLayer` here, asked in `GROUND_LAYERS`' order with what's known so far (`GroundCtx`:
  * the base the point stands on, and whether that's open ground or a slab), and answers with a height or nothing:
  *
@@ -51,6 +52,7 @@ import { skyFloorAt } from './southsky';
 import { recBridgeY } from './rec';
 import { GARAGE_SITE } from './solids';
 import { PLAN, inPoly, type Pt } from './streetplan';
+import { visitorsFloorAt } from './airbase';
 
 /** A block's slab's height (world.ts's `SLAB`), and the street's: a hair over the asphalt */
 export const SLAB = 0.15;
@@ -101,6 +103,9 @@ export const GROUND_LAYERS: GroundLayer[] = [
   // Endswood's sky network (southsky.ts, docs/south-plan.md Phase 2c), when `yNow` is up there: the galleries, bridges,
   // the podium deck, the cores' landings and The Core's stair
   { id: 'sky', how: 'take', at: (x, z, yNow) => skyFloorAt(x, z, yNow) },
+  // Northgate Air Base's visitors' centre (airbase.ts, docs/military-plan.md Phase 6): its stair, landing and roof
+  // terrace when `yNow` is on the way up or up there
+  { id: 'visitors', how: 'take', at: (x, z, yNow) => visitorsFloorAt(x, z, yNow) },
   // The rec's footbridge over the brook (rec.ts), humped over the valley: its deck when you're near it
   { id: 'recbridge', how: 'take', at: (x, z, yNow) => { const y = recBridgeY(x, z); return y !== null && Math.abs(yNow - y) < 1.2 ? y : null; } },
   // The south's rolling ground (southground.ts, docs/south-plan.md Phase 1c): its slabs, sidewalks, streets and land

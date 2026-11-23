@@ -25,7 +25,7 @@
  */
 import * as THREE from 'three';
 import { FIGURE_SCALE } from './skeleton';
-import { HOLDING, RELAXED, createDegen, lookOutfit, type Degen } from './character';
+import { HOLDING, RELAXED, createDegen, headsReady, loadHeads, lookOutfit, type Degen } from './character';
 import { copyPose, createLocomotion, placeRoot, type Locomotion, type Root } from './locomotion';
 import type { Animator } from './animator';
 import type { MoData } from './mocap';
@@ -110,8 +110,22 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
   let offset: number | null = null;
   const now = () => performance.now() / 1000;
 
+  /** A player's figure built again (a new look, or their head's chunk in) */
+  function refigure(r: Remote, info: PlayerInfo) {
+    unride(r);
+    r.gun.dispose();
+    dropFigure(r);
+    Object.assign(r, figure(info));
+  }
   function figure(info: PlayerInfo) {
-    const fig = createDegen(lookOutfit(info.look));
+    const o = lookOutfit(info.look);
+    // (a character's head, docs/characters-plan.md: built again once its chunk is in)
+    if (!headsReady(o))
+      loadHeads().then(() => {
+        const r = players.get(info.id);
+        if (r && r.info === info) refigure(r, info);
+      }, () => {});
+    const fig = createDegen(o);
     fig.g.scale.setScalar(SCALE);
     fig.g.visible = false;
     if (fig.held) fig.held.visible = true;
@@ -228,12 +242,8 @@ export function createRemotes(scene: THREE.Scene, camera: THREE.PerspectiveCamer
     setInfo(info: PlayerInfo) {
       const r = players.get(info.id);
       if (!r) return this.add(info);
-      if (JSON.stringify(info.look) !== JSON.stringify(r.info.look)) {
-        unride(r);
-        r.gun.dispose();
-        dropFigure(r);
-        Object.assign(r, figure(info));
-      } else if (info.weapon !== r.info.weapon) {
+      if (JSON.stringify(info.look) !== JSON.stringify(r.info.look)) refigure(r, info);
+      else if (info.weapon !== r.info.weapon) {
         // They took another gun at the store
         r.pivot.remove(r.gun.group);
         r.gun.dispose();

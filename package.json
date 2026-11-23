@@ -18,7 +18,9 @@
     "golfmap": "node scripts/golfmap.mjs",
     "shots": "node scripts/shots.mjs",
     "smoke": "node scripts/walk-smoke.mjs",
-    "memcheck": "node scripts/memcheck.mjs"
+    "memcheck": "node scripts/memcheck.mjs",
+    "exits-fit": "node scripts/exits-fit.mjs",
+    "kart-fit": "node scripts/kart-fit.mjs"
   },
   "dependencies": {
     "@astrojs/sitemap": "^3.7.4",

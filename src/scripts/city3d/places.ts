@@ -20,7 +20,6 @@ import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
 import { PIER_SPAWN } from './waterfront';
 import { MARKET_SPAWN } from './nightmarket';
-import { STADIUM_SPAWN } from './stadium';
 import { TOWER_SPAWN } from './skydeck';
 import { COURT_SPAWN, MALL_SPAWN } from './mall';
 import { SITE_SPAWNS } from './crestsites';
@@ -83,8 +82,6 @@ export const PLACES: Place[] = [
   { id: 'arms', kind: 'spot', spot: 'arms', at: AVENUE_SPAWNS.arms },
   { id: 'pier', kind: 'spot', spot: 'pier', at: PIER_SPAWN },
   { id: 'nightmarket', kind: 'spot', spot: 'nightmarket', at: MARKET_SPAWN },
-  // Westlake Park's stadium: on its forecourt, facing the gate
-  { id: 'stadium', kind: 'spot', spot: 'stadium', at: STADIUM_SPAWN },
   // Uptown's Sector 7 Tower: on the plaza in front of its pavilion, facing it (the lift to the sky deck inside)
   { id: 'tower', kind: 'spot', spot: 'tower', at: TOWER_SPAWN },
   // Palm Court and Starlight Mall, north of downtown: under the court's arch facing up its promenade, in front of the mall's porch

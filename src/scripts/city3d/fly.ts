@@ -29,6 +29,8 @@ import { paintHex } from './mycar';
 import { FLY, type MyPlane, type PlaneId } from './myplane';
 import type { Box } from './solids';
 import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
+import { fovShift } from './settings';
+import { settings as storedSettings } from './settings-store';
 
 export interface FlyDeps {
   scene: THREE.Scene;
@@ -243,7 +245,8 @@ export function createFly(d: FlyDeps) {
       s.power = 0;
       camYaw = s.yaw;
       lookYaw = lookPitch = 0;
-      view = START_VIEW;
+      // (Settings > Camera > Vehicle view: where every flight starts)
+      view = storedSettings().carView;
       camReady = false;
       fov = camera.fov;
       hud.hidden = false;
@@ -381,12 +384,14 @@ export function createFly(d: FlyDeps) {
         camera.lookAt(at);
       }
       camReady = true;
+      // (Settings > Camera > Camera shake off: none)
+      if (!storedSettings().shake) shake = 0;
       if (shake > 0) {
         camera.position.x += (Math.random() - 0.5) * shake;
         camera.position.y += (Math.random() - 0.5) * shake;
         shake = Math.max(0, shake - dt * 1.2);
       }
-      const wantFov = (noseCam ? 70 : (chase.fov ?? 58)) + Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 12;
+      const wantFov = (noseCam ? 70 : (chase.fov ?? 58)) + fovShift(storedSettings()) + Math.min(1, Math.hypot(s.vx, s.vz) / T.top) * 12;
       fov += (wantFov - fov) * damp(4, dt);
       if (Math.abs(camera.fov - fov) > 0.05) {
         camera.fov = fov;

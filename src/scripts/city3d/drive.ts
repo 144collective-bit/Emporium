@@ -57,6 +57,8 @@ import { KART_FEEL, type KartId } from './mykart';
 import { CHASE, chaseDistance, nextView, START_VIEW, type ViewId } from './views';
 import type { Box } from './solids';
 import { LENS } from './lens';
+import { fovShift } from './settings';
+import { settings as storedSettings } from './settings-store';
 
 export interface DriveDeps {
   scene: THREE.Scene;
@@ -457,7 +459,8 @@ export function createDrive(d: DriveDeps) {
       camYaw = v.state.yaw;
       lookYaw = lookPitch = 0;
       roll = pitch = 0;
-      view = START_VIEW;
+      // (Settings > Camera > Vehicle view: where every drive starts)
+      view = storedSettings().carView;
       camReady = false;
       fov = camera.fov;
       place(v);
@@ -696,6 +699,8 @@ export function createDrive(d: DriveDeps) {
         at.set(s.x + Math.cos(s.yaw) * 1.6, y + 0.75, s.z - Math.sin(s.yaw) * 1.6);
       }
       camReady = true;
+      // (Settings > Camera > Camera shake off: none)
+      if (!storedSettings().shake) shake = 0;
       if (shake > 0) {
         camera.position.x += (Math.random() - 0.5) * shake;
         camera.position.y += (Math.random() - 0.5) * shake;
@@ -704,7 +709,7 @@ export function createDrive(d: DriveDeps) {
       camera.lookAt(at);
       // (the helmet's view tips with the lean)
       if (first && v.bike) camera.rotateZ(-roll * 0.6);
-      const wantFov = (chase ? (chase.fov ?? 58) : 68) + (d.reduced ? 0 : Math.min(1, Math.abs(s.speed) / T.top) * 10);
+      const wantFov = (chase ? (chase.fov ?? 58) : 68) + fovShift(storedSettings()) + (d.reduced ? 0 : Math.min(1, Math.abs(s.speed) / T.top) * 10);
       fov += (wantFov - fov) * damp(4, dt);
       // (the seat's view is close to the dash and the wheel: the near plane comes in for it)
       const close = first && v.car?.eye ? 0.08 : near0;

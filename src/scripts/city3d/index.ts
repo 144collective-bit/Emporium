@@ -6,7 +6,6 @@
  */
 import * as THREE from 'three';
 import { MapControls } from 'three/addons/controls/MapControls.js';
-import { texSourceLine } from './texsource';
 import { BAKING_TEXTURES, PICK, bootTexturesPainted, builtTexturesDone, consolidate, glName, loadBuiltTextures, loadImage, loadTex, setGroundLift, texSources, updateLights, updateWind } from './kit';
 import { SOUTH_GROUND_RECT, southLift } from './southground';
 import { CROWD_PACK, loadMocap } from './mocap-load';
@@ -46,7 +45,6 @@ import { STREETLIFE_PEOPLE } from './streetlife';
 import { GARDEN_TREES as UPTOWN_GARDEN_TREES, SITE_PEOPLE } from './uptownsites';
 import { DECK_Y as BOARDWALK_Y } from './waterfront';
 import { LAZY_DISTRICTS, createDistricts } from './districts';
-import { buildStadium } from './stadium3d';
 import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
@@ -68,7 +66,7 @@ import { LINK_PEOPLE, stationLiftDoors } from './malllink';
 import { COURT_INSIDE_PEOPLE } from './courtinside';
 import { STATIONS } from './metro';
 import { LIFT, TOWER_SPAWN } from './skydeck';
-import { STADIUM_LAMPS, STADIUM_SPAWN } from './stadium';
+import { STADIUM_LAMPS } from './stadiumroad';
 import { buildLandmarks, type Spot } from './landmarks';
 import { buildInfill } from './infill';
 import { buildNeighbourhoods } from './neighbourhoods';
@@ -119,6 +117,7 @@ import { MONO_STATIONS } from './monorail';
 import { CABLE_DOORS } from './cablecar';
 import { PLACES } from './places';
 import { placeName } from './places';
+import { hubHooks } from './hubhooks';
 import { buildKartPark } from './kartpark3d';
 import { KART_SPAWN } from './kartpark';
 import { AIR_SPAWN } from './airfield';
@@ -146,11 +145,11 @@ import { kartRecordsHtml } from './kart-records';
 import { count, destAt } from './tycoon';
 import { guideAt } from './guide';
 import { CARS, initFarCars } from './cars';
-import { CROWD_VIEW, figureDetail } from './character';
-import { repaint, type GameDeps } from './ui';
+import { CROWD_VIEW, figureDetail, headsReady, loadHeads } from './character';
+import type { Outfit } from './wardrobe';
+import type { GameDeps } from './ui';
 import type { Bench } from './bench';
 import type { Shots } from './shots';
-import { mb, memoryRows, sceneMemory, targetMemory } from './perf';
 import { antialias } from './targets';
 import { PACKED, UV, tileBatch } from './tilebatch';
 import { hazeHorizon } from './tileplan';
@@ -160,10 +159,12 @@ import { meshesOf, startSiteWorker } from './sitework';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
-import { FAR_PHONE, farForm, farLods, freedNear, primeAverages, updateLods } from './lod';
+import { FAR_PHONE, farForm, freedNear, primeAverages, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
 import { createQuality, type QualityStep } from './quality';
+import { flyScale, fpsCap, masterGain, pixelRatio } from './settings';
+import { actions, acted, boot, onSettings, settings } from './settings-store';
 import { GPU_KEY, RELOAD_KEY, pickTier, reloadOnRestore, type Device, type Lost, type Picked } from './gputier';
 
 // The south's rolling ground under everything drawn there (docs/south-plan.md Phase 1c): set as this module loads, so
@@ -229,9 +230,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     return null;
   }
   // The tier (gputier.ts): the screen, memory and cores as before, graphics built into the processor a step down, and
-  // a step down after the 3D graphics stopped here lately. `data-tier` on the page overrides it.
+  // a step down after the 3D graphics stopped here lately; or Settings > Graphics > Quality (docs/settings-plan.md:
+  // a change takes a reload, which the tab offers). `data-tier` on the page overrides both.
   const gpu = gpuName(renderer);
-  const picked: Picked = root.dataset.tier ? { tier: root.dataset.tier as Tier, why: 'set by the page' } : pickTier(device(gpu));
+  const quality0 = settings().quality;
+  boot.quality = quality0;
+  const picked: Picked = root.dataset.tier ? { tier: root.dataset.tier as Tier, why: 'set by the page' } : pickTier(device(gpu), quality0 === 'auto' ? undefined : quality0);
   const tier = picked.tier;
   const Q = TIERS[tier];
   // Phones draw the far city in fewer pieces: the far forms, aircraft, small signs (lod.ts, docs/phone-far-plan.md)
@@ -243,7 +247,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   loader.hidden = false;
   progress(0.05);
 
-  renderer.setPixelRatio(Math.min(devicePixelRatio, Q.dpr));
+  // (the screen's pixels up to the tier's, at Settings > Graphics > Resolution's share)
+  renderer.setPixelRatio(pixelRatio(devicePixelRatio, Q.dpr, settings(), false));
   renderer.toneMapping = THREE.NeutralToneMapping;
   renderer.toneMappingExposure = 1;
   renderer.shadowMap.enabled = Q.shadows > 0;
@@ -358,8 +363,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The Night Market on its deck in front of Harbor Stores, a place
   const nightMarket = buildNightMarket(scene, crowd, { tick, low: tier === 'low' });
   spots.push(nightMarket.spot);
-  // Westlake Park's stadium (step 2): a place, built at the boot (the rest of the park is loaded as you approach)
-  spots.push(buildStadium(scene, crowd, { low: tier === 'low', tick }).spot);
   // Uptown's spire as a place, Sector 7 Tower (finance plan Phase 6): its spot only (the tower is Uptown's, drawn as a site)
   spots.push(buildTower(scene).spot);
   // ...and Palm Court and Starlight Mall north of downtown: their spots (they're drawn in their own chunk)
@@ -506,7 +509,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...the vendors at their carts and their customers
   for (const p of STREETLIFE_PEOPLE) crowd.push({ x: p.x, z: p.z, y: SLAB, ry: p.ry, act: p.act });
   for (const [x, z] of UPTOWN_GARDEN_TREES) addTree(x, z, 0.8, false);
-  // ...and the stadium's, north of the highway (stadium.ts)
+  // ...and Stadium Road's, north of the highway (stadiumroad.ts)
   for (const [x, z, ry, y] of STADIUM_LAMPS) addLamp(x, z, ry, y);
   // ...and Palm Court's and the mall's (mall.ts; the outskirts' trees keep off their land already)
   for (const [x, z, ry, y] of [...MALL_LAMPS, ...NORTH_LAMPS]) addLamp(x, z, ry, y);
@@ -712,14 +715,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   const pins = new Map<string, HTMLElement>();
   root.querySelectorAll<HTMLElement>('[data-pin]').forEach((el) => pins.set(el.dataset.pin!, el));
   // The pins are off by default (the owner's call, 2026-11: places are found on the world map and the hub's Map
-  // tab); Settings > Labels turns them on, remembered in this browser (a screen preference, not in the backup)
-  const LABELS_KEY = 'degen-city-labels-v1';
-  let pinsOn = false;
-  try {
-    pinsOn = localStorage.getItem(LABELS_KEY) === 'on';
-  } catch {
-    /* no storage: off */
-  }
+  // tab); Settings > Game > Labels turns them on (the settings record, settings-store.ts)
+  let pinsOn = settings().labels;
   root.classList.toggle('has-pins', pinsOn);
   const raycaster = new THREE.Raycaster();
   // (and the shapes drawn nowhere that stand for a place drawn as a site: Sector 7 Tower)
@@ -879,12 +876,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-market-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(MARKET_SPAWN);
-      });
-    // The stadium's panel: Walk in starts walk mode on its forecourt, facing the gate
-    if (id === 'stadium')
-      panelBody.querySelector('[data-stadium-walkin]')?.addEventListener('click', () => {
-        close();
-        startWalking(STADIUM_SPAWN);
       });
     // Sector 7 Tower's panel: Walk in starts walk mode on the plaza in front of its pavilion, the lift inside
     if (id === 'tower')
@@ -1441,8 +1432,6 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     },
     sfx: (kind, gain) => sound.sfx(kind, gain),
     guideGo: (g) => ('open' in g.go ? open(g.go.open) : startWalking(g.go.walk)),
-    openSpot: (id) => open(id),
-    mayCarry: (id) => walk.combat.canTake(id),
   });
   // A chunk that fails to fetch says so here (lazy.ts)
   setLazyToast((text, ms) => tycoon?.toast(text, ms));
@@ -1459,15 +1448,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       if (walking) canvas.focus({ preventScroll: true });
       dirty = true;
     };
-    // The Bag tab's grid: what he carries, read-only (inventory-ui.ts's chunk, fetched the first time the tab shows)
+    // The Bag tab: what he carries, a row each, Use on a snack or a boost (inventory-ui.ts's chunk, fetched the first time
+    // the tab shows)
     const bagGrid = root.querySelector<HTMLElement>('[data-hub-bag-grid]');
     const bagMod = lazy(() => import('./inventory-ui'), 'your bag');
-    const paintBag = () => {
-      if (!bagGrid) return;
+    let bag: { paint(): void } | null = null;
+    const paintBag = () =>
+      bagGrid &&
       void bagMod().then((m) => {
-        if (hub.tab === 'bag') repaint(bagGrid, m.bagHtml(game.save(), { may: (id) => walk.combat.canTake(id) }));
+        bag ??= m.hubBag(bagGrid, { save: () => game.save(), may: (id) => walk.combat.canTake(id), walking: () => walking, use: (id) => walk.useItem(id), open });
+        if (hub.tab === 'bag') bag.paint();
       });
-    };
     hub.hooks.tab = (id) => {
       root.classList.toggle('is-stall', id === 'business');
       if (id === 'business') tycoon!.paint();
@@ -1477,8 +1468,16 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   }
 
   // The Profile panel (wardrobe, finish, rank) works offline; multiplayer only when the site has a game server
+  let wantLook: Outfit | null = null;
   const profileUI = createProfileUI(root, {
-    setLook: (o) => walk.setLook(o),
+    // (a character's head, docs/characters-plan.md: its chunk first, so he doesn't come up as Degen and change; Degen if
+    // it won't load)
+    setLook: (o) => {
+      wantLook = o;
+      if (headsReady(o)) return walk.setLook(o);
+      const then = () => void (wantLook === o && walk.setLook(o));
+      loadHeads().then(then, then);
+    },
     onLifetime: (fn) => walk.combat.onLifetime(fn),
     openFitting: () => open('shop', true),
     // (the character screen comes in its own chunk the first time it's opened: lazy())
@@ -1595,7 +1594,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   walkBtn.addEventListener('click', () => startWalking(new URLSearchParams(location.search).has('spawn') ? undefined : HOME_SPAWN));
   walkBtn.hidden = false;
   // The mode header's City button: back to the city view from walking
-  const head = createCityHead(root);
+  // (its words are screen readers' now: what they told everyone else comes as a toast, docs/header-plan.md)
+  const head = createCityHead(root, { toast: (text, ms) => tycoon && game.toast(text, ms) });
   head.city.addEventListener('click', () => {
     if (walking) stopWalking();
   });
@@ -1681,7 +1681,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       return false;
     }
     camera.getWorldDirection(flyLook);
-    flyVel = easeVel(flyVel, wish(flyKeys, [flyLook.x, flyLook.y, flyLook.z], camera.position.y), dt, reduced);
+    // (Settings > Camera > Fly speed scales it)
+    const [wx, wy, wz] = wish(flyKeys, [flyLook.x, flyLook.y, flyLook.z], camera.position.y);
+    const k = flyScale(settings());
+    flyVel = easeVel(flyVel, [wx * k, wy * k, wz * k], dt, reduced);
     if (!flyVel.some((v) => v)) return false;
     const p = camera.position;
     const from: V3 = [p.x, p.y, p.z];
@@ -1718,7 +1721,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     const p = camera.position;
     flyLook.subVectors(controls.target, p);
     const d = flyLook.length() || 1;
-    const [lx, ly, lz] = turn([flyLook.x / d, flyLook.y / d, flyLook.z / d], e.movementX, e.movementY);
+    // (Settings > Camera's look speed and invert, as on foot)
+    const look = settings();
+    const [lx, ly, lz] = turn([flyLook.x / d, flyLook.y / d, flyLook.z / d], e.movementX * look.sens, e.movementY * look.sens * (look.invert ? -1 : 1));
     controls.target.set(p.x + lx * d, p.y + ly * d, p.z + lz * d);
     keepPivot();
     camera.lookAt(controls.target);
@@ -1797,6 +1802,32 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         .catch(() => game.toast('No taxis · try again')),
     riding: () => walk.riding,
   });
+  // The hub's Map tab (docs/header-plan.md, hubtabs-ui.ts): the world map's own actions, by a place's spot
+  {
+    const placeOf = (spot: string) => PLACES.find((p) => p.spot === spot);
+    const m = travel.deps;
+    hubHooks.map = {
+      state: () => m.state(),
+      visited: () => m.visited(),
+      here: () => (walking ? walk.position : controls.target),
+      go(spot, act) {
+        const p = placeOf(spot);
+        if (!p) return;
+        if (act === 'view') m.openSpot(spot);
+        else if (act === 'walk') m.walkHere(p);
+        else if (act === 'travel') m.travel(p);
+        else if (act === 'taxi') m.taxi(p);
+        else this.pin(spot);
+      },
+      pin(spot) {
+        const p = placeOf(spot);
+        if (!p) return;
+        const name = placeName(root, p).name;
+        m.setWaypoint({ x: p.at.x, z: p.at.z }, name);
+        game.toast(`Waypoint · ${name}`);
+      },
+    };
+  }
   // The taxis (taxi.ts): loaded the first time one's called (the world map's Taxi here)
   let taxis: ReturnType<typeof createTaxis> | null = null;
   const loadTaxis = lazy(
@@ -1856,7 +1887,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     'the metro'
   );
 
-  /* ---------- Controls: time, weather, sound, view ---------- */
+  /* ---------- Controls: time, weather, sound (Settings) ---------- */
   const sound = createSound();
   lifeSfx = (k, g) => sound.sfx(k, g);
   // The sound by district (ambience.ts): fetched after the boot (docs/south-plan.md 6a; nothing's heard till Sound is
@@ -1865,50 +1896,36 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   void import('./ambience').then((m) => (ambienceAt = m.ambienceAt)).catch(() => {});
   let amb: Ambience | null = null;
   let ambT = 0;
-  const group = (name: string, apply: (v: string) => void) => {
-    const btns = root.querySelectorAll<HTMLButtonElement>(`[data-${name}]`);
-    btns.forEach((b) =>
-      b.addEventListener('click', () => {
-        btns.forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
-        apply(b.getAttribute(`data-${name}`)!);
-        dirty = true;
-      })
-    );
-  };
-  group('time', (v) => sky.setTime(v as TimeMode));
-  group('weather', (v) => sky.setWeather(v as WeatherMode));
-  const soundBtn = root.querySelector<HTMLButtonElement>('[data-sound]')!;
-  soundBtn.addEventListener('click', async () => {
-    const on = await sound.toggle();
-    soundBtn.setAttribute('aria-pressed', String(on));
-    soundBtn.querySelector('[data-sound-label]')!.textContent = on ? 'Sound on' : 'Sound off';
-  });
-  const labelsBtn = root.querySelector<HTMLButtonElement>('[data-labels]')!;
+  // Settings (docs/settings-plan.md, the record in settings-store.ts): Game's time, sky and labels, Sound's volume
+  // (Graphics' resolution and bloom are the step-down's, below; shadows and the frame rate the frame's; Quality waits
+  // for a reload)
+  sky.setTime(settings().time);
+  sky.setWeather(settings().sky);
   const showLabels = (on: boolean) => {
     pinsOn = on;
     root.classList.toggle('has-pins', on);
-    labelsBtn.setAttribute('aria-pressed', String(on));
-    labelsBtn.querySelector('[data-labels-label]')!.textContent = on ? 'Labels on' : 'Labels off';
     // (hidden, the labels measure nothing: measured again once they show)
     if (on) measurePins();
     dirty = true;
   };
-  labelsBtn.setAttribute('aria-pressed', String(pinsOn));
-  labelsBtn.querySelector('[data-labels-label]')!.textContent = pinsOn ? 'Labels on' : 'Labels off';
-  labelsBtn.addEventListener('click', () => {
-    showLabels(!pinsOn);
-    try {
-      localStorage.setItem(LABELS_KEY, pinsOn ? 'on' : 'off');
-    } catch {
-      /* not remembered */
-    }
+  sound.setVolume(masterGain(settings()));
+  onSettings((s, keys) => {
+    if (keys.includes('time')) sky.setTime(s.time);
+    if (keys.includes('sky')) sky.setWeather(s.sky);
+    if (keys.includes('labels')) showLabels(s.labels);
+    if (keys.includes('volume')) sound.setVolume(masterGain(s));
+    dirty = true;
   });
-  root.querySelector('[data-reset]')!.addEventListener('click', () => {
-    stopWalking(false);
-    close();
-    const hv = home();
-    flyTo(hv.pos, hv.target, 1.4);
-  });
+  // Sound: never on by itself (it waits for the visitor), so it's not kept; turned on before the city was up, it's on now
+  actions.sound = {
+    on: () => sound.on,
+    set: async (on: boolean) => {
+      if (sound.on !== on) await sound.toggle();
+      acted();
+    },
+  };
+  if (actions.soundWanted && !sound.on) void sound.toggle().then(acted);
+  actions.soundWanted = false;
 
   /* ---------- Loop ---------- */
   const timer = new THREE.Timer();
@@ -1986,7 +2003,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // (the benchmark is a chunk of its own, loaded only when asked for; it starts once every site is built)
   let bench: Bench | null = null;
   if (query.has('bench'))
-    void import('./bench').then(({ createBench }) => {
+    void Promise.all([import('./bench'), import('./perf')]).then(([{ createBench }, { targetMemory }]) => {
       bench = createBench({ host, scene, tier, pixelRatio: () => renderer.getPixelRatio(), targets: () => targetMemory(post.targets(), scene), home, conditions: benchSky, boot: bootTimes, textures: texSources, extra: [] }, query.get('bench') === 'night');
     });
   // ?shots: the blending plan's review shots (shots.ts, docs/blend-plan.md), a chunk of its own too
@@ -2004,9 +2021,14 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       );
     });
   const statsEl = query.has('fps') || query.has('bench') ? document.createElement('pre') : null;
+  // (the readout's text and the memory measures are chunks of their own too, loaded only with it: readout.ts, perf.ts)
+  let perf: typeof import('./perf') | null = null;
+  let readout: typeof import('./readout') | null = null;
+  if (statsEl) {
+    void import('./perf').then((m) => (perf = m));
+    void import('./readout').then((m) => (readout = m));
+  }
   const stat = { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, last: 0, since: performance.now(), memAt: 0, mem: '' };
-  /** (the camera's look, for the readout) */
-  const statLook = new THREE.Vector3();
   function bootTimes() {
     const r = (a: number, b: number) => Math.round(b - a);
     // (`build` includes merging per tile, `tiles`, which includes building the sites round the home view, `sites`;
@@ -2049,7 +2071,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
           Q.far
         )
       );
-    (window as unknown as { __mem?: () => unknown }).__mem = () => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() });
+    (window as unknown as { __mem?: () => unknown }).__mem = () => perf && (({ sceneMemory, targetMemory, memoryRows }) => ({ total: sceneMemory(scene), targets: targetMemory(post.targets(), scene), freedNear: freedNear(), rows: memoryRows(scene), works: works.stats(), tier, tiles: tiled.bytesBy(), clamped: PACKED.clamped, gl: { ...renderer.info.memory }, textureRows: texRows?.(scene) ?? null, textureSources: texSources() }))(perf);
     renderer.info.autoReset = false;
   }
   // Nothing to draw while the city is scrolled out of view
@@ -2140,7 +2162,10 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (bench && !bench.active && !bench.done && !walking && !startUp() && !works.stats().waiting && !districts.pending()) bench.begin(t);
     const busy = !!flight || walking || t - lastInput < 1 || !!bench?.active;
     // (a phone resting at 30fps: the frames in between draw nothing, so they build what's waiting)
-    if (idleFps && !busy && t - lastT < 1 / idleFps - 0.004) return spare(6);
+    // (and Settings > Graphics > Frame rate: 60 or 30 caps every frame)
+    const cap = fpsCap(settings());
+    const rate = Math.min(cap || Infinity, idleFps && !busy ? idleFps : Infinity);
+    if (rate < Infinity && t - lastT < 1 / rate - 0.004) return spare(6);
     const dt = Math.min(t - lastT, 0.1);
     lastT = t;
 
@@ -2213,7 +2238,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Shadows only while walking or driving, never in the City view or up in an aircraft (shadows.ts, the owner's call),
     // their box ahead of where the camera looks
     camera.getWorldDirection(look);
-    sky.setShadows(walking && !walk.airborne && !lowered.shadows);
+    // (Settings > Graphics > Shadows off holds them off; on, the step-down can still lower them)
+    sky.setShadows(walking && !walk.airborne && !lowered.shadows && settings().shadows);
     // (in Degen's house, home.ts: no rain indoors)
     sky.setIndoors(walking && inHouse(walk.position.x, walk.position.z, walk.position.y));
     // (waking at home: the street's readiness asked every frame too, so the curtains open even standing still)
@@ -2382,38 +2408,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       stat.last = now;
       stat.frames++;
       if (now - stat.since >= 1000) {
-        const n = Math.max(1, stat.frames);
         const lost = Object.entries(lowered).filter(([, v]) => v).map(([k]) => k);
-        // Memory every few seconds (it walks the whole scene)
-        if (now - stat.memAt > 5000) {
-          const m = sceneMemory(scene);
-          stat.mem = `geometry ${mb(m.geometry)} · textures ${mb(m.textures)} · targets ${mb(targetMemory(post.targets(), scene))}${aa.msaa ? ` (MSAA ${aa.msaa}x)` : aa.smaa ? ' (SMAA)' : ''}`;
-          stat.memAt = now;
-        }
-        const b = bootTimes();
-        statsEl.textContent = [
-          `${Math.round((stat.frames * 1000) / (now - stat.since))} fps · slowest ${Math.round(stat.worst)} ms`,
-          `${Math.round(stat.draws / n)} draws · ${(stat.tris / n / 1e6).toFixed(2)}M tris`,
-          `of which shadows ${Math.round(stat.shadowDraws / n)} draws · ${(stat.shadowTris / n / 1e6).toFixed(2)}M tris`,
-          stat.mem,
-          `tiles ${tiled.drawn()} of ${tiled.pieces()} pieces drawn · ${tiled.nearTiles()} near · ${farLods()} far forms${((f) => (f.places ? ` (${f.places} near forms freed, ${mb(f.bytes)})` : ''))(freedNear())}`,
-          `boot ${(b.total / 1000).toFixed(1)} s · build ${(b.build / 1000).toFixed(1)} (work ${(b.work / 1000).toFixed(2)}, tiles ${(b.tiles / 1000).toFixed(2)}) · shaders ${(b.shaders / 1000).toFixed(1)}`,
-          (({ built, waiting, atBoot, bootMs, laterMs, slowest, offMain }) => `sites ${built} built: ${atBoot} at boot (${Math.round(bootMs)} ms), the rest after (${Math.round(laterMs)} ms here, ${offMain} of them off the main thread; slowest ${Math.round(slowest.ms)} ms: ${slowest.id}) · ${waiting} waiting · districts loaded: ${districts.loaded().join(', ') || 'none'}`)(works.stats()),
-          (({ released, held, budget, rebuilt, gone, goneBytes, returned }) => `near forms ${mb(held)} held of ${mb(budget)} · ${released} tiles let go · ${rebuilt} built again · past the haze ${gone} gone (${mb(goneBytes)} freed in all, ${returned} back)`)(works.stats()),
-          `${tier}${picked.why ? ` (${picked.why})` : ''} · px ${renderer.getPixelRatio().toFixed(2)}${lost.length ? ` · lowered: ${lost.join(', ')}` : ''} · ${gpu || 'graphics unnamed'}`,
-          texSourceLine(texSources()),
-          // Where Degen stands while walking (for placing things: ?spawn=x,z puts him back there)
-          ...(walking ? [`at ${walk.position.x.toFixed(1)}, ${walk.position.z.toFixed(1)}${walk.position.y > 1 ? ` · up ${walk.position.y.toFixed(1)}` : walk.position.y < -0.5 ? ` · down ${(-walk.position.y).toFixed(1)}` : ''} · motion capture ${walk.mocap}`] : []),
-          // (and how high he and the camera are, the camera's near plane and which way it looks: a black screen on foot
-          // reads here as under the ground, or the near plane, or the view gone wrong)
-          ...(walking
-            ? [
-                `height ${walk.position.y.toFixed(2)} · camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(1)} · near ${camera.near.toFixed(2)} · looks ${camera.getWorldDirection(statLook).y.toFixed(2)} · fog ${(scene.fog as THREE.FogExp2 | null)?.density?.toFixed(4) ?? '-'}`,
-              ]
-            : []),
-          // and where City view's free camera is (freecam.ts)
-          ...(!walking ? [`camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)} · near ${camera.near.toFixed(2)}`] : []),
-        ].join('\n');
+        if (readout) statsEl.textContent = readout.readout({ stat, scene, camera, renderer, targets: post.targets(), aa, tiled, works, districts, boot: bootTimes(), tier, why: picked.why, lost, gpu, walking, walk }, now);
         Object.assign(stat, { frames: 0, draws: 0, tris: 0, shadowDraws: 0, shadowTris: 0, worst: 0, since: now });
       }
     }
@@ -2422,8 +2418,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     // Quality is held where it is while the benchmark runs
     if (t > 4 && !bench?.active) {
       windowFrames++;
-      // "Slow" is relative to the rate we're aiming for (30fps on phones when idle)
-      const budget = idleFps && !busy ? 1 / idleFps : 1 / 60;
+      // "Slow" is relative to the rate we're aiming for (30fps on phones when idle, or the cap)
+      const budget = 1 / Math.min(60, rate);
       if (dt > budget * 1.7) windowSlow++;
       if (windowFrames === 90) {
         if (windowSlow > 45 && canDegrade()) {
@@ -2444,20 +2440,26 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Too slow: fewer pixels, then no shadows, then no bloom; fast again for a while, they come back (quality.ts: the
   // order, each step back once). The ink outlines always stay. Shadows go by their intensity (sky.setShadows(), above),
   // never the shadow map or castShadow, which recompiled every material in one frame (the stability plan's 6.1)
-  const fullPixels = renderer.getPixelRatio();
   const quality = createQuality();
   const lowered = quality.lowered;
   const canDegrade = () => quality.canDegrade();
   let fastWindows = 0;
   function apply(step: QualityStep | null) {
     if (step === 'pixels') {
-      renderer.setPixelRatio(lowered.pixels ? Math.max(1, fullPixels - 0.5) : fullPixels);
+      renderer.setPixelRatio(pixelRatio(devicePixelRatio, Q.dpr, settings(), lowered.pixels));
       resize();
-    } else if (step === 'bloom') post.bloom.enabled = !lowered.bloom;
+    } else if (step === 'bloom') post.bloom.enabled = !lowered.bloom && settings().bloom;
     // ('shadows': the frame asks sky.setShadows() with `lowered.shadows`, and they ease out or in)
   }
   const degrade = () => apply(quality.degrade());
   const restore = () => apply(quality.restore());
+  // (Settings > Graphics > Bloom off from the start; Resolution and Bloom changed later, heard once the step-down is
+  // here: the title screen's Settings can change them while the city is still being built)
+  apply('bloom');
+  onSettings((_, keys) => {
+    if (keys.includes('res')) apply('pixels');
+    if (keys.includes('bloom')) apply('bloom');
+  });
 
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {

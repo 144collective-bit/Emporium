@@ -10,7 +10,7 @@
  * it (`INFLUENCES`): worn grass and bare dirt by The Trenches, gravel and dry
  * grass by the Docks and the airport, dry grass by Sunridge's desert yards,
  * Crestmont and along the highway's verges, lawn round the park, the town,
- * Uptown, the mall, the stadium and the kart park, lusher grass down by the
+ * Uptown, the mall, Stadium Road and the kart park, lusher grass down by the
  * river, and a worn verge along every street. Each fades out over its reach
  * with a wobbled distance (no edge anywhere), most of the way at its
  * `strength`, so the open land between districts carries a little of both.
@@ -32,7 +32,7 @@ import { STRIP_RECT } from './strip';
 import { SOUTHFIELD_RECT, YARDS_RECT } from './southfield';
 import { CAMP_X1 as LOT9_CAMP_X1, FENCE as LOT9_FENCE_BOX, FIELD as LOT9_FIELD, PARK as LOT9_PARK, fromLot9Fence } from './lot9';
 import { BROOK, BROOK_HALF, ESTATE_LAND, VILLAGE_LAND } from './south';
-import { STADIUM_RECTS } from './stadium';
+import { ROAD_RECTS as STADIUM_ROAD_RECTS } from './stadiumroad';
 import { KART_RECTS } from './kartfacility';
 import { TILE, tileKey, type Rect } from './tiles';
 import { inTrenches } from './trenches';
@@ -110,7 +110,7 @@ export const INFLUENCES: Influence[] = [
   // Every street's verge, worn a little (the highway's, drier and wider)
   ...PLAN.streets.filter((s) => !raised(s)).map((s) => verge(`street:${s.id}`, s.loop ? [...s.pts, s.pts[0]] : s.pts, s.half, 'worn', 4, 0.35)),
   { id: 'highway', cover: 'dryGrass', reach: 9, strength: 0.6, box: SKY, dist: (x, z) => Math.max(0, fromHighway(x, z) - HIGHWAY_HALF) },
-  // The town, the park, Uptown, the mall, the Neon Mile, the stadium and the kart park: lawn round them
+  // The town, the park, Uptown, the mall, the Neon Mile, Stadium Road and the kart park: lawn round them
   around('town', TOWN_BOX, 'lawn', 12, 0.45),
   around('westlake', WESTLAKE_RECT, 'lawn', 16, 0.6),
   around('uptown', UPTOWN_RECT, 'lawn', 10, 0.45),
@@ -119,7 +119,7 @@ export const INFLUENCES: Influence[] = [
   // Southfield's park and gardens a lawn round them, its yards worn dry (docs/blend-plan.md Phase 5a)
   around('southfield', SOUTHFIELD_RECT, 'lawn', 8, 0.35),
   around('southyards', YARDS_RECT, 'dryGrass', 12, 0.45),
-  ...STADIUM_RECTS.map((r, i) => around(`stadium-${i}`, r, 'lawn', 12, 0.45)),
+  ...STADIUM_ROAD_RECTS.map((r, i) => around(`stadium-${i}`, r, 'lawn', 12, 0.45)),
   ...KART_RECTS.map((r, i) => around(`karts-${i}`, r, 'lawn', 14, 0.5)),
   // Sunridge's desert yards and Crestmont's dry hills: dry grass round them
   around('sunridge', SUNRIDGE_RECT, 'dryGrass', 16, 0.55),

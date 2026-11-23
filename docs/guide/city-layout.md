@@ -85,8 +85,12 @@ keep it up to date when what it describes changes.
     boxes in the shared paint: keep new infill going through them. Phones
     (`LOW` in `infill.ts`) leave out the finest details.
   - **Modelled fronts** (the owner's call, `docs/buildings-plan.md`; Phase 1,
-    the pilot, is built on the Emporium's block only, `PILOT` in
-    `infill.ts`): the painted windows get real frames, sills and lintels
+    the pilot, on the Emporium's block, Phase 2 every infill building
+    downtown, `fineOf()` in `infill.ts`, and their side walls where they
+    face a street or a lane, `sideFronts()`, `sideOpen()` in `facade.ts`;
+    Phase 3 the kits' buildings in The Trenches' rows and tenements, built
+    in their sites, their sides on desktops only):
+    the painted windows get real frames, sills and lintels
     near, by their window type (windows.ts: hoods on the round-headed
     ones, shutters on stucco, a post between a pair, the casements'
     concrete bands, steel on the lofts; a window box or an air conditioner

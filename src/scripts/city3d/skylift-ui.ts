@@ -5,7 +5,7 @@
  * (`[data-metro]`, the arcade kit) as the lift's, listing its other floors; pick one and you ride there (index.ts
  * `rideTo()`: a fade, out at that floor).
  */
-import { SKY_LIFTS, floorName, liftArrival, liftFloorOf } from './southsky';
+import { SKY_LIFTS, liftArrival, liftFloorName, liftFloorOf } from './southsky';
 import { STATION_LIFT, liftFloorAt } from './malllink';
 
 export interface SkyLiftDeps {
@@ -53,7 +53,7 @@ export function createSkyLiftUI(root: HTMLElement, d: SkyLiftDeps) {
     if (!l || here === null) return;
     show(
       l.name,
-      [0, ...l.floors].filter((f) => f !== here).map((f) => ({ label: floorName(f), to: liftArrival(l, f), arrived: `${l.name} · ${floorName(f)}` }))
+      [0, ...l.floors].filter((f) => f !== here).map((f) => ({ label: liftFloorName(l, f), to: liftArrival(l, f), arrived: `${l.name} · ${liftFloorName(l, f)}` }))
     );
   }
   /** Starlight Mall station's: the street, the mall's floor, the metro's (walk.ts `placeAt()`'s height is over the slab) */

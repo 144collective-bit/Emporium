@@ -48,12 +48,27 @@ export const WALL_GATE: Rect = (() => {
   return best;
 })();
 
-/** The fence's height (the chain-link and the wire on top), and how thick it is for walking into */
-export const FENCE_H = 2.6;
-export const FENCE_T = 0.1;
+/**
+ * The base's wall on the fence's line (docs/military-plan.md Phase 6, the owner's call: the chain-link fence became a
+ * large concrete wall): its height (over a truck: the base hidden from the street, its tall buildings over it) and how
+ * thick its precast panels are. The line keeps its fence's names (`FENCE`, `FENCE_RUNS`): only what stands on it changed
+ */
+export const FENCE_H = 4.5;
+export const FENCE_T = 0.3;
+/** The wall's precast panels' width (a joint between each), and its capping's overhang either side */
+export const WALL_PANEL = 3;
+export const WALL_CAP = 0.08;
+/** The piers each side of a gate's opening (square, a little taller than the wall) */
+export const PIER = 1.0;
+export const PIER_H = 5.0;
+/** A gate's two piers' centres: on its line, just outside its opening */
+export const piersOf = (g: Gate): Pt[] => [
+  [g.x - g.half - PIER / 2, g.z],
+  [g.x + g.half + PIER / 2, g.z],
+];
 
 /**
- * The fence, a closed line, clockwise from the south-west corner: the south side 44 north of the stadium, the east
+ * The fence, a closed line, clockwise from the south-west corner: the south side 44 north of where the stadium stood (removed 2026-11-22), the east
  * side west of Crestmont's hills (which start at x 285), the north side with the wall gate's yard running up to the
  * wall, the west side clear of the wall's floodlights
  */
@@ -128,7 +143,8 @@ export const FENCE_RUNS: [Pt, Pt][] = (() => {
       continue;
     }
     const at = (x: number): Pt => [x, a[1] + ((b[1] - a[1]) * (x - a[0])) / (b[0] - a[0])];
-    out.push([a, at(g.x - g.half)], [at(g.x + g.half), b]);
+    // (the wall meets each pier: the run stops at its outer face)
+    out.push([a, at(g.x - g.half - PIER)], [at(g.x + g.half + PIER), b]);
   }
   return out;
 })();
@@ -163,13 +179,53 @@ export const barrierOf = (g: Gate): [Pt, Pt] => [
 export const SIGN_WALL: Rect = [MAIN_GATE.x + MAIN_GATE.half + 2, MAIN_GATE.z + 4.6, MAIN_GATE.x + MAIN_GATE.half + 12, MAIN_GATE.z + 5.1];
 export const SIGN_WALL_H = 1.5;
 
-/** The visitors' car park outside the main gate, west of the road (clear of the stadium's car park's loop, -251) */
+/** The visitors' car park outside the main gate, west of the road (clear of where the stadium's car park's loop was, -251) */
 export const VISITORS: Rect = [-90, -298, -20, -262];
 /** Its drive from the north avenue's loop (x0, z0, x1, z1: across to the road's verge) */
 export const VISITORS_DRIVE: Rect = [-20, -284, -6.2, -277];
 /** The visitors' centre, along the car park's north edge (a place, coming soon), its roof a viewing terrace */
 export const VISITOR_CENTRE: Rect = [-62, -298, -32, -286];
-export const VISITOR_CENTRE_H = 4.4;
+/** Its height: its roof's terrace over the wall's top (Phase 6, the owner's call: raised so you see over the wall) */
+export const VISITOR_CENTRE_H = 6.2;
+/**
+ * The way up to its terrace (Phase 6, the owner's call: a stair you climb): a straight flight up its west face, from
+ * the car park at its south foot to a landing at its north-west corner, level with the roof, and the roof inside its
+ * rail. Each a rect (x0, z0, x1, z1) you stand on; the flight's floor rises from its foot (z1) to its head (z0)
+ */
+export const VISITOR_STAIR = { rect: [VISITOR_CENTRE[0] - 1.7, VISITOR_CENTRE[1] + 2.5, VISITOR_CENTRE[0] - 0.3, VISITOR_CENTRE[3] - 1.1] as Rect, steps: 14 };
+export const VISITOR_LANDING: Rect = [VISITOR_STAIR.rect[0], VISITOR_CENTRE[1] + 0.3, VISITOR_CENTRE[0] + 0.5, VISITOR_STAIR.rect[1]];
+/** The terrace you walk on: the roof inside its rail */
+export const VISITOR_TERRACE: Rect = [VISITOR_CENTRE[0] + 0.3, VISITOR_CENTRE[1] + 0.3, VISITOR_CENTRE[2] - 0.3, VISITOR_CENTRE[3] - 0.3];
+/** How far from a floor someone still stands on it (a step up or down), and how high up they're on the way up */
+const CLIMB_REACH = 0.8;
+const CLIMB_UP = 0.6;
+const onR = (r: Rect, x: number, z: number) => x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3];
+/** The flight's floor at z (over the street: 0.035 at its foot, the roof's level at its head) */
+export const stairY = (z: number) => {
+  const [, z0, , z1] = VISITOR_STAIR.rect;
+  return 0.035 + (VISITOR_CENTRE_H - 0.035) * Math.max(0, Math.min(1, (z1 - z) / (z1 - z0)));
+};
+/** The floors at a point someone `y` high could stand on (within a step of theirs) */
+function standOn(x: number, z: number, y: number): number[] {
+  const out: number[] = [];
+  if (onR(VISITOR_STAIR.rect, x, z)) out.push(stairY(z));
+  if (onR(VISITOR_LANDING, x, z) || onR(VISITOR_TERRACE, x, z)) out.push(VISITOR_CENTRE_H);
+  return out.filter((f) => Math.abs(f - y) <= CLIMB_REACH);
+}
+/** The floor under a point for someone `yNow` high on the way up or up there (groundheight.ts's `visitors` layer), or null */
+export function visitorsFloorAt(x: number, z: number, yNow: number): number | null {
+  if (x < VISITOR_STAIR.rect[0] - 1 || x > VISITOR_CENTRE[2] || z < VISITOR_CENTRE[1] || z > VISITOR_STAIR.rect[3] + 1) return null;
+  const ys = standOn(x, z, yNow);
+  return ys.length ? Math.max(...ys) : null;
+}
+/** Is someone `y` high on the stair or the terrace, off the ground (walk.ts then asks only `visitorsWall()`) */
+export const visitorsUp = (x: number, z: number, y: number) => y > CLIMB_UP && standOn(x, z, y).length > 0;
+/** Up there, where someone (radius `m`, feet at `y`) can't step: off the flight, the landing and the terrace (their rails) */
+export function visitorsWall(x: number, z: number, y: number, m = 0): boolean {
+  for (const [dx, dz] of [[0, 0], [m, 0], [-m, 0], [0, m], [0, -m]]) if (!standOn(x + dx, z + dz, y).length) return true;
+  return false;
+}
+
 /** Where you stand in front of the visitors' centre (its door faces the car park, south) */
 export const VISITOR_SPAWN = { x: -47, z: -283, yaw: 0 };
 
@@ -195,17 +251,21 @@ export const KEPT: { id: string; phase: 2 | 3; rect: Rect }[] = [
   { id: 'range', phase: 3, rect: [-716, -420, -600, -340] },
 ];
 
-/** What's solid from the boot: the fence, its shut gates, the guardhouses, the barriers' posts, the visitors' centre */
+/** What's solid from the boot: the wall, its shut gates and their piers, the guardhouses, the barriers' posts, the visitors' centre */
 export const AIRBASE_SOLIDS: Box[] = [
   ...FENCE_RUNS.flatMap((r) => runBoxes(r)),
-  // (each gate shut: a sliding gate of the same chain-link across its opening)
+  // (each gate shut: a steel sliding gate across its opening, between its piers)
   ...GATES.flatMap((g) => runBoxes([[g.x - g.half, g.z], [g.x + g.half, g.z]])),
+  ...GATES.flatMap((g) => piersOf(g).map(([x, z]): Box => [x - PIER / 2, z - PIER / 2, x + PIER / 2, z + PIER / 2, PIER_H])),
   ...GATES.map((g): Box => [...guardhouseOf(g), GUARDHOUSE_H]),
   ...GATES.map((g): Box => {
     const [p] = barrierOf(g);
     return [p[0] - 0.2, p[1] - 0.2, p[0] + 0.2, p[1] + 0.2, BARRIER_Y + 0.2];
   }),
   [...VISITOR_CENTRE, VISITOR_CENTRE_H],
+  // (the stair's flight past its first steps and its landing, solid from the ground: nobody walks under them; the
+  // foot's open, to step onto)
+  [VISITOR_STAIR.rect[0], VISITOR_LANDING[1], VISITOR_STAIR.rect[2], VISITOR_STAIR.rect[3] - 1.4, VISITOR_CENTRE_H],
   [...SIGN_WALL, SIGN_WALL_H],
 ];
 

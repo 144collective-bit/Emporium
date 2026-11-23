@@ -74,7 +74,7 @@ keep it up to date when what it describes changes.
   and `momentPose()` (in `momentposes.ts`, walk mode's on-foot chunk),
   keyed on the `Pose` rig as the vault's (the hands
   on the thing by `reachArm()`, within 1.5 cm in the test). Doors (every
-  landmark's, Trench Avenue's, the stadium's gate, the garage, hangar and
+  landmark's, Trench Avenue's, the garage, hangar and
   kart hut, the lifts and stations): a push, the panel opening as the
   hand lands; counters (the gun stores', the trainer's): a lean with both
   hands on the top while the menu is open; benches: "Sit" at a free bench
@@ -244,7 +244,7 @@ keep it up to date when what it describes changes.
   (`tests/mocapdata.ts`), and `tests/mocap.test.ts` holds every pack's
   file to what the pipeline makes:
   - **The data** is CMU's motion capture (free for commercial use; the
-    acknowledgment is in the start menu's Options > Credits, named, never
+    acknowledgment is in the hub's Settings > Game > Credits, named, never
     linked): mostly subject 143's and 127's takes (137's idles, 132's fast walk, 122's climb, 136's crouched walks, 141's strafes), in `assets/mocap/cmu/`
     (BVH, untouched), listed in `assets/mocap/takes.json` (a `loop` makes a seamless cycle,
     `loopClip()`, `cycle` its length where it's longer than a step; `fps` where the file's frame rate is wrong: subject 143's

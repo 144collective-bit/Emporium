@@ -38,7 +38,7 @@ import { TRENCH_RECT } from './trenches';
 import { WATERFRONT_RECT } from './waterfront';
 import { UPTOWN_RECT } from './uptown';
 import { WESTLAKE_RECT } from './westlake';
-import { STADIUM_RECTS } from './stadium';
+import { ROAD_RECTS as STADIUM_ROAD_RECTS } from './stadiumroad';
 import { TRACKS } from './metro';
 import { FRINGE_KEEPS } from './fringes';
 import { FOOTPATH as LOT9_PATH, LOT9_RECT, inLot9 } from './lot9';
@@ -194,10 +194,10 @@ export const KEEPS: Keep[] = [
   // The country roads past the highway, with their verges, ditches, fences and turning loops (ruraldress.ts, docs/highway-plan.md Phase 7)
   ...RURAL_KEEPS.flatMap((k) => line(k.id, k.pts, k.half, false, true)),
   land('waterfront', WATERFRONT_RECT, 2, true),
-  // Uptown, Westlake Park and the stadium's block, road, car park and footbridge
+  // Uptown, Westlake Park and Stadium Road and the walk north of the highway (the stadium itself removed, 2026-11-22)
   land('uptown', UPTOWN_RECT, 2, true),
   land('westlake', WESTLAKE_RECT, 2, true),
-  ...STADIUM_RECTS.map((r, i) => land(`stadium-${i}`, r, 2, true)),
+  ...STADIUM_ROAD_RECTS.map((r, i) => land(`stadium-${i}`, r, 2, true)),
   // The airport (airside, landside, the forecourt) and the low end of its approach, off the runway's west end
   ...AIRPORT_AREAS.map((r, i) => land(`airport-${i}`, r, 1)),
   land('approach', [RUNWAY.x0 - 200, RUNWAY.z - 14, RUNWAY.x0, RUNWAY.z + 14], 0),

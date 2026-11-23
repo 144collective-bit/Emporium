@@ -1,4 +1,4 @@
-# Westlake Park, the stadium and the north side
+# Westlake Park, Stadium Road and the north side
 
 Part of the project guide (`CLAUDE.md` is its index). Moved here word for word from `CLAUDE.md`;
 keep it up to date when what it describes changes.
@@ -7,7 +7,8 @@ keep it up to date when what it describes changes.
   district with a stadium as its attraction, scenery only for now) on the
   land west of town, north of the river, between the ring highway and the
   Parkway. Built in steps, each with the owner's sign-off: (1) the land,
-  the lake and the paths (built); (2) the stadium (built); (3) the park's life
+  the lake and the paths (built); (2) the stadium (built, then removed:
+  below); (3) the park's life
   (boats, a boathouse, people, its sound; built). The three strips south
   of the ring avenue (and their courts) became Uptown (below).
   - `westlake.ts` (DOM-free, tested in `tests/westlake.test.ts`): the big
@@ -19,8 +20,8 @@ keep it up to date when what it describes changes.
     walk.ts stops you on the lawn at its rim (`RIM`), cars stop at
     `LAKE_WALLS`, which drive-sim.ts adds near it); the paths (`PATHS`:
     `ring` round the big block, `loop` round the lake (`LOOP_OUT`), the
-    Mall (`MALL`) from City Hall's back door (the civic quarter, below) to
-    the stadium's forecourt, the ways
+    Mall (`MALL`) from City Hall's back door (the civic quarter, below) out
+    of the north gate (where it ran on to the stadium's forecourt), the ways
     in from `GATES`; `onPath()`); the gates' piers
     (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
     avenue, clumps from a seeded noise; `clump` ones,
@@ -56,58 +57,28 @@ keep it up to date when what it describes changes.
     and their leads, an instanced mesh a kind (not drawn
     while the camera is far from the park). Its sound: `park` (birds by
     day, an owl at night) in ambience.ts, the lake in `water`.
-  - **Sector 7 Stadium** (step 2; moved north of the ring highway in the
-    north side's stage 1, `docs/north-plan.md`, the owner's call) is
-    `stadium.ts` (DOM-free, tested in `tests/stadium.test.ts`) on its own
-    block north of the highway (`BLOCK`, in the street plan as `stadium`),
-    in line with the Mall (`CENTRE`): a soft-cornered oval bowl (`ovalAt()`,
-    `oval()`, `inOval()`; `FACADE`), two tiers of seats (`TIERS`) with a
-    concourse between (`CONCOURSE`), a roof ring over the upper tier
-    (`ROOF`), the pitch (`PITCH`) and its track (`TRACK`), four floodlight
-    masts (`MASTS`, `MAST`; `TALLEST` under the Emporium), the big screen
-    over the north stand (`SCREEN`) and the main gate in the south facade
-    (`GATE`, under `NAME`, fixed made-up copy), `STADIUM_SPAWN` on the
-    forecourt. Stadium Road (`ROAD`) runs west off the north road (ns0) past
-    its front, and the car park (`CAR_PARK`, `BAY_ROWS`, `BAYS`, `PARKED`) is
-    inside a one-way loop off it east of the stadium (`LOOP`), as the
-    airport's is: `STADIUM_STREETS` / `STADIUM_CROSSINGS` in the street
-    plan, so traffic drives them, up the north road (ns0) under the raised
-    highway. Its footbridge was retired with the highway's rise (the
-    owner's call, docs/highway-plan.md Phase 2): the Mall runs on out of
-    the park's north gate (westlake.ts `gate-n`) on a paved walk under the
-    deck (`WALK`, the deck's piers keep off it) to a zebra over Stadium
-    Road (`ZEBRA`). `STADIUM_SOLIDS` (in `SOLIDS`): the facade all round,
-    the gates shut until there are events, the masts, the parked cars;
-    `STADIUM_LAMPS`, `STADIUM_RECTS` (the outskirts' trees keep off). The stadium is drawn by `stadium3d.ts` (`buildStadium()`, a
-    place built at the boot: seats in sections of magenta, purple and cyan,
-    the roof's neon edge, lamp heads on the masts and their pools of light
-    on the pitch at night, the screen and the name board from one small
-    atlas, the parked cars); its grounds (the road, the car park with its
-    bays, one-way arrows and P sign, the walk and the zebra) by
-    `stadiumgrounds3d.ts`, loaded as you approach with the park's chunk
-    (`LAZY_DISTRICTS`: `westlake`, whose land covers it too).
-    It's a place: spot `stadium` (pin, directory entry, panel
-    `data-panel-tpl="stadium"`: events coming soon, Walk in), the gate's
-    door prompt opens it, `PLACES` entry. **Fixtures and match night** (the
-    polish plan's Phase 7): `fixtureAt(t)` in stadium.ts is the next match
-    from the visitor's clock (`HOME`, Sector 7 FC, against `VISITORS` in
-    turn by the day, Wednesdays and Saturdays at half past seven,
-    `FIXTURE`; `clockAt()`, `clockText()`, `fixtureLines()`; the same for
-    everyone in a time zone), on a fixture board beside the gate and on the
-    screen (stadium3d.ts: painted live, `liveTex()`, repainted when it
-    changes; the panel's live line too), and `matchOn(t)` (`MATCH`, the
-    match day's evening) is match night: the floodlights full on with their
-    pools on the pitch (a material of their own on the tick; dim otherwise),
-    the screen playing its slides (fixed made-up copy), the crowd's roar
-    round the ground (ambience.ts `stadium`, sound.ts: a murmur and a roar
-    swelling now and then) and a few people queueing at the shut gate (the
-    crowd's `wait` act; `Idle.when` in landmarks.ts: an idle only sometimes
-    there, life.ts stands them out of the world the rest of the time).
-    Nothing moves and the gates stay shut. Its
-    old site in the park (`GARDEN_SITE` in westlake.ts) is kept clear for
-    the formal garden (stage 3), the Mall running through it to the
-    north gate; the old car park on the first strip
-    went back to park.
+  - **Sector 7 Stadium was removed** (2026-11-22, the owner's call: room
+    in the boot, and the place wasn't wanted; CLAUDE.md's retired list).
+    Its bowl, masts, screen, gate and panel, its car park and one-way loop,
+    its block in the street plan, its solids, match nights (the fixtures,
+    the crowd's roar, the queue at the gate), its live line and its place
+    (pin, `PLACES`, `LIVE_PLACES`, the Map tab) all went; its old land north
+    of the highway is open country again (trees and rolling ground there by
+    themselves). What stayed: **Stadium Road** (`stadiumroad.ts`, DOM-free,
+    tested in `tests/stadiumroad.test.ts`: `ROAD_LINE` off the north road,
+    ns0, along `IN.z`, bending down to `ROAD.z` west to its end, a quiet road
+    with no way through, so traffic drives only to its junction with ns0;
+    `STADIUM_STREETS`, `STADIUM_CROSSINGS`, `STADIUM_LAMPS`, `ROAD_RECTS`,
+    `ROAD_AREA`) and **the walk** from the park's north gate
+    (westlake.ts `gate-n`) under the raised highway's deck (`WALK`, the
+    deck's piers and dressing keep off it) to a zebra over Stadium Road
+    (`ZEBRA`) onto the open land. Drawn by `stadiumgrounds3d.ts`, loaded as
+    you approach with the park's chunk (`LAZY_DISTRICTS`: `westlake`, its
+    rect the park's and `ROAD_AREA`). The visitor's clock the live lines
+    read moved to `clock.ts`. Exit 1A's sign reads Westlake · Northgate.
+    The stadium's old site in the park (`GARDEN_SITE` in westlake.ts) is
+    the formal garden (stage 3), the Mall running through it to the north
+    gate; the old car park on the first strip went back to park.
 - **The civic quarter** (the owner's call, the build-out plan's first
   section: City Hall, the police headquarters and the courthouse at
   Westlake Park's south end, facing Uptown across the avenue) is planned in
@@ -197,11 +168,11 @@ keep it up to date when what it describes changes.
     `flagLift()`, taken in between) with the honour guard at the pole round
     each (`ceremony` in `CIVIC_IDLE`, `flagCeremony()`); `?bench` views
     `civic` and `civic-high`, `BLEND_VIEWS` `civic`.
-- **The north side** (the owner's call): the stadium and the kart park
+- **The north side** (the owner's call): the stadium (since removed, above) and the kart park
   moving north of the ring highway and Westlake Park's paths, kerbs, low
   walls and gardens, planned in `docs/north-plan.md` in three stages, each
   with the owner's sign-off; keep it up to date. Stage 1 (the stadium
-  north, above), stage 2 (the kart park north, with its facility, below)
+  north, above; removed 2026-11-22), stage 2 (the kart park north, with its facility, below)
   and stage 3 (the park's walks, walls and gardens) are built:
   - `gardens.ts` (DOM-free, tested in `tests/gardens.test.ts`): the main
     walks (`MAIN_WALKS`: the ring walk, the lake loop, the Mall) paved with

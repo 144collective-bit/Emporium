@@ -7,9 +7,9 @@ it and has been retired completely. Build only on what's here.
 
 - The game is **The Trenches** (the owner's call, 2026-11): its title logo
   (`src/assets/trenches-logo.png`, the owner's art with its white
-  background cut away) heads the title screen and the maintenance cover
-  (the city's header has no logo since the controls plan's Phase 5, the
-  owner's call). The homepage's tab
+  background cut away) heads the title screen and the maintenance cover,
+  and sits small at the left of the city's header in every mode (the
+  owner's call, 2026-11-21: `docs/header-plan.md`). The homepage's tab
   reads "The Trenches | The Degen Emporium"; the header's title while the
   city loads, the no-3D card and the maintenance cover say The Trenches.
   The city it's set in is still Sector 7 (the welcome tip, the map, the
@@ -59,7 +59,7 @@ it and has been retired completely. Build only on what's here.
 | Downtown, the outer districts, traffic's routes, the ring highway's line, the street plan, the world's size, the river, the wall, the polish and performance plans' status | `docs/guide/city-layout.md` |
 | Places, the world map, waypoints, taxis, the river bus, the metro, sound by district | `docs/guide/getting-about.md` |
 | The Trenches (streets, projects, commons, grit, street walls, Trench Avenue's places, corner shops, riverside, waterfront, Night Market, The Block) | `docs/guide/trenches.md` |
-| Westlake Park, the stadium, the north side's gardens, the civic quarter (City Hall, the police headquarters, the courthouse) | `docs/guide/westlake.md` |
+| Westlake Park, Stadium Road (the stadium's removed), the north side's gardens, the civic quarter (City Hall, the police headquarters, the courthouse) | `docs/guide/westlake.md` |
 | Uptown, its towers, plaza, boulevard, Sector 7 Tower, the Sky Wheel, Uptown North | `docs/guide/uptown.md` |
 | Crestmont and its hills | `docs/guide/crestmont.md` |
 | The golf course in the north-east corner (its layout, ground, holes, lakes, what's underfoot, its life; its plan `docs/golf-plan.md`, its game's `docs/golf-game-plan.md`) | `docs/guide/golf.md` |
@@ -71,6 +71,7 @@ it and has been retired completely. Build only on what's here.
 | Everything south of The Trenches redesigned (Endswood, Aldwyn's Green, Lot 9), its phases | `docs/south-plan.md` |
 | Endswood as re-laid: the street web (`south.ts`), its land, lamps and places, Degen's home and compound (`docs/home-plan.md`), waking there at the start (`docs/spawn-plan.md`) | `docs/guide/endswood.md` |
 | The raised highway, its exits, turn lanes, country roads, street wear | `docs/guide/highway.md` |
+| The motorway exits rebuilt (four interchanges, two-lane ramps, frontage roads, the deck's third lane), its survey and phases | `docs/exits-plan.md` |
 | The ground palette, ground cover, verges, rolls, Southfield, the fringes, lamps by district, the seams, the review shots | `docs/guide/blend.md` |
 | Palm Court and Starlight Mall, inside the mall | `docs/guide/mall.md` |
 | Sector 7 Airport, flying | `docs/guide/airport.md` |
@@ -78,14 +79,14 @@ it and has been retired completely. Build only on what's here.
 | How traffic, people, buses and boats behave; dusk, wind, thunder | `docs/guide/city-life.md` |
 | The car models, the vehicle upgrade, the garage, driving, motorbikes, boating | `docs/guide/vehicles.md` |
 | The kart park, its circuit, races, karts and save | `docs/guide/kart-park.md` |
-| Degen's body, skeleton, wardrobe, clothes, tailoring, crowds, faces (`docs/faces-plan.md`) | `docs/guide/character.md` |
+| Degen's body, skeleton, wardrobe, clothes, tailoring, crowds, faces (`docs/faces-plan.md`), new characters (`docs/characters-plan.md`) | `docs/guide/character.md` |
 | Motion capture, the animator, contact, moments, emotes, the crowd's acts, the lab | `docs/guide/animation.md` |
 | Walk mode, collisions, the ground under a point, the split of `walk.ts` (`docs/walk-plan.md`) | `docs/guide/walk-mode.md` |
 | The inventory, fists on the street, sparring partners, free play | `docs/guide/inventory.md` |
 | Target practice, the guns, the gun store, the Fight Club | `docs/guide/combat.md` |
 | Dorras, the market, units, lots, contracts, staff, the Vault, missions, Getting started, the save and its backup | `docs/guide/economy.md` |
 | Drop 001's fitting room, the character screen, the free wardrobe, any colour (`docs/wardrobe-plan.md`) | `docs/guide/fitting-room.md` |
-| Menus, the start menu, the header, the hub, pins, touch controls, views, keys | `docs/guide/menus.md` |
+| Menus, the start menu, the header and the hub's tabs (`docs/header-plan.md`), the hub, its Settings (`docs/settings-plan.md`), pins, touch controls, views, keys | `docs/guide/menus.md` |
 | Bloom, z-fighting, cut-out signs, the comic page, palette, type, styles | `docs/guide/visual-rules.md` |
 | Phones, start-up, lazy chunks, baked data, textures, draw calls, shadows, near and far, sites, building kits, lazy districts, `?fps`, `?bench`, the snapshot | `docs/guide/performance.md` |
 | The owner's live settings (places and features switched from outside) | `docs/guide/live-settings.md` |
@@ -140,7 +141,8 @@ it and has been retired completely. Build only on what's here.
   the 2D map, the stage and screen on the hangout square, the skyline ring
   of dark towers, Sector 7 Central (the grand station), the street races,
   Build mode, the rival crew, the test district, the stadium's footbridge,
-  the gummy bag.
+  the gummy bag, Sector 7 Stadium (2026-11-22: Stadium Road and the walk
+  to it kept).
 
 ### The game
 
@@ -156,7 +158,8 @@ it and has been retired completely. Build only on what's here.
   `clean*()` loaders), and a new save in localStorage needs its key in
   `BACKUP_KEYS`. The `degen-city-` keys keep their names.
 - A new way into a feature goes through `live.closed()`; a new place goes in
-  `PLACES` and `LIVE_PLACES`, with its marquee line and live line.
+  `PLACES` and `LIVE_PLACES`, with its marquee line and live line, and in
+  its district in `maptab.ts` `AREAS` (the hub's Map tab and the pins).
 
 ### The code
 

@@ -119,7 +119,7 @@ export function ruralSplit(streets: PlanStreet[], crossings: PlanCrossing[], bes
       }
       const start = stop + out * RURAL.lead;
       const rid = `${id}-${axis === 'x' ? (out < 0 ? 'w' : 'e') : out < 0 ? 'n' : 's'}`;
-      // (out to the world's edge, or to a gate: the two north of the stadium end at Northgate Air Base's, airbase.ts)
+      // (out to the world's edge, or to a gate: the two north of Stadium Road end at Northgate Air Base's, airbase.ts)
       const gated = GATE_ROAD_ENDS[rid];
       const end = gated ?? edge - out * (RURAL.edge + RURAL.turn * 2 + RURAL.half);
       // (one to a gate however short: else the town's piece would run on to the edge past it)

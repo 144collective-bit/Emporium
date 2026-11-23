@@ -17,8 +17,8 @@ keep it up to date when what it describes changes.
   places are found on the world map and the hub's Map tab, and a building
   is still clicked in the City view (no hover lift or glow ring any more:
   each spot's `ring` is taken out of the scene at the boot). The hub's
-  Settings > Labels turns them back on (`[data-labels]`, `has-pins` on the
-  root, `degen-city-labels-v1`: a screen preference, never in the backup);
+  Settings > Game > Labels turns them back on (`labels` in the settings
+  record, `has-pins` on the root: `docs/settings-plan.md`);
   off, nothing is placed each frame. On, 3D pin labels stay on screen and
   fold to dots where they'd sit under the city's own buttons and cards
   (`chrome` in `index.ts`); add any new always-visible city overlay to
@@ -40,24 +40,27 @@ keep it up to date when what it describes changes.
   walking, the fly-in runs again instead, `city.intro()`); every visit opens at Day and Clear (the owner's call: Live
   and Auto, or any other time or weather, are the visitor's to pick, for
   that visit only); Multiplayer says "Coming soon" without `PUBLIC_GAME_SERVER`
-  and flips the Online switch on and enters with one; Options holds Time,
-  Weather and Sound, driving the header's own
-  settings controls (pressed when the city is up, queued until then). The
+  and flips the Online switch on and enters with one; Settings opens the
+  hub's own Settings over the title screen (`docs/settings-plan.md`). The
   root carries `has-start` until a choice is made; the loader and the
   welcome tip wait behind it.
 - The city page has **one header**: the city's own (`.city-head` in
   `CityMap.astro`, copy in `head.ts`), clear over the game since the
-  controls plan's Phase 5 (the owner's call: no bar, no logo, on every
-  screen; the title with a shadow under it, each button its own dark chip,
+  controls plan's Phase 5 (the owner's call: no bar on any screen; each
+  button its own dark chip,
   touches between them going through to the game). The site bar
   (`Nav.astro`) is left out there (`<Base nav={false}>`) and stays on the
   other pages. Walk mode carries the same header as the City view (the
   owner's call, after Phase 5 had it down to ☰ in play), so City / Walk
-  switches between the two from either. Left to right: the mode title and
-  subtitle (City view, Walk mode), then on the
+  switches between the two from either. Left to right: the game's title
+  art, small (`.city-head-logo`, the owner's call, 2026-11-21:
+  `docs/header-plan.md`; the mode's title and line, City view, Walk mode,
+  Driving · City Hatch, are for screen readers only, and what they told
+  everyone else is a toast: the City view's line the first time, `hints`
+  in the settings record, and a vehicle's name each time you get in), then on the
   right (the emotes, online, and ammo and score while walking), the City /
-  Walk switch (the current mode lit with a glow and a gradient underline,
-  the other dimmed), and the tools: in the 3D city (not while walking on
+  Walk switch (one button at every width: only the one that takes you to
+  the other mode, its icon in coin, its word where there's room), and the tools: in the 3D city (not while walking on
   phones) the Dorras readout (`[data-dorras]`, painted by `tycoon-ui.ts`, a
   green dot when the stall's till has takings; it opens the hub on
   Business) and the level pill (`[data-level]`, `missions-ui.ts`: level,
@@ -91,11 +94,10 @@ keep it up to date when what it describes changes.
   sign-off: **the hub** (`hub.ts`, markup `[data-hub]` in `CityMap.astro`,
   styles `.mk-hub` in `menus.css`), the pause screen: tabs Map (World map,
   every place, More's comic and store, PulseChain native, X and Telegram),
-  Bag (opens the inventory; what you carry is Business's Bag), Business
+  Bag (what you carry, Use on a snack or a boost, and the full inventory's button: `docs/header-plan.md`), Business
   (the business card `[data-biz]`, moved in; also opened by the desk in Degen's office upstairs, home.ts
   `home:desk`), Missions (level and badges),
-  Profile (look, finish, wardrobe, wallet), Settings (`[data-controls]`:
-  time, sky, sound, reset view; the walk controls; keys; credits) and Online
+  Profile (look, finish, wardrobe, wallet), Settings (below) and Online
   with a game server (`[data-mp]` is its tab). The page makes it (its own
   chunk, `hubReady`), so it works before 3D and where 3D can't run (Map
   only, `.hub-3d` off); `bootCity(root, wallet, hub)` fills in its hooks.
@@ -121,7 +123,7 @@ keep it up to date when what it describes changes.
   `tests/livelines.test.ts`, a chunk of its own fetched the first time a
   panel opens: `liveLine(id, t)`, one short line from the visitor's clock
   and the place's own timetable for every coming-soon place, `LIVE_IDS`:
-  the stadium's next fixture, the club's set, the bar's happy hour, the
+  the club's set, the bar's happy hour, the
   mall's hours, the fountain show's and the volcano's countdowns, the
   Pier House's next river bus, Liberty's next lift, the Night Market after
   dusk, the Harbour Master's tide, Crestmont's and Sunridge's hours;
@@ -161,22 +163,21 @@ keep it up to date when what it describes changes.
   ammo is on the hotbar's gun (`.hb-res`), the score in the hub, the emotes
   in the hub's Online tab (hub.ts `PHONE`); upright the header is one row
   (controls.css). Phase 4 (size, opacity, left-handed) is built, waiting
-  on the owner's sign-off: `TouchPrefs` (`cleanTouch()`, `touch` in
-  `degen-city-walk-v1`) from the hub's Settings (Touch buttons, touch
-  screens only); `layoutFor(w, h, mode, prefs)` scales the ring, steps a
+  on the owner's sign-off: `TouchPrefs` (`cleanTouch()`, `touch` in the
+  settings record) from the hub's Settings > Touch (touch screens only); `layoutFor(w, h, mode, prefs)` scales the ring, steps a
   size that doesn't fit back towards Medium until `clash()` finds nothing,
   and mirrors it for the left hand (the stick on the right); `--tc-alpha`
   is the opacity, solid while held. A new touch button is a `.tc` with its
   icon and word, and its slot in `LAYOUTS`; anything new pinned near the
   buttons goes in `clash()`. Phase 5 (the clear header and the installed
-  game) is built, waiting on the owner's sign-off: the header clear and
-  without its logo on every screen (walk mode's the City view's, above, the
-  owner's later call); installed (added
+  game) is built, waiting on the owner's sign-off: the header clear on
+  every screen (walk mode's the City view's, above, the owner's later call;
+  its logo back, small, since `docs/header-plan.md`); installed (added
   to the home screen) the game opens full screen with no browser bars
   (`public/site.webmanifest`: `display` fullscreen, standalone on iPhones,
   whose status bar stays, black; the meta tags in `Base.astro`). Phase 6
   (moving the buttons) is built, waiting on the owner's sign-off: Settings >
-  Touch buttons > Arrange buttons opens `arrange-ui.ts` (its own chunk; tabs
+  Touch > Arrange buttons opens `arrange-ui.ts` (its own chunk; tabs
   On foot / Vehicles / The ring, drag, Reset, Done, ×); a moved item's
   centre is kept in `TouchPrefs.arrange` per family and shape
   (`arrangeKey()`, shares of the screen in the right hand's frame),
@@ -205,7 +206,7 @@ keep it up to date when what it describes changes.
   (`mouseButtons.RIGHT = null`), Ctrl or Shift with the left still
   orbits, the left pans, the wheel zooms (to `FLY.pivot` close). A key
   pressed during a fly-in to a place takes the camera back. Touch keeps
-  its drag and pinch. The hub's Settings > Controls has a City view list
+  its drag and pinch. The hub's Settings > Controls > Keys has a City view mode
   (`FLY_KEYS` in keymap.ts, keys and mouse only, hidden on a gamepad or
   touch: `.km-city`), the header's hint on a desktop reads "WASD to fly"
   (head.ts), and `?fps` shows `camera x, y, z` in City view.
@@ -240,7 +241,8 @@ keep it up to date when what it describes changes.
   walk modes in the vehicles", the controls simpler and more accessible)
   is planned in `docs/views-plan.md`: near, far and first person in every
   vehicle, ride, race and the ring (not remembered: near, third person,
-  every time; the ring near and far only; rides look round freely), a
+  every time, though the car, bike, boat and aircraft now start in
+  Settings > Camera > Vehicle view, `docs/settings-plan.md`; the ring near and far only; rides look round freely), a
   touch View button up top on foot, one key for one job (`keymap.ts`; the
   gamepad's camera R3 everywhere, the ring on the street's keys), a
   control card per mode (`/`, the d-pad's down), hold or toggle for
@@ -270,8 +272,9 @@ keep it up to date when what it describes changes.
   boot: `KEYMAP`, every mode's jobs with their keys, gamepad buttons and
   touch buttons; a job on the same key and button in every mode it's in,
   no two jobs on one in a mode unless `shares` says so); the hub's
-  Settings > Keys is made from it at build time (a section a mode, only
-  the input in use shown, `data-input`); the ring on the street's keys
+  Settings > Controls > Keys is made from it at build time (a `[data-km]`
+  a mode, shown one at a time by its Mode picker, only the input in use
+  shown, `data-input`); the ring on the street's keys
   (right-click held block, Shift nothing; on the street right-click held
   is the fists' guard, `guard`, the control card's first row), the gamepad's sprint L3 only,
   Start quits a kart race, B skips a ride, M opens the world map at the
@@ -281,13 +284,65 @@ keep it up to date when what it describes changes.
   chunk) from `cardBinds()` for walk.ts's `modeNow()` and the input in use,
   shown for `CARD_AUTO` the first time in each mode (`seen` in
   `degen-city-walk-v1`) and on request (`/` or `?`, the d-pad's down, the
-  hub's Settings > Keys > Show the controls card; Esc, × or the key again
+  hub's Settings > Controls > Controls card; Esc, × or the key again
   closes it); in `chrome`. The boot's budget went to 710 with it. Phase 5
   (hold or toggle) is built, waiting on the owner's sign-off, and the plan
   is done: `comfort.ts` (DOM-free, tested in `tests/comfort.test.ts`:
   `Holds`, `DEFAULTS` (as it always was: Sprint and Aim lock on touch,
   held elsewhere; Crouch toggles; Block held), `holdMode()`, `press()`,
-  `cleanHolds()`), the hub's Settings > Hold or toggle (`[data-hold]`,
-  `holds` in `degen-city-walk-v1`), asked by walk.ts at every press of
+  `cleanHolds()`), the hub's Settings > Controls > Hold or toggle (`holds`
+  in the settings record), asked by walk.ts at every press of
   sprint, aim, crouch and block on every input (touch: `holdButton()`).
   A new held or toggled job goes in `HOLD_JOBS`.
+- **Settings** (the owner's call, 2026-11-21: "rebuild the settings menus,
+  keep the style", planned and built in `docs/settings-plan.md`, waiting on
+  the owner's sign-off): the hub's Settings tab has sub-tabs Game ·
+  Graphics · Camera · Controls · Touch (touch screens only) · Sound, every
+  row a `‹ value ›` picker (left and right step it on the keys, the d-pad
+  and the ◀ ▶, held they repeat; a press on a choice steps it round; a
+  range's bar takes a tap or a drag), a coin dot by anything off its
+  default and on its sub-tab, Reset at each sub-tab's foot and Reset all
+  on Game (asks first). One record, `degen-city-settings-v1`
+  (`settings.ts`, DOM-free: `cleanSettings()`, which takes Labels and the
+  walk's settings over on the first load; in `BACKUP_KEYS`), kept by
+  `settings-store.ts` (`settings()`, `setSettings()`, `onSettings()`;
+  `actions` for the rows that aren't kept, Sound and first person; `boot`,
+  the quality the city was built with). The rows are made at build time
+  from `settings-rows.ts` `ROWS` (DOM-free, never in the boot) and worked by
+  `settings-ui.ts` (its own chunk, loaded when the tab first shows; the
+  kit passes over the ◀ ▶, `data-mk-skip`, and a focused picker hears
+  left and right as `mk-step`; LT / RT step the sub-tabs, `mk-subtab`). A
+  new setting is a field in `Settings` and `cleanSettings()`, a row in
+  `ROWS`, and whatever follows it hears `onSettings()`. The title screen's
+  Settings button opens the hub's Settings over it (the hub lifts over the
+  title screen and shows only that tab there, `.is-start`); its Options
+  pane is gone, and so is Reset view.
+- **The header and the hub's tabs** (the owner's call, 2026-11-21: "work on
+  the menu drop down and the header", planned and built in
+  `docs/header-plan.md`, waiting on the owner's sign-off): the header's
+  logo and one City / Walk switch (above); the hub's title is the tab
+  you're on, its tab strip slimmer on phones. **Map**: World map, then a
+  `‹ District ›` picker (`maptab.ts`, DOM-free, tested in
+  `tests/maptab.test.ts`: `AREAS`, `AREA_OF`, `DIRECTORY`, which the page
+  and the pins are built from, `areaHere()`) starting where you are
+  ("Here"), All among its choices; a row a place (`[data-map-row]`): its
+  name and line (`[data-dir-spot]`: `placeName()` reads them, a click
+  opens it), a Soon tag (`soonSplit()`), **Go** (`goAct()`: View in the
+  City view, Go to fast travel to a place walked to, Taxi to one not yet,
+  Route at a wheel or on a ride; done through the world map's own actions,
+  `travel-ui.ts` `deps`, filled into `hubhooks.ts` by index.ts) and **◎**
+  (a waypoint; X on a gamepad, the hub's `mk-alt`); More at the foot.
+  **Missions** (`missions-ui.ts`): the level and XP, then Active (Claim
+  and Give up, the board's own buttons) · Badges · Done. **Profile**: the
+  rifle finish a `‹ value ›` picker over combat.ts's own finish buttons
+  (kept out of sight); the wardrobe's two buttons together. The Map and
+  Profile tabs' wiring is `hubtabs-ui.ts` (its own chunk, the first time
+  either shows); every picker's is `pickerkit.ts`, Settings' too. A new
+  place goes in `AREAS` in its district.
+  **Bag** (inventory-ui.ts `bagHtml()`): the weapon slots, then only what's
+  in the bag, a row each (Use on a snack or a boost, greyed in the City
+  view), how full it is, the Armoury and the Night Market. **Business**
+  (`[data-biz]`): the till on top, then Stall · Units · Workshop · Car as the
+  settings' chips (`.set-tabs`, LT / RT); its old Bag section is gone (the
+  hub's Bag tab is the one), and so is its own Dorras chip in the hub. Car
+  shows for everyone: the starter car is owned from the start.

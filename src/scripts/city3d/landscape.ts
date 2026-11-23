@@ -23,10 +23,10 @@ import { heightAt, naturalAt, slopeAt } from './terrain';
 import { rng } from './recipes';
 import { onDrive } from './coral';
 import { ESTATES, gardenPalmsOf, inGateway, toWorld } from './estates';
-import { onMansion } from './mansions';
+import { nearestDrive, onMansion, onPad } from './mansions';
 import { HOTEL_PALMS, inHotelDrive, onSite } from './crestsites';
 import { underSpur } from './metro';
-import { onLand } from './crestland';
+import { DRIVE_PIERS, onLand } from './crestland';
 import { onWalk } from './crestwalk';
 
 type Pt = [number, number];
@@ -242,6 +242,9 @@ export const EDGE_AT = { cut: 0.6, fill: 0.9, step: 1.5, behind: 0.45, over: 0.2
 /** How far out from the centre line the walls and rails stand: just past the asphalt, on the bed's shoulder */
 export const EDGE_OUT = LANE + 0.55;
 
+/** How far from a mansion's drive's middle a road's wall stops: just past its stone kerbs (mansions3d.ts, at 1.3) */
+export const DRIVE_CLEAR = 1.45;
+
 /** Along every hill road, both sides, in pieces `step` long: a wall where it's cut in, a rail where it's built up */
 export const WALLS: Edge[] = (() => {
   const out: Edge[] = [];
@@ -262,9 +265,20 @@ export const WALLS: Edge[] = (() => {
         // (not where another road comes in, nor at a junction's mouth)
         if (HILL_ROADS.some((o) => o !== r && o.pts.some((q) => Math.hypot(q[0] - a[0], q[1] - a[1]) < o.half + 3 || Math.hypot(q[0] - b[0], q[1] - b[1]) < o.half + 3))) continue;
         if (a[1] > HILLS.foot.z - 4 || b[1] > HILLS.foot.z - 4) continue;
-        // (nor across a mansion's drive, nor along a pad at a lane's end: mansions.ts)
-        if (onMansion(...a) || onMansion(...b) || onSite(...a) || onSite(...b)) continue;
-        const base = { road: r.id, a, b, ya: roadY(r, d), yb: roadY(r, d + EDGE_AT.step), side: side as 1 | -1 };
+        // (nor along a pad at a lane's end: mansions.ts)
+        if (onPad(...a) || onPad(...b) || onSite(...a) || onSite(...b)) continue;
+        // (across a mansion's drive: up to its kerbs and no further, the piece cut back where it crosses: R2, J2 part 2)
+        let [ta, tb] = [0, 1];
+        const at = (t: number): Pt => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        const inDrive = (t: number) => (nearestDrive(...at(t))?.d ?? Infinity) < DRIVE_CLEAR;
+        if (inDrive(0) || inDrive(1) || inDrive(0.5)) {
+          if (inDrive(0) && inDrive(1)) continue;
+          if (inDrive(0)) while (ta < 1 && inDrive(ta)) ta += 0.02;
+          else while (tb > 0 && inDrive(tb)) tb -= 0.02;
+          if (tb - ta < 0.2) continue;
+        }
+        const [pa, pb] = [at(ta), at(tb)];
+        const base = { road: r.id, a: pa, b: pb, ya: roadY(r, d + EDGE_AT.step * ta), yb: roadY(r, d + EDGE_AT.step * tb), side: side as 1 | -1 };
         if (there - y > EDGE_AT.cut) {
           // (topped just over the ground it holds back, right behind it, as the pads' terraces are: crestbanks.ts; the
           // owner's call, 2026-11-19, the walls stood proud of the bank, slabs beside the drives)
@@ -286,3 +300,27 @@ export const WALLS: Edge[] = (() => {
   }
   return out;
 })();
+
+/** Where a wall stops at a drive's kerb, its end returned a step up the drive beside the kerb: a low cheek, so the wall
+ * reads as turning in, not cut off (R2, J2 part 2). Same form as `WALLS`'s pieces, drawn with them */
+export const DRIVE_CHEEKS: Edge[] = WALLS.flatMap((e): Edge[] => {
+  if (e.kind !== 'wall') return [];
+  return (['a', 'b'] as const).flatMap((end): Edge[] => {
+    const p = e[end];
+    const near = nearestDrive(...p);
+    if (!near || near.d > DRIVE_CLEAR + 0.25) return [];
+    const [d0, d1] = near.m.drive;
+    const l = Math.hypot(d1[0] - d0[0], d1[1] - d0[1]) || 1;
+    const u: Pt = [(d1[0] - d0[0]) / l, (d1[1] - d0[1]) / l];
+    // (up to the drive's gate pier on its side, if there's one near, and stopping just short of it)
+    const pier = DRIVE_PIERS.map((t) => ({ t, s: (t.x - p[0]) * u[0] + (t.z - p[1]) * u[1], o: Math.abs(-(t.x - p[0]) * u[1] + (t.z - p[1]) * u[0]) }))
+      .filter((c) => c.s > 0 && c.s < 3 && c.o < 0.6)
+      .sort((x, y) => x.s - y.s)[0];
+    const len = pier ? pier.s - 0.45 : 1.1;
+    if (len < 0.25) return [];
+    const q: Pt = [p[0] + u[0] * len, p[1] + u[1] * len];
+    const y = end === 'a' ? e.ya : e.yb;
+    const h = end === 'a' ? e.ha : e.hb;
+    return [{ ...e, a: p, b: q, ya: y, yb: Math.max(y, heightAt(...q) - 0.05), h, ha: h, hb: Math.min(h, 0.3) }];
+  });
+});

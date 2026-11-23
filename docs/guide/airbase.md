@@ -5,25 +5,34 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
 
 - **Northgate Air Base** (the owner's call, 2026-11: a very large military base and airfield across the whole north,
   from the west wall to Crestmont's hills; made up; nothing threatening: no weapons on show, nothing attacks you, a
-  guarded gate and the rest seen through the fence). Built a phase at a time, each with the owner's sign-off. All five
-  phases are built (the land, the fence and the gates; the airfield; the base itself; its life, night and sound; the
-  polish); what's next is the plan's "Later" list, each in a plan of its own.
+  guarded gate). Built a phase at a time, each with the owner's sign-off. Phases 0-5 are built (the land, the fence and
+  the gates; the airfield; the base itself; its life, night and sound; the polish); Phase 6 (the owner's call,
+  2026-11-21) made the fence a large concrete wall, with a stair up the visitors' centre to see over it, and polished
+  the base again. What's next is the plan's "Later" list, each in a plan of its own.
 - **`airbase.ts`** (DOM-free, on `DOM_FREE`, the boot's; tested in `tests/airbase.test.ts`): the plan's lines in fixed
   world numbers, but where the base meets the wall (worked out from `WALL_INNER`, `FLOODS` and `CAMERAS`, so it holds
   under `npm run test:wide`).
   - `FENCE`: the fence's closed line, clockwise from the south-west corner (-730, -330), wandering (no run square to
-    the axes but the wall gate's yard's three), 44 or more north of the stadium, west of the hills (x 285), with grass
+    the axes but the wall gate's yard's three), 44 or more north of where the stadium stood (removed 2026-11-22), west of the hills (x 285), with grass
     to the wall's foot all round but at the yard; `inAirbase()` (even-odd), `AIRBASE_RECT`, `southFenceZ()`,
     `fromFence()`. `FENCE_RUNS` is its straight runs, without the yard's face along the wall (the wall closes it),
-    broken at the gates. `FENCE_H` 2.6 (above the climb), `runBoxes()` makes a run thin boxes (Lot 9's way).
+    broken at the gates' piers. Since Phase 6 a concrete wall stands on the line (it keeps the fence's names):
+    `FENCE_H` 4.5 (over a truck), `FENCE_T` 0.3 (its precast panels), `WALL_PANEL` (3, a post between each),
+    `WALL_CAP`; `runBoxes()` makes a run boxes as thick as the wall (Lot 9's way).
   - `GATES`: the main gate on `ns0-n` (x -4.5) and the service gate on `ns3-n` (x 64.5), on the fence's south side
-    (z where it crosses: -307.5 and -310.3), both shut (a box across each opening at the fence's height). Each has a
-    guardhouse inside on its east (`guardhouseOf()`) and a barrier down outside (`barrierOf()`, `BARRIER_Y`).
+    (z where it crosses: -307.5 and -310.3), both shut (a box across each opening at the wall's height, its steel
+    sliding gate), a pier either side (`piersOf()`, `PIER`, `PIER_H`: the wall meets them). Each has a guardhouse
+    inside on its east (`guardhouseOf()`) and a barrier down outside (`barrierOf()`, `BARRIER_Y`).
     `GATE_ROAD_ENDS` is where each country road ends (rural.ts), its loop's centre `LOOP_SHORT` (16) short of its gate:
     (-4.5, -291.5) and (64.5, -294.3).
   - `VISITORS` (the car park, x -90 to -20, z -298 to -262), `VISITORS_DRIVE` (its drive across to `ns0-n`, south of
-    the loop), `VISITOR_CENTRE` (on the car park's north edge, `VISITOR_CENTRE_H` 4.4, its roof a terrace),
-    `VISITOR_SPAWN` (Walk in: in the car park, facing the door). `SIGN_WALL`: the base's name on a low wall outside the
+    the loop), `VISITOR_CENTRE` (on the car park's north edge, `VISITOR_CENTRE_H` 6.2 since Phase 6: its roof's
+    terrace over the wall's top), `VISITOR_SPAWN` (Walk in: in the car park, facing the door). **Its stair** (Phase 6,
+    the owner's call: one you climb): `VISITOR_STAIR` (a straight flight up its west face, its floor `stairY()`, under
+    40 degrees), `VISITOR_LANDING` (level with the roof at its north-west corner) and `VISITOR_TERRACE` (the roof inside
+    its rail): `visitorsFloorAt()` is groundheight.ts's `visitors` layer, `visitorsUp()` / `visitorsWall()` walk.ts's
+    rails up there (Endswood's sky network's way: off the shapes is a rail); the flight past its first steps and the
+    landing solid from the ground (nobody walks under them). `SIGN_WALL`: the base's name on a low wall outside the
     main gate, east of the road.
   - `AVENUE`: the parade avenue, north from the main gate in line with the road to z -700, then bending to the wall gate.
     `WALL_GATE`: in the gap between two of the wall's floodlights with no camera in it, nearest x -34 (on the site's own
@@ -34,8 +43,8 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
     gates, the avenue, the visitors' area and the kept lots. The rest keeps its woods (they cleared none of the woods'
     trees: the woods test's count holds).
   - `AIRBASE_SOLIDS` (in `SOLIDS`, excused from the slab and grid checks in `tests/solids.test.ts`: airbase.test.ts holds
-    them off every road there is): the fence, the shut gates, the guardhouses, the barriers' posts, the visitors' centre
-    and the sign wall.
+    them off every road there is): the wall, the shut gates and their piers, the guardhouses, the barriers' posts, the
+    visitors' centre and its stair, and the sign wall.
   - `AIRBASE_LAMPS` (the city's own lamps, `addLamp()` in index.ts, in `tests/lampfacing.test.ts`): along the inside of
     the south fence every `FENCE_LAMP_GAP` (90) reaching to it, one outside each gate, three round the car park. The
     town's post (`lampStyle()` unchanged).
@@ -46,20 +55,26 @@ with the owner's answers and every phase, is `docs/military-plan.md`; the signed
 - **Its ground** (ground.ts `INFLUENCES`): mown lawn inside the fence and 6 past it (`airbase`), worn round the car park.
 - **The drawing, `airbase3d.ts`** (its chunk `airbase-camp` in `LAZY_DISTRICTS`, over the fence's box to the car park;
   tested in `tests/airbase3d.test.ts`), as sites:
-  - the fence, 30 a site: galvanised posts every 3.5 and a top rail; the chain-link's mesh (grime.ts `chainMesh()`) in
-    the FX layer, see-through; near only (not on phones), the arms leaning out from each post's top and three strands of
-    wire along them;
-  - each gate: its posts, its shut sliding gate, the barrier in red and white, the guardhouse (a band of windows, a door
-    to the road, its roof), the apron from the loop to the barrier and on in;
+  - the wall (Phase 6; the sites `airbase wall <run> <piece>`), 30 a site: the precast slab, its darker footing and its
+    capping, a post at each end; near only (not on phones) the panels' posts every `WALL_PANEL`, the coiled razor wire
+    along the capping and the lights on its top facing out (airbasedress.ts `WALL_LIGHTS`, every `WALL_LIGHT_GAP`,
+    each in the middle of its panel, clear of the joints); their washes down its outer face and a pool on the grass at
+    its foot at night are one additive mesh in the FX layer (`wallWash()`, on the main thread, not on phones; the
+    city's wall's floodlights' way), the gates' piers' lamps' (`PIER_LIGHTS`) in it too;
+  - each gate: its piers (near only a lamp on each facing out), its shut steel sliding gate on its track (near only its
+    ribs), the barrier in red and white,
+    the guardhouse (a band of windows, a door to the road, its roof), the apron from the loop to the barrier and on in;
   - the parade avenue's asphalt, its edges lined, 40 a site (no traffic till Phase 4: it isn't in the street plan);
-  - the visitors' car park, its kerb, bays and drive, and the centre (concrete, glass to the car park, its name over the
-    door, the terrace's rail near only);
+  - the visitors' car park, its kerb, bays and drive, and the centre (concrete, glass to the car park on two floors,
+    its name over the upper band, the terrace's rail near only, but on phones, which draw no near detail, always), its stair (a step a box from the ground, the flight's
+    rail always) and its landing on a column;
   - the base's name on its wall, and the service gate's board. The signs are one atlas (`canvasTex()`, baked).
 - **The place**: `northgate` (src/lib/city.ts `SpotId`, places.ts `PLACES`, live.ts `LIVE_PLACES`, livelines.ts), its
   pin over the visitors' centre (index.ts `pickSpot`), its panel in CityMap.astro (kicker 51, coming soon, Walk in). A
   taxi there gets the far places' 18 s (tests/travel.test.ts).
-- **The world map** (worldmap.ts) draws its fence, the avenue, the car park, the centre and the guardhouses.
-- **The views**: `BENCH_VIEWS` has `north-stadium`, `airbase-overview`, `airbase-gate` and `airbase-runway` since
+- **The world map** (worldmap.ts) draws its wall (a heavier line than a fence's), the avenue, the car park, the centre
+  and the guardhouses.
+- **The views**: `BENCH_VIEWS` has `north-road` (`north-stadium` till the stadium went, 2026-11-22), `airbase-overview`, `airbase-gate` and `airbase-runway` since
   Phase 0; each phase is measured against them (the plan's baseline and allowances).
 - **The airfield (Phase 2)**, in `airbase.ts`: `RUNWAY` (x -620 to -120 at z -540, half 6), `APPROACH`, `TAXIWAY`
   and its `CONNECTORS`, `NORTH_TAXI` and its `NORTH_LINKS`, `SHELTER` / `SHELTERS` (nine, in threes, their doors south

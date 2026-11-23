@@ -52,17 +52,28 @@ export const PANES: Record<FacadeStyle, Pane> = {
   ribbon: { x: 4, y: 20, w: PX_W - 8, h: 22, span: 1 },
   // Big steel windows, one for every two bays
   steel: { x: 10, y: 10, w: PX_W * 2 - 20, h: 42, span: 2 },
+  // The gallery sides' kitchen windows, one a flat (two bays), behind a grille (the door beside it painted only)
+  deck: { x: 54, y: 16, w: 30, h: 22, span: 2 },
   // Brutalist balcony recesses, one for every two bays: the window at the back of the recess (its door beside it,
   // painted only; the recess's front over its foot)
   recess: { x: 20, y: 16, w: 50, h: 28, span: 2 },
 };
 /** The brutalist recesses (`recess`), in pixels: the fin between two, the slab's edge at each floor, the front's top,
  * the door at the back beside the window */
+/** The gallery sides' flats (`deck`), in pixels: a front door and a kitchen window behind a grille, two bays a flat */
+export const DECK = { door: { x: 12, w: 20, y: 18 }, meter: { x: 36, w: 9, y: 30, h: 14 } };
+/** What's at a flat's door off the gallery (by a hash of where it is): its door's paint, a steel door, a boarded one, a
+ * tag scrawled by it, or a plain one; mostly plain, rough at the edges */
+export const DECK_LIFE = ['plain', 'plain', 'steel', 'plain', 'tag', 'plain', 'boarded', 'plain', 'tag', 'plain', 'steel', 'plain'] as const;
+export type DeckLife = (typeof DECK_LIFE)[number];
+export const deckLife = (seed: number, row: number, i: number): DeckLife => DECK_LIFE[(seed * 97 + row * 13 + i * 5) % DECK_LIFE.length];
+/** The front doors' paints: council colours, worn */
+export const DOOR_PAINTS = ['#7a2b2b', '#2d4f3a', '#2b3e66', '#6b5a2a', '#4a4a52', '#5a2d4f'];
 export const RECESS = { fin: 10, slab: 9, front: 42, door: { x: 76, w: 12, y: 14 } };
 /** What lives in a brutalist recess (by a hash of where it is): a plant, a dish, an air-con unit, a bike, washing out,
- * a front painted in a colour (the odd one, the blocks' own accents), or nothing; mostly plain, so a long front reads
- * calm, washing only now and then */
-export const RECESS_LIFE = ['plant', 'none', 'dish', 'ac', 'none', 'bike', 'plant', 'none', 'washing', 'none', 'panel', 'ac', 'none', 'dish'] as const;
+ * a front painted in a colour (the odd one, the blocks' own accents), a flat boarded up, one burnt out (soot over it),
+ * or nothing; mostly plain, so a long front reads calm, washing only now and then */
+export const RECESS_LIFE = ['plant', 'none', 'dish', 'ac', 'none', 'bike', 'plant', 'none', 'washing', 'none', 'panel', 'ac', 'none', 'dish', 'boarded', 'burnt'] as const;
 export type RecessLife = (typeof RECESS_LIFE)[number];
 /** What's in a recess: `seed` the band's, `row` its floor in the band, `i` the recess along it */
 export const recessLife = (seed: number, row: number, i: number): RecessLife => RECESS_LIFE[(seed * 131 + row * 17 + i * 7) % RECESS_LIFE.length];
@@ -77,7 +88,7 @@ export const CASEMENT_BANDS: [number, number][] = [
 ];
 
 /** How far a window's surround reaches past its glass each side (shutters, the sill's ends) */
-export const REACH: Record<FacadeStyle, number> = { sash: 0.1, arched: 0.1, shuttered: 0.16, steel: 0.1, balcony: 0.1, pair: 0.1, casement: 0.07, ribbon: 0.05, recess: 0.05 };
+export const REACH: Record<FacadeStyle, number> = { sash: 0.1, arched: 0.1, shuttered: 0.16, steel: 0.1, balcony: 0.1, pair: 0.1, casement: 0.07, ribbon: 0.05, recess: 0.05, deck: 0.05 };
 /** The least plain wall left at each end of a front: under it a bay is dropped and the rest centred again */
 export const END_MIN = 0.09;
 
@@ -148,3 +159,22 @@ export function windowsOf(bays: Bays, style: FacadeStyle, floors: number, clip: 
     }
   return out;
 }
+
+/**
+ * Whether a building's side wall faces open ground (a street, a lane, an alley, a park) rather than a neighbour's wall
+ * (docs/buildings-plan.md Phase 2): the side's left end at `L` (the front's corner), the front running along `t`,
+ * `n` out of the front, `w` wide and `d` deep; `side` 0 its left (seen from the street), 1 its right. Open when most
+ * of five points a little outside it, from near the front to near the back, are clear of `solid`.
+ */
+export function sideOpen(L: [number, number], t: [number, number], n: [number, number], w: number, d: number, side: 0 | 1, solid: (x: number, z: number) => boolean): boolean {
+  const u = side === 0 ? -SIDE_LOOK : w + SIDE_LOOK;
+  let clear = 0;
+  for (const f of SIDE_SAMPLES) {
+    const v = -d * f;
+    if (!solid(L[0] + t[0] * u + n[0] * v, L[1] + t[1] * u + n[1] * v)) clear++;
+  }
+  return clear * 2 > SIDE_SAMPLES.length;
+}
+/** How far outside a side wall `sideOpen()` looks, and where along it (shares of the depth from the front) */
+export const SIDE_LOOK = 0.3;
+const SIDE_SAMPLES = [0.15, 0.35, 0.5, 0.65, 0.85];

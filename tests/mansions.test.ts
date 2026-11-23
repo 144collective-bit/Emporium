@@ -96,3 +96,22 @@ test("built on the hillside, not sunk in it (the owner's call): each pad at the 
   // (and some room round them all: the yards aren't all nothing)
   assert.ok(MANSIONS.reduce((n, m) => n + (m.yard[2] - m.yard[0] - (m.rect[2] - m.rect[0])) + (m.yard[3] - m.yard[1] - (m.rect[3] - m.rect[1])), 0) > 20);
 });
+
+test("a mansion's drive is paved from the road's edge, never over its edge line into the lane (J2 part 1)", async () => {
+  const { MANSIONS, driveStart, outOf } = await import('../src/scripts/city3d/mansions');
+  const { nearHillRoad } = await import('../src/scripts/city3d/crestmont');
+  const { DRAPE } = await import('../src/scripts/city3d/crestdrape');
+  let trimmed = 0;
+  for (const m of MANSIONS) {
+    const [d0, d1] = m.drive;
+    const [ox, oz] = outOf(m.face);
+    const [px, pz] = [-oz * DRAPE.drive.half, ox * DRAPE.drive.half];
+    const t0 = driveStart(d0, d1, px, pz);
+    assert.ok(t0 < 0.3, `drive ${m.drive} trimmed by ${t0}: most of it lost`);
+    const s: [number, number] = [d0[0] + (d1[0] - d0[0]) * t0, d0[1] + (d1[1] - d0[1]) * t0];
+    for (const k of [-1, 1]) assert.ok(!nearHillRoad(s[0] + k * px, s[1] + k * pz, 0), `drive at ${s} has an edge on the asphalt`);
+    if (t0 > 0) trimmed++;
+  }
+  assert.ok(MANSIONS.length > 5);
+  console.log(`  (${trimmed} of ${MANSIONS.length} drives start a little up from where they did)`);
+});

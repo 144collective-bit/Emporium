@@ -53,6 +53,8 @@ import { finishKartRace, kartStatsOf, keepSplits, parLap, recordKey, seriesRace,
 import { live } from './live-client';
 import { RACE_FAR, RACE_NEAR, START_VIEW, nextView, type ViewId } from './views';
 import { LENS } from './lens';
+import { fovShift } from './settings';
+import { settings as storedSettings } from './settings-store';
 
 /* ---------- The rivals ---------- */
 
@@ -364,6 +366,8 @@ export function createKartRace(d: KartRaceDeps): KartRace {
     }
     camReady = true;
     camera.position.copy(camPos);
+    // (Settings > Camera > Camera shake off: none)
+    if (!storedSettings().shake) shake = 0;
     if (shake > 0 && !d.reduced) {
       camera.position.x += (Math.random() - 0.5) * shake;
       camera.position.y += (Math.random() - 0.5) * shake;
@@ -378,7 +382,7 @@ export function createKartRace(d: KartRaceDeps): KartRace {
       camera.near = close;
       camera.updateProjectionMatrix();
     }
-    const wantFov = 60 + Math.min(1, Math.abs(p.speed) / p.tune.top) * 10 + boost * 6;
+    const wantFov = 60 + fovShift(storedSettings()) + Math.min(1, Math.abs(p.speed) / p.tune.top) * 10 + boost * 6;
     fov += (wantFov - fov) * damp(4, dt);
     if (Math.abs(camera.fov - fov) > 0.05) {
       camera.fov = fov;

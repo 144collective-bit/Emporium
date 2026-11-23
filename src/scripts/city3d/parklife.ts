@@ -173,7 +173,7 @@ export interface Picnic {
   /** Who's sitting round it: where and facing */
   people: { x: number; z: number; ry: number }[];
 }
-/** In the glades: on the big block's lawns, well off the paths, the water, the stadium and every tree; seeded */
+/** In the glades: on the big block's lawns, well off the paths, the water, the formal garden and every tree; seeded */
 export const PICNICS: Picnic[] = (() => {
   let s = 4242;
   const r = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
