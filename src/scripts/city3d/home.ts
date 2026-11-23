@@ -337,11 +337,13 @@ export function homeLevel(y: number): HomeLevel {
 const inFoot = (x: number, z: number) => x > hx0 && x < hx1 && z > hz0 && z < hz1;
 /** Inside the house (its footprint, on one of its indoor floors: `y` is how high he is; up on the roof is `onRoof()`)? */
 export const inHouse = (x: number, z: number, y = 0) => inFoot(x, z) && homeLevel(y) !== 'roof';
-const hits = (list: readonly { rect: Rect }[], x: number, z: number, r: number) => list.some(({ rect: f }) => x + r > f[0] && x - r < f[2] && z + r > f[1] && z - r < f[3]);
+const touch = (f: Rect, x: number, z: number, r: number) => x + r > f[0] && x - r < f[2] && z + r > f[1] && z - r < f[3];
+const hits = (list: readonly { rect: Rect }[], x: number, z: number, r: number) => list.some(({ rect: f }) => touch(f, x, z, r));
 /** Does someone `r` wide at x, z, `y` high, inside the house, touch its walls or anything standing on his floor? */
 export function homeWall(x: number, z: number, r: number, y = SLAB_Y) {
   if (x - r < rx0 || x + r > rx1 || z - r < rz0 || z + r > rz1) return true;
   const lv = homeLevel(y);
+  if (lv !== 'base' && stairRails(y).some((f) => touch(f, x, z, r))) return true;
   return hits(lv === 'up' ? rooms.up : lv === 'base' ? rooms.base : rooms.room, x, z, r);
 }
 /**
@@ -349,14 +351,12 @@ export function homeWall(x: number, z: number, r: number, y = SLAB_Y) {
  * bottom): in the room, everything over its ceiling; upstairs, the room under its floor and the roof over its
  * ceiling; on the roof, the whole house under it
  */
-export function homeCamera(y: number): [number, number, number, number, number, number][] {
+type CamBox = [number, number, number, number, number, number];
+export function homeCamera(y: number): CamBox[] {
   const lv = homeLevel(y);
-  if (lv === 'room') return [[hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, SLAB_Y + CEIL]];
-  if (lv === 'up')
-    return [
-      [hx0, hz0, hx1, hz1, SLAB_Y + UP_Y - 0.16, -1],
-      [hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, SLAB_Y + UP_CEIL],
-    ];
+  // (over the stair's well the room's ceiling and the upstairs' floor are open: docs/house-plan.md Phase 2)
+  if (lv === 'room') return [...AROUND_WELL.map((r): CamBox => [...r, SLAB_Y + RIDGE, SLAB_Y + CEIL]), [...STAIR.well, SLAB_Y + RIDGE, SLAB_Y + UP_CEIL], ...ROOF_STEPS_CAMERA];
+  if (lv === 'up') return [...AROUND_WELL.map((r): CamBox => [...r, SLAB_Y + UP_Y - 0.16, -1]), [hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, SLAB_Y + UP_CEIL], ...ROOF_STEPS_CAMERA];
   if (lv === 'base')
     // (under the ground the city's walls don't reach: the basement's own four, round its room, and the house over it)
     return [
@@ -367,6 +367,67 @@ export function homeCamera(y: number): [number, number, number, number, number, 
       [hx0 - 1, rz1, hx1 + 1, hz1 + 1, SLAB_Y, SLAB_Y + BASE_Y - 1],
     ];
   return [[hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, -1]];
+}
+
+/* ---------- The stair (docs/house-plan.md Phase 2: a turned stair, walked) ---------- */
+
+/** A flight's width, the spine between the flights, the half landing's depth, a flight's run */
+const [SW, SPINE, HALF_D, RUN] = [0.9, 0.1, 0.95, 1.45];
+const [wx0, wz1] = [rx1 - 2 * SW - SPINE, rz0 + HALF_D + RUN];
+/**
+ * The stair from the room up to the landing, in the stair hall in the front east corner (`well`): the first flight
+ * (`a`) up along the east wall toward the front, the half landing (`half`) across the front wall under the stair's
+ * window (`window`, over its middle, x0 to x1 and y0 to y1 over the slab), the turn, the second flight (`b`) back
+ * beside the first up to the landing upstairs, a steel spine between them (`spine`). `steps`: the risers in each
+ * flight (the last onto the landing over it). Walked: the floor under him rises with the treads (`stairY()`), its
+ * rails stop him (`stairRails()`), the camera's ceilings open over its well (`homeCamera()`).
+ */
+export const STAIR = {
+  well: [wx0, rz0, rx1, wz1] as Rect,
+  a: [rx1 - SW, rz0 + HALF_D, rx1, wz1] as Rect,
+  half: [wx0, rz0, rx1, rz0 + HALF_D] as Rect,
+  b: [wx0, rz0 + HALF_D, wx0 + SW, wz1] as Rect,
+  spine: [wx0 + SW, rz0 + HALF_D, rx1 - SW, wz1] as Rect,
+  steps: 6,
+  window: { x0: wx0 + 0.2, x1: rx1 - 0.3, y0: UP_Y / 2 + 0.08, y1: CEIL - 0.08 },
+};
+/** The house's footprint round the well, as boxes (the camera's ceilings and floors round it) */
+const AROUND_WELL: [number, number, number, number][] = [
+  [hx0, hz0, wx0, hz1],
+  [wx0, wz1, hx1, hz1],
+  [rx1, hz0, hx1, wz1],
+  [wx0, hz0, rx1, rz0],
+];
+const inR = (f: Rect, x: number, z: number) => x >= f[0] && x <= f[2] && z >= f[1] && z <= f[3];
+/** The stair's floor at x, z (over the world: the first flight from the room's floor at its foot to the half landing, the second on up to the landing upstairs), or null off it */
+export function stairY(x: number, z: number): number | null {
+  const { a, half, b } = STAIR;
+  const k = (v: number) => Math.min(1, Math.max(0, v));
+  if (inR(a, x, z)) return SLAB_Y + (UP_Y / 2) * k((a[3] - z) / RUN);
+  if (inR(half, x, z)) return SLAB_Y + UP_Y / 2;
+  if (inR(b, x, z)) return SLAB_Y + (UP_Y / 2) * (1 + k((z - b[1]) / RUN));
+  return null;
+}
+/** How far up or down from a floor he steps on or off it at the stair's ends */
+const STEP = 0.3;
+/**
+ * While he wakes and the street outside loads, the stair waits too, as the doors do (docs/spawn-plan.md: the landing
+ * looks out over the Close): index.ts shuts it as he wakes and opens it when the street's ready
+ */
+export const STAIR_GATE = { shut: false };
+/**
+ * What stops someone `y` high (his feet) round the stair: its west side always (the second flight's side and the
+ * balustrade over it upstairs), the spine between the flights, across the first flight's foot but from the room's
+ * floor (upstairs it's the well's rail; while the street loads, shut), across the second's head but from upstairs
+ * (down in the room it's the flight's underside, the den's door in it)
+ */
+export function stairRails(y: number): Rect[] {
+  const h = y - SLAB_Y;
+  const { well, a, b, spine } = STAIR;
+  const out: Rect[] = [[well[0] - 0.04, well[1], well[0], well[3] + 0.04], spine];
+  if (h > STEP || STAIR_GATE.shut) out.push([a[0], well[3], a[2], well[3] + 0.04]);
+  if (h < UP_Y - STEP) out.push([b[0], well[3], b[2], well[3] + 0.04]);
+  return out;
 }
 
 /**
@@ -386,12 +447,13 @@ export const SOFA_SEAT = { x: SEAT_X, z: SEAT_Z, ry: -Math.PI / 2, h: 0.24 };
 
 /**
  * The room's windows (home3d.ts draws them: the front one over the sofa, the one east of the front door over the
- * hall's console table (docs/compound-plan.md Phase 2, as it is outside), the back one over the counter), each
+ * hall's console table (docs/compound-plan.md Phase 2, as it is outside) up to the stair hall, the back one over the
+ * counter; the stair's own window over the half landing is the stair's, `STAIR`), each
  * across x0 to x1 in the wall at z, `into` the way into the room
  */
 export const ROOM_WINDOWS = [
   { x0: rx0 + 0.506, x1: DX - 0.75, z: rz0 + 0.006, into: 1 },
-  { x0: DX + 0.9, x1: rx1 - 1.05, z: rz0 + 0.006, into: 1 },
+  { x0: DX + 0.9, x1: STAIR.well[0] - 0.25, z: rz0 + 0.006, into: 1 },
   { x0: rx0 + 0.806, x1: rx0 + 4.206, z: rz1 - 0.006, into: -1 },
 ] as const;
 /**
@@ -413,16 +475,20 @@ export function curtainPanels(k: number): Rect[] {
 }
 
 
-/** Where you arrive at the top of the stairs, by the stairwell's head */
-const LANDING = { x: rx1 - 1.3, z: rz0 + 0.75 };
 
 /* ---------- The roof terrace (docs/ends-far-west-plan.md Phase 3) ---------- */
 
 /** The terrace's floor over the slab (the roof's felt), and the roof inside its parapet and rail */
 export const ROOF_Y = EAVES + 0.06;
 export const TERRACE: Rect = [hx0 + SHELL + 0.1, hz0 + SHELL + 0.1, hx1 - SHELL - 0.1, hz1 - SHELL - 0.1];
-/** The stairs' head: a hatch in the roof over the stairs below, its lid up, a rail round three sides */
+/** The roof's steps' head: a hatch in the roof over the well's front, its lid up, a rail round three sides */
 export const HATCH: Rect = [rx1 - 1.05, rz0 + 0.3, rx1 - 0.1, rz0 + 1.7];
+/**
+ * The roof's steps (docs/house-plan.md Phase 2: steep, walnut on black steel): from the landing at the well's back,
+ * over the stair's first flight, up through the hatch: across x0 to x1, from their foot at z1 (the landing's floor)
+ * to their head at z0 (the roof's), `steps` risers. Walked in Phase 3; till then the way up is the fade
+ */
+export const ROOF_STEPS = { rect: [HATCH[0] + 0.12, HATCH[1] + 0.15, HATCH[2] - 0.04, wz1] as Rect, steps: 9 };
 /** What stands on the terrace: its footprint, how tall (over the roof), and what it is (home3d.ts draws each) */
 export interface RoofThing {
   kind: 'hatch' | 'sofa' | 'table' | 'planter' | 'telescope' | 'sign';
@@ -445,15 +511,24 @@ export const ROOF_THINGS: RoofThing[] = [
   { kind: 'planter', rect: [tx0 + 5.0, tz1 - 0.5, tx0 + 6.0, tz1 - 0.1], h: 0.3 },
   { kind: 'planter', rect: [tx1 - 1.5, tz1 - 0.6, tx1 - 0.1, tz1 - 0.1], h: 0.3 },
 ];
+/** The roof's steps to the camera, in six lengths each as low as its lowest end's underside (they climb over the stair's first flight) */
+const ROOF_STEPS_CAMERA: CamBox[] = [0, 1, 2, 3, 4, 5].map((k) => {
+  const [x0, z0, x1, z1] = ROOF_STEPS.rect;
+  const [za, zb] = [z1 - ((k + 1) * (z1 - z0)) / 6, z1 - (k * (z1 - z0)) / 6];
+  return [x0, za, x1, zb, SLAB_Y + UP_CEIL, SLAB_Y + UP_Y + ((z1 - zb) / (z1 - z0)) * (ROOF_Y - UP_Y) - 0.12];
+});
 /** Up on the roof (over the house's footprint, above the upstairs)? */
 export const onRoof = (x: number, z: number, y: number) => homeLevel(y) === 'roof' && inFoot(x, z);
 /**
- * The floor under someone `yNow` high in the house's footprint, for groundheight.ts: the upstairs', the roof's or the basement's (null
- * in the room, whose floor is the plot's own ground, and outside the footprint)
+ * The floor under someone `yNow` high in the house's footprint, for groundheight.ts: the stair's, the upstairs', the roof's or the
+ * basement's (null in the room, whose floor is the plot's own ground, and outside the footprint)
  */
 export function homeFloorY(x: number, z: number, yNow: number) {
   if (!inFoot(x, z)) return null;
   const lv = homeLevel(yNow);
+  // (on the stair, its treads: docs/house-plan.md Phase 2)
+  const s = lv === 'room' || lv === 'up' ? stairY(x, z) : null;
+  if (s !== null) return s;
   return lv === 'up' ? SLAB_Y + UP_Y : lv === 'roof' ? SLAB_Y + ROOF_Y : lv === 'base' ? SLAB_Y + BASE_Y : null;
 }
 /** Does someone `r` wide at x, z on the terrace touch its rail or anything standing on it? */
@@ -472,25 +547,28 @@ export interface Portal {
   to: { x: number; z: number; y: number; yaw: number };
   arrived: string;
 }
+/** Where the roof's steps start upstairs (behind the well's rail over the first flight) and the den's door under the second flight */
+const ROOF_FOOT = { x: rx1 - SW / 2, z: wz1 + 0.3 };
+const DEN_DOOR = { x: wx0 + SW / 2, z: wz1 + 0.3 };
+/** The stair's foot in the room, where it says it's waiting while the street loads */
+export const STAIR_FOOT = { x: rx1 - SW / 2, z: wz1 + 0.3 };
 /**
- * The front door (on the yard, north) and the side door (onto the east lawn), outside and in; the stairs, from the
- * room up to the landing and down again; the steps from the landing up through the hatch to the terrace, and down
+ * The front door (on the yard, north) and the side door (onto the east lawn), outside and in; the steps from the
+ * landing up through the hatch to the terrace, and down; the den's door, down and up
  */
 export const HOME_PORTALS: Portal[] = [
   { id: 'home:in', level: 'room', x: DX, z: hz0 - 0.75, label: 'Go in', to: { x: DX, z: rz0 + 0.55, y: SLAB_Y, yaw: Math.PI }, arrived: 'Home' },
   { id: 'home:out', level: 'room', x: DX, z: rz0 + 0.3, label: 'Front door', to: { x: DX + 0.5, z: hz0 - 1.75, y: SLAB_Y, yaw: 0 }, arrived: 'The yard' },
   { id: 'home:yard', level: 'room', x: rx1 - 0.3, z: SZ, label: 'Side door', to: { x: hx1 + 0.6, z: SZ, y: SLAB_Y, yaw: -Math.PI / 2 }, arrived: 'The garden' },
   { id: 'home:back', level: 'room', x: hx1 + 0.5, z: SZ, label: 'Go in', to: { x: rx1 - 0.55, z: SZ, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
-  // The stairs: from the room at their foot up to the landing by the stairwell's head, and down
-  { id: 'home:up', level: 'room', x: rx1 - 1.3, z: rz0 + 2.45, label: 'Upstairs', to: { x: LANDING.x, z: LANDING.z + 0.6, y: SLAB_Y + UP_Y, yaw: Math.PI }, arrived: 'Upstairs' },
-  { id: 'home:down', level: 'up', x: LANDING.x, z: LANDING.z + 1.4, label: 'Downstairs', to: { x: rx1 - 1.75, z: rz0 + 2.45, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
-  // The steps from the landing up through the hatch, and down
-  { id: 'home:roof', level: 'up', x: LANDING.x, z: LANDING.z, label: 'Roof', to: { x: HATCH[0] - 0.55, z: (HATCH[1] + HATCH[3]) / 2, y: SLAB_Y + ROOF_Y, yaw: Math.PI / 2 }, arrived: 'The terrace' },
-  { id: 'home:roofdown', level: 'roof', x: HATCH[0] - 0.35, z: (HATCH[1] + HATCH[3]) / 2, label: 'Downstairs', to: { x: LANDING.x, z: LANDING.z + 0.5, y: SLAB_Y + UP_Y, yaw: Math.PI }, arrived: 'Upstairs' },
-  // The steps down under the open stairs (Phase 4): from the room by their top to the basement by their foot, and up
-  // (down there he arrives west of the bar's stools, facing into the den with the way south clear)
-  { id: 'home:cellar', level: 'room', x: rx1 - 1.3, z: rz0 + 0.6, label: 'Basement', to: { x: rx1 - 1.65, z: rz0 + 2.75, y: SLAB_Y + BASE_Y, yaw: Math.PI }, arrived: 'The den' },
-  { id: 'home:cellarup', level: 'base', x: rx1 - 1.5, z: rz0 + 2.15, label: 'Upstairs', to: { x: rx1 - 1.3, z: rz0 + 1.2, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
+  // (the stair between the room and the landing is walked: `STAIR`, docs/house-plan.md Phase 2)
+  // The steps from the landing up through the hatch (from the well's rail over the first flight), and down
+  { id: 'home:roof', level: 'up', x: ROOF_FOOT.x, z: ROOF_FOOT.z, label: 'Roof', to: { x: HATCH[0] - 0.55, z: (HATCH[1] + HATCH[3]) / 2, y: SLAB_Y + ROOF_Y, yaw: Math.PI / 2 }, arrived: 'The terrace' },
+  { id: 'home:roofdown', level: 'roof', x: HATCH[0] - 0.35, z: (HATCH[1] + HATCH[3]) / 2, label: 'Downstairs', to: { x: ROOF_FOOT.x, z: ROOF_FOOT.z + 0.45, y: SLAB_Y + UP_Y, yaw: Math.PI }, arrived: 'Upstairs' },
+  // The den's door under the stair's second flight (Phase 4; docs/house-plan.md Phase 2), from the room to the basement
+  // by the steps' foot, and up (down there he arrives west of the bar's stools, facing into the den with the way south clear)
+  { id: 'home:cellar', level: 'room', x: DEN_DOOR.x, z: DEN_DOOR.z, label: 'Basement', to: { x: rx1 - 1.65, z: rz0 + 2.75, y: SLAB_Y + BASE_Y, yaw: Math.PI }, arrived: 'The den' },
+  { id: 'home:cellarup', level: 'base', x: rx1 - 1.5, z: rz0 + 2.15, label: 'Upstairs', to: { x: DEN_DOOR.x, z: DEN_DOOR.z + 0.45, y: SLAB_Y, yaw: Math.PI }, arrived: 'Home' },
 ];
 /** A thing in the house to use: where its prompt stands, on which floor, and its label (walk `places`; index.ts opens what it's for) */
 export interface HomeUse {
@@ -503,9 +581,10 @@ export interface HomeUse {
 const [wa, va, ca] = [WARDROBE_RECT, VAULT_RECT, DESK_CHAIR_RECT];
 /**
  * The ways out of the room that wait while the street outside is still loading (docs/spawn-plan.md Phase 1): the
- * front door, the side door and the stairs up (the landing and the terrace look out over the Close); spawn.ts says when
+ * front door, the side door, and the stair up (`STAIR_GATE`, its prompt `home:stairs` at its foot meanwhile: the
+ * landing and the terrace look out over the Close); spawn.ts says when
  */
-export const HOME_WAITS: readonly string[] = ['home:out', 'home:yard', 'home:up'];
+export const HOME_WAITS: readonly string[] = ['home:out', 'home:yard', 'home:stairs'];
 /** Their prompt meanwhile */
 export const WAITING = 'Getting ready…';
 /** The wardrobe (in front of the dressing room's rails upstairs: the fitting room), the den's vault (in front of it: the stash), the desk (behind its chair: the business card) */
@@ -520,7 +599,8 @@ export const HOME_USES: HomeUse[] = [
  */
 export function homePlaces(y: number, ready = true): { id: string; x: number; z: number; label: string }[] {
   const lv = homeLevel(y);
-  return [...HOME_PORTALS, ...HOME_USES].filter((p) => p.level === lv).map((p) => (ready || !HOME_WAITS.includes(p.id) ? p : { ...p, label: WAITING }));
+  const list = [...HOME_PORTALS, ...HOME_USES].filter((p) => p.level === lv).map((p) => (ready || !HOME_WAITS.includes(p.id) ? p : { ...p, label: WAITING }));
+  return ready || lv !== 'room' ? list : [...list, { id: 'home:stairs', ...STAIR_FOOT, label: WAITING }];
 }
 
 /** Pools of light at night (docs/ends-far-west-plan.md Phase 5): on Gate Lane under each of the gates' lamps, in the

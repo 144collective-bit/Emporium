@@ -49,7 +49,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, HOUSE_GEO, homePlaces, setRooms, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, HOUSE_GEO, homePlaces, setRooms, HOME_SPAWN, inHouse, SOFA_SEAT, STAIR_GATE } from './home';
 import { READY_AT, READY_REACH, curtains, dueDistricts, streetReady } from './spawn';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
@@ -1233,13 +1233,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let wokeAt = 0;
   let street = { ready: false, at: 0 };
   function streetUp() {
-    if (street.ready || !wokeAt) return true;
+    if (street.ready || !wokeAt) {
+      STAIR_GATE.shut = false;
+      return true;
+    }
     const now = performance.now();
     if (now - street.at < 300) return false;
     const due = dueDistricts(LAZY_DISTRICTS, districts.loaded()).length;
     street = { ready: streetReady({ due, waiting: works.waitingNear(READY_AT[0], READY_AT[1], READY_REACH), waitedMs: now - wokeAt }), at: now };
-    // (and the curtains drawn back: home3d.ts follows it)
-    if (street.ready) curtains.open = true;
+    // (and the curtains drawn back, home3d.ts following, and the stair up opened, home.ts `STAIR_GATE`)
+    if (street.ready) {
+      curtains.open = true;
+      STAIR_GATE.shut = false;
+    }
     return street.ready;
   }
   let lifting = false;
@@ -1308,6 +1314,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         return void loadStash()
           .then((ui) => ui.open())
           .catch(() => game.toast('Stash stuck · try again'));
+      // (the stair's foot while the street loads: home.ts `STAIR_GATE`)
+      if (id === 'home:stairs') return tycoon?.toast('Nearly ready · the street is loading', 2500);
       if (id.startsWith('home:')) {
         const p = HOME_PORTALS.find((q) => q.id === id);
         if (!p) return;
@@ -2520,6 +2528,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       const at = there ? undefined : inside ? HOME_WAKE : HOME_SPAWN;
       // (the curtains drawn before his house is drawn: they open once the street's ready, Phase 2)
       if (inside) curtains.open = false;
+      if (inside) STAIR_GATE.shut = true;
       if (!there) {
         await Promise.race([districts.load('south'), new Promise((r) => setTimeout(r, 10000))]);
         works.want(HOME_WAKE.x, HOME_WAKE.z, 25);
