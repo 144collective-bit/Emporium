@@ -68,14 +68,17 @@ keep it up to date when what it describes changes.
   Aldwyn's Green's platform card, a ride to the High Road, skipped; the
   change: from Downtown's metro door to the tube's High Road, skipped to the
   end), the world map and a taxi (the tube's Trenches station found, Taxi
-  here, cancelled), a kart race (a single race started and quit),
+  here, cancelled), a kart race (a single race started and quit), a
+  round of golf (Play golf at Knob Hill's door, the 1st tee, a swing's
+  three presses, the next shot, Esc out),
   flying (into your aircraft, rolling out), the gamepad (a made-up pad:
   the stick, A, Start, B) and the touch controls (made-up fingers: the
   stick, Aim, Gas); it fails on any page error, any NaN warning in
   the console (NaN geometry can black a real GPU's screen out,
   docs/stability-plan.md; the software renderer draws on regardless) or a
   step that didn't happen. `npm run smoke -- car,foot` runs only those scenes. `walk.ts` is the view and has no unit tests, so run it before and
-  after changing walk mode; `SMOKE_SHOTS=dir` keeps a picture a step. It
+  after changing walk mode; `SMOKE_SHOTS=dir` keeps a picture a step (`SMOKE_CLEAN=1`: without the `?fps`
+  readout over it). It
   takes a few minutes in the software renderer, so it isn't in the Action.
 - `npm run memcheck` (after a build and the texture bake;
   `scripts/memcheck.mjs`): the whole city built on a headless phone, held

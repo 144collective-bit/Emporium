@@ -334,7 +334,7 @@ export const GOLFERS: Golfer[] = /* @__PURE__ */ (() => {
   for (const nine of [0, 1] as const)
     GROUPS[nine].forEach((n, g) => {
       const { legs, loop } = roundOf(nine, g, n);
-      for (let k = 0; k < n; k++) out.push({ id: `golfer-${nine}-${g}-${k}`, group: nine * 10 + g, k, trim: k % 2 === 1, legs: legs[k], loop, offset: (loop * g) / GROUPS[nine].length });
+      for (let k = 0; k < n; k++) out.push({ id: `golfer-${nine}-${g}-${k}`, group: nine * 10 + g, k, trim: k % 2 === 1, legs: legs[k], loop, offset: (loop * (g + 0.5)) / GROUPS[nine].length });
     });
   return out;
 })();

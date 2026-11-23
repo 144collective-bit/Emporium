@@ -1,0 +1,239 @@
+/* ---------- The golf game (walk mode, golfgame.ts; docs/golf-game-plan.md) ----------
+   The round's HUD under the header in three glass blocks as the kart race's (the hole, its par, its name and the
+   stroke left; the club, the distance to the pin and the lie centre; the wind and Quit right), the swing's meter
+   along the bottom (its zero line, the top, the power set, the marker running), short pops over the middle, and the
+   hole's card on the shared results card (.race-result, cards.css). Walk mode's own buttons hide while a round's on
+   (.city.is-golfing). Nothing moves under reduced motion but the marker (it's the game). */
+
+.city.is-golfing .walk-stick,
+.city.is-golfing .walk-look,
+.city.is-golfing .walk-prompt,
+.city.is-golfing .walk-run,
+.city.is-golfing .walk-crouch,
+.city.is-golfing .walk-jump,
+.city.is-golfing .walk-fire,
+.city.is-golfing .walk-aim,
+.city.is-golfing .walk-reload,
+.city.is-golfing .walk-swap,
+.city.is-golfing .walk-crosshair,
+.city.is-golfing .combat-hud,
+.city.is-golfing .combat-cross,
+.city.is-golfing .drive-hud,
+.city.is-golfing .city-pins,
+.city.is-golfing .mission-tracker,
+.city.is-golfing .city-guide,
+.city.is-golfing .hotbar {
+  display: none;
+}
+.golf-hud {
+  position: absolute;
+  inset: calc(var(--head-h) + 12px) 16px 16px;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  align-items: start;
+  gap: 10px;
+  color: #fff;
+  pointer-events: none;
+}
+.golf-hud[hidden],
+.golf-card[hidden] {
+  display: none;
+}
+.golf-hud-left,
+.golf-hud-mid,
+.golf-hud-right {
+  display: grid;
+  gap: 3px;
+  padding: 7px 12px 8px;
+  border: 1px solid #0000;
+  border-radius: 14px;
+  background:
+    linear-gradient(#0b0a12e6, #0b0a12e6) padding-box,
+    var(--pulse) border-box;
+  box-shadow: 0 0 30px -10px #00eaffaa;
+}
+.golf-hud-left {
+  justify-self: start;
+  justify-items: start;
+}
+.golf-hud-mid {
+  justify-items: center;
+  min-width: 132px;
+}
+.golf-hud-right {
+  justify-self: end;
+  justify-items: center;
+  pointer-events: auto;
+}
+.golf-hud p {
+  margin: 0;
+}
+.golf-hole {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--font-display);
+}
+.golf-hole b {
+  font-size: 22px;
+  font-weight: 900;
+}
+.golf-hole span,
+.golf-stroke,
+.golf-to,
+.golf-lie {
+  font-size: 13px;
+  opacity: 0.85;
+}
+.golf-name {
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #e6c46a;
+}
+.golf-club {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.golf-club b {
+  font-family: var(--font-display);
+  font-size: 18px;
+}
+.golf-key {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: #ffffff22;
+  font-size: 11px;
+}
+.golf-wind {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+/* The wind's arrow: up the screen is down the aim */
+.golf-arrow {
+  display: inline-block;
+  width: 0;
+  height: 0;
+  border-right: 6px solid transparent;
+  border-bottom: 14px solid #00eaff;
+  border-left: 6px solid transparent;
+}
+.golf-quit {
+  padding: 4px 12px;
+  border: 1px solid #ffffff55;
+  border-radius: 10px;
+  background: #ffffff14;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+/* The meter: its zero line (the strike's sweet spot) near the left, the top (full power) near the right */
+.golf-meter {
+  position: relative;
+  grid-column: 1 / -1;
+  grid-row: 3;
+  justify-self: center;
+  width: min(520px, 100%);
+  height: 22px;
+  border: 1px solid #0000;
+  border-radius: 11px;
+  background:
+    linear-gradient(90deg, #ff5a5a 0%, #ffd23f 15%, #3ddc84 18%, #3ddc84 30%, #00eaff 85%, #ff5aa0 100%) padding-box,
+    var(--pulse) border-box;
+  opacity: 0.92;
+}
+.golf-meter i {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+}
+.golf-meter-zero {
+  left: 16.7%;
+  background: #fff;
+}
+.golf-meter-full {
+  left: 92.4%;
+  background: #ffffffaa;
+}
+.golf-meter-power {
+  background: #0b0a12;
+}
+.golf-meter-mark {
+  width: 5px;
+  margin-left: -2.5px;
+  background: #fff;
+  box-shadow: 0 0 8px #fff;
+}
+.golf-meter-power[hidden] {
+  display: none;
+}
+.golf-meter-tip {
+  position: absolute;
+  top: -22px;
+  left: 0;
+  right: 0;
+  margin: 0;
+  font-size: 12px;
+  text-align: center;
+  text-shadow: 0 1px 3px #000;
+}
+.golf-pop {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  align-self: center;
+  justify-self: center;
+  padding: 8px 18px;
+  border-radius: 14px;
+  background: #0b0a12d9;
+  font-family: var(--font-display);
+  font-size: clamp(20px, 5vw, 34px);
+  font-weight: 900;
+  text-align: center;
+}
+.golf-pop[hidden] {
+  display: none;
+}
+.golf-card {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 6;
+  transform: translate(-50%, -50%);
+}
+.golf-card-score {
+  margin: 4px 0;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 900;
+}
+.golf-card-line {
+  margin: 0;
+  opacity: 0.85;
+}
+.golf-card-take {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+@media (max-width: 480px) {
+  .golf-hud {
+    inset: calc(var(--head-h) + 8px) 8px 12px;
+    gap: 6px;
+  }
+  .golf-hud-mid {
+    min-width: 0;
+  }
+  .golf-hole b {
+    font-size: 18px;
+  }
+}

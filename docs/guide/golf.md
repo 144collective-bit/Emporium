@@ -124,3 +124,17 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   `carry`), a round (`newRound()`, `teeBall()`, `windOn()`, `playShot()`, `toPar()`, `roundOver()`, `MAX_STROKES`,
   `WIND_MAX`, `rng()`), the test golfer (`botShot()`). The pins are golflife.ts's flags (`FURNITURE[i].pin`).
   `npm run golfmap` draws a round on the map (`GOLF_ROUND`, `GOLF_ROUND_BOT`).
+  Phase 2 (a shot on the course) built: **`golfgame.ts`** (its own chunk: walk.ts `loadGolf()` / `startGolf()` at
+  Knob Hill's door, whose prompt reads Play golf, `DOOR_LABEL`, gated by the live settings' `golf`, `GATED`):
+  `createGolfGame()` → `GolfGame` (`start()`, `frame()`, `key()`, `quit()`, `at`): a round's phases (aim, the meter,
+  the swing, the flight, settling, the camera's move to the next ball, the hole's card); the meter (`METER`: up past
+  the top, the power on the way up, the accuracy on the way down: early a hook, late a slice); `pickClub()` for the
+  distance; Degen posed at the addressed ball by acts.ts's `golfPose()` / `puttPose()`, placed with locomotion.ts's
+  `placeRoot()`, a club on his right hand's bone while the round's on (the owner's exception to "his hands hold only
+  weapons"); the ball (unlit white, on the FX layer), its trail, the aim's ring and dashed line; the shot camera
+  (`shotCamera()`: behind the ball on his side), following the ball, flying between shots; the HUD and the hole's card
+  built in the chunk, styled by `src/styles/golf.css` (imported after karts.css in Base.astro), walk mode's own
+  buttons, the guide and the hotbar hidden under `.city.is-golfing`; `scoreName()` (par, birdie...). Walk mode's
+  hooks: `golfFrame()` in `update()`, `modeNow()`'s `golf` (keymap.ts `golf`: aim A / D, club W / S, swing Space,
+  quit Esc; the jobs `club` and `swing`), walkkeys.ts's `golf` branch, Esc's `quitGolf()`, `endGolf()` standing
+  Degen back at the door. The smoke's `golf` scene plays a shot (`npm run smoke -- golf`).

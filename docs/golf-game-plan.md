@@ -16,7 +16,8 @@ Nothing is built until the owner signs off a phase; keep this plan up to date. T
 | Degen holding a club | Yes: golf is the one exception to "his hands hold only weapons" (docs/wardrobe-plan.md Phase 1), a club in his hands only while a round is on |
 | How long a round | The player's pick each time: a hole, the front nine, the back nine or all eighteen; a round left is carried on later |
 | Between shots | The camera flies to the ball |
-| Phase 1 | Go (2026-11-22); built, waiting for the owner's sign-off |
+| Phase 1 | Go (2026-11-22); built, signed off (2026-11-23: "1") |
+| Phase 2 | Go (2026-11-23); built, waiting for the owner's sign-off |
 
 ## What it is
 
@@ -107,6 +108,17 @@ penalties, the trees, the cup, a hole and a round, the bot's rounds. Nothing on 
 The game's chunk and its first look: the clubhouse's "Play golf", the 1st tee, aiming, the meter, the ball's flight
 and roll followed by the camera, Degen's swing, the next shot from where it stopped, holing out. One hole playable,
 on a desktop.
+
+**Built** (2026-11-23; `docs/guide/golf.md`): Play golf at the clubhouse's door (the live settings' `golf` gates
+it) opens a round of the 1st hole: Degen at his ball with a club in his hands, the camera behind the ball, the aim's
+ring and line, A / D to aim, W / S the club (the one for the distance picked first), Space three times (the meter:
+start, power on the way up, accuracy on the way down), his swing or putt, the ball's flight and roll followed by the
+camera (its trail behind it), a pop for the water, out of bounds or a tree, the camera flying on to the next shot,
+the hole's card (its strokes and their name, Again or Done), Esc or Quit out. The HUD: the hole, its par and name,
+the stroke; the club, the distance to the pin, the lie; the wind's arrow and speed; the meter. In the boot 1.4 KB
+(770.5 KB): walk mode's hooks; the game's own chunk the rest. The smoke plays a shot (`golf`). Shown to the owner
+with the smoke's pictures. The crowd's groups now start part-way round their nine (golflife.ts `offset`), not on the
+1st tee; keeping them off your hole is Phase 3's.
 
 ### Phase 3: the round
 

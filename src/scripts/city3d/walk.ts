@@ -108,6 +108,7 @@ import { DOWN as UNDER_DOWN } from './underground';
 import { HARBOUR_MASTER } from './docksport';
 import { SITE_DOORS } from './crestsites';
 import { GOLF_CLUBHOUSE } from './golflift';
+import type { GolfGame } from './golfgame';
 import { CORAL_DOORS } from './coral';
 import { RESORTS } from './resorts';
 import { SPHERE_DOOR } from './stripmarks';
@@ -139,11 +140,11 @@ import { LENS, nearFor } from './lens';
 /** What a prompt can open: a landmark's door, or one of walk mode's own places and vehicles */
 type Near = SpotId | 'gear' | 'garage' | 'hangar' | 'car' | 'plane' | 'boat' | 'karts' | 'trainer' | 'bench' | 'stand' | 'put' | `place:${string}` | `spar:${PartnerId}`;
 /** The prompts the owner can close (live settings, live.ts) and the feature that closes each */
-const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat' };
+const GATED: Partial<Record<Near, FeatureId>> = { gear: 'guns', garage: 'drive', hangar: 'fly', karts: 'karts', trainer: 'fight', boat: 'boat', golfclub: 'golf' };
 /** The landmarks' doors, Trench Avenue's, the stadium's gate, the Harbour Master's, Sunridge's, the resorts', the Sphere's and Crestmont's (their prompts open their panels) */
 const ALL_DOORS = [...DOORS, ...AVENUE_DOORS, { id: 'stadium' as const, ...GATE.spot }, { id: 'harbourmaster' as const, ...HARBOUR_MASTER.door }, ...SUN_DOORS, ...RESORTS.map((r) => ({ id: r.id, ...r.door })), { id: 'sphere' as const, ...SPHERE_DOOR }, ...ENDS_DOORS, ...SITE_DOORS, { id: 'golfclub' as const, ...GOLF_CLUBHOUSE.door }, ...CORAL_DOORS, { id: 'cityhall' as const, ...CITYHALL_DOOR }, { id: 'police' as const, ...POLICE_DOOR }, { id: 'courthouse' as const, ...COURT_DOOR }];
 /** Doors with a word of their own (the viewpoints: nothing to enter) */
-const DOOR_LABEL: Partial<Record<string, string>> = { overlook: 'Look out', reservoir: 'Look out' };
+const DOOR_LABEL: Partial<Record<string, string>> = { overlook: 'Look out', reservoir: 'Look out', golfclub: 'Play golf' };
 /** Prompts that say their own label (the rest say "Enter ...") */
 const OWN_LABEL = new Set<string>(['gear', 'garage', 'hangar', 'car', 'plane', 'boat', 'karts', 'trainer', 'bench', 'stand', 'put', ...Object.keys(DOOR_LABEL)]);
 /** The Armoury's counter top (its drawing grid: the counter's box, a little in from its front edge) and height over the slab */
@@ -721,6 +722,7 @@ export function createWalk(d: WalkDeps) {
       else if (n.id === 'plane') (fly.active ? leavePlane() : board());
       else if (n.id === 'boat') (boating() ? leaveBoat() : takeBoat());
       else if (n.id === 'karts') void loadKarts().then(() => kartUI.show());
+      else if (n.id === 'golfclub') startGolf();
       else if (n.id === 'trainer') fightUI.show();
       else if (n.id.startsWith('spar:')) startFight({ kind: 'street', partner: n.id.slice(5) as PartnerId });
       else if (n.id === 'car') (drive.active ? getOut() : getIn());
@@ -1016,6 +1018,7 @@ export function createWalk(d: WalkDeps) {
     if (ride) return 'ride';
     if (fighting()) return 'ring';
     if (karts.active) return 'kart';
+    if (golf?.active) return 'golf';
     if (boating()) return 'boat';
     if (fly.active) return 'plane';
     if (drive.active) return drive.vehicle?.kind === 'bike' ? 'bike' : 'car';
@@ -1781,6 +1784,9 @@ export function createWalk(d: WalkDeps) {
     get karts() {
       return karts;
     },
+    get golf() {
+      return golf;
+    },
     get near() {
       return near;
     },
@@ -2375,6 +2381,41 @@ export function createWalk(d: WalkDeps) {
     }
   }
 
+  /* ---------- Golf (docs/golf-game-plan.md): Play golf at Knob Hill's door; the round is golfgame.ts's own chunk ---------- */
+  let golf: GolfGame | null = null;
+  const loadGolf = lazy(() => import('./golfgame'), 'golf');
+  function startGolf() {
+    void loadGolf().then((m) => {
+      if (!active || golf?.active || drive.active || fly.active || karts.active) return;
+      if (combat.armed) combat.toggleHolster();
+      golf ??= m.createGolfGame({ scene: d.scene, camera, root, hero, scale: SCALE, toast: (text, ms) => d.game.toast(text, ms), end: endGolf });
+      keys.clear();
+      near = null;
+      prompt.hidden = true;
+      golf.start([0]);
+    });
+  }
+  /** The round over (or quit): Degen back on foot by the clubhouse's door */
+  function endGolf() {
+    const s = GOLF_CLUBHOUSE.spawn;
+    pos.set(s.x, groundAt(s.x, s.z), s.z);
+    vel.set(0, 0);
+    vy = 0;
+    keys.clear();
+    d.touched();
+  }
+  const quitGolf = () => (golf?.active ? (golf.quit(), true) : false);
+  /** In a round: the game has the keys and the camera; Degen stands where it puts him */
+  function golfFrame(dt: number, t: number) {
+    golf!.frame(dt, t);
+    pos.set(golf!.at.x, golf!.at.y, golf!.at.z);
+    combat.update(dt, t, false);
+    if (near) {
+      near = null;
+      prompt.hidden = true;
+    }
+  }
+
   /** In the kart: the sim takes the pedals, the stick and the buttons; the view does the rest */
   function kartFrame(dt: number, t: number) {
     const k = (a: string, b: string) => (keys.has(a) || keys.has(b) ? 1 : 0);
@@ -2421,6 +2462,7 @@ export function createWalk(d: WalkDeps) {
     if (ride) return rideFrame(dt, t);
     partners?.update(dt, pos.x, pos.z, sparWith);
     if (fighting()) return fightFrame(dt, t);
+    if (golf?.active) return golfFrame(dt, t);
     if (karts.active) return kartFrame(dt, t);
     if (!kartsAsked && nearKarts(pos.x, pos.z)) {
       kartsAsked = true;
@@ -3472,7 +3514,7 @@ export function createWalk(d: WalkDeps) {
     closeCard: () => hideCard(),
     /** Esc: close the gun store, the garage, the kart or fight menu if one is open, or abandon a kart race or a fight (true if it did) */
     closeShop() {
-      return !!hotbar?.close() || shop.close() || garageUI.close() || hangarUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight();
+      return !!hotbar?.close() || shop.close() || garageUI.close() || hangarUI.close() || kartUI.close() || abandonKart() || fightUI.close() || quitFight() || quitGolf();
     },
     /** The hub opened: Degen stands still, the mouse is freed */
     pause() {

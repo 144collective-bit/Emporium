@@ -12,6 +12,7 @@
 // renderer (a few frames a second), so every step waits on what it expects, not on the clock.
 //   CHROMIUM_PATH=...   the browser (default: Playwright's own, else /opt/pw-browsers/chromium)
 //   SMOKE_SHOTS=dir     keep a picture after each step
+//   SMOKE_CLEAN=1       ... without the ?fps readout over them (it's still read, only not shown)
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
@@ -107,6 +108,7 @@ async function scene(name, spawn, play, init) {
   try {
     // (no spot given: he wakes where everyone does, in his room at home, docs/spawn-plan.md)
     await page.goto(`http://127.0.0.1:${server.address().port}/?fps${spawn ? `&spawn=${spawn}` : ''}`);
+    if (process.env.SMOKE_CLEAN) await page.addStyleTag({ content: '.city-stats { opacity: 0 !important; }' });
     await t.click('[data-start-guest]');
     // (Single player goes straight into walking)
     await t.click('[data-start-single]');
@@ -389,6 +391,30 @@ await scene('karts', '-338.8,-46.9', async (t) => {
   }
   if (await t.has('.city.is-karting')) throw new Error('the race did not end on Esc');
   await t.step('quit the race');
+});
+
+// Golf (docs/golf-game-plan.md Phase 2): at Knob Hill's door, Play golf, the 1st tee, a swing (start, power on the
+// way up, accuracy on the way down), the ball off and the next shot to play, Esc out
+await scene('golf', '528,-497.6', async (t) => {
+  await t.prompt('Play golf');
+  await t.until('the round', () => !!document.querySelector('.city.is-golfing'), null, 120000);
+  await t.step('on the 1st tee');
+  const stroke = () => t.page.evaluate(() => document.querySelector('[data-golf-stroke]')?.textContent ?? '');
+  await t.page.keyboard.press('Space');
+  await t.page.waitForTimeout(800);
+  await t.page.keyboard.press('Space');
+  await t.page.waitForTimeout(1250);
+  await t.page.keyboard.press('Space');
+  await t.step('the swing');
+  await t.until('the next shot', () => (document.querySelector('[data-golf-stroke]')?.textContent ?? '') === 'Stroke 2', null, 60000);
+  await t.step(`the ball played: ${await stroke()}, ${await t.page.evaluate(() => document.querySelector('[data-golf-to]')?.textContent ?? '')}`);
+  // (Esc closes the control card first if it's up, then quits)
+  for (let i = 0; i < 3 && (await t.has('.city.is-golfing')); i++) {
+    await t.page.keyboard.press('Escape');
+    await t.page.waitForTimeout(1500);
+  }
+  if (await t.has('.city.is-golfing')) throw new Error('the round did not end on Esc');
+  await t.step('quit the round');
 });
 
 // Flying: beside your aircraft in Hangar 1 (airfield.ts HANGAR_SPOT), in, rolling out under power

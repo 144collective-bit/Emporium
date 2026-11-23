@@ -137,7 +137,8 @@ keep it up to date when what it describes changes.
     `kart-sim.ts`, come with the race), flying's step (`flight-step.ts`, when you're near your aircraft or climb
     in, fly.ts `loadStep()`) and target practice's rules (`combat-sim.ts`, with combat.ts; the guns and the
     dummies the boot reads are `weapons.ts`: both moved out of the boot on 2026-11-22 to make room for the golf
-    plan's Phase 5), the economy's screens
+    plan's Phase 5), the golf game (`golfgame.ts` with its rules, golfgame-sim.ts: walk.ts `loadGolf()`, the first
+    Play golf at Knob Hill's door; the boot holds its hooks only), the economy's screens
     (`tycoon-ui.ts`: the business card's views, the market hall and the
     building panels' parts, the first time one opens; `tycoon-boot.ts`
     keeps the save, its tick, the Dorras readout, the missions and the
