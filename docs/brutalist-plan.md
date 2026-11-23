@@ -182,7 +182,7 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 ## What Phase 7a did (2026-11-23: Degen's flat)
 
 - **Where** (the owner's pick): Kite Point's 15th floor, behind the door where The Core's 15th-floor bridge meets it
-  (southblocks.ts `FLAT`, `FLAT_FLOOR`): a living room along the tower's front (its face seen from inside: windows on
+  (southblocks.ts `FLAT`, `FLAT_FLOOR`; two storeys high, the 16th taken into it: a storey's no more than his height): a living room along the tower's front (its face seen from inside: windows on
   the city), a hall right of the door, the bedroom past a partition. Its floors are sky shapes laid round the sofa,
   counter and bed (southsky.ts `flatShapes()`), walked only once it's his (`setFlatOpen()`); its door's prompt on the
   bridge (`flatDoors()`).

@@ -846,8 +846,8 @@ export const FLAT = (() => {
     t,
     n,
     y,
-    /** Its ceiling (the next floor's slab under) */
-    ceil: floorY(KITE.base, FLAT_FLOOR + 1) - 0.06,
+    /** Its ceiling: two storeys up (the 16th floor's taken into it: a storey's no more than his height), under the 17th's slab */
+    ceil: floorY(KITE.base, FLAT_FLOOR + 2) - 0.06,
     /** The whole flat's outline (its walls inside the tower: hollow for the camera) */
     outline: rect(-5.5, 3, -0.3, -5.8),
     /** Its floors, laid round what's in the rooms (walked only where they are: the sofa, the counter and the bed stop you) */
