@@ -154,7 +154,7 @@ in their sites (and in the site worker).
   The Block 0.38M to 0.46M triangles; with phones kept painted, the
   phone's geometry after the views is 111.6 MB before and after.
 
-### Phase 4: the glass and the extras (built, waiting on the owner's sign-off)
+### Phase 4: the glass and the extras (built, signed off by the owner, 2026-11-23: the plan complete)
 
 Mullion fins and spandrels on the offices' towers; the diners; and, on
 desktops only, rooms behind the glass (interior mapping) if the owner
