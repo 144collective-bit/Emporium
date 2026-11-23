@@ -183,6 +183,14 @@ wants it after seeing the rest (the owner's pick: yes).
   normal and uv, so the window's size and its light ride in the uv's whole
   part (`packRoomUv()`); the colours are written as on screen and turned
   to linear light at the end, as the atlas's are.
+- **Measured** (headless, against main, at downtown's street, the square
+  and the towers from the north): phones the same (draws 312 / 284 / 257
+  before, 314 / 283 / 250 after; triangles 0.51M / 0.46M / 0.56M before
+  and after within a per cent; geometry after the views 102.0 and 102.1
+  MB); desktops draws 532 / 425 / 483 before, 512 / 454 / 482 after
+  (within the traffic's swing), triangles 1.61M / 1.68M / 1.49M before,
+  1.68M / 1.79M / 1.48M after, geometry 137.9 and 138.3 MB. The boot's
+  code 765.6 KB of 775 (the rooms' shader and code, about 3 KB).
 
 ## Numbers
 
