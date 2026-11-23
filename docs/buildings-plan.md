@@ -117,11 +117,42 @@ a street or a lane.
   on a phone and 2.4 MB on a desktop, all of it near-only detail held
   from the boot as the pilot's was.
 
-### Phase 3: the kits
+### Phase 3: the kits (built, signed off by the owner, 2026-11-23)
 
 The buildings the kits lay (The Trenches' tenements and rows, the
 recipes' districts): `IN_SITE` buildings take a modelled front too, built
 in their sites (and in the site worker).
+
+- **What takes it:** the kits' buildings of the downtown types, drawn
+  through `infillBuilding()` in their sites: The Trenches' rows (48
+  brownstones and 17 shops, projects3d.ts) and its tenements (65 shops,
+  streetwall3d.ts). Southfield's yards have none of those types. All 130
+  are in `SOLIDS`, so their side walls are judged as downtown's are: 92 of
+  their 260 sides face a street or a lane. The side test
+  (`tests/facade.test.ts`) covers them too.
+- **Phones: the fronts, not the sides** (the owner's pick; `fineOf()`'s
+  `side()`: `IN_SITE && LOW`). They're about 3,300 windows (about 1,700
+  on the fronts and 1,600 on the sides, the rows being long and deep):
+  every one on phones measured about 7 MB more geometry (6.6 by count),
+  where downtown's 750 or so are under 2 MB, and the phone's geometry is
+  the tight one. The fronts alone are about 3.5 MB on a phone by count
+  (the headless readings swing too much with how many sites had built
+  to show it). On desktops it's all of it, near-only detail in the sites,
+  let go with them past the haze.
+- **memcheck** (the phone, every site built; the owner's ask before
+  merging): geometry 201.2 MiB of 210 with Phase 3, 200.7 on main without
+  it (+0.5: near forms past the budget are let go). Its frame ceilings
+  failed on main without Phase 3 too (`south-rampart` 294 ms, `crest-drive`
+  348, the route 1843) and with it (`south-rampart` 296, the rest under):
+  a hitch from what the sites build there, not Phase 3's.
+- **Measured** (headless, the medium tier and the phone tier, at the bench
+  view over The Block, a row's corner and a tenement's): desktop draws
+  282 / 523 / 267 before, 292 / 514 / 292 after; triangles 1.49M / 1.79M /
+  0.86M before, 1.51M / 1.72M / 0.90M after (they swing with the traffic
+  and with how much of the Trenches' sites had built). With every window
+  on phones too, the phone's geometry rose about 7 MB and the view over
+  The Block 0.38M to 0.46M triangles; with phones kept painted, the
+  phone's geometry after the views is 111.6 MB before and after.
 
 ### Phase 4: the glass and the extras
 

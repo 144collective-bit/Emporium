@@ -1090,9 +1090,13 @@ interface Fine {
 }
 /** Something tall enough to hide a side wall's windows stands at (x, z): a building's, not a bollard's or a bin's */
 const walled = (x: number, z: number) => SOLIDS.some((b) => b[4] > S + 1.2 && x > b[0] && x < b[2] && z > b[1] && z < b[3]);
-/** Every infill building downtown has a modelled front (Phase 1 the Emporium's block, Phase 2 the rest: docs/buildings-plan.md) */
+/**
+ * Every infill building has a modelled front (docs/buildings-plan.md: Phase 1 the Emporium's block, Phase 2 the rest
+ * of downtown, Phase 3 the kits' in their sites: The Trenches' rows and tenements), its side walls too where they face
+ * a street or a lane (but the kits' on phones)
+ */
 function fineOf(f: Infill, kind: WallKind, w: number, col: number): Fine | null {
-  if (IN_SITE || f.floors < 1) return null;
+  if (f.floors < 1) return null;
   const style = styleOf(kind);
   if (!style) return null;
   const bays = baysOf(w, style, col);
@@ -1100,6 +1104,9 @@ function fineOf(f: Infill, kind: WallKind, w: number, col: number): Fine | null 
   // The sides where they face a street or a lane (not a neighbour's wall): their bays centred along them too
   const F = frameOf(f);
   const side = (i: 0 | 1) => {
+    // (phones give the kits' buildings their fronts but not their sides: The Trenches' rows and tenements carry about
+    // 1,600 side windows, about 3 MB of sills and lintels more on a phone; the owner's pick, Phase 3)
+    if (IN_SITE && LOW) return null;
     if (!sideOpen(F.L, F.t, F.n, F.w, F.d, i, walled)) return null;
     const b = baysOf(F.d, style, (col + 3 + 2 * i) % COLS);
     return b.n > 0 ? b : null;
