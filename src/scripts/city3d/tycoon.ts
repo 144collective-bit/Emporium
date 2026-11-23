@@ -242,6 +242,17 @@ export const CORNER = { slots: 4, capacity: 60, pace: 2 } as const;
 /* The polish plan's Phase 10 (save v14): the Night Market's stall, Dorras only, from level NIGHT_LEVEL; it trades after dusk only */
 export const NIGHT_PRICE = FREE_PLAY ? 0 : 25000;
 export const NIGHT_LEVEL = FREE_PLAY ? 1 : 4;
+/**
+ * Degen's flat in Endswood's Kite Point (docs/brutalist-plan.md Phase 7a, the owner's picks): bought once with Dorras,
+ * a flat game price from level FLAT_LEVEL, his to live in (never let out, never an investment: not in the estate's
+ * worth); once it's his, a choice of where he wakes, home or here
+ */
+export const FLAT_PRICE = FREE_PLAY ? 0 : 40000;
+export const FLAT_LEVEL = FREE_PLAY ? 1 : 5;
+export type WakeAt = 'home' | 'flat';
+export interface Flat {
+  wake: WakeAt;
+}
 /** The stall: a food counter, always a shop, a few kinds at a time, its queue quicker than a corner shop's while the market's open */
 export const NIGHT_STALL = { slots: 3, capacity: 40, pace: 3 } as const;
 /** When it trades, by the visitor's clock: from 18:00 to 02:00 the next morning */
@@ -485,6 +496,8 @@ export interface TycoonSave {
   corners: (Corner | null)[];
   /** The Night Market's stall (save v14): null until you buy it */
   night: Corner | null;
+  /** Degen's flat in Kite Point (docs/brutalist-plan.md Phase 7a): null until he buys it; where he wakes, once it's his */
+  flat: Flat | null;
   ledger: Ledger;
   loan: Loan | null;
   /* Phase 5: the city's game */
@@ -561,6 +574,7 @@ export function newSave(now: number): TycoonSave {
     lots: Array.from({ length: LOT_COUNT }, () => null),
     corners: Array.from({ length: CORNER_COUNT }, () => null),
     night: null,
+    flat: null,
     ledger: { totals: {}, recent: [] },
     loan: null,
     xp: 0,
@@ -672,6 +686,7 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     corners: Array.from({ length: CORNER_COUNT }, (_, i) => cleanCorner((Array.isArray(o.corners) ? o.corners : [])[i], mul(`c${i}` as PlaceId))),
     // (v14: a save from before the Night Market's stall doesn't own it)
     night: cleanNight(o.night, mul(NIGHT_PLACE)),
+    flat: null,
     ledger: cleanLedger(o.ledger, now),
     loan: null,
     xp: Math.floor(num(o.xp, 0, 1e9, 0)),
@@ -697,6 +712,8 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
   s.inventory = cleanInventory(o.inventory, s);
   // (the trunk at home: a save from before it has nothing put away)
   s.stash = cleanStash(o.stash);
+  // (Degen's flat: a save from before it doesn't own it; where he wakes, home unless it says the flat)
+  s.flat = cleanFlat(o.flat);
   // (the flyers out at your stall: never further off than a fresh lot of them; a save from before them has none)
   s.flyers = Math.floor(num(o.flyers, 0, now + FLYERS.minutes * 60000, 0));
   // Phase 3: staff only where there's a job for them; couriers and contracts checked against the rules
@@ -1500,6 +1517,30 @@ export function buyCorner(s: TycoonSave, i: number): BuyResult {
 /** What the stall costs (null once it's yours) */
 export const nightPrice = (s: TycoonSave) => (s.night ? null : NIGHT_PRICE);
 /** Buy the Night Market's stall: it opens as a food stall straight away, its shelves empty, trading after dusk */
+/** A saved flat as it should be: null if it isn't a flat, its wake home unless it's the flat */
+function cleanFlat(raw: unknown): Flat | null {
+  if (!raw || typeof raw !== 'object') return null;
+  return { wake: obj(raw).wake === 'flat' ? 'flat' : 'home' };
+}
+/** What the flat costs (null once it's his) */
+export const flatPrice = (s: TycoonSave) => (s.flat ? null : FLAT_PRICE);
+/** Buy Degen's flat: once, from level FLAT_LEVEL, a flat game price; he goes on waking at home till he says otherwise */
+export function buyFlat(s: TycoonSave): BuyResult {
+  if (s.flat) return { ok: false, why: 'owned' };
+  const r = pay(s, FLAT_PRICE, FLAT_LEVEL, 'property');
+  if (!r.ok) return r;
+  s.flat = { wake: 'home' };
+  addXp(s, XP.property);
+  return r;
+}
+/** Where he wakes: the flat only once it's his */
+export function setWake(s: TycoonSave, at: WakeAt): boolean {
+  if (at === 'flat' && !s.flat) return false;
+  if (s.flat) s.flat.wake = at;
+  return true;
+}
+/** Where he wakes now: the flat if it's his and he chose it, home otherwise */
+export const wakeAt = (s: TycoonSave): WakeAt => (s.flat?.wake === 'flat' ? 'flat' : 'home');
 export function buyNightStall(s: TycoonSave): BuyResult {
   if (s.night) return { ok: false, why: 'owned' };
   const r = pay(s, NIGHT_PRICE, NIGHT_LEVEL, 'property');

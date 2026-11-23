@@ -98,6 +98,12 @@ import {
   NIGHT_PRICE,
   NIGHT_STALL,
   buyNightStall,
+  buyFlat,
+  flatPrice,
+  setWake,
+  wakeAt,
+  FLAT_PRICE,
+  FLAT_LEVEL,
   nightOpen,
   nightPrice,
   nightShare,
@@ -920,4 +926,35 @@ test('a v9 save carries on into v10 owning no corner shops; a v10 save keeps its
   assert.equal(s.corners[2], null);
   assert.deepEqual(s.corners[1]!.slots.map((x) => [x.good, x.qty, x.price]), [['tees', Math.round(CORNER.capacity * 1.5), 'high']]);
   assert.equal(placeLevel(s, 'c1'), 2);
+});
+
+test("Degen's flat in Kite Point (docs/brutalist-plan.md Phase 7a): bought once from its level, his to wake in if he chooses, never counted as worth", () => {
+  const s = newSave(T0);
+  s.dorras = 1e6;
+  assert.equal(s.flat, null);
+  assert.equal(wakeAt(s), 'home');
+  assert.equal(setWake(s, 'flat'), false, "he can't wake in a flat that isn't his");
+  assert.deepEqual(buyFlat(s), { ok: false, why: 'level' }, "a new player can't buy it");
+  assert.equal(flatPrice(s), FLAT_PRICE);
+  s.xp = xpForLevel(FLAT_LEVEL);
+  const worth = propertyValue(s);
+  assert.ok(buyFlat(s).ok);
+  assert.equal(s.dorras, 1e6 - FLAT_PRICE);
+  assert.equal(flatPrice(s), null);
+  assert.deepEqual(buyFlat(s), { ok: false, why: 'owned' });
+  assert.equal(propertyValue(s), worth, 'a home, not an investment: not in the worth');
+  // (he goes on waking at home till he says otherwise; then the flat; then home again)
+  assert.equal(wakeAt(s), 'home');
+  assert.ok(setWake(s, 'flat'));
+  assert.equal(wakeAt(s), 'flat');
+  assert.ok(setWake(s, 'home'));
+  assert.equal(wakeAt(s), 'home');
+  // (kept through a save and back, and a save from before it doesn't own one)
+  setWake(s, 'flat');
+  assert.deepEqual(cleanSave(JSON.parse(JSON.stringify(s)), T0).flat, { wake: 'flat' });
+  const old = JSON.parse(JSON.stringify(newSave(T0)));
+  delete old.flat;
+  assert.equal(cleanSave(old, T0).flat, null);
+  assert.deepEqual(cleanSave({ ...old, flat: { wake: 'somewhere' } }, T0).flat, { wake: 'home' });
+  assert.equal(cleanSave({ ...old, flat: 'yes' }, T0).flat, null);
 });
