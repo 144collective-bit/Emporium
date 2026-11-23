@@ -124,8 +124,13 @@ Each phase merges on its own and leaves the city working; the new park is behind
 1. **The new circuit as data** (the centre line, its width and heights, done 2026-11-23): `kartcircuit2.ts`
    (DOM-free, on `DOM_FREE`), `CIRCUIT2` sampled every `STEP2`, the hill-top run raised over the tunnel; tested (the
    lap's length, width, radius, slope, the tunnel's two passes and clearance, spacing, the site, streets and solids).
-   **Still to come in Phase 1b:** the start line, the pit lane, the racing lines both ways and the tags (turns,
-   pit-in, pit-out) as today's `kartcircuit.ts` has them.
+   **Phase 1b** (done, 2026-11-23): `COURSES2` both ways (Riverside Raceway and its reverse, the same surface), the
+   start line on the pit straight in front of race control (`START2_U`), the corners found from the curvature and
+   numbered in race order (24 each way, lefts and rights mirrored), the grid (`gridSlots2()`, eight two abreast behind
+   the line), the pit lane (`PIT2_LANE`, off the pit straight before the line and back on before the Docks wiggles,
+   its straight along the garages `PIT2_STRAIGHT` clear of the run-off) and a racing line each way (in to the apexes,
+   out wide either side, on the track with room for a kart, about 4% shorter than the middle); tested, and drawn by
+   `npm run kart-fit`.
 2. **The site and its ground** (`kartpark2.ts`): the park's rect on the land, the ground held level and shaped
    round it (banks, the approach to the river), its solids, its land kept clear of the outskirts' trees, the riverside
    road's edge and the service road. Behind the switch.
