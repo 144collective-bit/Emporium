@@ -24,7 +24,7 @@ import { ABUTMENTS, LIBERTY_SPAWN, TOWERS, WALKWAY } from '../src/scripts/city3d
 import { GATES, GARDEN_SITE, LAKE_C, WESTLAKE_BLOCKS } from '../src/scripts/city3d/westlake';
 import { AXIS_X, PLAZA_BLOCK, UPTOWN_BLOCKS } from '../src/scripts/city3d/uptown';
 import { HIGHRISES } from '../src/scripts/city3d/highrise';
-import { BLOCK as STADIUM_BLOCK, CENTRE as STADIUM_CENTRE, LOOP as STADIUM_LOOP, ROAD as STADIUM_ROAD } from '../src/scripts/city3d/stadium';
+import { IN as STADIUM_IN, ROAD as STADIUM_ROAD } from '../src/scripts/city3d/stadiumroad';
 import { RURAL_RUNS } from '../src/scripts/city3d/rural';
 
 const FILE = join(process.cwd(), 'tests', 'fixtures', 'layout.json');
@@ -101,7 +101,8 @@ const layout = () =>
     liberty: { x: FOOTBRIDGE_X, towers: TOWERS, walkway: WALKWAY, abutments: ABUTMENTS },
     westlake: { blocks: WESTLAKE_BLOCKS, lake: LAKE_C, gates: GATES, garden: GARDEN_SITE },
     uptown: { blocks: UPTOWN_BLOCKS.map((b) => ({ id: b.id, rect: b.rect })), plaza: PLAZA_BLOCK, axis: AXIS_X, towers: HIGHRISES.map((t) => ({ id: t.id, design: t.design, lot: t.lot, roof: t.roof, tip: t.tip, door: t.door })) },
-    stadium: { block: STADIUM_BLOCK, centre: STADIUM_CENTRE, road: STADIUM_ROAD, loop: STADIUM_LOOP },
+    // (the stadium removed, 2026-11-22, the owner's call: its road kept)
+    stadiumRoad: { in: STADIUM_IN, road: STADIUM_ROAD },
   }) as Record<string, unknown>;
 
 // The streets, with the world's edge left open

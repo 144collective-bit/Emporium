@@ -23,7 +23,6 @@ export const AREAS: Area[] = [
   { id: 'uptown', name: 'Uptown', character: 'towers' },
   { id: 'uptown-north', name: 'Uptown North', character: 'towers' },
   { id: 'westlake', name: 'Westlake Park', character: 'park' },
-  { id: 'stadium', name: 'Sector 7 Stadium', character: 'sport' },
   { id: 'mall', name: 'Starlight Mall', character: 'retail' },
   { id: 'palm-court', name: 'Palm Court', character: 'retail' },
   { id: 'sunridge', name: 'Sunridge', character: 'homes' },
@@ -47,7 +46,7 @@ export function areaOfBlock(b: Block): string | null {
   if (b.id === 'uptown-north') return 'uptown-north';
   if (b.id === 'palm-court') return 'palm-court';
   if (b.id === 'mall' || b.id === 'mall-park') return 'mall';
-  const byRef: Record<string, string> = { uptown: 'uptown', westlake: 'westlake', stadium: 'stadium', sunridge: 'sunridge', crestmont: 'crestmont', trenches: 'trenches', endswood: 'endswood', south: 'endswood', docks: 'docks', strip: 'strip', southfield: 'southfield', southyards: 'southyards' };
+  const byRef: Record<string, string> = { uptown: 'uptown', westlake: 'westlake', sunridge: 'sunridge', crestmont: 'crestmont', trenches: 'trenches', endswood: 'endswood', south: 'endswood', docks: 'docks', strip: 'strip', southfield: 'southfield', southyards: 'southyards' };
   return (b.ref && byRef[b.ref]) ?? null;
 }
 

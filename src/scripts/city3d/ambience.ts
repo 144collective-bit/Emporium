@@ -22,7 +22,7 @@
  *
  * The polish pass's sound phase (docs/polish-plan.md theme 3): the town's hum is the loudest of every built-up
  * part's (`HUMS`: the town itself, The Trenches, Uptown and Uptown North hushed, the mall, the Neon Mile, the
- * Docks, the airport, the kart park, the stadium and Southfield Yards, each eased out past its land), so no
+ * Docks, the airport, the kart park and Southfield Yards, each eased out past its land), so no
  * district reads as open country; and the places with a sound of their own have a layer: the waterfront
  * (`waterfront`: gulls by day, a foghorn now and then, along The Trenches' boardwalk, Pier 7 and the Night
  * Market's deck and the town's promenades; the market's murmur after dusk is `market`), Southbank Docks (`docks`:
@@ -30,8 +30,7 @@
  * fading as one takes off or lands, from the timetable, so it's the same for everyone), inside Starlight Mall
  * (`indoor`: a soft indoor hum and murmur; sound.ts damps the outdoor layers by it), Southfield Yards (`yards`: a
  * compressor running, a reversing beep now and then) and the kart park (`karts`: engines idling and a tannoy's
- * murmur, low; a race's own karts are kart.ts's). The polish plan's Phase 7 added the stadium on a match night
- * (`stadium`: the crowd's roar swelling now and then round the ground, from stadium.ts's `matchOn()` and the clock).
+ * murmur, low; a race's own karts are kart.ts's). (The stadium's match nights went with it: removed 2026-11-22.)
  * On Endswood Estate (docs/estate-plan.md Phase 7) its own (`ends`: pigeons by day, a moped now and then, the two-tone
  * siren far off, the ice-cream van's jingle on a summer's day), Bunker Sound's beat out of its garage door (`studio`)
  * and St Aldwyn's bell on the hour, heard across the estate and beyond (`bell`). On the civic square
@@ -65,7 +64,6 @@ import { COURT_TALLEST, EAST_X, NORTH, SOUTH, WEST_X } from './courtinside';
 import { DOCKS_RECT } from './docks';
 import { FLIGHTS, SITE, poseAt } from './airfield';
 import { KART_PARK } from './kartpark';
-import { BLOCK as STADIUM_BLOCK, matchOn } from './stadium';
 import { DECKS, MARKET_DECK } from './waterfront';
 import { PROMENADE } from './outer';
 import { YARDS_RECT, inYards } from './southfield';
@@ -130,8 +128,6 @@ export interface Ambience {
   /** Northgate Air Base (docs/military-plan.md Phase 4): far engines across the field, 0-1 (all of it inside its fence,
    * fading over 80 past it) */
   airbase: number;
-  /** The stadium on a match night (stadium.ts `matchOn()`): the crowd's roar swelling now and then, 0-1; 0 any other time */
-  stadium: number;
   /** Endswood Estate: pigeons, mopeds, the two-tone siren far off, the ice-cream van, 0-1 */
   ends: number;
   /** Bunker Sound's beat out of its garage door, 0-1 */
@@ -164,7 +160,7 @@ const SHOW_LAKE = resortOf('gondolier')!.water[0];
  * How much of the town's hum each built-up part has on its land (the town's own is 1 inside `CITY_EXT`), and how
  * far past its edge it fades out: The Trenches (its own `hood` layer over it), Uptown and Uptown North hushed
  * (`UPTOWN_HUSH`), the mall's car parks and forecourt, the Neon Mile (its crowd's `strip` over it), the Docks'
- * yards, the airport's landside, the kart park, the stadium's grounds and Southfield Yards
+ * yards, the airport's landside, the kart park and Southfield Yards
  */
 export const HUMS = {
   trenches: { level: 0.8, fade: 40 },
@@ -174,7 +170,6 @@ export const HUMS = {
   docks: { level: 0.5, fade: 40 },
   airport: { level: 0.45, fade: 50 },
   karts: { level: 0.4, fade: 40 },
-  stadium: { level: 0.5, fade: 40 },
   yards: { level: 0.5, fade: 40 },
 } as const;
 /** The south (docs/south-plan.md Phase 6e): Bunker Sound's garage door, St Aldwyn's tower, the High Road's shop fronts */
@@ -315,7 +310,7 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const yards = 1 - smooth(0, 30, inYards(x, z) ? 0 : past(YARDS_RECT, x, z));
   // The hum is the loudest of every built-up part's: the town's (hushed in Uptown and Sunridge, which it reaches),
   // Crestmont's and Sunridge's own, The Trenches', Uptown's and Uptown North's hushed, the mall's, the Neon Mile's,
-  // the Docks', the airport's, the kart park's, the stadium's and Southfield Yards'
+  // the Docks', the airport's, the kart park's and Southfield Yards'
   const H = HUMS;
   const town = Math.max(
     city * hush * (1 - (1 - SUN_HUM) * suburb),
@@ -328,7 +323,6 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     H.docks.level * near(DOCKS_RECT, x, z, 0, H.docks.fade),
     H.airport.level * near(SITE, x, z, 0, H.airport.fade),
     H.karts.level * near(KART_RECT, x, z, 0, H.karts.fade),
-    H.stadium.level * near(STADIUM_BLOCK, x, z, 0, H.stadium.fade),
     H.yards.level * (inYards(x, z) ? 1 : near(YARDS_RECT, x, z, 0, H.yards.fade))
   );
   // The waterfront's decks and the promenades (the gulls, the foghorn), the market's deck after dusk
@@ -348,8 +342,6 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const home = inHouse(x, z) && lift < 3 ? 1 : 0;
   const karts = near(KART_RECT, x, z, 0, 40);
   const airbase = inAirbase(x, z) ? 1 : 1 - smooth(0, 80, fromFence(x, z));
-  // The stadium's crowd on a match night (the polish plan's Phase 7): round the ground, carrying well past its block
-  const stadium = matchOn(t * 1000) ? near(STADIUM_BLOCK, x, z, 0, 90) : 0;
   // Endswood: all of it on its land, fading over 25 past it. Bunker Sound's beat and St Aldwyn's bell come back with
   // their buildings (docs/south-plan.md Phases 2 and 3: the south was re-laid, Phase 1b)
   // (how far off its land: its land is its blocks and streets, not the fields inside its bounds)
@@ -394,7 +386,6 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     yards: yards * k,
     karts: karts * k,
     airbase: airbase * k,
-    stadium: stadium * k,
     ends: ends * k,
     studio,
     bell,

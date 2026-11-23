@@ -176,10 +176,12 @@ in the address, read in one place) and turned on for everyone in Phase 7. A phas
 lettered steps, each merged.
 
 0. **The survey** (done, 2026-11-21; signed off the same day): this plan, the drawings, `scripts/exits-fit.mjs`.
-1. **The standard as rules and tests.** `exitstd.ts` (DOM-free, on `DOM_FREE`): the standard's numbers (the table
-   above) and `checkRamp()` / `checkInterchange()`, which report every breach (width, grade, lengths, radius,
-   clearance to solids, streets and pillars, the gaps between interchanges). Tested on hand-made ramps. Nothing in the
-   city changes.
+1. **The standard as rules and tests** (done, 2026-11-23, the improvement loop). `exitstd.ts` (DOM-free, on
+   `DOM_FREE`): the standard's numbers (`EXIT_STD`, the table above; `rampWidth()`) and `checkRamp()` /
+   `checkInterchanges()`, which report every breach (width, grade, the speed lane and its taper, radius: the deck's
+   standard over the first `nearDeck` of a ramp, a loop's after; clearance to solids, other streets and pillars, a
+   ramp's own street allowed, its foot meeting it at `footAngle` or squarer; clearance under the deck; the gaps between interchanges round the ring). Tested on
+   hand-made ramps in `tests/exitstd.test.ts`. Nothing in the city changes.
 2. **The new interchanges as data, behind the switch.** `exits2.ts` (DOM-free): the four interchanges (the deck's
    lanes, the two-lane ramps and their heights, the frontage roads as one-way streets with their signals, the gores,
    the U-turn lanes). Tests: every ramp meets the standard; every movement works (from each street in a cluster onto

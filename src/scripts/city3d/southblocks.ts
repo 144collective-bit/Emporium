@@ -18,7 +18,7 @@
  * Heights are in the city's units: a storey 1 (as the old estate's), the ground floor taller; the towers' plant rooms
  * reach about 20 (the owner's figure, St Aldwyn's spire 22.5).
  */
-import { HALF, PATH_HALF, MARSH_LANE, ENDSWOOD_ROAD, type Pt } from './south';
+import { HALF, PATH_HALF, MARSH_LANE, ENDSWOOD_ROAD, FOOTPATHS as FOOTPATHS_ALL, SOUTH_BLOCKS as SOUTH_LAND, type Pt } from './south';
 import { cross, inside, shift, smooth } from './streetfaces';
 import { southLift } from './southground';
 import type { Box } from './underground';
@@ -220,6 +220,27 @@ export const HARRIER = twin('harrier', 'Harrier Point', [-67, 371.5], 'orange');
 export const KITE = twin('kite', 'Kite Point', [-35, 378.5], 'teal');
 const twinCoreFoot = squareFoot([-51, 375], TWIN_CORE_HALF, TWIN_ROT, 0.6);
 export const TWIN_CORE: Block = { id: 'twin-core', name: 'The Core', kind: 'core', foot: twinCoreFoot, steps: [{ from: 0, to: 0, storeys: 19 }], base: baseOf(twinCoreFoot) };
+/** The top floor the twins and The Core share: a bridge from The Core to each tower at it (docs/brutalist-plan.md Phase 3) */
+export const TOP_FLOOR = 17;
+/**
+ * The Perch (docs/brutalist-plan.md Phase 3, the owner's name): a hexagonal concrete drum round The Core's top two
+ * floors, wider than it, a flat face to each tower (where the top bridges meet it); inside, one room two storeys high
+ * round a glass lift, a glass band all round it; its roof The Core's, so it's no taller (`topOf()` unchanged)
+ */
+export const PERCH = (() => {
+  const c: Pt = [twinCoreFoot.reduce((s, p) => s + p[0], 0) / twinCoreFoot.length, twinCoreFoot.reduce((s, p) => s + p[1], 0) / twinCoreFoot.length];
+  /** From its middle to the middle of a face, and to a corner */
+  const apothem = 4.3;
+  const r = apothem / Math.cos(Math.PI / 6);
+  const foot = Array.from({ length: 6 }, (_, k): Pt => {
+    const a = TWIN_ROT + Math.PI / 6 + (k * Math.PI) / 3;
+    return [c[0] + Math.cos(a) * r, c[1] + Math.sin(a) * r];
+  });
+  const base = TWIN_CORE.base;
+  /** Its floor (the top floor's), its roof (The Core's) */
+  const [y0, y1] = [floorY(base, TOP_FLOOR), roofY(base, storeysOf(TWIN_CORE))];
+  return { name: 'The Perch', at: c, apothem, r, foot, y0, y1, rot: TWIN_ROT };
+})();
 
 // The stairwell blocks: three tall slabs between the avenues (running south: their right side west, their galleries
 // there), three lower round the Circus along the streets' curves
@@ -314,23 +335,43 @@ export interface Core {
   /** Its roof: over its block's, the lift's machine room */
   top: number;
   foot: Pt[];
+  /**
+   * How far it stands off its block (docs/brutalist-plan.md Phase 2: a service tower of its own, a link from its
+   * gallery to it at each landing; 0: against its block as before). `SERVICE_GAP` where there's room, less where a
+   * street or a parking court is near (`CORE_GAPS`)
+   */
+  gap: number;
+  /** The link's line at each landing: from the gallery's end (or front) to the tower's face, and the way along it */
+  link: [Pt, Pt] | null;
 }
+/** A service tower's distance off its block: a bridge's length (docs/brutalist-plan.md Phase 2) */
+export const SERVICE_GAP = 3;
+/** The towers with less room than that (measured: a street, a parking court or the underpass's ramp near; 0: still
+ * against its block) */
+const CORE_GAPS: Record<string, number> = { 'rampart-2': 0, 'rampart-3': 1, 'sorrel-b': 1.5, 'fennel-a': 1, 'linnet-b': 0 };
 const rotOf = (dir: Pt) => Math.atan2(dir[1], dir[0]);
-function coreAt(b: Block, id: string, at: Pt, dir: Pt, storeys: number): Core {
+function coreAt(b: Block, id: string, at: Pt, dir: Pt, storeys: number, gap: number, link: [Pt, Pt] | null): Core {
   const rot = rotOf(dir);
-  return { id, of: b.id, at, rot, half: CORE_HALF, top: roofY(b.base, storeys) + CORE_OVER, foot: squareFoot(at, CORE_HALF, rot, 0.6) };
+  return { id, of: b.id, at, rot, half: CORE_HALF, top: roofY(b.base, storeys) + CORE_OVER, foot: squareFoot(at, CORE_HALF, rot, 0.6), gap, link };
 }
-/** A slab's cores: one past each end, flush with its galleries' outer edge, so each gallery runs into them */
+/** A slab's cores: past each end, in line with its galleries, standing `gap` off it (each gallery runs on to it by its link) */
 function endCores(b: Block): Core[] {
   const spine = b.spine!;
   const L = lineLength(spine);
   const s = SIDE[b.galleries!];
+  // (its outer face flush with the gallery's outer edge, as before; the link along the gallery band's middle)
   const off = s * (b.depth! / 2 + GALLERY_W - CORE_HALF);
+  const mid = s * (b.depth! / 2 + GALLERY_W / 2);
   return ([['a', 0, -1], ['b', L, 1]] as const).map(([k, d, out]) => {
+    const id = `${b.id}-${k}`;
+    const gap = CORE_GAPS[id] ?? SERVICE_GAP;
     const { p, dir } = pointAt(spine, d);
     const right: Pt = [-dir[1], dir[0]];
-    const at: Pt = [p[0] + dir[0] * out * (CORE_HALF + 0.05) + right[0] * off, p[1] + dir[1] * out * (CORE_HALF + 0.05) + right[1] * off];
-    return coreAt(b, `${b.id}-${k}`, at, dir, storeysAt(b, d));
+    const along = out * (CORE_HALF + 0.05 + gap);
+    const at: Pt = [p[0] + dir[0] * along + right[0] * off, p[1] + dir[1] * along + right[1] * off];
+    const from: Pt = [p[0] + right[0] * mid, p[1] + right[1] * mid];
+    const to: Pt = [p[0] + dir[0] * out * (gap + 0.05) + right[0] * mid, p[1] + dir[1] * out * (gap + 0.05) + right[1] * mid];
+    return coreAt(b, id, at, dir, storeysAt(b, d), gap, gap > 0 ? [from, to] : null);
   });
 }
 /** The Rampart's cores: standing out from its galleries, at these points along it (none under the arch) */
@@ -339,19 +380,94 @@ function sideCores(b: Block, xs: number[]): Core[] {
   const spine = b.spine!;
   const s = SIDE[b.galleries!];
   return xs.map((x, i) => {
+    const id = `${b.id}-${i}`;
+    const gap = CORE_GAPS[id] ?? SERVICE_GAP;
     const d = alongToX(spine, x);
     const { p, dir } = pointAt(spine, d);
     const right: Pt = [-dir[1], dir[0]];
-    const off = s * (b.depth! / 2 + GALLERY_W + CORE_HALF + 0.05);
-    return coreAt(b, `${b.id}-${i}`, [p[0] + right[0] * off, p[1] + right[1] * off], dir, storeysAt(b, d));
+    const edge = s * (b.depth! / 2 + GALLERY_W);
+    const off = s * (b.depth! / 2 + GALLERY_W + CORE_HALF + 0.05 + gap);
+    const link: [Pt, Pt] = [[p[0] + right[0] * edge, p[1] + right[1] * edge], [p[0] + right[0] * (edge + s * (gap + 0.05)), p[1] + right[1] * (edge + s * (gap + 0.05))]];
+    return coreAt(b, id, [p[0] + right[0] * off, p[1] + right[1] * off], dir, storeysAt(b, d), gap, gap > 0 ? link : null);
   });
 }
+/** A core's landing posts: the four corners of its footprint, a little in (the ring's points furthest out each way
+ * round its middle), less any that would stand in its link's doorway, where the covered link from the gallery arrives
+ * (J1 part 3: a post dead in the opening read as slabs meeting at a point, and walked through, having no solid) */
+export function landingPosts(ring: Pt[], link: [Pt, Pt] | null = null): Pt[] {
+  const c: Pt = [ring.reduce((s, p) => s + p[0], 0) / ring.length, ring.reduce((s, p) => s + p[1], 0) / ring.length];
+  const far = [...ring].sort((p, q) => Math.hypot(q[0] - c[0], q[1] - c[1]) - Math.hypot(p[0] - c[0], p[1] - c[1]));
+  const out: Pt[] = [];
+  for (const p of far) {
+    if (out.length === 4) break;
+    if (out.every((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) > 1)) out.push(p);
+  }
+  const posts = out.map((p): Pt => [c[0] + (p[0] - c[0]) * 0.85, c[1] + (p[1] - c[1]) * 0.85]);
+  return link ? posts.filter((p) => !inDoorway(link, p)) : posts;
+}
+/** Whether a point stands in a link's doorway: across it within its half-width (and a post's), at its tower end */
+export function inDoorway(link: [Pt, Pt], p: Pt): boolean {
+  const [a, e] = link;
+  const l = Math.hypot(e[0] - a[0], e[1] - a[1]) || 1;
+  const t: Pt = [(e[0] - a[0]) / l, (e[1] - a[1]) / l];
+  const s = (p[0] - a[0]) * t[0] + (p[1] - a[1]) * t[1];
+  const o = Math.abs(-(p[0] - a[0]) * t[1] + (p[1] - a[1]) * t[0]);
+  return o < BRIDGE_HALF + 0.15 && s > l - 1.5 && s < l + 2;
+}
+
 export const CORES: Core[] = [...sideCores(RAMPART, RAMPART_CORE_XS), ...[LINNET, MARTEN, WREN, SORREL, FENNEL, TEASEL].flatMap(endCores)];
 
 /** Every block, the cores apart */
 export const BLOCKS: Block[] = [RAMPART, HARRIER, KITE, TWIN_CORE, LINNET, MARTEN, WREN, SORREL, FENNEL, TEASEL];
 export const blockById = (id: string) => BLOCKS.find((b) => b.id === id)!;
 export const coreById = (id: string) => CORES.find((c) => c.id === id)!;
+
+/* ---------- The towers' stair cages (docs/brutalist-plan.md, the owner's pick: caged stairs outside, walked) ---------- */
+
+/**
+ * A service tower's stair cage: a concrete-framed cage of anti-climb mesh standing out from one of its faces (one with
+ * no door, link or bridge on it, clear of the streets and the courts: measured), switchback flights inside it from the
+ * street up to each of its landings. In the cage's own numbers: `a` out from the tower's face (0 at the face), `b`
+ * across (its `side`)
+ */
+export interface Cage {
+  id: string;
+  core: string;
+  /** The face's middle at the tower, the way out from it, the way across */
+  root: Pt;
+  out: Pt;
+  side: Pt;
+  base: number;
+  /** As high as the cage's frame goes */
+  top: number;
+  /** A point in the cage's numbers, in the world */
+  at(a: number, b: number): Pt;
+}
+/** The cage's measures: how far out it reaches, half its width, its landings' depth, its lanes' half gap */
+export const CAGE = { len: 5, half: 1.1, land: 0.9, gap: 0.05 };
+/** Which face each tower's cage stands out from (measured: the others have a door, a link, a bridge, a street or a
+ * parking court; the Rampart's fifth, Linnet's and Marten's north ones, Fennel's east one and Teasel's east one have no
+ * room for one and keep their lifts alone) */
+const CAGE_FACES: Record<string, '+d' | '-d' | '+r' | '-r'> = {
+  'rampart-0': '+d', 'rampart-1': '+d', 'rampart-2': '+d', 'rampart-3': '+d', 'linnet-b': '-r', 'marten-b': '+r',
+  'wren-a': '-r', 'wren-b': '+r', 'sorrel-a': '-r', 'sorrel-b': '-r', 'fennel-b': '-r', 'teasel-b': '+r',
+};
+export const CAGES: Cage[] = CORES.filter((c) => CAGE_FACES[c.id]).map((c) => {
+  const d: Pt = [Math.cos(c.rot), Math.sin(c.rot)];
+  const out: Pt = { '+d': d, '-d': [-d[0], -d[1]] as Pt, '+r': [-d[1], d[0]] as Pt, '-r': [d[1], -d[0]] as Pt }[CAGE_FACES[c.id]];
+  const side: Pt = [-out[1], out[0]];
+  const root: Pt = [c.at[0] + out[0] * (c.half + 0.05), c.at[1] + out[1] * (c.half + 0.05)];
+  const at = (a: number, b: number): Pt => [root[0] + out[0] * a + side[0] * b, root[1] + out[1] * a + side[1] * b];
+  return { id: `${c.id}-cage`, core: c.id, root, out, side, base: blockById(c.of).base, top: c.top - 0.3, at };
+});
+/** A cage's ground as boxes: under its second flights' lane and its far end (its first flight's lane and the way in at the
+ * tower left clear, walked up from the street) */
+const cageSolids = (g: Cage): Box[] => {
+  const { len, half, gap, land } = CAGE;
+  const rect = (a0: number, a1: number, b0: number, b1: number): Pt[] => [g.at(a0, b0), g.at(a1, b0), g.at(a1, b1), g.at(a0, b1)];
+  return [...cover(rect(land, len, -half, -gap), g.top, 0.3), ...cover(rect(len - 2, len, gap, half), g.top, 0.3)];
+};
+
 
 /* ---------- The galleries ---------- */
 
@@ -390,7 +506,9 @@ export interface Bridge {
   pts: [Pt, Pt];
   ys: [number, number];
 }
-const footOf = (e: End) => ('core' in e ? coreById(e.core).foot : 'block' in e ? blockById(e.block).foot : DECKS.find((d) => d.id === e.deck)!.poly);
+/** (The Core's at its top floor: The Perch's, wider) */
+const footOf = (e: End, floor = 0) =>
+  'core' in e ? coreById(e.core).foot : 'block' in e ? (e.block === 'twin-core' && floor >= TOP_FLOOR ? PERCH.foot : blockById(e.block).foot) : DECKS.find((d) => d.id === e.deck)!.poly;
 const centreOf = (poly: Pt[]): Pt => [poly.reduce((s, p) => s + p[0], 0) / poly.length, poly.reduce((s, p) => s + p[1], 0) / poly.length];
 const baseOfEnd = (e: End) => ('core' in e ? blockById(coreById(e.core).of).base : 'block' in e ? blockById(e.block).base : null);
 /** Where a line from `from` to `to` crosses a ring's edge last (`last`) or first */
@@ -404,7 +522,7 @@ function edgeHit(poly: Pt[], from: Pt, to: Pt, last: boolean): Pt {
   return [from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t];
 }
 function bridge(id: string, a: End, b: End, floor: number, via?: [Pt, Pt]): Bridge {
-  const [fa, fb] = [footOf(a), footOf(b)];
+  const [fa, fb] = [footOf(a, floor), footOf(b, floor)];
   const [ca, cb] = via ?? [centreOf(fa), centreOf(fb)];
   const pts: [Pt, Pt] = [edgeHit(fa, ca, cb, true), edgeHit(fb, ca, cb, false)];
   const yOf = (e: End) => {
@@ -442,6 +560,9 @@ export const BRIDGES: Bridge[] = [
   ...[3, 6, 9].map((f) => bridge(`rampart-core-${f}`, { core: 'rampart-3' }, { block: 'twin-core' }, f)),
   // The core to each tower, every third floor
   ...[3, 6, 9, 12, 15].flatMap((f) => [bridge(`core-harrier-${f}`, { block: 'twin-core' }, { block: 'harrier' }, f), bridge(`core-kite-${f}`, { block: 'twin-core' }, { block: 'kite' }, f)]),
+  // ...and at the top floor, The Perch to each (the twins joined at the top: docs/brutalist-plan.md Phase 3)
+  bridge(`core-harrier-${TOP_FLOOR}`, { block: 'twin-core' }, { block: 'harrier' }, TOP_FLOOR),
+  bridge(`core-kite-${TOP_FLOOR}`, { block: 'twin-core' }, { block: 'kite' }, TOP_FLOOR),
   // Along the ring road, over the avenues: the Rampart's east end to Linnet, Linnet to Marten, Marten to Wren
   bridge('rampart-linnet', { core: 'rampart-4' }, { core: 'linnet-a' }, 3),
   ...[3, 6].flatMap((f) => [bridge(`linnet-marten-${f}`, { core: 'linnet-a' }, { core: 'marten-a' }, f), bridge(`marten-wren-${f}`, { core: 'marten-a' }, { core: 'wren-a' }, f)]),
@@ -452,6 +573,8 @@ export const BRIDGES: Bridge[] = [
   // Kite Point over Endswood Road to Teasel's east end
   bridge('kite-teasel', { block: 'kite' }, { core: 'teasel-a' }, 3),
 ];
+
+
 
 export interface Court {
   id: string;
@@ -534,9 +657,62 @@ export function cover(poly: Pt[], top: number, step = 0.6, skip?: [number, numbe
 }
 /** The archway's span along x (the Rampart runs east-west there) */
 export const ARCH_X: [number, number] = [pointAt(RAMPART_SPINE, RAMPART.arch!.from).p[0], pointAt(RAMPART_SPINE, RAMPART.arch!.to).p[0]];
+/* ---------- The bridges' piers (docs/brutalist-plan.md polish: heavy concrete spans) ---------- */
+
+export interface Pier {
+  id: string;
+  at: Pt;
+  /** Its turn: square to its span */
+  rot: number;
+  /** Its top: the underside of the lowest bridge on its span there */
+  top: number;
+  base: number;
+}
+/** A pier's half width, the spans long enough to have them, and how far apart along a span */
+export const PIER_HALF = 0.35;
+const PIER_SPAN = 10;
+const PIER_EVERY = 7;
+/** How far a point is in from the nearest edge of the estate's land it stands on (negative: on no land, a street) */
+const onLand = (p: Pt) => {
+  const f = SOUTH_LAND.find((b) => inside(b.poly, p));
+  if (!f) return -1;
+  return Math.min(...f.poly.map((q, i) => segDist(p, q, f.poly[(i + 1) % f.poly.length])));
+};
+/** Every long bridge's piers: about every `PIER_EVERY` along it, where the ground under it is the estate's (clear of the
+ * streets and their sidewalks, the footpaths, the blocks, the towers, their cages and the courts) */
+export const PIERS: Pier[] = (() => {
+  const spans = new Map<string, Bridge[]>();
+  for (const br of BRIDGES) {
+    const key = br.pts.flat().map((v) => v.toFixed(1)).join(',');
+    spans.set(key, [...(spans.get(key) ?? []), br]);
+  }
+  const out: Pier[] = [];
+  for (const set of spans.values()) {
+    const low = set.reduce((a, b) => (Math.min(...a.ys) < Math.min(...b.ys) ? a : b));
+    const [a, c] = low.pts;
+    const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    if (l < PIER_SPAN) continue;
+    const n = Math.max(1, Math.round(l / PIER_EVERY) - 1);
+    for (let k = 1; k <= n; k++) {
+      const f = k / (n + 1);
+      const at: Pt = [a[0] + (c[0] - a[0]) * f, a[1] + (c[1] - a[1]) * f];
+      const clear = [-1, 1].every((dx) => [-1, 1].every((dz) => onLand([at[0] + dx * 0.6, at[1] + dz * 0.6]) > 1.7));
+      if (!clear) continue;
+      if (FOOTPATHS_ALL.some((fp) => fp.pts.some((q, i) => i > 0 && segDist(at, fp.pts[i - 1], q) < PATH_HALF + 1))) continue;
+      if ([...BLOCKS.map((b) => b.foot), ...CORES.map((q) => q.foot)].some((ft) => inside(ft, at) || ft.some((q, i) => segDist(at, q, ft[(i + 1) % ft.length]) < 1.2)) || CAGES.some((g) => inside([g.at(-0.3, -1.6), g.at(CAGE.len + 0.3, -1.6), g.at(CAGE.len + 0.3, 1.6), g.at(-0.3, 1.6)], at))) continue;
+      if (COURTS.some((ct) => inside(ct.poly, at))) continue;
+      const y = low.ys[0] + (low.ys[1] - low.ys[0]) * f;
+      out.push({ id: `${low.id}-pier-${k}`, at, rot: Math.atan2(c[1] - a[1], c[0] - a[0]), top: y - 0.22, base: southLift(at[0], at[1]) + 0.15 });
+    }
+  }
+  return out;
+})();
+
 export const BLOCK_SOLIDS: Box[] = [
   ...BLOCKS.flatMap((b) => cover(b.foot, topOf(b), 0.6, b.arch ? ARCH_X : undefined)),
   ...CORES.map((c) => cover(c.foot, c.top, 0.6)).flat(),
+  ...CAGES.flatMap(cageSolids),
+  ...PIERS.map((p): Box => [p.at[0] - PIER_HALF, p.at[1] - PIER_HALF, p.at[0] + PIER_HALF, p.at[1] + PIER_HALF, p.top]),
 ];
 
 /** Where the blocks stand, all of them, their bridges and their deck (districts.ts loads their drawing within reach of it) */

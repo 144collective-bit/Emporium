@@ -2,7 +2,7 @@
  * The hub (docs/menu-plan.md Phase 2): one menu for everything that isn't a place or a shop, the game's pause
  * screen, in the menus' arcade kit (menus.css `.mk-hub`, menukit.ts). Markup `[data-hub]` in CityMap.astro.
  *
- * - Its tabs: Map (the world map, every place, the comic and the links), Bag, Business (the business card,
+ * - Its tabs: Map (the world map, the places by district with Go and a waypoint: hubtabs-ui.ts, the comic and the links), Bag, Business (the business card,
  *   tycoon-ui.ts), Missions (your level and badges, missions-ui.ts), Profile (profile-ui.ts), Settings (settings-ui.ts:
  *   sub-tabs Game, Graphics, Camera, Controls, Touch, Sound: docs/settings-plan.md) and Online when there's a game server
  *   (multiplayer.ts). Tabs a mode can't use are hidden (`data-hub-walk`: walking only).
@@ -35,7 +35,7 @@ const REPEAT_FIRST = 380;
 const REPEAT_EVERY = 90;
 
 /** Inside the hub, these open screens of their own: the hub closes first */
-const OWN_SCREENS = '[data-worldmap-open], [data-inv-open], [data-dir-spot], [data-open-char], [data-open-fitting], [data-hub-leave], [data-account-open]';
+const OWN_SCREENS = '[data-worldmap-open], [data-inv-open], [data-dir-spot], [data-map-go], [data-bag-go], [data-open-char], [data-open-fitting], [data-hub-leave], [data-account-open]';
 
 export function createHub(root: HTMLElement) {
   const el = root.querySelector<HTMLElement>('[data-hub]')!;
@@ -45,13 +45,21 @@ export function createHub(root: HTMLElement) {
   let back: HTMLElement | null = null;
   /** The d-pad direction held, and when it next repeats */
   let repeat: { i: number; next: number } | null = null;
-  // The Settings tab's rows (settings-ui.ts): their own chunk, the first time the tab shows
+  // The Settings tab's rows (settings-ui.ts), and the Map and Profile tabs' (hubtabs-ui.ts, docs/header-plan.md):
+  // their own chunks, the first time the tab shows
   let settingsUI: Promise<{ shown(): void }> | null = null;
   const loadSettings = () => (settingsUI ??= import('./settings-ui').then(({ createSettingsUI }) => createSettingsUI(root, el)));
+  let tabsUI: Promise<{ shown(tab: 'map' | 'profile'): void }> | null = null;
+  const loadTabs = () => (tabsUI ??= import('./hubtabs-ui').then(({ createHubTabs }) => createHubTabs(root, el)));
+  // The title is the tab you're on (the header carries the game's name: docs/header-plan.md)
+  const title = el.querySelector<HTMLElement>('#hub-title');
   const kit = menuKit(el, {
     close: () => void close(),
     onTab: (id) => {
+      const name = el.querySelector(`[data-mk-tabs] [data-tab="${id}"]`)?.textContent?.trim();
+      if (title && name && title.textContent !== name) title.textContent = name;
       if (id === 'settings') void loadSettings().then((ui) => ui.shown());
+      if (shown && (id === 'map' || id === 'profile')) void loadTabs().then((ui) => ui.shown(id));
       if (shown) hooks.tab?.(id as HubTab);
     },
   });
@@ -179,7 +187,8 @@ export function createHub(root: HTMLElement) {
     input: (kind: Input) => kit.input(kind),
     /**
      * A gamepad while it's open (`edge(i)`: button i just pressed, `held(i)`: down): the d-pad moves (held, it keeps
-     * on: a picker keeps stepping), LB / RB the tabs, LT / RT Settings' sections, A presses, B or Start closes
+     * on: a picker keeps stepping), LB / RB the tabs, LT / RT Settings' sections, A presses, X a row's second action
+     * (a place's waypoint), B or Start closes
      */
     pad(edge: (i: number) => boolean, any: boolean, held: (i: number) => boolean = () => false) {
       if (any) kit.input('pad');
@@ -196,6 +205,8 @@ export function createHub(root: HTMLElement) {
       }
       if (repeat && !held(repeat.i)) repeat = null;
       if (edge(6) || edge(7)) el.dispatchEvent(new CustomEvent('mk-subtab', { detail: edge(6) ? -1 : 1 }));
+      // X: the focused row's second action (the Map tab's waypoint: hubtabs-ui.ts)
+      if (edge(2)) document.activeElement?.dispatchEvent(new CustomEvent('mk-alt', { bubbles: true }));
       if (edge(4)) kit.step(-1);
       if (edge(5)) kit.step(1);
       if (edge(0)) kit.press();

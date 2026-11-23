@@ -8,7 +8,7 @@
 import { PLAN, distToStreet, raised } from './streetplan';
 import { TRACKS, type Track } from './metro';
 import { TUNNEL } from './lot9';
-import { WALK as STADIUM_WALK } from './stadium';
+import { WALK as STADIUM_WALK } from './stadiumroad';
 import { inWater } from './river';
 import { BRIDGE_PIERS } from './waterfront';
 import { HIGHWAY_BOX } from './highway';
@@ -51,7 +51,7 @@ export function pierClear(s: number) {
   for (const st of UNDER) if (distToStreet(st, [x, z]) < st.half + r + PIER_CLEAR) return false;
   for (const t of Object.values(TRACKS)) if (trackDist(t, [x, z]) < r + 2 + PIER_CLEAR) return false;
   if (Math.abs(x - TUNNEL.x) < TUNNEL.half + TUNNEL.wall + r + PIER_CLEAR && z > TUNNEL.z0 && z < TUNNEL.z1) return false;
-  // (and the walk from Westlake Park to the stadium under the deck, stadium.ts)
+  // (and the walk from Westlake Park north under the deck to Stadium Road, stadiumroad.ts)
   if (Math.abs(x - STADIUM_WALK.x) < STADIUM_WALK.half + r + PIER_CLEAR && z < STADIUM_WALK.z0 && z > STADIUM_WALK.z1) return false;
   // In the river only on the bridges' pier lines (between the boats' lanes)
   if (pts.some(([px, pz]) => inWater(px, pz))) return BRIDGE_PIERS.some((bz) => Math.abs(z - bz) < 0.5);

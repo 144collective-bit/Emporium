@@ -36,36 +36,48 @@ asking, as long as everything in **The rules** below holds:
 1. **Start from fresh `main`.** Fetch `origin/main` and work on top of it.
    If the latest "Build site" run on `main` failed, fixing it is this run's
    item, before anything else.
-2. **One item per run** (two if both are small). Small, low-risk changes
+2. **The board sets the order** (the owner's call, 2026-11-22). After rule 1, the
+   item is the top card of the **Ready** column on the owner's Works Board
+   (https://claude.ai/artifact/GsX2xpXCSNhkr4KFVuQmJH, `cards`, lowest `rank`
+   first). Move it to **In progress** when starting, **Checking** once merged,
+   **Live** when its "Build site" run passes, or **Needs you** with the question
+   in its notes. If Ready is empty, fall back to this plan's order (Track A's
+   jobs, then their sweeps, then the hunt, then the levels). A Ready card that
+   moves something, adds copy the visitor reads, or is otherwise out of scope
+   above gets a short plan or a question, not a build. Each card taken is
+   written into this plan (its job entry, ticked when done) and the log, so
+   the record stays here. If the board can't be read or written, carry on
+   from this plan and catch the board up next pass.
+3. **One item per run** (two if both are small). Small, low-risk changes
    that can be reverted. If an item turns out bigger than one run, split it
    in this plan and do the first part.
-3. **Read before changing.** Read the area's guide file in `docs/guide/` and
+4. **Read before changing.** Read the area's guide file in `docs/guide/` and
    any plan it names. Check that the item is still open, since some backlog
    items may already be fixed. If one is, mark it done here with a note.
-4. **Every check passes, or nothing merges:** `npm run typecheck`,
+5. **Every check passes, or nothing merges:** `npm run typecheck`,
    `npm run lint`, `npm test`, `npm run test:wide`, `npm run build`,
    `npm run budget`, and `npm run smoke` whenever walk mode, input or
    anything drawn changed. Fix the code, not the test.
-5. **Speed work needs numbers.** Measure before and after (`?bench`, or
+6. **Speed work needs numbers.** Measure before and after (`?bench`, or
    `?fps` on the phone tier). Add the numbers to the log. If it isn't faster,
    don't merge it. Write down what was learned instead.
-6. **Visual work needs a look.** Use Playwright against `npm run preview` at
+7. **Visual work needs a look.** Use Playwright against `npm run preview` at
    320, 375, 768, 1024 and 1440 px, plus a phone on its side. Shots go in the
    scratchpad, not the repo.
-7. **Update the guide file** for whatever changed, and add a line to the
+8. **Update the guide file** for whatever changed, and add a line to the
    log below.
-8. **Merge.** Open a pull request to `main` titled `Loop: <item>`, then
+9. **Merge.** Open a pull request to `main` titled `Loop: <item>`, then
    merge it (squash). After merging, check that the "Build site" Action
    starts. A failed build doesn't publish, so the live site stays as it was,
    and the next run fixes it first (rule 1).
-9. **Stop rather than guess.** If a change needs an owner's decision, or
+10. **Stop rather than guess.** If a change needs an owner's decision, or
    the checks can't be made to pass within the run, push the branch with a
    draft pull request titled `Loop (needs owner): <item>`, add the question
    to **Waiting on the owner**, and move on to the next item next time.
-10. **Never** force-push `main`, commit to `deploy`, skip or weaken a test,
+11. **Never** force-push `main`, commit to `deploy`, skip or weaken a test,
     raise a budget, or change `FREE_FOR_NOW`, `PUBLIC_GAME_SERVER` or the
     live settings.
-11. **Pause switch.** If the line under **Status** says `PAUSED`, the run
+12. **Pause switch.** If the line under **Status** says `PAUSED`, the run
     does nothing and ends.
 
 ## The board
@@ -119,8 +131,8 @@ A hunt runs whenever no job is ready, and once a week otherwise.
 **The first night (2026-11-21, the owner's call):** pass 1 takes J1, pass 2
 J2, pass 3 the hunt of Endswood, Aldwyn's Green and Lot 9. Passes 4 to 6 take
 the owner's next jobs (J3 on), added below after J2 in the owner's order, or
-R1's sweep if none have arrived. The Works Board (the owner's kanban) mirrors
-this list; this plan is what the loop reads.
+R1's sweep if none have arrived. From 2026-11-22 the Works Board's Ready column
+sets the order (rule 2).
 
 ### Model repairs
 
@@ -165,7 +177,7 @@ this list; this plan is what the loop reads.
   stadium's concourse, the mall's upper floors, the Docks' quays and
   walkways, the airport's terminal decks, the Neon Mile's resort terraces,
   Crestmont's terraces and pool decks, Lot 9.
-  - [ ] Endswood's blocks
+  - [x] Endswood's blocks (J1, parts 1 to 3)
   - [ ] The Trenches
   - [ ] Uptown and Uptown North
   - [ ] Westlake and the civic quarter
@@ -173,7 +185,7 @@ this list; this plan is what the loop reads.
   - [ ] The Docks
   - [ ] The airport
   - [ ] The Neon Mile
-  - [ ] Crestmont
+  - [x] Crestmont's hill drives (J2, parts 1 and 2; the estates' and the Flats' gateways still to check)
   - [ ] Sunridge
   - [ ] Lot 9
   - [ ] Northgate Air Base
@@ -229,6 +241,12 @@ this list; this plan is what the loop reads.
 
 ### Jobs
 
+- [x] **J1 (R1), part 1: the galleries and balconies** (2026-11-22, pass 1; see the log). Part 2 below.
+- [x] **J1 (R1), part 2: the bridges' decks, the cores' landings and the podium deck** (2026-11-22, pass 2;
+      see the log). The junction where a gallery meets a link's portal is left for a look on foot (J1 part 3).
+- [x] **J1 (R1), part 3:** the gallery-to-portal junction checked on foot (2026-11-23, pass 3): the portal
+      reads; the fault was a landing post standing in every link's doorway at its tower (15 of 15), drawn
+      only, walked through. Cleared (`landingPosts()`, tested). **J1 done**; R1's sweep goes on at The Trenches.
 - [ ] **J1 (R1): a gallery walkway on Endswood's flats** (the owner's
       screenshot, 2026-11-21: looking down a gallery towards the highway).
       The deck, its upstands and the slabs either side are plain `CONC`
@@ -244,6 +262,13 @@ this list; this plan is what the loop reads.
       main the same day and re-dressed the estate's walls; the screenshot
       may predate it. Check what's left of the fault on main first, and
       keep to Phase 1's concrete (`docs/brutalist-plan.md`).
+- [x] **J2 (R2), part 1: the hill drives' paving stops at the road's edge** (2026-11-23, pass 4): drawn from
+      where both its edges clear the asphalt (mansions.ts `driveStart()`, tested), no longer over the edge line.
+- [x] **J2 (R2), part 2: the hill roads' walls at a drive's mouth** (2026-11-23, pass 5: clipped to `DRIVE_CLEAR`,
+      returned up the drive to its gate pier as `DRIVE_CHEEKS`, tested; walls are drawn only, no solids): today a whole 1.5 piece of wall is left out
+      each side (landscape.ts `WALLS`, `onMansion()`), so the wall stops square well short of the drive. Run each
+      wall up to the drive's kerb and finish its end (a cheek returning along the drive, its coping round the
+      corner). Walls are solids: check the walk through the mouth stays clear (R2's rule 6) and the snapshot holds.
 - [ ] **J2 (R2): the cypress drives in Crestmont** (the owner's screenshot,
       2026-11-21: a drive lined with cypresses, two stone piers at its
       gate, meeting a curving two-lane road with lamps on its far side). The
@@ -299,6 +324,9 @@ one is still open before fixing it.
       routes cached across routes.test; motionmatch.test's wall-clock
       assertion made a ratio (polish §11).
 - [ ] The 14 small DOM-free modules without a test get one (polish §11).
+- [ ] Smoke's `station` scene stalls now and then in a full run on the software renderer ("along the hall
+      and down the escalator", 2026-11-22); passes run alone. Find why (a wait too short under load) and
+      fix the scene's timing, not by loosening what it checks.
 
 ## Level 2: speed and phones
 
@@ -340,6 +368,68 @@ Each later level does the same.
 (Questions the loop couldn't answer itself. The owner answers here, or in a
 session.)
 
+- **Main's build is over the full-tier texture budget (2026-11-21, pass 2).** Brutalist plan
+  Phase 2 (#238) added about 70 KB of textures (the bridges' painted block names and the gallery
+  sides' wall row), putting `texFull` 23 KB over 4955 KB on GitHub. Which do you want?
+  (a) the brutalist plan's session trims its own new textures (a smaller name sheet, the gallery
+  row sharing an existing one); (b) revert #238 until it fits; (c) raise `texFull` to about
+  5040 KB on purpose (your call only, in `scripts/budget.mjs`). Until one is done, every loop
+  pass stops at rule 1.
+  **Owner's answer (2026-11-22): (a).** The brutalist plan's session trims its own new
+  textures back under 4955 KB; the loop waits for that build to pass.
+
 ## The log
 
 (One line for each run: the date, the item, the pull request, the numbers.)
+
+- 2026-11-21, pass 1 (22:07): main's "Build site" #361 failed at typecheck after #238
+  (`farLods` imported but unused in `index.ts` since the readout moved to `readout.ts`).
+  Fixed by dropping the import (rule 1, #240); typecheck, lint, test, test:wide and build
+  pass. **Correction (pass 2):** the local texture bake had not run (it needs
+  `CHROMIUM_PATH=/opt/pw-browsers/chromium` in this container and exits 0 without it), so the
+  budget's texture rows were never checked here. J1 moves on.
+- 2026-11-21, pass 2 (23:07): "Build site" #362 (after #240) failed at the budget: `texFull`
+  4977.5 KB of 4955 on GitHub (5023.8 KB here; `texLow` 3349.7 of 3450 is fine). The growth is
+  #238's (brutalist plan Phase 2): a new painted sheet of the blocks' names for the bridges
+  (`SIGN_TEX` in southblocks3d.ts, 512x640, 36 KB baked) and a new row in the shared wall atlas
+  for the gallery sides (`brutalDeck` in infill.ts's `WALL_KINDS`). Trimming them is a change to
+  owner-signed new art, and raising a budget is the owner's only, so the question is under
+  **Waiting on the owner**. Nothing is live since #235 until main's build passes; rule 1 holds
+  every later pass on this until it's answered.
+- 2026-11-22, passes 3 to 6 (00:07 to 03:07): main unchanged and #363 still failing at
+  `texFull`; each pass checked and stopped at rule 1. Nothing merged.
+- 2026-11-22 (the owner, in session): the texture budget goes to the brutalist plan's session to
+  trim (answer (a)); the Works Board's Ready column now sets the loop's order (rule 2).
+- 2026-11-22, pass 1 (22:07): main green again (#243 trimmed the textures; builds #365 to #368 pass).
+  J1 part 1 (R1 on the galleries and balconies, southblocks3d.ts `drawStep()`): the floor `DECK_FLOOR`
+  a step lighter than the walls; the front upstand's dark coping and closed ends; near only, slab joints
+  about every 1.2 m, a skirting 5 mm off the wall and a drip under the front. All plain colours (they share
+  one paint), no new material or texture. Shots at Marten Court before and after (scratchpad).
+  Draws not measured this pass (the near trims join each step's near part). Checks: typecheck, lint, test,
+  test:wide, build, texture bake, budget (texFull 4918.2 of 4955, texLow 3310.2 of 3450, boot 762.1 of 775)
+  pass; smoke 148 steps ok, the station's escalator step stalled once in the full run and passed run alone,
+  the same on main and the branch (logged under Level 1 as flaky).
+- 2026-11-22, pass 2 (23:07, started 23:28 after pass 1 ran long): J1 part 2 (R1 on the cores' landings, the
+  bridges' floors and the podium deck, southblocks3d.ts `drawCore()`, `drawBridge()`, `drawDeck()`). Podium
+  shot from above before and after: one flat grey slab, now a jointed 1.2 grid with a capped balustrade.
+  Checks: typecheck, lint, test, test:wide, build, texture bake, budget (texFull 4918.2 of 4955, texLow
+  3310.2 of 3450) and smoke (150 steps, none failed) pass. Draws not measured (plain colours, near trims).
+- 2026-11-23, pass 3 (00:07, started 00:20): J1 part 3. On foot along Marten's floor-6 gallery to its link: the
+  portal reads; the fault left was a landing post in the link's doorway at the tower, at all 15 links (drawn
+  only, no solid, walked through). `landingPosts()` / `inDoorway()` (southblocks.ts, tested) leave those out.
+  J1 done; R1's Endswood sweep ticked. Checks: typecheck, lint, test (with the new test), test:wide, build,
+  texture bake, budget (texFull 4918.2 of 4955), smoke 150 steps, none failed.
+- 2026-11-23, pass 4 (01:08): J2 part 1. Two hill drives shot where they meet their road: the paving ran over the
+  road's edge line into the lane, and the road's wall stops square well short of each side. Part 1 draws the drive
+  and its kerbs from where both edges clear the asphalt (mansions.ts `driveStart()`, tested); the walls are part 2.
+  Checks: typecheck, lint, test (with the new test), test:wide, build, texture bake, budget (texFull 4918.2 of
+  4955), smoke 150 steps, none failed.
+- 2026-11-23, pass 5 (02:07): J2 part 2. The hill roads' walls left a whole piece out each side of a drive, stopping
+  square short of it; now clipped to `DRIVE_CLEAR` (just past the drive's kerbs) and returned up the drive to its
+  gate pier (`DRIVE_CHEEKS`; mansions.ts `onPad()`, `nearestDrive()`; tested: no wall over a drive or through a
+  pier). Walls are drawn only. After shots at the same two drives: the walls turn in to the piers. Checks:
+  typecheck, lint, test (with the new test), test:wide, build, texture bake, budget (texFull 4918.2 of 4955);
+  smoke 148 steps ok, the station flake once more (L1), passed run alone.
+- 2026-11-23, pass 6 (03:07): the board's next Ready card, Exits 1 (the exits plan's Phase 1, owner-signed): the
+  standard as rules and tests, `exitstd.ts` (DOM-free) and `tests/exitstd.test.ts`. Nothing in the city reads it
+  yet. Checks: typecheck, lint, test, test:wide, build and budget (no texture or drawing change; smoke not needed).

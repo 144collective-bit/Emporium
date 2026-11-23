@@ -13,7 +13,7 @@ and it's done: 192.0 to about 179.5 MiB (below). **Phase 0 is done.** **Phase 1 
 measured below). A full tile batch now grows by small steps (below: the phone at 170.7 MiB of 187, steady). **Phase 2 (the
 airfield) is built and signed off** (2026-11-19, measured below). **Phase 3 (the base) is built and signed off**
 (2026-11-19, measured below). **Phase 4 (life, night and sound) is built and
-trimmed** (2026-11-20, measured below: the owner's call). **Phase 5 (polish) is built and signed off** (2026-11-20, below). **Phase 6 (the wall and a polish pass) is built** (2026-11-21, below), merged on the owner's word before its last draw counts.
+trimmed** (2026-11-20, measured below: the owner's call). **Phase 5 (polish) is built and signed off** (2026-11-20, below). **Phase 6 (the wall and a polish pass) is built and merged** (2026-11-21, #233, below; its draw counts and after shots the same day).
 **The plan is done.** What's next is its "Later" list, each in a plan of its own (the owner's picks below).
 
 ## The owner's answers (2026-11-18)
@@ -693,7 +693,25 @@ place stay where they stand (the snapshot holds them): only what stands on the l
 
   memcheck passes on both (210 and 70 the ceilings). The boot's budget was raised to 771 for the stair (the owner's
   call); main has since raised it to 775 for its own work, and the stair sits inside that. Every view's slowest CPU frame
-  passes memcheck's 250 ms. The draw counts by view didn't finish before the owner's "Merge to main": they follow, with
-  the after shots of the polish, in a small change after the merge.
+  passes memcheck's 250 ms.
+- **The draws, counted after the merge** (the owner's call: a small follow-up). The full `?bench` flies every view in
+  the city and outran an hour under the software renderer here, and `?fps` under the review shots averages over frames
+  it didn't draw; so every site `airbase3d.ts` makes was built in Node, as the tests do, and its meshes (a draw each
+  before the tile batches merge them further) and triangles counted, on main before the wall (c93e2b5) and after (#233):
+
+  | `airbase3d.ts`'s sites | Before: the fence | After: the wall |
+  | --- | ---: | ---: |
+  | Phone: the line's meshes (its own, and the FX layer's) | 111 and 111 | 109 and 0 |
+  | Phone: the line's triangles | 11,868 | 6,540 |
+  | Phone: the gates' meshes (and FX) | 2 and 2 | 2 and 0 |
+  | Phone: the visitors' centre's triangles (the stair, its rails) | 214 | 1,150 |
+  | Desktop: the line's meshes (all, near, FX) | 111, 111, 111 | 109, 218, 0 |
+  | Desktop: the line's near triangles (the wire, posts and lights) | 14,532 | 404,052 |
+
+  On phones the wall costs half the fence's draws (no chain-link in the FX layer) and 45% fewer triangles; the rest
+  of the base is unchanged. At night the washes are one mesh in all (`wallWash()`). On desktop the razor wire is the
+  weight: about 3,700 triangles a 30 m stretch, near only (within the tier's `far`, 120 on the high tier), so
+  about eight stretches of a straight run at once, some 30,000 (the whole line's 404,052 is never drawn together). The next thing to trim if the north grows (fewer sides a coil, or coils further
+  apart).
 - **Checks:** `npm test` and `npm run test:wide` pass; the wall's tests hold its height, thickness, gates, piers, lights
   (on the line, facing out, clear of the joints), the piers' lamps, the stair's climb and rails, and the phone's rail.
