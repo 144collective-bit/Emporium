@@ -8,6 +8,7 @@
 //   SHOTS_ONLY=view1,view2   only these views        SHOTS_SETS=full   only one tier        SHOTS_TIMES=day   only day
 //   SHOTS_RESUME=1           keep the pictures already taken under this label (a long run cut short goes on)
 //   SHOTS_EXTRA='[{"id":"x","name":"...","pos":[x,y,z],"target":[x,y,z]}]'  one-off cameras too (a close look, not a review view)
+//   SHOTS_QUERY='&karts=new'  more of the page's query (a switch: Riverside Raceway's, docs/kart-harbour-plan.md)
 //   SHOTS_AT=2026-06-21T12:00:58Z  the clock at this time instead (what runs on the clock: the swing bridge, the tall ship)
 //   SHOTS_MOTION=1           without reduced motion (what moves on the clock stands where it is at SHOTS_AT)
 //   SHOTS_BENCH=1            also run ?bench on each tier (bench.ts) and keep its draws and triangles (headless and
@@ -80,7 +81,7 @@ try {
       const errors = [];
       page.on('pageerror', (e) => errors.push(String(e)));
       const t0 = Date.now();
-      await page.goto(`${origin}/?shots${time === 'night' ? '=night' : ''}`);
+      await page.goto(`${origin}/?shots${time === 'night' ? '=night' : ''}${process.env.SHOTS_QUERY ?? ''}`);
       await page.waitForFunction(() => globalThis.__shots?.ready, null, { timeout: 1800000, polling: 1000 });
       log(`${set} ${time}: the city built in ${Math.round((Date.now() - t0) / 1000)} s`);
       const extra = process.env.SHOTS_EXTRA ? JSON.parse(process.env.SHOTS_EXTRA) : [];

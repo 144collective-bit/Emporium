@@ -254,7 +254,9 @@ function hillPiece(b: Batch, u0: number, v0: number, n: number) {
       const a = j * (n + 1) + i;
       const q = [a, a + 1, a + n + 1, a + n + 2];
       if (Math.max(...q.map((k) => H[k])) < 0.02) continue;
-      if (covered(SITE2.x0 + u0 + i + 0.5, SITE2.z0 + v0 + j + 0.5)) continue;
+      // (left out only where all its corners are under the run-off or the tunnel's roof: under their edges it carries
+      // on, a little lower, so no cut edge shows)
+      if ([[0, 0], [1, 0], [0, 1], [1, 1]].every(([a, c]) => covered(SITE2.x0 + u0 + i + a, SITE2.z0 + v0 + j + c))) continue;
       idx.push(a, a + n + 1, a + 1, a + 1, a + n + 1, a + n + 2);
     }
   if (!idx.length) return;
@@ -394,7 +396,7 @@ function start(b: Batch, low: boolean) {
   if (!low)
     for (let k = 0; k < 5; k++) {
       const t = (k + 1) / 6;
-      b.add(place(new THREE.SphereGeometry(0.14, 8, 6), ax + (bx - ax) * t - f.tx * 0.24, f.y + H - 0.1, az + (bz - az) * t - f.tz * 0.24), neon('#ff3b3b', 0.6, 1.6));
+      b.add(place(new THREE.SphereGeometry(0.14, 8, 6), ax + (bx - ax) * t - f.tx * 0.3, f.y + H - 0.55, az + (bz - az) * t - f.tz * 0.3), neon('#ff3b3b', 0.6, 1.6));
     }
 }
 
@@ -418,8 +420,9 @@ function pitLane(b: Batch) {
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos), 3));
-  // (wound to face up whichever way the lane runs)
-  const up = new THREE.Vector3(pos[3] - pos[0], pos[4] - pos[1], pos[5] - pos[2]).cross(new THREE.Vector3(pos[6] - pos[0], pos[7] - pos[1], pos[8] - pos[2])).y > 0;
+  // (wound to face up whichever way the lane runs: its first triangle as indexed, 0, 2, 1)
+  const P = (k: number) => new THREE.Vector3(pos[k * 3], pos[k * 3 + 1], pos[k * 3 + 2]);
+  const up = P(2).sub(P(0)).cross(P(1).sub(P(0))).y > 0;
   g.setIndex(up ? idx : idx.map((_, k) => idx[k - (k % 3) + [0, 2, 1][k % 3]]));
   g.computeVertexNormals();
   b.add(g, PIT_C);

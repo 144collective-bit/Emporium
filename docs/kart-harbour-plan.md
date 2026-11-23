@@ -131,8 +131,8 @@ Each phase merges on its own and leaves the city working; the new park is behind
    its straight along the garages `PIT2_STRAIGHT` clear of the run-off) and a racing line each way (in to the apexes,
    out wide either side, on the track with room for a kart, about 4% shorter than the middle); tested, and drawn by
    `npm run kart-fit`.
-2. **The site and its ground** (`kartpark2.ts`, done as data 2026-11-23, `tests/kartpark2.test.ts`): the site's natural
-   ground measured level (0 throughout); the hill, cones of embankment from the raised run falling at `HILL_SIDE`
+2. **The site and its ground** (`kartpark2.ts`, done as data 2026-11-23, `tests/kartpark2.test.ts`): the site's ground
+   held level (its open land's rolls levelled under it: Phase 3); the hill, cones of embankment from the raised run falling at `HILL_SIDE`
    (0.45) to the level, with the tunnel's cover (its clear height and 0.5) all along it and a cutting at each mouth
    (`TUNNEL2`, 35.5 long, both passes under the switchbacks inside it); the open track on its own road height
    everywhere; a low west bank for watching the esses; the gate path north to the riverside road (`GATE2_PATH`), the
@@ -140,10 +140,26 @@ Each phase merges on its own and leaves the city working; the new park is behind
    **Not yet read by the city**: the city's ground, trees' keep-off, land and solids (`groundheight.ts`, `ground.ts`,
    `landuse.ts`, `outskirts.ts`) are built when they load and can't read `?karts=new`, so they take the park's land in
    Phase 3, when it's first drawn (behind the switch, as the drawing is), and for everyone at the switch (Phase 8).
-3. **The track drawn and raced, behind the switch**: the park's ground, land and solids joined to the city's (Phase 2's
-   data); the circuit, its kerbs and run-off, the bridge and ramps, armco,
-   tyre walls, catch fencing; `kart-sim.ts` on the new circuit (heights, the bridge), the AI's lines, the items mode's
-   boxes, the race start and finish. `npm run smoke`'s kart race run on it with `?karts=new`.
+3. **The track drawn and raced, behind the switch** (done, 2026-11-23): the switch itself, `kartswitch.ts`, on for a page
+   with `?karts=new` (`KARTS2.on`, read at the top of the boot). With it on:
+   - **The park's land.** Its rolls are levelled (`flattenRolls()` in rolls.ts, at the boot and in the site worker: the
+     land rolled up to 0.8 where the bake hadn't kept it, so the site wasn't level after all). The outskirts' trees keep
+     off `KART2_RECTS`, and the city's ground takes the park's (groundheight.ts's `riverside` layer: the hill, the road
+     over it, the tunnel's floor from inside).
+   - **On foot.** The tunnel's and cuttings' walls stop you below their tops (`riversideWall()`, walk.ts `blocked()`).
+   - **The drawing.** It's a district, `karts2` (kartgrounds2-3d.ts, `when`: not loaded or counted with the switch
+     off): the lawn, the hill as a grid, the run-off and gravel, asphalt, lines and red-and-white kerbs, the tunnel
+     (walls, ceiling, roof, portals, neon), the cuttings' retaining walls, the chequered line, both grids and the
+     gantry, the pit lane, armco, tyre walls round the tight bends, and catch fencing along the riverside straight.
+   - **The sim.** It races the new circuit (`kartcourse2.ts`: the two courses in the sim's shape, the track's own
+     numbers through `kart-track.ts`'s `Track`; today's circuit races exactly as before).
+   - **The race.** The par driver runs both ways clean at every class (par laps about 78.5, 64.5 and 56.5), and a full
+     field races three laps. The tunnel and its cuttings are walled; the items mode has its own boxes. The race camera
+     keeps inside the tunnel and over the hill. The clubhouse's single races and time trials run there, with their own
+     minimap. Its records and boards are kept (the save takes `riverside` keys). `npm run smoke -- karts2` races it.
+   - **What waits for later phases:** the ceremony on its podium (results after a breath until Phase 4), its marshals
+     and their flags (Phase 4's race control), the course's boards, braking markers and arrows (Phase 5). The cups
+     keep today's circuit until the switch.
 4. **The venue, behind the switch**, a step a night: 4a workshops and the tyre store; 4b the hire-kart garage;
    4c the paddock (transporters, awnings, vans, trailers, the kart wash, weighbridge, scrutineering); 4d race control
    and safety (the tower, start gantry, marshal posts, tractor, medical cabin); 4e the visitors' side (grandstand,

@@ -5,7 +5,8 @@
  * landuse.ts, outskirts.ts) when the park is first drawn behind `?karts=new` (Phase 3), since those are built when
  * they load and can't read the switch.
  *
- * The site's natural ground is level (0 under all of it), so the circuit lies on it as it is, but for:
+ * The site's ground is held level (0 under all of it: its open land's rolls levelled, rolls.ts `flattenRolls()`), so
+ * the circuit lies on it as it is, but for:
  * - **the hill**: an embankment carrying the raised switchbacks over the tunnel, its sides falling at `HILL_SIDE` to the
  *   level, the tunnel through it where its cover is deep enough and a cutting either side of the tunnel's mouths;
  * - **the west bank**: a grass spectator bank between the esses and the site's west edge.
@@ -17,7 +18,7 @@ import { CIRCUIT2, CLEAR2, HILL_TOP, KERB2, SITE2, TRACK2_HALF, TUNNEL_CLEAR, ty
 
 export type Rect = [number, number, number, number];
 
-/** The site's level (its natural ground: 0 throughout, measured 2026-11-23) */
+/** The site's level (0 throughout, its rolls levelled) */
 export const KART2_LEVEL = 0;
 /** How steeply the hill's sides fall (rise per tile of run), and how wide its top stays flat either side of the road */
 export const HILL_SIDE = 0.45;
