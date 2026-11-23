@@ -215,8 +215,7 @@ and the bandstand's detail) is in the park's chunk (`LAZY_DISTRICTS`:
      walks.
    Walk mode walks the steps and bridges (groundheight.ts layers, as the
    terraces are); solids for the balustrades and piers.
-4. **The formal garden made ornate** (built, waiting on the owner's
-   sign-off). gardens.ts: the wisteria pergola along the north side inside
+4. **The formal garden made ornate** (built, signed off 2026-11-23). gardens.ts: the wisteria pergola along the north side inside
    the wall (`PERGOLA`, `PERGOLA_COLUMNS`, solid; the north beds start
    behind it); drawn by gardens3d.ts: the wall a balustrade on the same
    lines (`balustrade()`: plinth, rail, piers, balusters near only), the
