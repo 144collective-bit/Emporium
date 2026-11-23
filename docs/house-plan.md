@@ -12,8 +12,7 @@ reached by fades (`HOME_PORTALS`: `home:up`, `home:down`, `home:cellar`, `home:c
 `docs/guide/endswood.md`.
 
 This moves things that exist, on the owner's word: the house's walls and doors, and what stands round it in the
-compound. `tests/snapshot.test.ts` is rewritten for them in Phase 1 and nowhere else; nothing outside the compound's
-wall moves.
+compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` doesn't hold the house).
 
 ## The owner's answers (2026-11-23)
 
@@ -36,10 +35,12 @@ wall moves.
 
 ## Phases
 
-1. **The bigger house.** `HOUSE` 10.4 by 7.5; its shell, doors, windows (`houseWindows()`, `ROOM_WINDOWS`), curtains,
+1. **The bigger house.** *Built, waiting for the owner's sign-off* (shots: `docs/house-shots/phase-1-*.webp`; draw
+   calls 313 desktop, 198 phone, from 309 and 197; the snapshot test doesn't hold the house, so it wasn't rewritten).
+   `HOUSE` 10.4 by 7.5; its shell, doors, windows (`houseWindows()`, `ROOM_WINDOWS`), curtains,
    roof and terrace with it; the compound's things round it moved to fit; every room re-laid in the bigger floors with
    space to breathe (`homerooms.ts`), the stair hall's place kept clear for Phase 2 (the fades stay until then);
-   `tests/snapshot.test.ts` rewritten for what moved; `npm test`, `npm run test:wide`, the smoke run; shots.
+   `npm test`, `npm run test:wide`, the smoke run; shots.
 2. **The turned stair, walked.** In a stair hall off the front door: a flight up along the wall to a half landing, a
    turn, a flight on up to the landing upstairs; walnut treads, black steel stringers and rail, a window on the half
    landing. The ground under him rises with the treads (as `southsky.ts`'s stair: the ground under a point), the walls
