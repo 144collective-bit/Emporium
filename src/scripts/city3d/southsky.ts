@@ -13,7 +13,7 @@
  *   picker (skylift-ui.ts) and the ride (index.ts `rideTo()`).
  */
 import {
-  BLOCKS, BLOCKS_RECT, BRIDGES, BRIDGE_HALF, CAGE, CAGES, CORES, DECKS, GALLERY_W, SKY_FLOORS, PERCH, TOP_FLOOR, TWIN_CORE_HALF, blockById, floorY,
+  BLOCKS, BLOCKS_RECT, BRIDGES, BRIDGE_HALF, CAGE, CAGES, CORES, DECKS, GALLERY_W, SKY_FLOORS, LOBBIES, PERCH, TOP_FLOOR, lobbyAt, TWIN_CORE_HALF, blockById, floorY,
   lineLength, outward, pointAt, section, storeysOf, type Block, type Pt,
 } from './southblocks';
 import { inside, shift } from './streetfaces';
@@ -347,12 +347,22 @@ export function liftArrival(l: SkyLift, f: number): { x: number; z: number; y?: 
   if (f === 0) return { ...l.door };
   return { x: l.at[0], z: l.at[1], y: floorY(l.base, f) - SLAB, yaw: l.door.yaw };
 }
-/** The lifts' call points walk mode prompts at, for someone `y` high: the doors at the foot, or the landings at their
- * floor */
+/** A lobby's floor (docs/brutalist-plan.md Phase 6: the block's base) under a point in its hall or doorway, or null */
+export function lobbyFloorAt(x: number, z: number): number | null {
+  return lobbyAt(x, z)?.base ?? null;
+}
+/** Where a lobby's lift doors are: in the middle of its back wall's right half, a step out from it */
+export const lobbyLiftDoor = (l: (typeof LOBBIES)[number]): Pt => {
+  const o = -0.3 - l.d + 0.55;
+  return [l.door[0] + l.t[0] * 0.6 + l.n[0] * o, l.door[1] + l.t[1] * 0.6 + l.n[1] * o];
+};
+/** The lifts' call points walk mode prompts at, for someone `y` high: the doors at the foot (and the lobbies' lift
+ * doors, which call their block's lift), or the landings at their floor */
 export function skyLiftDoors(y: number): { id: string; x: number; z: number; label: string }[] {
   return SKY_LIFTS.flatMap((l) => {
     const f = liftFloorOf(l, y);
     if (f === null || (f === 0 && y > UP_FROM)) return [];
-    return [f === 0 ? { id: `sky-lift:${l.id}`, x: l.door.x, z: l.door.z, label: 'Lift' } : { id: `sky-lift:${l.id}`, x: l.at[0], z: l.at[1], label: 'Lift' }];
+    const lobbies = f === 0 ? LOBBIES.filter((q) => q.lift === l.id).map((q) => ({ id: `sky-lift:${l.id}`, x: lobbyLiftDoor(q)[0], z: lobbyLiftDoor(q)[1], label: 'Lift' })) : [];
+    return [f === 0 ? { id: `sky-lift:${l.id}`, x: l.door.x, z: l.door.z, label: 'Lift' } : { id: `sky-lift:${l.id}`, x: l.at[0], z: l.at[1], label: 'Lift' }, ...lobbies];
   });
 }

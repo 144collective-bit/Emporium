@@ -4,7 +4,7 @@
  * race) both use them.
  */
 import { CUPS, CUP_IDS } from './kart-cups';
-import { COURSES, COURSE_IDS, type CourseId } from './kartcircuit';
+import { COURSES, COURSE_IDS, RIVER_COURSE_NAME, type CourseId, type RaceCourseId } from './kartcircuit';
 import { PLAYER_KARTS } from './mykart';
 import { ownsKart, recordKey, type TycoonSave } from './tycoon';
 import { clockOf, esc, fmt } from './ui';
@@ -17,8 +17,9 @@ export const ord = (n: number) => (n === 1 ? 'st' : n === 2 ? 'nd' : n === 3 ? '
 export const placeOf = (n: number) => `${n}${ord(n)}`;
 
 /** A course's name without " · reverse", and a small tag when it is the reverse */
-export const courseLabel = (id: CourseId) => {
-  const c = COURSES[id];
+export const courseLabel = (id: RaceCourseId) => {
+  // (Riverside Raceway's by its name, so the boot needn't load its circuit)
+  const c = id === 'riverside' || id === 'riverside-reverse' ? { name: RIVER_COURSE_NAME, reverse: id === 'riverside-reverse' } : COURSES[id];
   return `${esc(c.name.replace(' · reverse', ''))}${c.reverse ? '<i class="kart-rev">rev</i>' : ''}`;
 };
 export const NONE = '<span class="race-none">No time yet</span>';
