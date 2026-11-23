@@ -13,15 +13,18 @@ import { SLAB } from './world';
 import { Batch, canvasTex, lit, neon, siteMat, toon } from './kit';
 import { site } from './tilework';
 import { registerHouses } from './sunhouses3d';
-import { registerYards } from './sunyards3d';
+import { registerSprinklers, registerYards } from './sunyards3d';
 import { registerAmenities } from './sunamenities3d';
 import { registerLife } from './sunlife3d';
 import { registerFringes } from './fringes3d';
 import { COURT } from './mall';
 import { EW_ROADS, MEDIAN, WALK_W } from './layout';
 import { along, dashes, pieces, ribbon, unit } from './roads3d';
-import { BULB, COURTS, ENTRIES, ENTRY_MEDIAN, MONUMENTS, PATH, SUN_CROSSINGS, SUN_NAME, SUN_STREETS, WALL, WALL_RUNS, WEST_EDGE, type Pt, type Rect } from './sunridge';
-import { COVER, KERB as KERB_C, ROAD } from './palette';
+import { BULB, COURTS, ENTRIES, ENTRY_MEDIAN, KERB_RETURNS, MONUMENTS, PATH, SUN_BLOCKS, SUN_CROSSINGS, SUN_NAME, SUN_STREETS, WALL, WALL_RUNS, WEST_EDGE, distTo, inside, type Pt, type Rect } from './sunridge';
+import { FRINGE_PATH, PATH_W } from './fringes';
+import { GROUNDS } from './sunyards';
+import { COVER, KERB as KERB_C, PLANT as PLANT_C, ROAD, STONE as STONE_C } from './palette';
+import { PLAN, onSlab } from './streetplan';
 
 export const SELF = import.meta.url;
 
@@ -41,6 +44,48 @@ const CAP = toon('#b39468');
 const STONE = toon('#8b7b68');
 const PAVING = toon('#cbbfa6');
 const UPLIGHT = neon('#ffd9a0', 0.15, 1.3);
+/** The rolled kerb along the sidewalk's edge (Phase 7): pale stone, so the street's edge reads */
+const KERB_STONE = toon(STONE_C.kerb);
+const KERB_W = 0.14;
+/** The verge outside the wall: the yards' decomposed granite, and a low desert shrub */
+const GRAVEL = toon(GROUNDS[0]);
+const SHRUB = toon(PLANT_C.shrub);
+
+/** A line in steps no longer than `step` */
+function dense(pts: Pt[], step: number): Pt[] {
+  const out: Pt[] = [pts[0]];
+  for (let i = 1; i < pts.length; i++) {
+    const [a, b] = [pts[i - 1], pts[i]];
+    const n = Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / step));
+    for (let k = 1; k <= n; k++) out.push([a[0] + ((b[0] - a[0]) * k) / n, a[1] + ((b[1] - a[1]) * k) / n]);
+  }
+  return out;
+}
+/** A point `d` right of a line at its point i (the line's way from i to the next, or from the one before) */
+function rightOf(pts: Pt[], i: number, d: number): Pt {
+  const [a, b] = i < pts.length - 1 ? [pts[i], pts[i + 1]] : [pts[i - 1], pts[i]];
+  const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+  // (right of travel, seen from above with z south: (-dz, dx))
+  return [pts[i][0] - ((b[1] - a[1]) / l) * d, pts[i][1] + ((b[0] - a[0]) / l) * d];
+}
+/**
+ * The kerb along one side of a line `off` right of it (negative: left), `KERB_W` wide on the sidewalk's top: only
+ * where there is sidewalk (a slab), so it breaks where another street comes in or a crossing cuts through.
+ */
+function kerbAlong(b: Batch, line: Pt[], off: number) {
+  const pts = dense(line, 0.4);
+  const mid = off + Math.sign(off) * (KERB_W / 2);
+  let run: Pt[] = [];
+  const flush = () => {
+    if (run.length > 1) b.add(ribbon(run, Math.min(off, off + Math.sign(off) * KERB_W), Math.max(off, off + Math.sign(off) * KERB_W), () => SLAB + 0.005), KERB_STONE);
+    run = [];
+  };
+  pts.forEach((p, i) => {
+    if (onSlab(PLAN, rightOf(pts, i, mid))) run.push(p);
+    else flush();
+  });
+  flush();
+}
 
 /** The name on the monuments: bronze letters on a stone plaque */
 const NAME = siteMat(
@@ -87,6 +132,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   registerHouses(low, scene);
   // The yards and their walls (Phase 3: sunyards3d.ts)
   registerYards(low, scene);
+  registerSprinklers(scene, tick);
   // The slivers by the highway beside it (fringes3d.ts, docs/blend-plan.md Phase 5c)
   registerFringes(['sunridge'], low);
   // The club, the park and the school (Phase 4: sunamenities3d.ts)
@@ -105,6 +151,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       site(`sunridge street ${s.id} ${k}`, pc.rect, (into) => {
         const b = new Batch();
         b.add(ribbon(pc.pts, -s.half, s.half, () => Y), ASPHALT);
+        // (its kerbs, both sides)
+        for (const side of [-1, 1]) kerbAlong(b, pc.pts, side * s.half);
         const ys: THREE.Matrix4[] = [];
         if (centre) dashes(ys, pc.pts, 0, 1.1, 0.55, 0.07, () => Y + 0.006, (x, z) => nearCrossing(x, z, 4.6));
         b.instances(unit, YELLOW, ys);
@@ -132,9 +180,28 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     site(`sunridge bulb ${c.id}`, [e[0] - BULB - 1, e[1] - BULB - 1, e[0] + BULB + 1, e[1] + BULB + 1], (into) => {
       const b = new Batch();
       b.add(new THREE.CircleGeometry(BULB, low ? 20 : 32).rotateX(-Math.PI / 2).translate(e[0], Y + 0.002, e[1]), ASPHALT);
+      // (its kerb round the circle, where the sidewalk is: the stem's mouth stays open)
+      const ring: Pt[] = Array.from({ length: 65 }, (_, k) => [e[0] + Math.cos((k / 64) * Math.PI * 2) * BULB, e[1] + Math.sin((k / 64) * Math.PI * 2) * BULB]);
+      kerbAlong(b, ring, -1e-3);
       b.build(into, { cast: false, receive: true });
     });
   }
+
+  // The kerb returns (Phase 7): each rounded corner's asphalt filled in from where the square corner was, and the kerb
+  // swept round it on the sidewalk's edge
+  KERB_RETURNS.forEach((k, i) => {
+    const N = 16;
+    const arc: Pt[] = Array.from({ length: N + 1 }, (_, s) => [k.c[0] + Math.cos(k.a0 + ((k.a1 - k.a0) * s) / N) * k.r, k.c[1] + Math.sin(k.a0 + ((k.a1 - k.a0) * s) / N) * k.r]);
+    const all = [k.q, ...arc];
+    site(`sunridge kerb return ${i}`, rectOf(all, 1), (into) => {
+      const b = new Batch();
+      const shape = new THREE.Shape(all.map(([x, z]) => new THREE.Vector2(x, -z)));
+      b.add(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, Y + 0.001, 0), ASPHALT);
+      const mid: Pt[] = Array.from({ length: N + 1 }, (_, s) => [k.c[0] + Math.cos(k.a0 + ((k.a1 - k.a0) * s) / N) * (k.r - KERB_W / 2), k.c[1] + Math.sin(k.a0 + ((k.a1 - k.a0) * s) / N) * (k.r - KERB_W / 2)]);
+      b.add(ribbon(mid, -KERB_W / 2, KERB_W / 2, () => SLAB + 0.005), KERB_STONE);
+      b.build(into, { cast: false, receive: true });
+    });
+  });
 
   // Stop bars where Mesa Drive, the cul-de-sacs and the entrances meet another street: across the lane coming in,
   // a little back from the other street's kerb
@@ -180,6 +247,77 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       b.build(into, { cast: false, receive: true });
     });
   }
+
+  /* ---------- The verge outside the wall (Phase 7: no straight strip of sidewalk along it) ---------- */
+  // The strip of slab outside the wall in gravel, the gravel spilling off it at ground level in a wandering line, and
+  // clumps of boulders and low shrubs along it at no even spacing; only where the land outside is open (clear of the
+  // streets, the sidewalks and the fringe's path)
+  for (const [bi, blk] of SUN_BLOCKS.entries())
+    for (const [ri, run] of blk.runs.entries()) {
+      if (run.street) continue;
+      const line = dense(run.pts, 0.5);
+      // (outward: away from the block)
+      const outN = (i: number): Pt => {
+        const r = rightOf(line, i, 1);
+        const [nx, nz] = [r[0] - line[i][0], r[1] - line[i][1]];
+        return inside(blk.poly, [line[i][0] + nx * 0.3, line[i][1] + nz * 0.3]) ? [-nx, -nz] : [nx, nz];
+      };
+      const open = (p: Pt) => !onSlab(PLAN, p) && distTo(FRINGE_PATH, p) > PATH_W / 2 + 0.25 && !SUN_STREETS.some((st) => distTo(st.pts, p, !!st.loop) < st.half + WALK_W + 0.3);
+      let cum = 0;
+      const spill = line.map((p, i) => {
+        if (i) cum += Math.hypot(p[0] - line[i - 1][0], p[1] - line[i - 1][1]);
+        const n = outN(i);
+        const want = Math.max(0, 0.55 * Math.sin(cum / 3.3 + ri * 1.7 + bi) + 0.3 * Math.sin(cum / 1.4 + bi * 0.9) + 0.05);
+        // (no further than the land outside stays open)
+        let w = 0;
+        while (w < want && open([p[0] + n[0] * (WALK_W + w + 0.1), p[1] + n[1] * (WALK_W + w + 0.1)])) w += 0.05;
+        return { p, n, w, cum };
+      });
+      pieces(line, 1.5).forEach((pc, k) =>
+        site(`sunridge verge ${bi} ${ri} ${k}`, pc.rect, (into) => {
+          const b = new Batch();
+          const idx = spill.filter((q) => pc.pts.some((r) => Math.hypot(r[0] - q.p[0], r[1] - q.p[1]) < 1e-6));
+          if (idx.length < 2) return;
+          // The strip on the slab in gravel
+          const tri = (a: Pt, c: Pt, d: Pt, y: number, m: THREE.Material) => {
+            const g = new THREE.BufferGeometry();
+            const up = (c[1] - a[1]) * (d[0] - a[0]) - (c[0] - a[0]) * (d[1] - a[1]) > 0;
+            const v = (up ? [a, c, d] : [a, d, c]).flatMap((q) => [q[0], y, q[1]]);
+            g.setAttribute('position', new THREE.Float32BufferAttribute(v, 3));
+            g.computeVertexNormals();
+            b.add(g, m);
+          };
+          for (let i = 1; i < idx.length; i++) {
+            const [A, B] = [idx[i - 1], idx[i]];
+            const out = (q: typeof A, d: number): Pt => [q.p[0] + q.n[0] * d, q.p[1] + q.n[1] * d];
+            tri(out(A, 0), out(B, 0), out(B, WALK_W - 0.02), SLAB + 0.004, GRAVEL);
+            tri(out(A, 0), out(B, WALK_W - 0.02), out(A, WALK_W - 0.02), SLAB + 0.004, GRAVEL);
+            // ...and spilling off it onto the ground where it bulges
+            if (A.w > 0.04 || B.w > 0.04) {
+              tri(out(A, WALK_W), out(B, WALK_W), out(B, WALK_W + B.w), 0.022, GRAVEL);
+              tri(out(A, WALK_W), out(B, WALK_W + B.w), out(A, WALK_W + A.w), 0.022, GRAVEL);
+            }
+          }
+          // Clumps where it bulges most: a boulder or two and a low shrub, near only
+          b.detail(() => {
+            for (let i = 1; i < idx.length - 1; i++) {
+              const q = idx[i];
+              if (q.w < 0.35 || idx[i - 1].w > q.w || idx[i + 1].w > q.w) continue;
+              const at = (d: number, side: number): Pt => [q.p[0] + q.n[0] * d - q.n[1] * side, q.p[1] + q.n[1] * d + q.n[0] * side];
+              const [bx, bz] = at(WALK_W + q.w * 0.5, 0.15);
+              b.add(new THREE.IcosahedronGeometry(0.22, 0).scale(1.2, 0.7, 1).translate(bx, 0.1, bz), STONE);
+              const [sx, sz] = at(WALK_W * 0.55, -0.35);
+              b.add(new THREE.IcosahedronGeometry(0.2, 0).translate(sx, SLAB + 0.16, sz), SHRUB);
+              if (!low && q.w > 0.6) {
+                const [cx, cz] = at(WALK_W + q.w * 0.3, -0.6);
+                b.add(new THREE.IcosahedronGeometry(0.15, 0).scale(1, 0.6, 1.2).translate(cx, 0.07, cz), STONE);
+              }
+            }
+          });
+          b.build(into, { cast: false, receive: true });
+        })
+      );
+    }
 
   /* ---------- The wall round the land ---------- */
   const [y0, y1] = [SLAB, WALL.top];

@@ -16,7 +16,7 @@
  * the footprint set back until the lot is wide enough (a pie-shaped lot round a turning circle widens as it goes back),
  * with a back yard behind (`BACK_MIN`). Everything under the Emporium.
  */
-import { LOTS, type Lot } from './sunridgelots';
+import { LATE_FROM, LOTS, type Lot } from './sunridgelots';
 import type { Pt } from './sunridge';
 import { rng } from './recipes';
 
@@ -258,7 +258,8 @@ function build(): House[] {
   const out: House[] = [];
   const rand = rng(8821);
   let prev = { scheme: -1, roof: -1, plan: '' as string, prev2: '' as string };
-  for (const l of LOTS) {
+  // (the lots laid before the late ones: theirs below, after all of these, so these keep their ids)
+  for (const l of LOTS.slice(0, LATE_FROM)) {
     const f = frameOf(l);
     // Neighbours along the same street differ: the scheme and the roof never the same as next door's, the plan not two in a row
     let scheme = Math.floor(rand() * SCHEMES.length);
@@ -306,6 +307,24 @@ function build(): House[] {
     const scheme = [0, 1, 2, 3, 4, 5].map((k) => (k + Math.floor(late() * SCHEMES.length)) % SCHEMES.length).find((k) => !beside.some((h) => h.scheme === k))!;
     const roof = [0, 1, 2].map((k) => (k + Math.floor(late() * ROOFS.length)) % ROOFS.length).find((k) => !beside.some((h) => h.roof === k)) ?? 0;
     out.push({ id: `sun-house-${out.length}`, lot: l.id, ...laid, scheme, roof, o: f.o, u: f.u, v: f.v, solar: late() < 0.28, chimney: false });
+  }
+  // The late lots' houses (docs/suburb-plan.md Phase 8: the field east of the school, the gap on the south row), after
+  // every house before, from their own numbers: a plan as the rest are given one, a colour and roof unlike next door's
+  const later = rng(8823);
+  for (const l of LOTS.slice(LATE_FROM)) {
+    const f = frameOf(l);
+    const want: Plan[] = later() < 0.3 ? ['two', 'porch'] : ['ranch', 'ell'];
+    if (later() < 0.5) want.reverse();
+    const order = [...want, ...PLANS.filter((p) => !want.includes(p))];
+    const elevation = (['arch', 'stone', 'tower'] as const)[Math.floor(later() * 3)];
+    const mirror = later() < 0.5;
+    let laid: ReturnType<typeof lay> = null;
+    for (const p of order) for (const m of [mirror, !mirror]) laid ??= lay(p, elevation, m, f) ?? lay(p, 'arch', m, f);
+    if (!laid) continue;
+    const prev = out[out.length - 1];
+    const scheme = [0, 1, 2, 3, 4, 5].map((k) => (k + Math.floor(later() * SCHEMES.length)) % SCHEMES.length).find((k) => k !== prev?.scheme)!;
+    const roof = [0, 1, 2].map((k) => (k + Math.floor(later() * ROOFS.length)) % ROOFS.length).find((k) => k !== prev?.roof) ?? 0;
+    out.push({ id: `sun-house-${out.length}`, lot: l.id, ...laid, scheme, roof, o: f.o, u: f.u, v: f.v, solar: later() < 0.28, chimney: later() < 0.18 });
   }
   return out;
 }

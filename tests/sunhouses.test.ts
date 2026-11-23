@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BACK_MIN, HOUSES, HOUSE_SOLIDS, LAID_LAST, PLANS, SIDE_MIN, houseTop, toWorld } from '../src/scripts/city3d/sunhouses';
-import { LOTS, outline } from '../src/scripts/city3d/sunridgelots';
+import { LATE_FROM, LOTS, outline } from '../src/scripts/city3d/sunridgelots';
 import { SUN_STREETS, distTo, inside, type Pt } from '../src/scripts/city3d/sunridge';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { WALK_W } from '../src/scripts/city3d/layout';
@@ -75,7 +75,25 @@ test("every lot round a turning circle has its house, no lot's back crossed (Pha
   // (the second pass's lot at Ocotillo Court's north end, where its circle stood in open ground)
   assert.ok(LOTS.some((l) => l.late && l.street === 'sun-court-1'), "no lot laid at Ocotillo Court's north end");
   for (const l of LOTS) if (l.street.startsWith('sun-court')) assert.ok(built.has(l.id), `${l.id} on ${l.street} has no house`);
-  // The two laid last, after every other house, so the houses before keep their ids (and their yards and residents)
-  assert.deepEqual(HOUSES.slice(-LAID_LAST.length).map((h) => h.lot), LAID_LAST);
-  assert.ok(HOUSES.slice(0, -LAID_LAST.length).every((h, i) => h.id === `sun-house-${i}` && !LAID_LAST.includes(h.lot)));
+  // The two laid last, after every other house of the first lots, so the houses before keep their ids (and their
+  // yards and residents); the late lots' (Phase 8) after those
+  const late = HOUSES.filter((h) => LOTS.findIndex((l) => l.id === h.lot) >= LATE_FROM);
+  const early = HOUSES.slice(0, HOUSES.length - late.length);
+  assert.deepEqual(HOUSES.slice(early.length).map((h) => h.lot), late.map((h) => h.lot), 'the late lots\' houses come last');
+  assert.deepEqual(early.slice(-LAID_LAST.length).map((h) => h.lot), LAID_LAST);
+  assert.ok(early.slice(0, -LAID_LAST.length).every((h, i) => h.id === `sun-house-${i}` && !LAID_LAST.includes(h.lot)));
+});
+
+test('the late lots (Phase 8): after every lot before, on the field east of the school and in the gap on the south row, a house on each', () => {
+  assert.equal(LOTS[LATE_FROM - 1].id, `sun-lot-${LATE_FROM - 1}`);
+  // (the first pass's own late lots, round the turning circles, all before LATE_FROM: none shares an id with these)
+  assert.ok(LOTS.slice(LATE_FROM).every((l) => !l.late), 'a turning-circle lot laid after LATE_FROM');
+  assert.equal(new Set(LOTS.map((l) => l.id)).size, LOTS.length, 'two lots share an id');
+  const late = LOTS.slice(LATE_FROM);
+  assert.ok(late.length >= 6, `${late.length} late lots`);
+  late.forEach((l, i) => assert.equal(l.id, `sun-lot-${LATE_FROM + i}`));
+  // (most on the field east of the school, between the loop and the east wall)
+  assert.ok(late.filter((l) => l.front[0][0] > 230 && l.front[0][1] > -70 && l.front[0][1] < -20).length >= 5);
+  const built = new Set(HOUSES.map((h) => h.lot));
+  for (const l of late) assert.ok(built.has(l.id), `${l.id} has no house`);
 });

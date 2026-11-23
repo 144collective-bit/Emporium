@@ -19,6 +19,7 @@
  */
 
 import { showAt } from './stripmarks';
+import { bellDue } from './sunbell';
 import type { Sfx } from './combat';
 import type { Ambience } from './ambience';
 import type { Voice } from './vehicleids';
@@ -114,6 +115,8 @@ export function createSound(given?: AudioContext) {
   let civicMurmur: GainNode | null = null;
   let civicFlags: GainNode | null = null;
   let hallBellGain: GainNode;
+  /** Sunridge's school bell (sunbell.ts): the minute it last rang, so it rings once */
+  let rung = -1;
   const BOOM_BPM = 88;
   const CLUB_BPM = 124;
   const STUDIO_BPM = 140;
@@ -175,6 +178,44 @@ export function createSound(given?: AudioContext) {
 
   /** The master level while it's on (Settings > Sound > Volume) */
   let level = 0.55;
+
+  /** An electric school bell: a hammer on a gong, a bright tone and its partial chopped quickly, three seconds, from across the estate */
+  function schoolBell(t: number, level: number) {
+    const g = ctx!.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.035 * level, t + 0.05);
+    g.gain.setValueAtTime(0.035 * level, t + 2.8);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 3.3);
+    // (the clapper: a square LFO through a gain swinging the tone on and off)
+    const chop = ctx!.createGain();
+    chop.gain.value = 0.5;
+    const lfo = ctx!.createOscillator();
+    lfo.type = 'square';
+    lfo.frequency.value = 24;
+    const depth = ctx!.createGain();
+    depth.gain.value = 0.5;
+    lfo.connect(depth).connect(chop.gain);
+    const bp = ctx!.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.frequency.value = 1800;
+    bp.Q.value = 0.6;
+    chop.connect(bp).connect(g).connect(master);
+    for (const [f, k] of [
+      [1250, 1],
+      [2930, 0.4],
+    ]) {
+      const o = ctx!.createOscillator();
+      o.type = 'triangle';
+      o.frequency.value = f;
+      const og = ctx!.createGain();
+      og.gain.value = k;
+      o.connect(og).connect(chop);
+      o.start(t);
+      o.stop(t + 3.4);
+    }
+    lfo.start(t);
+    lfo.stop(t + 3.4);
+  }
 
   function init() {
     ctx = given ?? new AudioContext();
@@ -1505,6 +1546,12 @@ export function createSound(given?: AudioContext) {
         if (a.bell > 0.05) toll(t, now.getHours() % 12 || 12);
         // (City Hall's from its tower, a fourth under St Aldwyn's, its strikes slower: a second after it)
         if (a.hallBell > 0.05) toll(t + 1, now.getHours() % 12 || 12, hallBellGain, 147, 3.2);
+      }
+      // Sunridge's school bell on weekdays (sunbell.ts: school, break, lunch, home time), heard across the estate
+      const minute = now.getHours() * 60 + now.getMinutes();
+      if (minute !== rung && bellDue(now.getDay(), now.getHours(), now.getMinutes())) {
+        rung = minute;
+        if (a.suburb > 0.05) schoolBell(t, a.suburb);
       }
       hallBellGain.gain.setTargetAtTime(a.hallBell, t, 0.5);
       // The civic square: footsteps and a murmur by day (a crowd's voices, softer than the Strip's), the flags fluttering

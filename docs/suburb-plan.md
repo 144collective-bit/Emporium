@@ -283,7 +283,163 @@ These are my recommendations, made so the plan is complete; any can change.
      (`LAID_LAST` takes the `late` lots too). 102 houses on 102 lots. A
      resident at the grill is left out where a turned house's solid cells
      reach past its back wall over a shallow back yard (sunlife.ts).
-7. *(Optional)* **A home of your own** for Dorras, with the owner's say.
+7. **The loose ends** (built, signed off 2026-11-21; the owner's
+   picks, 2026-11-21, from the audit after Phase 6):
+   - **The panels:** the club's and the school's describe the place
+     instead of "coming soon" (draft copy, the owner's to change).
+   - **Sprinklers you can see:** `SPRINKLERS` in sunyards.ts (DOM-free,
+     tested in `tests/sunyards.test.ts`): a pop-up rotor on every front
+     lawn (one a lawn, on its biggest piece, the spot furthest from its
+     edges and plants, `HEAD_CLEAR`; its spray's reach `r`, `REACH`), each
+     on for three minutes in every nine on the clock (`SPRINKLE`,
+     `sprinklerOn()`, about a third at once), its spray round once in six
+     seconds (`sprayAt()`). Drawn by sunyards3d.ts's `registerSprinklers()`:
+     one instanced mesh of thin arching sprays in the FX layer, by day and
+     not in the rain (as the sprinklers are heard), set each frame only
+     near Sunridge; under reduced motion the ticks run once, so they stand.
+     One draw call.
+   - **The school bell:** `sunbell.ts` (DOM-free, tested in
+     `tests/sunbell.test.ts`): weekdays at eight, the break (10:30, 10:45),
+     lunch (12:00, 12:45) and home time (three), by the visitor's clock in
+     step with the school's live line; sound.ts rings it (`schoolBell()`, an
+     electric bell's chopped tone), heard across Sunridge (`suburb`).
+   - **The edges** (the owner: "fix the edges. this is still rough",
+     after the shots; the yards', the streets' and Sunridge's outer edge):
+     - *The lawns:* each lawn's turf is an island in its gravel
+       (sunyards.ts `islandOf()`, `Yard.islands`): its piece moved in from
+       the sidewalk, the lot lines, the driveway and the house
+       (`ISLAND_IN`), its edges wandering a little further in (`WANDER`) and
+       its corners rounded, so neighbouring yards meet across gravel, not
+       lawn against gravel in a straight line; a sliver too narrow keeps its
+       gravel. Drawn over the piece's gravel (sunyards3d.ts). The
+       sprinklers stand on the turf.
+     - *The driveways* stop at the sidewalk, which runs on unbroken (the
+       owner's call: an apron across it was tried and taken out); the kerb
+       is a rolled one, driven over. Their ends finished (the owner: "please
+       ensure all driveway ends are clean"): each driveway is the yard's
+       (sunyards.ts `drive`, `driveOf()`, drawn by sunyards3d.ts), from the
+       garage door to the sidewalk's edge exactly (`streetV()`: round a
+       turning circle the lot's front is a chord and the sidewalk's edge an
+       arc, so a gap of bare ground showed), flared out to it each side in
+       a quarter round (`FLARE`, never past the lot's sides). The front
+       yards' pieces are carried to the same edge, and their turf moved in
+       where the edge bows into the lot. Tested: every driveway's end on
+       the sidewalk's edge, nothing on the sidewalk, the flares inside the
+       lot; the fronts to the edge with no sliver.
+     - *The kerbs:* a rolled kerb in pale stone (`STONE.kerb`) along the
+       sidewalk's edge beside every street and round every turning circle
+       (sunridge3d.ts `kerbAlong()`), only where there's sidewalk
+       (`onSlab()`), so it breaks at junctions, crossings and a stem's
+       mouth.
+     - *The outer edge:* the fringe's dry wash meanders in bends a few
+       tiles long (fringes.ts, its range 9.7 to 14.8 in from the highway as
+       its test allows) and its path wanders between the wash and its old
+       line (never further in, where the highway's bend brings Sunridge's
+       sidewalk close), so the bands outside the wall no longer run ruler
+       straight. The wall itself stays where it is (nothing moves).
+     - *The ground between the yards:* Sunridge's blocks lie in dry desert
+       grass (world.ts's `dryGrass` lot, `COVER.dryGrass`) instead of the
+       city's lawn green, so the wedges between the turning circles' lots,
+       the strips behind the yards and the bare corners read as ground, and
+       the watered turf stands out from it (the park's lawn and the
+       school's field draw their own grass over it).
+     - *The back yards' lawns* soft-edged as the front's (`islandOf()`).
+     - *Left:* the sidewalk's square corners at the junctions (the street
+       plan's blocks), the wide bare lawn by the school, and the strip up
+       Palm Court's back (too narrow to bend).
+   - **Left for later** (the audit's other items, each the owner's call):
+     driveway cars leaving in the morning and back in the evening with
+     their garage doors, kids on bikes and scooters and hoops over the
+     garages, the ice-cream van at the park, swimmers, seasonal porch
+     decorations, the rest of Ocotillo Court's lots.
+8. **The gardens and the land behind** (built, signed off 2026-11-21; the owner, 2026-11-21: "do them all then lets work fixing the
+   garden fences. i want the fences to be moved to suit the existing wasted
+   space. scan the entire area of sunridge ... extend some gardens to use the
+   wasted space"):
+   - **The last rough spots of Phase 7:** the blocks' street corners rounded
+     (sunridge.ts `roundCorners()`, `KERB_RETURNS`: every junction and each
+     cul-de-sac's stem into its circle; sunridge3d.ts fills the asphalt into
+     each and lays the kerb round it; the lots, laid from the runs, don't
+     move); the strip of slab outside the perimeter wall a gravel verge
+     spilling onto the ground in a wandering line, with clumps of boulders
+     and shrubs, where the land outside is open.
+   - **The scan:** Sunridge's blocks rasterised, every bit of land on no
+     lot, amenity or footpath found: 75 patches, about 4,800 square tiles
+     (the lots: about 9,000), the biggest the band along the east and north
+     walls and round the school, the loop's middle between back-to-back
+     rows, the strip by the club, park and school, the south avenue's
+     strip, the wedges round the turning circles and the north-west and
+     south-west corners.
+   - **The gardens, each block divided among its lots** (the owner, after the
+     first growth pass: "close the pockets ... do another pass to optimise
+     and balance the arrangement of the garden fences. take full creative
+     control and do what is needed to make it a realistic design and
+     layout"). A first pass grew each lot's four corners into the land
+     behind; it left bent gaps and long strips four corners couldn't close.
+     It was replaced by dividing the land as a subdivision is
+     (sunridgelots.ts `divide()`, `GARDENS`, baked as `sun-gardens`): every
+     bit of a block goes to the row of the street it's nearest (so
+     back-to-back rows meet on one rear fence along the block's middle, and
+     a corner's two rows on its diagonal), only where that row has houses
+     (`ROW_REACH` past its first and last), and in the row to the nearest
+     lot (side fences straight back from the street, fanned round a curve,
+     the land behind the inside of a bend shared out). Kept off: the
+     amenities' land in the lot's own block (`KEEP_CLEAR`, where the lot
+     wasn't laid within it), the footpath, every other street's sidewalk
+     and its own past the row's ends (`STREET_CLEAR`), the land's edge
+     nearer than the perimeter wall's line (a garden reaching it backs onto
+     that wall); no deeper than `DEEP`. Each garden is the outline round
+     its cells on a quarter-tile grid (`RES`, `contour()`), smoothed into
+     fence lines (`dp()`, `simplify()`, spikes out), holding its whole lot
+     (`holding()`), brought back inside its block (`pullIn()`): a `Garden`,
+     its `outline`. The houses keep their lots (`LOTS`); the yards read the
+     gardens in the house's frame (sunyards.ts `gardenFrame()`, `acrossG()`,
+     `depthG()`): the walls on every garden edge but the open front yard
+     (the lot's own ground in front of the return walls) and the first
+     tile back from the street, so a garden reaching along a side street
+     beside its house is walled along it, as a corner lot's is; shared
+     fences once (trimmed where another wall stands), one return a side;
+     the whole garden in gravel under the front's ground (`Yard.inner`), so
+     no land beside a house is left bare; the back lawn grown out to the
+     garden's walls where it spreads behind the house (`Yard.lawn`, the
+     biggest quad that keeps a path's width in, never smaller than the old
+     back yard's patch); a pool no further from the house than in a lot's
+     own yard. Tested: each garden holds its lot and stays in its block,
+     none overlaps another, over 90% of the free land is in a garden, and
+     every back lawn is inside its garden.
+   - **More houses** (the owner's call for the field east of the school):
+     the amenities' land is drawn as rough rectangles, and the school's
+     and the club's reached across the loop into the blocks outside it, so
+     no lots were laid there. A late pass (sunridgelots.ts `late()`,
+     `LATE_FROM`) lays lots there, kept off only the amenity land whose
+     middle is in that block: six along the loop's outer side east of the
+     school and two in the gap on the south row; their houses are built
+     after every other (sunhouses.ts, `rng(8823)`), so every house, yard
+     and resident before keeps its id. Their ids start after Phase 6's
+     Ocotillo Court lot (`sun-lot-101`, laid with the first lots):
+     `LATE_FROM` is 102.
+   - **The big gardens dressed** (built and signed off 2026-11-21; the
+     owner's call, after Phase 8's sign-off: "a varied mix of these, not in every garden"): about two in
+     three gardens with 30 square tiles or more behind the house get one
+     to three of a tree out toward the far end (a lemon, a mesquite or a
+     shade tree), a raised timber bed along a wall (vegetables or flowers)
+     and a fire pit with three or four chairs on a pad of pavers, each where
+     it has room, and stepping stones from the patio out to one of them or
+     the shed on most; about half the fire pits lit of an evening, their
+     embers a steady low orange glow after dark, charcoal by day (the
+     owner's call: steady, no flicker; signed off 2026-11-21; `burning`, sunyards3d.ts `EMBER`,
+     a `lit()` material, the pits at every distance, their chairs near
+     only) (sunyards.ts `dressOf()`, `Yard.dress`, `DRESS_FROM`,
+     its own generator, so every yard keeps what it had). Drawn in the
+     yard's own materials (sunyards3d.ts `drawDress()`: no new draw calls),
+     the trees at every distance, the rest near only, fewer on phones; the
+     trunks, beds and pits solid. About a third of all the gardens.
+     Tested: each thing in its garden, clear of the walls, the house, the
+     pool, the extras and each other; every kind of each.
+   - **What's left:** about 540 square tiles of the 4,800 the scan found,
+     nearly all the thin margins kept round the amenities and the streets
+     and a few slivers where three gardens meet.
+9. *(Optional)* **A home of your own** for Dorras, with the owner's say.
 
 ## Constraints
 

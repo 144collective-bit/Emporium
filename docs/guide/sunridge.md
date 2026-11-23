@@ -76,7 +76,32 @@ keep it up to date when what it describes changes.
   and a lawnmower now and then by day, sound.ts `mower()`). Drawn by
   `sunlife3d.ts` (`registerLife()` from sunridge3d.ts's `register()`: the
   people into the crowd, the dogs and leads on the main thread, the cars
-  through `parkedCars()`).
+  through `parkedCars()`). Phase 6 (polish and performance) is built. Phase 7
+  (the loose ends) is built and signed off (2026-11-21): the club's and
+  school's panels describe the place; sunyards.ts's `SPRINKLERS` (a rotor on
+  every front lawn, on the clock, `sprinklerOn()`, `sprayAt()`), drawn by
+  sunyards3d.ts's `registerSprinklers()` (one instanced mesh, by day and not
+  in the rain); `sunbell.ts` (the school bell, weekdays, `bellDue()`), rung
+  by sound.ts; and the edges: the lawns' turf islands in their gravel
+  (sunyards.ts `islandOf()`, `Yard.islands`), the rolled kerbs along the streets and turning
+  circles (sunridge3d.ts `kerbAlong()`), the fringe's wash and path
+  meandering (fringes.ts).
+- **The gardens and the land behind** (docs/suburb-plan.md Phase 8): the
+  blocks' street corners rounded (sunridge.ts `roundCorners()`,
+  `KERB_RETURNS`, drawn by sunridge3d.ts with the asphalt filled in and the
+  kerb round); the gravel verge outside the perimeter wall (sunridge3d.ts);
+  each block's land divided among its lots into gardens (sunridgelots.ts
+  `divide()`, `GARDENS`, baked `sun-gardens`: outlines; the yards and walls
+  read them through sunyards.ts `gardenFrame()`, `acrossG()`, `depthG()`,
+  `Yard.inner` the whole garden in gravel, `Yard.lawn` the back lawn grown
+  to the garden's walls; the walls on every garden edge but the open front
+  yard, sunyards.ts `walls()`; the big gardens' trees, beds, fire pits and
+  stepping stones, `dressOf()`, `Yard.dress`, drawn by sunyards3d.ts
+  `drawDress()`; about half the fire pits' embers glowing after dark,
+  `burning`, `EMBER`); eight late lots and houses on the field
+  east of the school and the south row's gap (sunridgelots.ts `late()`,
+  `LATE_FROM`, 102: after Ocotillo Court's `sun-lot-101`; sunhouses.ts
+  builds them after every other house).
 - **Performance** (docs/suburb-plan.md Phase 6): four `?bench` views
   (`sunridge` over the loop, `sun-street`, `sun-court`, `sun-pools`). On
   phones it's about 120-190 draws and 0.27-0.53M triangles, among the city's
