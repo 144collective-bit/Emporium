@@ -1460,22 +1460,21 @@ function stair(b: Batch, low: boolean) {
   // stringer; at the second flight's back the same, round the den's door under its high end
   xBand(b, x0 - 0.006, z0 + 0.006, f[1], S, S, S + H - STRING_DN, S + H - STRING_DN, WOOD_DARK);
   xBand(b, x0 - 0.006, f[1], z1, S, S, S + H - STRING_DN, S + UP_Y - STRING_DN, WOOD_DARK);
-  const door = (f[0] + f[2]) / 2;
+  // (the second flight's back: over the den's doorway, the flight's whole width, and either side of it if it's narrower)
   const [d0, d1] = DEN_STEPS.door;
-  // (the second flight's back but for the den's doorway in it)
-  icube(b, [f[0], z1 + 0.004, d0 - 0.04, z1 + 0.012], S, S + CEIL, WOOD_DARK);
-  icube(b, [d1 + 0.04, z1 + 0.004, f[2], z1 + 0.012], S, S + CEIL, WOOD_DARK);
-  icube(b, [d0 - 0.04, z1 + 0.004, d1 + 0.04, z1 + 0.012], S + 1.04, S + CEIL, WOOD_DARK);
+  if (d0 > f[0] + 0.04) icube(b, [f[0], z1 + 0.004, d0 - 0.04, z1 + 0.012], S, S + CEIL, WOOD_DARK);
+  if (d1 < f[2] - 0.04) icube(b, [d1 + 0.04, z1 + 0.004, f[2], z1 + 0.012], S, S + CEIL, WOOD_DARK);
+  icube(b, [d0, z1 + 0.004, d1, z1 + 0.012], S + 1.04, S + CEIL, WOOD_DARK);
   b.detail(() => {
     for (let z = z0 + 0.03; z < z1 - 0.05; z += 0.1) icube(b, [x0 - 0.03, z, x0 - 0.012, z + 0.072], S, lineB(z + 0.036) - STRING_DN - 0.004, WOOD);
-    for (let x = f[0] + 0.03; x < f[2] - 0.05; x += 0.1) if (Math.abs(x + 0.036 - door) > 0.43) icube(b, [x, z1 + 0.012, x + 0.072, z1 + 0.03], S, S + UP_Y - STRING_DN - 0.03, WOOD);
+    for (let x = f[0] + 0.03; x < f[2] - 0.05; x += 0.1) if (x + 0.072 < d0 || x > d1) icube(b, [x, z1 + 0.012, x + 0.072, z1 + 0.03], S, S + UP_Y - STRING_DN - 0.03, WOOD);
   });
-  // (the den's door, open (docs/house-plan.md Phase 3): its black steel frame, the walnut leaf slid back into the wall
-  // west of it, its edge and brass pull showing in the doorway)
-  for (const x of [d0 - 0.04, d1]) icube(b, [x, z1 + 0.012, x + 0.04, z1 + 0.036], S, S + 1.04, INK);
-  icube(b, [d0 - 0.04, z1 + 0.012, d1 + 0.04, z1 + 0.036], S + 1.0, S + 1.04, INK);
-  icube(b, [d0, z1 - 0.004, d0 + 0.03, z1 + 0.03], S, S + 1.0, WOOD);
-  icube(b, [d0 + 0.03, z1 + 0.004, d0 + 0.04, z1 + 0.02], S + 0.4, S + 0.7, BRASS);
+  // (the den's door, open (docs/house-plan.md Phase 3): its black steel frame lining the doorway, the walnut leaf slid
+  // back into the wall west of it, its edge and brass pull showing at the frame)
+  for (const x of [d0, d1 - 0.04]) icube(b, [x, z1 + 0.012, x + 0.04, z1 + 0.036], S, S + 1.04, INK);
+  icube(b, [d0, z1 + 0.012, d1, z1 + 0.036], S + 1.0, S + 1.04, INK);
+  icube(b, [d0 + 0.04, z1 - 0.004, d0 + 0.07, z1 + 0.03], S, S + 1.0, WOOD);
+  icube(b, [d0 + 0.07, z1 + 0.004, d0 + 0.08, z1 + 0.02], S + 0.4, S + 0.7, BRASS);
   // Under the stair, the soffits over the den's steps: plastered under the second flight, the half landing and the
   // first, along their stringers' feet
   const [yH, yU] = [S + H - STRING_DN, S + UP_Y - STRING_DN];

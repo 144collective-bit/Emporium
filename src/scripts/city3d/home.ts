@@ -431,8 +431,11 @@ export const DEN_STEPS = {
   half: STAIR.half,
   a: STAIR.a,
   steps: 6,
-  /** The den's door in the second flight's back, x0 to x1 */
-  door: [(STAIR.b[0] + STAIR.b[2]) / 2 - 0.35, (STAIR.b[0] + STAIR.b[2]) / 2 + 0.35] as [number, number],
+  /**
+   * The den's doorway in the second flight's back, x0 to x1: the flight's whole width, so whoever comes up the den's
+   * steps along a wall walks straight out (a jamb in the way stopped him dead)
+   */
+  door: [STAIR.b[0], STAIR.b[2]] as [number, number],
 };
 const DEN_RUNS: Run[] = [
   { rect: STAIR.b, n: BASE_Y / 2, s: 0 },
@@ -469,7 +472,11 @@ export function stairRails(y: number): Rect[] {
   // (the second flight's back: from the room, its doorway the den's door; from the basement, the den's steps'
   // underside, closed)
   if (h < -0.5) out.push([b[0], z1 - 0.04, b[2], z1]);
-  else if (h < UP_Y - STEP) out.push([b[0], z1, DEN_STEPS.door[0], z1 + 0.04], [DEN_STEPS.door[1], z1, b[2], z1 + 0.04]);
+  else if (h < UP_Y - STEP) {
+    const [d0, d1] = DEN_STEPS.door;
+    if (d0 > b[0]) out.push([b[0], z1, d0, z1 + 0.04]);
+    if (d1 < b[2]) out.push([d1, z1, b[2], z1 + 0.04]);
+  }
   return out;
 }
 

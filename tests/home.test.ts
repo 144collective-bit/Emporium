@@ -566,7 +566,13 @@ test('the den\'s and the roof\'s steps, walked (docs/house-plan.md Phase 3): dow
   assert.ok(Math.abs(denY(bx, z1)! - SLAB_Y) < 1e-9 && Math.abs(denY(bx, hz)! - (SLAB_Y + BASE_Y / 2)) < 1e-9 && Math.abs(denY(ax, z1)! - (SLAB_Y + BASE_Y)) < 1e-9);
   assert.ok(-BASE_Y / 2 / (a[3] - a[1]) <= UP_Y / 2 / (a[3] - a[1]) + 0.01, 'no steeper than the stair');
   const [d0, d1] = DEN_STEPS.door;
-  assert.ok(d0 > b[0] && d1 < b[2] && d1 - d0 >= 2 * RW + 0.2, 'the den\'s door in the second flight\'s back, a body and more wide');
+  assert.ok(d0 <= b[0] + 1e-9 && d1 >= b[2] - 1e-9, 'the den\'s doorway the second flight\'s whole width');
+  // (so whoever comes up along either wall walks straight out: no jamb to stop him)
+  for (const x of [b[0] + RW + 0.002, b[2] - RW - 0.002]) {
+    const up: [number, number][] = [];
+    for (let z = hz; z < z1 + 0.6; z += 0.04) up.push([x, z]);
+    assert.equal(walk(up, denY(x, hz)!), SLAB_Y, 'up along the wall and out of the den\'s doorway');
+  }
   const den: [number, number][] = [];
   for (let z = z1 + 0.6; z > hz; z -= 0.04) den.push([bx, z]);
   for (let x = bx; x < ax; x += 0.04) den.push([x, hz]);
