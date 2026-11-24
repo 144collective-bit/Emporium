@@ -72,7 +72,7 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    rails (`stairRails()`) and the terrace's walls (`roofWall()`, `HATCH_WALLS`) by his height; the camera's flights and
    spine solid (`homeCamera()`). `home:cellar`, `home:cellarup`, `home:roof`, `home:roofdown` are gone: the house's only
    fades are its doors out. `tests/home.test.ts` walks both ways down and up; the smoke run walks them (`homeden`,
-   `hometerrace`).
+   `hometerrace`). Draw calls unchanged: 313 desktop, 198 phone. Shots: `docs/house-shots/phase-3-*.webp`.
 4. **The modern villa outside.** Dark stone at the base to the ground floor's sills, pale render over it; deep window
    reveals with black steel frames and stone sills; timber soffits under the roof's edge and a steel coping on the
    parapet; a glass balcony off the bedroom over the front door; downpipes, vents and a canopy over the front door;

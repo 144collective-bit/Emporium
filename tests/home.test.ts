@@ -544,7 +544,7 @@ test('the turned stair (docs/house-plan.md Phase 2): walked from the room round 
 
 test('the den\'s and the roof\'s steps, walked (docs/house-plan.md Phase 3): down through the den\'s door under the stair, round and down to the basement; up from the landing through the hatch onto the terrace', () => {
   const { well, a, b, half, spine } = STAIR;
-  const [x0, z0, x1, z1] = well;
+  const [x0, z0, , z1] = well;
   const RW = 0.17;
   const [ax, bx, hz] = [(a[0] + a[2]) / 2, (b[0] + b[2]) / 2, (half[1] + half[3]) / 2];
   // (as walk.ts does: the ground under him asked from a little over his feet, his walls by his floor: the house's,
