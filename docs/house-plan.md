@@ -56,9 +56,23 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    the first flight to the hatch (`ROOF_STEPS`), still a fade till Phase 3. `tests/home.test.ts` walks it up and down;
    the smoke run walks it up (`hometerrace`) and down (`homestairs`). The shell's floor slab is open over the well too.
    Draw calls unchanged: 313 desktop, 198 phone. Shots: `docs/house-shots/phase-2-*.webp`.
-3. **The den's and the roof's steps, walked.** The den's door under the second flight opens on steps down under the
-   stair (a flight under each, as it turns), the roof's steep steps from the landing up through the hatch (`ROOF_STEPS`),
-   walked as the stair; `home:cellar`, `home:cellarup`, `home:roof`, `home:roofdown` go. The smoke run walks both.
+3. **The den's and the roof's steps, walked.** *Built, waiting for the owner's sign-off.* The den's door under the
+   second flight's high end stands open (its walnut leaf slid back into the wall, `DEN_STEPS.door`), and the den's
+   steps go down under the stair as it turns (`DEN_STEPS`, `denY()` in `home.ts`): north under the second flight, the
+   turn under the half landing, south under the first to the basement's floor at its foot, six risers a flight, walnut
+   on black risers as the stair's, a handrail along the walls, the den's cyan down the last flight; plastered soffits
+   under the stair over them, walled in the den's colour from its floor (the well's west side, the second flight's back,
+   the spine). The room's floor and the basement's ceiling are open over the well, and so is the ground under the
+   house (the plot's paving, south3d.ts `besideWell()`; its block's slab and the grass, world.ts `holesIn()` and
+   `buildGround()`). The roof's steps are walked from the
+   landing (`roofStepY()`): steep (nine risers), up over the first flight to a little platform at the roof's floor in
+   the hatch (`ROOF_STEPS.top`), out west across a steel sill where the hatch's kerb is open (`HATCH_WAY`); the hatch
+   reaches further south for headroom, the ceiling and the roof are open over it, a rail along the steps' open side.
+   Where the flights stand over one another, his floor is the highest he's on or can step onto (`homeFloorY()`); the
+   rails (`stairRails()`) and the terrace's walls (`roofWall()`, `HATCH_WALLS`) by his height; the camera's flights and
+   spine solid (`homeCamera()`). `home:cellar`, `home:cellarup`, `home:roof`, `home:roofdown` are gone: the house's only
+   fades are its doors out. `tests/home.test.ts` walks both ways down and up; the smoke run walks them (`homeden`,
+   `hometerrace`). Draw calls unchanged: 313 desktop, 198 phone. Shots: `docs/house-shots/phase-3-*.webp`.
 4. **The modern villa outside.** Dark stone at the base to the ground floor's sills, pale render over it; deep window
    reveals with black steel frames and stone sills; timber soffits under the roof's edge and a steel coping on the
    parapet; a glass balcony off the bedroom over the front door; downpipes, vents and a canopy over the front door;

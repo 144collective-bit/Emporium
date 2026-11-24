@@ -343,7 +343,7 @@ const hits = (list: readonly { rect: Rect }[], x: number, z: number, r: number) 
 export function homeWall(x: number, z: number, r: number, y = SLAB_Y) {
   if (x - r < rx0 || x + r > rx1 || z - r < rz0 || z + r > rz1) return true;
   const lv = homeLevel(y);
-  if (lv !== 'base' && stairRails(y).some((f) => touch(f, x, z, r))) return true;
+  if (stairRails(y).some((f) => touch(f, x, z, r))) return true;
   return hits(lv === 'up' ? rooms.up : lv === 'base' ? rooms.base : rooms.room, x, z, r);
 }
 /**
@@ -354,19 +354,22 @@ export function homeWall(x: number, z: number, r: number, y = SLAB_Y) {
 type CamBox = [number, number, number, number, number, number];
 export function homeCamera(y: number): CamBox[] {
   const lv = homeLevel(y);
-  // (over the stair's well the room's ceiling and the upstairs' floor are open: docs/house-plan.md Phase 2)
-  if (lv === 'room') return [...AROUND_WELL.map((r): CamBox => [...r, SLAB_Y + RIDGE, SLAB_Y + CEIL]), [...STAIR.well, SLAB_Y + RIDGE, SLAB_Y + UP_CEIL], ...ROOF_STEPS_CAMERA];
-  if (lv === 'up') return [...AROUND_WELL.map((r): CamBox => [...r, SLAB_Y + UP_Y - 0.16, -1]), [hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, SLAB_Y + UP_CEIL], ...ROOF_STEPS_CAMERA];
+  // (over the stair's well the room's ceiling, the upstairs' floor and the basement's ceiling are open, the flights
+  // and the spine in it solid: docs/house-plan.md Phases 2 and 3; over the hatch the upstairs' ceiling and the roof)
+  const roof = (top: number, bottom: number) => aroundHatch(hx0, hz0, hx1, hz1).map((r): CamBox => [...r, top, bottom]);
+  if (lv === 'room') return [...AROUND_WELL.map((r): CamBox => [...r, SLAB_Y + RIDGE, SLAB_Y + CEIL]), [...STAIR.well, SLAB_Y + RIDGE, SLAB_Y + UP_CEIL], ...FLIGHTS_CAMERA];
+  if (lv === 'up') return [...AROUND_WELL.map((r): CamBox => [...r, SLAB_Y + UP_Y - 0.16, -1]), ...roof(SLAB_Y + RIDGE, SLAB_Y + UP_CEIL), ...FLIGHTS_CAMERA];
   if (lv === 'base')
     // (under the ground the city's walls don't reach: the basement's own four, round its room, and the house over it)
     return [
-      [hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, SLAB_Y + BASE_CEIL],
+      ...AROUND_WELL.map((r): CamBox => [...r, SLAB_Y + RIDGE, SLAB_Y + BASE_CEIL]),
       [hx0 - 1, hz0 - 1, rx0, hz1 + 1, SLAB_Y, SLAB_Y + BASE_Y - 1],
       [rx1, hz0 - 1, hx1 + 1, hz1 + 1, SLAB_Y, SLAB_Y + BASE_Y - 1],
       [hx0 - 1, hz0 - 1, hx1 + 1, rz0, SLAB_Y, SLAB_Y + BASE_Y - 1],
       [hx0 - 1, rz1, hx1 + 1, hz1 + 1, SLAB_Y, SLAB_Y + BASE_Y - 1],
+      ...FLIGHTS_CAMERA,
     ];
-  return [[hx0, hz0, hx1, hz1, SLAB_Y + RIDGE, -1]];
+  return [...roof(SLAB_Y + RIDGE, -1), ...FLIGHTS_CAMERA];
 }
 
 /* ---------- The stair (docs/house-plan.md Phase 2: a turned stair, walked) ---------- */
@@ -399,15 +402,45 @@ const AROUND_WELL: [number, number, number, number][] = [
   [wx0, hz0, rx1, rz0],
 ];
 const inR = (f: Rect, x: number, z: number) => x >= f[0] && x <= f[2] && z >= f[1] && z <= f[3];
-/** The stair's floor at x, z (over the world: the first flight from the room's floor at its foot to the half landing, the second on up to the landing upstairs), or null off it */
-export function stairY(x: number, z: number): number | null {
-  const { a, half, b } = STAIR;
-  const k = (v: number) => Math.min(1, Math.max(0, v));
-  if (inR(a, x, z)) return SLAB_Y + (UP_Y / 2) * k((a[3] - z) / RUN);
-  if (inR(half, x, z)) return SLAB_Y + UP_Y / 2;
-  if (inR(b, x, z)) return SLAB_Y + (UP_Y / 2) * (1 + k((z - b[1]) / RUN));
-  return null;
+/** A run of floor over `rect`: `n` over the slab along its north edge, `s` along its south, sloping evenly between (flat if they're the same) */
+interface Run {
+  rect: Rect;
+  n: number;
+  s: number;
 }
+const runY = ({ rect: r, n, s }: Run, z: number) => SLAB_Y + n + (s - n) * Math.min(1, Math.max(0, (z - r[1]) / (r[3] - r[1])));
+const runAt = (list: readonly Run[], x: number, z: number) => {
+  const r = list.find((u) => inR(u.rect, x, z));
+  return r ? runY(r, z) : null;
+};
+/** The stair up: the first flight, the half landing, the second flight */
+const UP_RUNS: Run[] = [
+  { rect: STAIR.a, n: UP_Y / 2, s: 0 },
+  { rect: STAIR.half, n: UP_Y / 2, s: UP_Y / 2 },
+  { rect: STAIR.b, n: UP_Y / 2, s: UP_Y },
+];
+/** The stair's floor at x, z (over the world: the first flight from the room's floor at its foot to the half landing, the second on up to the landing upstairs), or null off it */
+export const stairY = (x: number, z: number): number | null => runAt(UP_RUNS, x, z);
+/**
+ * The den's steps (docs/house-plan.md Phase 3): through the den's door under the second flight's high end, down under
+ * it, the turn under the half landing, on down under the first flight to the basement's floor at its foot, turning as
+ * the stair over them does
+ */
+export const DEN_STEPS = {
+  b: STAIR.b,
+  half: STAIR.half,
+  a: STAIR.a,
+  steps: 6,
+  /** The den's door in the second flight's back, x0 to x1 */
+  door: [(STAIR.b[0] + STAIR.b[2]) / 2 - 0.35, (STAIR.b[0] + STAIR.b[2]) / 2 + 0.35] as [number, number],
+};
+const DEN_RUNS: Run[] = [
+  { rect: STAIR.b, n: BASE_Y / 2, s: 0 },
+  { rect: STAIR.half, n: BASE_Y / 2, s: BASE_Y / 2 },
+  { rect: STAIR.a, n: BASE_Y / 2, s: BASE_Y },
+];
+/** The den's steps' floor at x, z (over the world), or null off them */
+export const denY = (x: number, z: number): number | null => runAt(DEN_RUNS, x, z);
 /** How far up or down from a floor he steps on or off it at the stair's ends */
 const STEP = 0.3;
 /**
@@ -424,9 +457,19 @@ export const STAIR_GATE = { shut: false };
 export function stairRails(y: number): Rect[] {
   const h = y - SLAB_Y;
   const { well, a, b, spine } = STAIR;
-  const out: Rect[] = [[well[0] - 0.04, well[1], well[0], well[3] + 0.04], spine];
-  if (h > STEP || STAIR_GATE.shut) out.push([a[0], well[3], a[2], well[3] + 0.04]);
-  if (h < UP_Y - STEP) out.push([b[0], well[3], b[2], well[3] + 0.04]);
+  const z1 = well[3];
+  const out: Rect[] = [[well[0] - 0.04, well[1], well[0], z1 + 0.04], spine];
+  // (the first flight's foot: open from the room, and from the basement to the den's steps' foot under it; upstairs,
+  // the well's rail but where the roof's steps start, and their sides up over the well: docs/house-plan.md Phase 3)
+  if (h > UP_Y - STEP) {
+    const [sx0, , sx1] = ROOF_STEPS.rect;
+    if (sx0 > a[0]) out.push([a[0], z1, sx0, z1 + 0.04]);
+    out.push([sx1, z1, a[2], z1 + 0.04], [sx0 - 0.04, ROOF_STEPS.rect[1], sx0, z1], [sx1, ROOF_STEPS.rect[1], sx1 + 0.04, z1]);
+  } else if ((STAIR_GATE.shut && h > -0.5) || h > STEP) out.push([a[0], z1, a[2], z1 + 0.04]);
+  // (the second flight's back: from the room, its doorway the den's door; from the basement, the den's steps'
+  // underside, closed)
+  if (h < -0.5) out.push([b[0], z1 - 0.04, b[2], z1]);
+  else if (h < UP_Y - STEP) out.push([b[0], z1, DEN_STEPS.door[0], z1 + 0.04], [DEN_STEPS.door[1], z1, b[2], z1 + 0.04]);
   return out;
 }
 
@@ -481,14 +524,45 @@ export function curtainPanels(k: number): Rect[] {
 /** The terrace's floor over the slab (the roof's felt), and the roof inside its parapet and rail */
 export const ROOF_Y = EAVES + 0.06;
 export const TERRACE: Rect = [hx0 + SHELL + 0.1, hz0 + SHELL + 0.1, hx1 - SHELL - 0.1, hz1 - SHELL - 0.1];
-/** The roof's steps' head: a hatch in the roof over the well's front, its lid up, a rail round three sides */
-export const HATCH: Rect = [rx1 - 1.05, rz0 + 0.3, rx1 - 0.1, rz0 + 1.7];
 /**
- * The roof's steps (docs/house-plan.md Phase 2: steep, walnut on black steel): from the landing at the well's back,
- * over the stair's first flight, up through the hatch: across x0 to x1, from their foot at z1 (the landing's floor)
- * to their head at z0 (the roof's), `steps` risers. Walked in Phase 3; till then the way up is the fade
+ * The roof's steps' head: a hatch in the roof over the well's front, its lid up on its east side, a kerb round it but
+ * on its west side by the steps' head, where he steps out onto the terrace (`HATCH_WAY`, z0 to z1)
  */
-export const ROOF_STEPS = { rect: [HATCH[0] + 0.12, HATCH[1] + 0.15, HATCH[2] - 0.04, wz1] as Rect, steps: 9 };
+export const HATCH: Rect = [rx1 - 1.05, rz0 + 0.3, rx1 - 0.1, rz0 + 2.25];
+/** The hatch's kerb's width */
+export const HATCH_KERB = 0.08;
+/**
+ * The roof's steps (docs/house-plan.md Phase 2: steep, walnut on black steel; walked, Phase 3): from the landing at the
+ * well's back, over the stair's first flight, up through the hatch: across x0 to x1, from their foot at z1 (the
+ * landing's floor) to their head, `steps` risers, then a little platform `top` deep at the roof's floor to z0
+ */
+export const ROOF_STEPS = { rect: [HATCH[0] + 0.12, HATCH[1] + 0.15, HATCH[2] - 0.04, wz1] as Rect, steps: 9, top: 0.35 };
+/** The way out of the hatch onto the terrace, beside the steps' platform: z0 to z1 along its west side */
+export const HATCH_WAY: [number, number] = [HATCH[1] + HATCH_KERB, ROOF_STEPS.rect[1] + ROOF_STEPS.top + 0.1];
+const ROOF_RUNS: Run[] = [
+  { rect: [ROOF_STEPS.rect[0], ROOF_STEPS.rect[1], ROOF_STEPS.rect[2], ROOF_STEPS.rect[1] + ROOF_STEPS.top], n: ROOF_Y, s: ROOF_Y },
+  { rect: [ROOF_STEPS.rect[0], ROOF_STEPS.rect[1] + ROOF_STEPS.top, ROOF_STEPS.rect[2], ROOF_STEPS.rect[3]], n: ROOF_Y, s: UP_Y },
+];
+/** The roof's steps' floor at x, z (over the world), or null off them */
+export const roofStepY = (x: number, z: number): number | null => runAt(ROOF_RUNS, x, z);
+/** A rect x0, z0, x1, z1 but for the hatch in it, as four */
+function aroundHatch(x0: number, z0: number, x1: number, z1: number): Rect[] {
+  const [a0, c0, a1, c1] = HATCH;
+  return [
+    [x0, z0, a0, z1],
+    [a1, z0, x1, z1],
+    [a0, z0, a1, c0],
+    [a0, c1, a1, z1],
+  ];
+}
+/** The hatch's kerb and the steps' rail inside it, as the terrace's walls: open on the west by the steps' head */
+const HATCH_WALLS: Rect[] = [
+  [HATCH[0], HATCH[1], HATCH[2], HATCH[1] + HATCH_KERB],
+  [HATCH[0], HATCH[3] - HATCH_KERB, HATCH[2], HATCH[3]],
+  [HATCH[2] - HATCH_KERB, HATCH[1], HATCH[2], HATCH[3]],
+  [HATCH[0], HATCH_WAY[1], HATCH[0] + HATCH_KERB, HATCH[3]],
+  [ROOF_STEPS.rect[0] - 0.04, HATCH_WAY[1], ROOF_STEPS.rect[0], HATCH[3]],
+];
 /** What stands on the terrace: its footprint, how tall (over the roof), and what it is (home3d.ts draws each) */
 export interface RoofThing {
   kind: 'hatch' | 'sofa' | 'table' | 'planter' | 'telescope' | 'sign';
@@ -511,12 +585,23 @@ export const ROOF_THINGS: RoofThing[] = [
   { kind: 'planter', rect: [tx0 + 5.0, tz1 - 0.5, tx0 + 6.0, tz1 - 0.1], h: 0.3 },
   { kind: 'planter', rect: [tx1 - 1.5, tz1 - 0.6, tx1 - 0.1, tz1 - 0.1], h: 0.3 },
 ];
-/** The roof's steps to the camera, in six lengths each as low as its lowest end's underside (they climb over the stair's first flight) */
-const ROOF_STEPS_CAMERA: CamBox[] = [0, 1, 2, 3, 4, 5].map((k) => {
-  const [x0, z0, x1, z1] = ROOF_STEPS.rect;
-  const [za, zb] = [z1 - ((k + 1) * (z1 - z0)) / 6, z1 - (k * (z1 - z0)) / 6];
-  return [x0, za, x1, zb, SLAB_Y + UP_CEIL, SLAB_Y + UP_Y + ((z1 - zb) / (z1 - z0)) * (ROOF_Y - UP_Y) - 0.12];
-});
+/**
+ * The flights to the camera (the stair's, the den's steps', the roof's steps) and the spine between them: each flight
+ * in six lengths, each a slab from its lower end's tread down a flight's depth, so the camera neither looks up
+ * through one nor sinks into one under him
+ */
+const FLIGHTS_CAMERA: CamBox[] = [
+  ...[...UP_RUNS, ...DEN_RUNS, ...ROOF_RUNS].flatMap((u): CamBox[] => {
+    const [x0, z0, x1, z1] = u.rect;
+    const n = u.n === u.s ? 1 : 6;
+    return Array.from({ length: n }, (_, k): CamBox => {
+      const [za, zb] = [z0 + (k * (z1 - z0)) / n, z0 + ((k + 1) * (z1 - z0)) / n];
+      const top = Math.min(runY(u, za), runY(u, zb));
+      return [x0, za, x1, zb, top, top - 0.18];
+    });
+  }),
+  [...STAIR.spine, SLAB_Y + UP_Y / 2, SLAB_Y + BASE_Y],
+];
 /** Up on the roof (over the house's footprint, above the upstairs)? */
 export const onRoof = (x: number, z: number, y: number) => homeLevel(y) === 'roof' && inFoot(x, z);
 /**
@@ -526,15 +611,24 @@ export const onRoof = (x: number, z: number, y: number) => homeLevel(y) === 'roo
 export function homeFloorY(x: number, z: number, yNow: number) {
   if (!inFoot(x, z)) return null;
   const lv = homeLevel(yNow);
-  // (on the stair, its treads: docs/house-plan.md Phase 2)
-  const s = lv === 'room' || lv === 'up' ? stairY(x, z) : null;
-  if (s !== null) return s;
+  // In the stair's well, the flights over one another there (the stair's, the den's steps' under it, the roof's steps
+  // over its first flight: docs/house-plan.md Phases 2 and 3): the highest he's on or can step up onto, else the lowest
+  if (inR(STAIR.well, x, z)) {
+    // (up on the roof, off the steps, the hatch's sill beside their platform, where he steps out)
+    if (lv === 'roof' && roofStepY(x, z) === null) return SLAB_Y + ROOF_Y;
+    const all = [stairY(x, z), denY(x, z), roofStepY(x, z)].filter((v): v is number => v !== null);
+    const under = all.filter((v) => v <= yNow + 0.05);
+    if (all.length) return under.length ? Math.max(...under) : Math.min(...all);
+    return lv === 'up' ? SLAB_Y + UP_Y : lv === 'roof' ? SLAB_Y + ROOF_Y : lv === 'base' ? SLAB_Y + BASE_Y : null;
+  }
   return lv === 'up' ? SLAB_Y + UP_Y : lv === 'roof' ? SLAB_Y + ROOF_Y : lv === 'base' ? SLAB_Y + BASE_Y : null;
 }
-/** Does someone `r` wide at x, z on the terrace touch its rail or anything standing on it? */
+/** What stands on the terrace as its walls: the hatch is its kerb's (`HATCH_WALLS`), open by the steps' head */
+const ROOF_SOLIDS = ROOF_THINGS.filter((t) => t.kind !== 'hatch');
+/** Does someone `r` wide at x, z on the terrace touch its rail, the hatch's kerb or anything standing on it? */
 export function roofWall(x: number, z: number, r: number) {
   if (x - r < tx0 || x + r > tx1 || z - r < tz0 || z + r > tz1) return true;
-  return hits(ROOF_THINGS, x, z, r);
+  return hits(ROOF_SOLIDS, x, z, r) || HATCH_WALLS.some((f) => touch(f, x, z, r));
 }
 
 /** A door's two sides: where its prompt stands (and on which floor), its label, and where the fade puts you (walking's yaw: 0 north, π south, π/2 west) */
@@ -547,28 +641,17 @@ export interface Portal {
   to: { x: number; z: number; y: number; yaw: number };
   arrived: string;
 }
-/** Where the roof's steps start upstairs (behind the well's rail over the first flight) and the den's door under the second flight */
-const ROOF_FOOT = { x: rx1 - SW / 2, z: wz1 + 0.3 };
-const DEN_DOOR = { x: wx0 + SW / 2, z: wz1 + 0.3 };
 /** The stair's foot in the room, where it says it's waiting while the street loads */
 export const STAIR_FOOT = { x: rx1 - SW / 2, z: wz1 + 0.3 };
 /**
- * The front door (on the yard, north) and the side door (onto the east lawn), outside and in; the steps from the
- * landing up through the hatch to the terrace, and down; the den's door, down and up
+ * The front door (on the yard, north) and the side door (onto the east lawn), outside and in (the stair, the den's
+ * steps and the roof's are walked: `STAIR`, `DEN_STEPS`, `ROOF_STEPS`, docs/house-plan.md Phases 2 and 3)
  */
 export const HOME_PORTALS: Portal[] = [
   { id: 'home:in', level: 'room', x: DX, z: hz0 - 0.75, label: 'Go in', to: { x: DX, z: rz0 + 0.55, y: SLAB_Y, yaw: Math.PI }, arrived: 'Home' },
   { id: 'home:out', level: 'room', x: DX, z: rz0 + 0.3, label: 'Front door', to: { x: DX + 0.5, z: hz0 - 1.75, y: SLAB_Y, yaw: 0 }, arrived: 'The yard' },
   { id: 'home:yard', level: 'room', x: rx1 - 0.3, z: SZ, label: 'Side door', to: { x: hx1 + 0.6, z: SZ, y: SLAB_Y, yaw: -Math.PI / 2 }, arrived: 'The garden' },
   { id: 'home:back', level: 'room', x: hx1 + 0.5, z: SZ, label: 'Go in', to: { x: rx1 - 0.55, z: SZ, y: SLAB_Y, yaw: Math.PI / 2 }, arrived: 'Home' },
-  // (the stair between the room and the landing is walked: `STAIR`, docs/house-plan.md Phase 2)
-  // The steps from the landing up through the hatch (from the well's rail over the first flight), and down
-  { id: 'home:roof', level: 'up', x: ROOF_FOOT.x, z: ROOF_FOOT.z, label: 'Roof', to: { x: HATCH[0] - 0.55, z: (HATCH[1] + HATCH[3]) / 2, y: SLAB_Y + ROOF_Y, yaw: Math.PI / 2 }, arrived: 'The terrace' },
-  { id: 'home:roofdown', level: 'roof', x: HATCH[0] - 0.35, z: (HATCH[1] + HATCH[3]) / 2, label: 'Downstairs', to: { x: ROOF_FOOT.x, z: ROOF_FOOT.z + 0.45, y: SLAB_Y + UP_Y, yaw: Math.PI }, arrived: 'Upstairs' },
-  // The den's door under the stair's second flight (Phase 4; docs/house-plan.md Phase 2), from the room to the basement
-  // by the steps' foot, and up (down there he arrives west of the bar's stools, facing into the den with the way south clear)
-  { id: 'home:cellar', level: 'room', x: DEN_DOOR.x, z: DEN_DOOR.z, label: 'Basement', to: { x: rx1 - 1.65, z: rz0 + 2.75, y: SLAB_Y + BASE_Y, yaw: Math.PI }, arrived: 'The den' },
-  { id: 'home:cellarup', level: 'base', x: rx1 - 1.5, z: rz0 + 2.15, label: 'Upstairs', to: { x: DEN_DOOR.x, z: DEN_DOOR.z + 0.45, y: SLAB_Y, yaw: Math.PI }, arrived: 'Home' },
 ];
 /** A thing in the house to use: where its prompt stands, on which floor, and its label (walk `places`; index.ts opens what it's for) */
 export interface HomeUse {

@@ -257,7 +257,11 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `stairY()` (asked through `homeFloorY()`), its rails `stairRails()` (in `homeWall()`), the camera open over its well
   (`homeCamera()`), its foot waiting while the street loads (`STAIR_GATE`, set by index.ts with the curtains); drawn by
   home3d.ts `stair()` and `upStair()` (with the roof's steps, `ROOF_STEPS`). Nothing in the rooms' lists stands in
-  its well (tests). The den's door is under its second flight; the den's and the roof's steps are still fades.
+  its well (tests). Phase 3 (the den's and the roof's steps, walked) is built: `DEN_STEPS` and `denY()` (down through
+  the den's door under the second flight, turning under the stair to the basement's floor), `ROOF_STEPS` and
+  `roofStepY()` (up from the landing to a platform in the hatch, out over `HATCH_WAY`); `homeFloorY()` takes the highest
+  floor he's on where they stand over one another; drawn by home3d.ts `denSteps()` and `upStair()`. The house's only
+  fades are its doors out.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,
