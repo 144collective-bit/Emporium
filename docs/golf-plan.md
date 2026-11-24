@@ -284,7 +284,7 @@ paints the level pill at once; the kart park's and the metro's drawing, which th
 - Play a hole, nine or eighteen; rewards Dorras and XP only. Its save (`degen-city-golf-v1`) with its migration and its
   key in `BACKUP_KEYS`; in through `live.closed()`; touch controls.
 
-### The design pass (the owner's call, 2026-11-24: "do a design pass across the golf course"; proposed, waiting for the owner's go)
+### The design pass (the owner's call, 2026-11-24: "do a design pass across the golf course"; D1 first, go 2026-11-24; the lakes stay where they are)
 
 The survey (2026-11-24): every hole from behind its tee and from short of its green, the lakes, the clubhouse, on the
 desktop by day (`docs/golf-shots/design-0-*.webp`: `greens-a` holes 1 to 6's greens, `greens-b` 7 to 12's, `tees-a`

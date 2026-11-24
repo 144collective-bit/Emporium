@@ -28,7 +28,8 @@ import {
   TEE,
   arcOf,
   bunkersOf,
-  ellipseAt,
+  bunkerAt,
+  onGreen,
   fairwayEnd,
   fairwayHalf,
   greenOf,
@@ -218,7 +219,7 @@ function shapedAt(x: number, z: number, dug = true) {
     const dt = Math.hypot(Math.max(u, 0), Math.max(v, 0));
     if (dt < TEE_EASE) h += (teeLevel(hole) - h) * (1 - smooth(0, TEE_EASE, dt));
     const g = greenOf(hole);
-    const e = ellipseAt(g.at, g.dir, hole.green, x, z);
+    const e = onGreen(hole, x, z);
     const out = (e - 1) * Math.min(...hole.green);
     if (out < GREEN_HOLD + GREEN_EASE) {
       const along = (x - g.at[0]) * g.dir[0] + (z - g.at[1]) * g.dir[1];
@@ -229,7 +230,7 @@ function shapedAt(x: number, z: number, dug = true) {
   if (dug)
     for (const i of near)
       for (const b of bunkersOf(HOLES[i])) {
-        const e = ellipseAt(b.at, b.dir, b.r, x, z);
+        const e = bunkerAt(b, x, z);
         if (e < 1) h -= BUNKER_DEPTH * (1 - smooth(0, 1, e));
       }
   return h;
