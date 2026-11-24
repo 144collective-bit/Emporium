@@ -18,7 +18,7 @@ import { BRIDGES, BROOK, BROOK_HALF, BULB, CHURCHYARD, CIRCUS, FOOTPATHS, HEDGES
 import { BOLLARD, PATH_BOLLARDS } from './endswood';
 import { PLOT } from './endsfar';
 import { addCurtains, denCharts, houseLights, registerHome, trophyWall } from './home3d';
-import { HOME_POOLS } from './home';
+import { HOME_POOLS, STAIR } from './home';
 import { registerTunnel } from './tunnel3d';
 import { registerCircus } from './circus3d';
 import { registerUnderpasses } from './underpass3d';
@@ -260,16 +260,29 @@ function registerGreens() {
   });
 }
 
-/** Degen's compound's plot: block paving in two tones (courses across it); its wall, gates and buildings are home3d.ts's */
+/** A rect but for the stair's well in Degen's house, where the den's steps go down under the room's floor (docs/house-plan.md Phase 3) */
+function besideWell(r: Rect): Rect[] {
+  const [a0, c0, a1, c1] = STAIR.well;
+  if (r[0] >= a1 || r[2] <= a0 || r[1] >= c1 || r[3] <= c0) return [r];
+  return ([
+    [r[0], r[1], r[2], c0],
+    [r[0], c1, r[2], r[3]],
+    [r[0], Math.max(r[1], c0), a0, Math.min(r[3], c1)],
+    [a1, Math.max(r[1], c0), r[2], Math.min(r[3], c1)],
+  ] as Rect[]).filter((q) => q[2] - q[0] > 1e-6 && q[3] - q[1] > 1e-6);
+}
+
+/** Degen's compound's plot: block paving in two tones (courses across it), open over his stair's well; its wall, gates and buildings are home3d.ts's */
 function registerPlot() {
+  const quad = (b: Batch, [x0, z0, x1, z1]: Rect, y: number, m: THREE.Material) => flatPoly(b, [[x0, z0], [x0, z1], [x1, z1], [x1, z0]], y, m);
   cutRect(PLOT, 13).forEach((p, j) =>
     site(`south plot ${j}`, [p[0] - 0.5, p[1] - 0.5, p[2] + 0.5, p[3] + 0.5], (into) => {
       const b = new Batch();
-      flatPoly(b, [[p[0], p[1]], [p[0], p[3]], [p[2], p[3]], [p[2], p[1]]], ON, PAVING);
+      for (const r of besideWell(p)) quad(b, r, ON, PAVING);
       b.detail(() => {
         for (let z = Math.ceil(p[1] / 1.2) * 1.2; z < p[3]; z += 2.4) {
           const z1 = Math.min(p[3], z + 1.2);
-          flatPoly(b, [[p[0], z], [p[0], z1], [p[2], z1], [p[2], z]], OVER, PAVING_DARK);
+          for (const r of besideWell([p[0], z, p[2], z1])) quad(b, r, OVER, PAVING_DARK);
         }
       });
       b.build(into, { cast: false, receive: true });

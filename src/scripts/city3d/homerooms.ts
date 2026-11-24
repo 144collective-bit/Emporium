@@ -69,7 +69,7 @@ export type UpKind =
   | 'shower'
   | 'towels';
 
-export type BaseKind = 'steps' | 'vault' | 'tv' | 'table' | 'sofa' | 'beanbag' | 'arcade' | 'desk' | 'chair' | 'tower' | 'bar' | 'barshelf' | 'stools' | 'fridge' | 'plant';
+export type BaseKind = 'vault' | 'tv' | 'table' | 'sofa' | 'beanbag' | 'arcade' | 'desk' | 'chair' | 'tower' | 'bar' | 'barshelf' | 'stools' | 'fridge' | 'plant';
 
 
 /** The way through the room from the front door to the side door, kept clear: this wide */
@@ -81,7 +81,7 @@ let made: HouseRooms | undefined;
 export const houseRooms = (g: HouseGeo) => (made ??= layOut(g));
 
 function layOut(g: HouseGeo) {
-  const { ROOM, CEIL, UP_Y, UP_CEIL, BASE_Y, BASE_CEIL, HOME, WARDROBE_RECT, VAULT_RECT, DESK_CHAIR_RECT } = g;
+  const { ROOM, CEIL, UP_Y, UP_CEIL, HOME, WARDROBE_RECT, VAULT_RECT, DESK_CHAIR_RECT } = g;
   const [rx0, rz0, rx1, rz1] = ROOM;
 
   /** The front door's place along the front wall */
@@ -203,17 +203,15 @@ function layOut(g: HouseGeo) {
 
   /**
    * His basement, his trading den (the owner's call: "a basement that he uses to trade in. A real degen man cave"):
-   * under the house, a room's height (`BASE_Y` to `BASE_CEIL`), down steps under the open stairs (their way down a fade,
-   * `home:cellar`). **The trading desk** along the back wall: six screens on arms (made-up charts, no words, numbers or
-   * names: home3d.ts `denCharts()`), his chair, the tower with its lit side; **the cave**: a wall-hung telly on the front
+   * under the house, a room's height (`BASE_Y` to `BASE_CEIL`), down the den's steps under the stair (home.ts
+   * `DEN_STEPS`: walked, docs/house-plan.md Phase 3; nothing here stands in the stair's well). **The trading desk**
+   * along the back wall: six screens on arms (made-up charts, no words, numbers or names: home3d.ts `denCharts()`), his
+   * chair, the tower with its lit side; **the cave**: a wall-hung telly on the front
    * wall, a low sofa facing it across a table, a beanbag, a bar along the east wall (its counter, a lit shelf of made-up
    * bottles behind it, stools, a mini fridge), an arcade cabinet on the west wall, a plant. Looks only: nothing in it does
    * anything in the game. Its own list, asked by `homeWall()` down there
    */
-  const BH = BASE_CEIL - BASE_Y;
   const BASEMENT: BaseThing[] = [
-    // The steps down, along the east wall from under the stairs (their top at the front, at the room's floor)
-    { kind: 'steps', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.2], h: BH },
     // The cave: the telly on the front wall, the table, the sofa facing it, a beanbag
     { kind: 'tv', rect: [rx0 + 1.4, rz0, rx0 + 3.4, rz0 + 0.12], h: 0.9 },
     // The stash's vault (docs/interior-plan.md Phase 1, the owner's pick): a round steel door in the north wall
