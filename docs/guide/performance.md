@@ -446,8 +446,15 @@ keep it up to date when what it describes changes.
     `south-rampart` and `crest-drive`; a tile at a time, 204 and 119 ms,
     a big site such as Degen's home, 156 ms, still running with its
     tile's others and a site across four tiles four times; a site at a
-    time, `south-rampart` 44 ms, 2026-11-23.) The room they took is reused
-    (`BatchedMesh.optimize()`) before a mesh grows. The places, the
+    time, `south-rampart` 44 ms, 2026-11-23.) The room they took is reused: a
+    piece let go leaves its room as a free slot, and a piece coming back
+    (the same size: a site builds the same pieces again) goes in the slot
+    that fits it best (tilebatch.ts `takeSlot()`), so only that run is
+    uploaded; only when nothing fits and there's no room at the end is the
+    mesh compacted (`BatchedMesh.optimize()`, which clears the slots)
+    before it grows. (Compacted every time, a mesh of 19 MB was uploaded
+    again whole: 0.6-1.2 s of one frame on memcheck's phone at
+    `crest-hills`, 2026-11-24.) The places, the
     landmarks and downtown's monolithic builders are built at the boot and
     never let go.
   - The rules are DOM-free in `tileplan.ts` (tested in
