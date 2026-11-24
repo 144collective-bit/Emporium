@@ -20,7 +20,7 @@ import type { LifeSfx } from './life';
 import { createPost } from './post';
 import { buildWall } from './wall3d';
 import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
-import { PARK_LAMPS, PARK_TREES } from './westlake';
+import { LAKEHOUSE, LAKEHOUSE_SPAWN, PARK_LAMPS } from './westlake';
 import { CITYHALL_LAND, CITYHALL_PICK, CITYHALL_SPAWN, CITYHALL_TIP, COURT as COURT_LOT, COURT_PICK, COURTHOUSE_SPAWN, POLICE as POLICE_LOT, POLICE_PICK, POLICE_SPAWN, SQUARE_LAMPS, SQUARE_TREES, TOWER_C as CITYHALL_TOWER, CIVIC_IDLE, FLOOD_POOLS, civicDay, flagCeremony } from './civic';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
@@ -49,7 +49,7 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, HOUSE_GEO, homePlaces, setRooms, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, HOUSE_GEO, homePlaces, setRooms, HOME_SPAWN, inHouse, SOFA_SEAT, STAIR_GATE } from './home';
 import { READY_AT, READY_REACH, curtains, dueDistricts, streetReady } from './spawn';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
@@ -109,7 +109,10 @@ import type { TubeUI } from './tube-ui';
 import type { Tube } from './tube3d';
 import { HALL_Y, PLAT_DOOR, PLAT_Y, SOUTH_STATIONS, lineAt } from './southline';
 import type { SkyLiftUI } from './skylift-ui';
-import { skyLiftDoors } from './southsky';
+import { flatDoors, setFlatOpen, skyLiftDoors } from './southsky';
+import { FLAT } from './southblocks';
+import type { FlatUI } from './flat-ui';
+import { wakeAt } from './tycoon';
 import { YARD_TREES } from './southyard';
 import { FLOOR, PLANTERS, PLANTER_H, PLAZA, PLAZA_LAMPS as CIRCUS_LAMPS } from './circus';
 const CIRCUS_MID = [PLAZA.x, PLAZA.z] as const;
@@ -415,6 +418,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and City Hall at the civic square's head (civic.ts, docs/civic-plan.md Phase 2; drawn in Westlake Park's
   // chunk): the pin over its tower, the fly-in from the square (south)
   spots.push(pickSpot(scene, 'cityhall', SLAB, CITYHALL_PICK, CITYHALL_LAND, CITYHALL_TIP - SLAB + 1.4, CITYHALL_TOWER));
+  // ...and Westlake Park's Lakehouse Café (westlake.ts, docs/westlake-plan.md Phase 6): the pavilion and its deck, the pin
+  // over its roof
+  spots.push(pickSpot(scene, 'lakehouse', SLAB, [{ rect: LAKEHOUSE.rect, h: LAKEHOUSE.top }, { rect: LAKEHOUSE.deck, h: 1.1 }], [LAKEHOUSE.deck[0], LAKEHOUSE.rect[1], LAKEHOUSE.rect[2], LAKEHOUSE.rect[3]], LAKEHOUSE.top + 1.4, [(LAKEHOUSE.rect[0] + LAKEHOUSE.rect[2]) / 2, (LAKEHOUSE.rect[1] + LAKEHOUSE.rect[3]) / 2]));
   // ...and the police headquarters and the courthouse flanking the square (Phase 3): their pins over their roofs
   {
     const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
@@ -438,7 +444,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)
-  PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
+  // (the park's trees come with its chunk: parktrees3d.ts, docs/westlake-plan.md Phase 5)
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
   // The civic square's (civic.ts, docs/civic-plan.md)
   for (const [x, z] of SQUARE_TREES) addTree(x, z, 1, false);
@@ -977,6 +983,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         close();
         startWalking(id === 'police' ? POLICE_SPAWN : id === 'courthouse' ? COURTHOUSE_SPAWN : CITYHALL_SPAWN);
       });
+    // The Lakehouse Café's panel: Walk in on the inlet walk, facing its door (westlake.ts)
+    if (id === 'lakehouse')
+      panelBody.querySelector('[data-lakehouse-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(LAKEHOUSE_SPAWN);
+      });
     // Northgate Air Base's panel: Walk in in the visitors' car park, facing the centre (airbase.ts)
     if (id === 'northgate')
       panelBody.querySelector('[data-northgate-walkin]')?.addEventListener('click', () => {
@@ -1062,6 +1074,23 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       }))
     ),
     'the stash'
+  );
+  // Degen's flat's card (flat-ui.ts, at its door in Kite Point: docs/brutalist-plan.md Phase 7a): loaded when it first opens
+  let flatUI: FlatUI | null = null;
+  const loadFlat = lazy(
+    () =>
+      import('./flat-ui').then(({ createFlatUI }) =>
+        (flatUI = createFlatUI(root, {
+          game,
+          opened: () => {
+            walk.releaseMouse();
+            close();
+            tycoon?.closeCard();
+          },
+          owned: () => setFlatOpen(true),
+        }))
+      ),
+    'the flat'
   );
   const loadRiverBus = lazy(
     () =>
@@ -1255,13 +1284,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let wokeAt = 0;
   let street = { ready: false, at: 0 };
   function streetUp() {
-    if (street.ready || !wokeAt) return true;
+    if (street.ready || !wokeAt) {
+      STAIR_GATE.shut = false;
+      return true;
+    }
     const now = performance.now();
     if (now - street.at < 300) return false;
     const due = dueDistricts(LAZY_DISTRICTS, districts.loaded()).length;
     street = { ready: streetReady({ due, waiting: works.waitingNear(READY_AT[0], READY_AT[1], READY_REACH), waitedMs: now - wokeAt }), at: now };
-    // (and the curtains drawn back: home3d.ts follows it)
-    if (street.ready) curtains.open = true;
+    // (and the curtains drawn back, home3d.ts following, and the stair up opened, home.ts `STAIR_GATE`)
+    if (street.ready) {
+      curtains.open = true;
+      STAIR_GATE.shut = false;
+    }
     return street.ready;
   }
   let lifting = false;
@@ -1313,7 +1348,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     engine: (revs, voice) => sound.engine(revs, voice),
     tyres: (level) => sound.tyres(level),
     // Your business's places, and the metro's station doors
-    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...CABLE_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
+    places: () => [...(tycoon?.places() ?? []), ...metroDoors(), ...tubeDoors(), ...RIVER_BUS_DOORS, ...MONO_DOORS, ...CABLE_DOORS, ...LIFT_DOORS, ...libertyDoors(), ...mallDoors(), ...skyLiftDoors(walk.position.y), ...flatDoors(walk.position.y), ...stationLiftDoors(walk.position.y), ...homePlaces(walk.position.y, streetUp())],
     openPlace: (id) => {
       // (Degen's front and back doors, home.ts: a fade in or out of the room inside)
       // (in his room, home.ts `HOME_USES`: the wardrobe is the fitting room, the trunk the stash)
@@ -1326,10 +1361,17 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         walk.releaseMouse();
         return tycoon?.openCard();
       }
+      // (Degen's flat's door, Kite Point: its card, to buy it or choose where he wakes)
+      if (id === 'flat:door')
+        return void loadFlat()
+          .then((ui) => ui.open())
+          .catch(() => game.toast('Flat stuck · try again'));
       if (id === 'home:stash')
         return void loadStash()
           .then((ui) => ui.open())
           .catch(() => game.toast('Stash stuck · try again'));
+      // (the stair's foot while the street loads: home.ts `STAIR_GATE`)
+      if (id === 'home:stairs') return tycoon?.toast('Nearly ready · the street is loading', 2500);
       if (id.startsWith('home:')) {
         const p = HOME_PORTALS.find((q) => q.id === id);
         if (!p) return;
@@ -1559,6 +1601,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let beforeWalk: { pos: THREE.Vector3; target: THREE.Vector3 } | null = null;
   function startWalking(spawn?: { x: number; z: number; yaw: number; y?: number }, seat?: { x: number; z: number; ry: number; h: number }) {
     if (walking) return;
+    // (Degen's flat's door opens once it's his: the save's, docs/brutalist-plan.md Phase 7a)
+    setFlatOpen(!!tycoon?.save.flat);
     // (unless the owner has closed it for now: live settings)
     const shut = live.closed('walk');
     if (shut) return tycoon?.toast(shut, 3500);
@@ -1592,6 +1636,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     monoUI?.close();
     skyLiftUI?.close();
     stashUI?.close();
+    flatUI?.close();
     mp?.walkChanged(false);
     document.body.classList.remove('is-walking');
     close();
@@ -1641,7 +1686,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     if (travel.key(e, walking ? !active && (walk.onFoot || walk.atWheel) && !shown : true)) return;
     if (walking) {
       if (e.key === 'Escape') {
-        if (stashUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || cableUI?.skip() || cableUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
+        if (stashUI?.close() || flatUI?.close() || walk.closeCard() || taxis?.skip() || metroUI?.skip() || metroUI?.close() || tubeUI?.skip() || tubeUI?.close() || riverBusUI?.skip() || riverBusUI?.close() || monoUI?.skip() || monoUI?.close() || cableUI?.skip() || cableUI?.close() || skyLiftUI?.close() || walk.closeShop() || walk.releaseMouse() || closePop()) return;
         // (nothing else open: the hub, the pause screen; its "Back to City view" leaves walk mode)
         active ? close() : hub ? hub.show() : stopWalking();
       }
@@ -2536,12 +2581,24 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     async wake() {
       if (root.dataset.mode !== 'explore' || live.closed('walk')) return false;
       const there = new URLSearchParams(location.search).has('spawn');
+      // (in his flat in Kite Point if it's his and he chose it, docs/brutalist-plan.md Phase 7a: its block's chunk and
+      // what's round it built first; standing, by the front windows)
+      if (!there && tycoon && wakeAt(tycoon.save) === 'flat') {
+        setFlatOpen(true);
+        await Promise.race([districts.load('south-blocks'), new Promise((r) => setTimeout(r, 10000))]);
+        works.want(FLAT.wake.x, FLAT.wake.z, 25);
+        wokeAt = performance.now();
+        street = { ready: false, at: 0 };
+        startWalking({ ...FLAT.wake, y: FLAT.y - SLAB });
+        return true;
+      }
       // (unless the owner has closed his house for now: then in the yard outside it)
       const home = live.place('home');
       const inside = !there && !(home && !home.open);
       const at = there ? undefined : inside ? HOME_WAKE : HOME_SPAWN;
       // (the curtains drawn before his house is drawn: they open once the street's ready, Phase 2)
       if (inside) curtains.open = false;
+      if (inside) STAIR_GATE.shut = true;
       if (!there) {
         await Promise.race([districts.load('south'), new Promise((r) => setTimeout(r, 10000))]);
         works.want(HOME_WAKE.x, HOME_WAKE.z, 25);

@@ -3,8 +3,8 @@
 // the floor under you by your height, only the railings stopping you up there, a lift in every core.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { REACH, SKY_LIFTS, SKY_SHAPES, STAIR, UP_FROM, cageLevels, coreFloors, floorName, liftArrival, liftFloorName, liftFloorOf, skyFloorAt, skyLiftDoors, skyUp, skyWall, type SkyShape } from '../src/scripts/city3d/southsky';
-import { BLOCKS_RECT, BRIDGES, CAGE, CAGES, LOBBIES, PERCH, TOP_FLOOR, CORES as CORES_ALL, GALLERIES, blockById, floorY, inBlock, type Pt } from '../src/scripts/city3d/southblocks';
+import { REACH, SKY_LIFTS, SKY_SHAPES, STAIR, UP_FROM, cageLevels, coreFloors, flatDoors, floorName, liftArrival, liftFloorName, liftFloorOf, setFlatOpen, skyFloorAt, skyLiftDoors, skyUp, skyWall, type SkyShape } from '../src/scripts/city3d/southsky';
+import { BLOCKS_RECT, BRIDGES, CAGE, CAGES, FLAT, FLAT_FLOOR, LOBBIES, PERCH, TOP_FLOOR, CORES as CORES_ALL, GALLERIES, blockById, floorY, inBlock, type Pt } from '../src/scripts/city3d/southblocks';
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
 import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
@@ -236,5 +236,48 @@ test("The Perch walked (docs/brutalist-plan.md Phase 3): The Core's lift up to i
   for (const m of open) {
     const out: Pt = [m[0] + (m[0] - PERCH.at[0]) * 0.1, m[1] + (m[1] - PERCH.at[1]) * 0.1];
     assert.equal(skyWall(out[0], out[1], y, 0.2), true, `out through its glass at ${out[0].toFixed(1)}, ${out[1].toFixed(1)}`);
+  }
+});
+
+test("Degen's flat (docs/brutalist-plan.md Phase 7a): shut till it's his; then in off the bridge to its living room, hall and bedroom, the partition between", () => {
+  const y = FLAT.y;
+  const br = BRIDGES.find((q) => q.id === `core-kite-${FLAT_FLOOR}`)!;
+  const mid = (poly: Pt[]): Pt => centre(poly);
+  const living = mid(FLAT.rooms.living);
+  // (shut: no floor in it, the door a wall; its prompt on the bridge, a step out)
+  setFlatOpen(false);
+  assert.equal(skyFloorAt(living[0], living[1], y), null);
+  assert.equal(skyWall(FLAT.door[0] - FLAT.n[0] * 0.4, FLAT.door[1] - FLAT.n[1] * 0.4, y, 0.2), true, 'in through its shut door');
+  const [p] = flatDoors(y);
+  assert.ok(p && p.id === 'flat:door');
+  assert.equal(skyFloorAt(p.x, p.z, y), y, 'its prompt not on the bridge');
+  assert.equal(flatDoors(y - 3).length, 0, 'its prompt a floor down');
+  // (his: from the bridge's middle, through the door, round every room, floor all the way)
+  setFlatOpen(true);
+  try {
+    const walk = (a: Pt, c: Pt, what: string) => {
+      for (let k = 0; k <= 40; k++) {
+        const q: Pt = [a[0] + ((c[0] - a[0]) * k) / 40, a[1] + ((c[1] - a[1]) * k) / 40];
+        assert.equal(skyFloorAt(q[0], q[1], y), y, `${what}: no floor at ${q.map((v) => v.toFixed(2))}`);
+      }
+    };
+    const bm: Pt = [(br.pts[0][0] + br.pts[1][0]) / 2, (br.pts[0][1] + br.pts[1][1]) / 2];
+    const inside = FLAT.at(0, -1.2);
+    walk(bm, FLAT.door, 'onto its door');
+    walk(FLAT.door, inside, 'through its door');
+    walk(inside, living, 'into the living room');
+    walk(inside, mid(FLAT.rooms.hall), 'into the hall');
+    walk(mid(FLAT.rooms.hall), mid(FLAT.rooms.bedroom), 'into the bedroom');
+    const wake = FLAT.wake;
+    assert.equal(skyFloorAt(wake.x, wake.z, y), y, 'he wakes on its floor');
+    assert.equal(skyWall(wake.x, wake.z, y, 0.3), false, 'hemmed in where he wakes');
+    // (the partition between the living room and the bedroom: a wall)
+    const part = FLAT.at(0.85, -4.4);
+    assert.equal(skyWall(part[0], part[1], y, 0.05), true, 'through the partition');
+    // (and its back wall)
+    const back = FLAT.at(-2, -5.9);
+    assert.equal(skyWall(back[0], back[1], y, 0.05), true, 'through its back wall');
+  } finally {
+    setFlatOpen(false);
   }
 });

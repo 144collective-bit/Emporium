@@ -90,6 +90,7 @@ const spots: Record<SpotId, Spot> = {
   busgarage: { title: "Aldwyn's Green Bus Garage", sub: 'Bus garage' },
   rec: { title: "Aldwyn's Green Rec", sub: 'Rec ground' },
   northgate: { title: 'Northgate Air Base', sub: "Visitors' centre" },
+  lakehouse: { title: 'The Lakehouse Café', sub: 'Westlake Park' },
   cityhall: { title: 'City Hall', sub: 'Sector 7' },
   police: { title: 'Sector 7 Police', sub: 'Headquarters' },
   courthouse: { title: 'The Courthouse', sub: 'Sector 7' },
@@ -968,6 +969,16 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
     <p class="metro-note">Kept at home.</p>
     <div class="stash-body" data-stash-body></div>
   </section>
+  <section class="metro-card flat-card mk-skin" data-flat hidden aria-labelledby="flat-title">
+    <div class="pop-head">
+      <p class="pop-title" id="flat-title">Your flat</p>
+      <button type="button" class="pop-close" data-flat-close aria-label="Close the flat">
+        <svg class="mk-xi" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><use href="#mk-x" /></svg>
+      </button>
+    </div>
+    <p class="metro-note">Kite Point · 15th floor</p>
+    <div class="flat-body" data-flat-body></div>
+  </section>
   <div class="taxi-bar metro-bar riverbus-bar mk-skin" data-riverbus-bar hidden aria-live="polite">
     <span class="taxi-mark metro-mark riverbus-roundel" aria-hidden="true"></span>
     <p class="taxi-text" data-riverbus-text></p>
@@ -1407,6 +1418,13 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
     <h2 id="city-panel-title" class="city-panel-title">Northgate Air Base</h2>
     <p class="city-panel-text">A base and airfield across the north, its gates shut. The visitors' centre: coming soon.</p>
     <button type="button" class="chip-link kart-walkin" data-northgate-walkin>Walk in</button>
+  </template>
+
+  <template data-panel-tpl="lakehouse" data-marquee="Tea on the water">
+    <p class="kicker"><span class="kicker-num">56</span> Westlake Park</p>
+    <h2 id="city-panel-title" class="city-panel-title">The Lakehouse Café</h2>
+    <p class="city-panel-text">A stone and glass pavilion by the stone bridge, its tables out over the water. Coming soon.</p>
+    <button type="button" class="chip-link kart-walkin" data-lakehouse-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="cityhall" data-marquee="The city keeps its records">

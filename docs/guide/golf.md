@@ -79,7 +79,7 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
     `golf-footpath`; the drive kept as a street) and ground.ts (`INFLUENCES` `golf-native`, `golf`, the worn
     `golf-footpath`; the drive's verge a street's).
 - **`golf3d.ts`** (the district `golf`, `LAZY_DISTRICTS`; tested in `tests/golflift.test.ts`): the turf, one texture
-  (`drawTurf()`, `TURF_SCALE` pixels a tile, the palette's golf covers, mown stripes `FAIRWAY_STRIPE` / `GREEN_STRIPE`,
+  (`drawTurf()`, `TURF_SCALE` pixels a tile, one on every tier: phones ask for two and paint it at half; the owner's call, 2026-11-24, to keep `texFull` in budget; the palette's golf covers, mown stripes `FAIRWAY_STRIPE` / `GREEN_STRIPE`,
   the bunkers' `LIP`, clear over the water) on a toon material, alpha-tested (`golf-turf`); laid by `turfMesh()` on
   `golfMesh()`'s own triangles `TURF_LIFT` over the grass, only where `mownNear()`, near and far; a site a tile, in the FX layer.
   The ink round the greens' fringes and the bunkers' lips (D1: the texture's two pixels a tile can't hold a crisp

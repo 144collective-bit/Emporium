@@ -10,7 +10,7 @@ import {
   BIKE_HOME, BOLLARD, BOLLARDS, CAR_HOME, CEIL, HOME, homeCamera, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
   HOME_WORKSHOP_DOOR, HATCH, PIER, PLANTERS, PLANTER_H, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, BASE_CEIL, BASE_Y, homeFloorY, homeLevel, homePlaces, homeWall, inHouse, UP_CEIL, UP_Y, onHome, onRoof, roofWall,
   HOME_WAITS, HOME_WAKE, WAITING, SOFA_SEAT, ROOM_WINDOWS, CURTAIN, curtainPanels, FIRE_ESCAPE, GATEHOUSE, GATEHOUSE_H, GATE_LEAF, GATE_LEAF_H, FOUNTAIN, PALMS, PALM_PLANTER, POOL, LOUNGERS, CABANA, CABANA_SOFA, CABANA_POSTS, HELIPAD,
-  HOUSE_GEO, setRooms,
+  HOUSE_GEO, setRooms, STAIR, STAIR_FOOT, STAIR_GATE, ROOF_STEPS, stairY, stairRails,
 } from '../src/scripts/city3d/home';
 import { HALL_W, houseRooms } from '../src/scripts/city3d/homerooms';
 
@@ -195,7 +195,12 @@ test('the room: wall to wall inside the shell, its ceiling the camera\'s, everyt
   const [hx0, hz0, hx1, hz1] = HOME.house;
   assert.deepEqual(ROOM.map((n) => Math.round(n * 1e6) / 1e6), [hx0 + SHELL, hz0 + SHELL, hx1 - SHELL, hz1 - SHELL].map((n) => Math.round(n * 1e6) / 1e6));
   assert.ok(CEIL > 1 && CEIL < HOME.eaves / 2 + 0.2, 'the ground floor of two');
-  assert.deepEqual(homeCamera(SLAB_Y), [[hx0, hz0, hx1, hz1, SLAB_Y + HOME.ridge, SLAB_Y + CEIL]]);
+  // (the camera under the room's ceiling but over the stair's well, open up to the landing's: docs/house-plan.md Phase 2)
+  const cam = homeCamera(SLAB_Y);
+  for (const b of cam.slice(0, 4)) assert.deepEqual(b.slice(4), [SLAB_Y + HOME.ridge, SLAB_Y + CEIL]);
+  assert.deepEqual(cam[4], [...STAIR.well, SLAB_Y + HOME.ridge, SLAB_Y + UP_CEIL]);
+  const area = (b: readonly number[]) => (b[2] - b[0]) * (b[3] - b[1]);
+  assert.ok(Math.abs(cam.slice(0, 5).reduce((t, b) => t + area(b), 0) - (hx1 - hx0) * (hz1 - hz0)) < 1e-6, 'the footprint covered, once');
   assert.ok(inHouse((hx0 + hx1) / 2, (hz0 + hz1) / 2) && !inHouse(HOME_SPAWN.x, HOME_SPAWN.z));
   for (const f of FURNITURE) {
     assert.ok(within(f.rect, ROOM, 1e-9), `${f.kind} through a wall`);
@@ -204,7 +209,7 @@ test('the room: wall to wall inside the shell, its ceiling the camera\'s, everyt
   for (let i = 0; i < FURNITURE.length; i++) for (let j = i + 1; j < FURNITURE.length; j++) assert.ok(!overlap(FURNITURE[i].rect, FURNITURE[j].rect), `${FURNITURE[i].kind} on ${FURNITURE[j].kind}`);
   assert.deepEqual(
     [...new Set(FURNITURE.map((f) => f.kind))].sort(),
-    ['armchair', 'boots', 'chair', 'chaise', 'console', 'counter', 'dining', 'fridge', 'island', 'lamp', 'laundry', 'media', 'oven', 'plant', 'sofa', 'stairs', 'stools', 'table', 'trophies'],
+    ['armchair', 'boots', 'chair', 'chaise', 'console', 'counter', 'dining', 'fridge', 'island', 'lamp', 'laundry', 'media', 'oven', 'plant', 'sofa', 'stools', 'table', 'trophies'],
   );
   assert.ok(homeWall(ROOM[0] + 0.05, ROOM[1] + 3, R) && !homeWall(HOME.door[0], (ROOM[1] + ROOM[3]) / 2, R));
   // From inside the front door you can walk to inside the side door and up to everything (a flood over a fine grid)
@@ -252,8 +257,7 @@ test('the refit (docs/compound-plan.md Phase 2, docs/interior-plan.md Phase 1): 
   assert.equal(use('home:wardrobe').level, 'up');
   assert.equal(use('home:stash').level, 'base');
   for (const u of HOME_USES.filter((x) => x.level === 'room')) assert.ok(!homeWall(u.x, u.z, R), `${u.id}'s prompt in something`);
-  const up = HOME_PORTALS.find((p) => p.id === 'home:up')!;
-  assert.ok(!homeWall(up.x, up.z, R), 'the stairs\' prompt');
+  assert.ok(!homeWall(STAIR_FOOT.x, STAIR_FOOT.z, R), 'the stair\'s foot');
   // The lounge west of the hall: the media wall on the west wall (nothing stands in the middle of the room for the
   // telly), the corner sofa facing it across the coffee table, the chaise at its south end, the trophy wall past it
   for (const k of ['media', 'sofa', 'chaise', 'armchair', 'table', 'trophies', 'lamp']) assert.ok(at(k)[2] < dx - HALL_W / 2, `${k} in the lounge`);
@@ -276,12 +280,14 @@ test('the refit (docs/compound-plan.md Phase 2, docs/interior-plan.md Phase 1): 
   const sz = HOME.sideDoor[1];
   assert.ok(Math.abs(boots[2] - rx1) < 1e-9 && Math.abs(laundry[2] - rx1) < 1e-9, 'on the east wall');
   assert.ok(boots[3] < sz - 0.5 && laundry[1] > sz + 0.4, 'either side of the side door, clear of it');
-  // The stairs along the east wall by the front, as before
-  assert.deepEqual(at('stairs'), [rx1 - 0.95, rz0, rx1, rz0 + 2.8]);
+  // The stair hall in the front east corner (docs/house-plan.md Phase 2), clear of everything in the room
+  const [wx0, wz0, wx1, wz1] = STAIR.well;
+  assert.ok(Math.abs(wx1 - rx1) < 1e-9 && Math.abs(wz0 - rz0) < 1e-9 && wx0 > dx + HALL_W / 2 && wz1 < HOME.sideDoor[1] - 1, 'in the corner, off the hall');
+  for (const f of FURNITURE) assert.ok(!overlap(f.rect, STAIR.well), `the ${f.kind} in the stair hall`);
 });
 
 test('the doors: a prompt outside and in for the front and the side, each fade landing somewhere you can stand', () => {
-  assert.deepEqual(HOME_PORTALS.map((p) => p.id), ['home:in', 'home:out', 'home:yard', 'home:back', 'home:up', 'home:down', 'home:roof', 'home:roofdown', 'home:cellar', 'home:cellarup']);
+  assert.deepEqual(HOME_PORTALS.map((p) => p.id), ['home:in', 'home:out', 'home:yard', 'home:back', 'home:roof', 'home:roofdown', 'home:cellar', 'home:cellarup']);
   for (const p of HOME_PORTALS.slice(0, 4)) {
     const inside = p.id === 'home:out' || p.id === 'home:yard';
     // The prompt on its own side of the wall, the landing on the other
@@ -355,16 +361,26 @@ test('the curtains: drawn, they cover both windows; open, they bunch at the ends
 });
 
 test('while the street is loading, the ways out of the room wait and the rest are as they were', () => {
-  assert.deepEqual([...HOME_WAITS].sort(), ['home:out', 'home:up', 'home:yard']);
+  assert.deepEqual([...HOME_WAITS].sort(), ['home:out', 'home:stairs', 'home:yard']);
   assert.ok(WAITING.split(' ').length <= 3);
   for (const y of [0, SLAB_Y + ROOF_Y]) {
     const ready = homePlaces(y);
-    const waiting = homePlaces(y, false);
+    // (in the room the stair's foot says it's waiting too: docs/house-plan.md Phase 2, it's walked)
+    const waiting = homePlaces(y, false).filter((p) => p.id !== 'home:stairs');
     assert.deepEqual(waiting.map((p) => p.id), ready.map((p) => p.id), 'the same prompts');
     for (const [i, p] of waiting.entries()) assert.equal(p.label, HOME_WAITS.includes(p.id) ? WAITING : ready[i].label, p.id);
   }
+  const foot = homePlaces(SLAB_Y, false).find((p) => p.id === 'home:stairs')!;
+  assert.ok(foot.label === WAITING && Math.hypot(foot.x - STAIR_FOOT.x, foot.z - STAIR_FOOT.z) < 1e-9);
+  assert.ok(!homePlaces(SLAB_Y + UP_Y, false).some((p) => p.id === 'home:stairs'), 'only in the room');
+  // ...and shut meanwhile: the first flight's foot is a wall, open again once the street's ready
+  const onFoot: [number, number] = [STAIR_FOOT.x, STAIR.well[3] - 0.1];
+  STAIR_GATE.shut = true;
+  assert.ok(homeWall(...onFoot, R, SLAB_Y));
+  STAIR_GATE.shut = false;
+  assert.ok(!homeWall(...onFoot, R, SLAB_Y));
   // Going in from the yard and coming down from the terrace never wait
-  assert.ok(!HOME_WAITS.includes('home:in') && !HOME_WAITS.includes('home:back') && !HOME_WAITS.includes('home:down'));
+  assert.ok(!HOME_WAITS.includes('home:in') && !HOME_WAITS.includes('home:back') && !HOME_WAITS.includes('home:roofdown'));
 });
 
 test("the wardrobe's and the vault's prompts stand where he can, by the thing, apart from the doors'", () => {
@@ -390,26 +406,26 @@ test('upstairs (docs/compound-plan.md Phase 3): its own floor between the room a
   assert.ok(inHouse(mx, mz, floor) && !onRoof(mx, mz, floor));
   assert.equal(homeFloorY(mx, mz, floor), floor);
   assert.equal(homeFloorY(mx, mz, floor + 0.5), floor);
-  // The camera up there: over the room's ceiling (its floor's box topped out under the floor) and under the roof
-  const [under, over] = homeCamera(floor);
-  assert.ok(under[4] + 0.15 < floor && under[4] + 0.15 > SLAB_Y + CEIL, 'the floor under him');
-  assert.equal(over[5], SLAB_Y + UP_CEIL);
+  // The camera up there: over the room's ceiling (its floor's boxes topped out under the floor, open over the stair's
+  // well) and under the roof
+  const cam = homeCamera(floor);
+  for (const under of cam.slice(0, 4)) assert.ok(under[4] + 0.15 < floor && under[4] + 0.15 > SLAB_Y + CEIL && !overlap(under, STAIR.well), 'the floor under him');
+  assert.equal(cam[4][5], SLAB_Y + UP_CEIL);
   // What stands upstairs: inside the walls, apart (the partitions may meet end to end)
   for (const u of UPSTAIRS) {
     assert.ok(within(u.rect, ROOM, 1e-9), `${u.kind} through a wall`);
     assert.ok(u.h > 0 && u.h <= UP_CEIL - UP_Y + 1e-9);
   }
   for (let i = 0; i < UPSTAIRS.length; i++) for (let j = i + 1; j < UPSTAIRS.length; j++) assert.ok(!overlap(UPSTAIRS[i].rect, UPSTAIRS[j].rect), `${UPSTAIRS[i].kind} on ${UPSTAIRS[j].kind}`);
-  // The stairwell is over the stairs, and railed: you can't step into it
-  const stairs = FURNITURE.find((f) => f.kind === 'stairs')!.rect;
-  assert.deepEqual(UPSTAIRS.find((u) => u.kind === 'well')!.rect, stairs);
-  assert.ok(homeWall((stairs[0] + stairs[2]) / 2, (stairs[1] + stairs[3]) / 2, R, floor));
-  // From where the stairs bring him he can walk everywhere: both rooms through their doorways, the desk, the ways down and up
+  // Nothing stands in the stair's well, and from the landing's floor its rails stop him but at the second flight's head
+  for (const u of UPSTAIRS) assert.ok(!overlap(u.rect, STAIR.well), `the ${u.kind} in the well`);
+  // From the stair's head he can walk everywhere: both rooms through their doorways, the desk, the ways down and up
   const step = 0.1;
   const key = (i: number, j: number) => `${i},${j}`;
   const at = (i: number, j: number): [number, number] => [ROOM[0] + i * step, ROOM[1] + j * step];
-  const start = HOME_PORTALS.find((p) => p.id === 'home:up')!.to;
-  assert.equal(start.y, floor);
+  const start = { x: (STAIR.b[0] + STAIR.b[2]) / 2, z: STAIR.well[3] + 0.3 };
+  // (onto the stair only as far as its floor is the landing's: down it, he'd be on the stair, not the floor)
+  const off = (x: number, z: number) => { const g = stairY(x, z); return g !== null && Math.abs(g - floor) > 0.3; };
   const first: [number, number] = [Math.round((start.x - ROOM[0]) / step), Math.round((start.z - ROOM[1]) / step)];
   assert.ok(!homeWall(...at(...first), R, floor), 'he arrives somewhere he can stand');
   const seen = new Set([key(...first)]);
@@ -418,7 +434,7 @@ test('upstairs (docs/compound-plan.md Phase 3): its own floor between the room a
     const [i, j] = queue.pop()!;
     for (const [di, dj] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       const n: [number, number] = [i + di, j + dj];
-      if (seen.has(key(...n)) || homeWall(...at(...n), R, floor)) continue;
+      if (seen.has(key(...n)) || homeWall(...at(...n), R, floor) || off(...at(...n))) continue;
       seen.add(key(...n));
       queue.push(n);
     }
@@ -442,8 +458,14 @@ test('upstairs (docs/compound-plan.md Phase 3): its own floor between the room a
   // The middle front window in the dressing room, whole (the partition clear of it)
   const dress = UPSTAIRS.filter((u) => u.kind === 'wall' && u.rect[2] - u.rect[0] < 0.2 && u.rect[2] < ROOM[2] - 3).map((u) => u.rect[0]);
   for (const x of dress) assert.ok(x < ROOM[0] + 3.2, 'the dressing room\'s partition west of the middle window');
-  // Its prompts: the way down, the way up to the roof, the wardrobe, the desk; standing where he can, apart, all reached
-  assert.deepEqual(homePlaces(floor).map((p) => p.id), ['home:down', 'home:roof', 'home:wardrobe', 'home:desk']);
+  // (the stair's well: never stepped into from the landing's floor; but for the second flight's head, the flood over
+  // the floor stays out of it)
+  for (const k of seen) {
+    const [px, pz] = at(...(k.split(',').map(Number) as [number, number]));
+    assert.ok(!(px > STAIR.well[0] + 0.01 && pz < STAIR.well[3] - 0.01 && !(px > STAIR.b[0] && px < STAIR.b[2] && pz > STAIR.well[3] - 0.7)), `off the landing into the well at ${px.toFixed(2)}, ${pz.toFixed(2)}`);
+  }
+  // Its prompts: the way up to the roof, the wardrobe, the desk; standing where he can, apart, all reached
+  assert.deepEqual(homePlaces(floor).map((p) => p.id), ['home:roof', 'home:wardrobe', 'home:desk']);
   for (const p of homePlaces(floor)) {
     assert.ok(!homeWall(p.x, p.z, R, floor) && reach(p.x, p.z, 0.2), `${p.id}'s prompt`);
     for (const q of homePlaces(floor)) if (q !== p) assert.ok(Math.hypot(p.x - q.x, p.z - q.z) > 0.6, `${p.id} and ${q.id} apart`);
@@ -451,11 +473,68 @@ test('upstairs (docs/compound-plan.md Phase 3): its own floor between the room a
   const desk = HOME_USES.find((u) => u.id === 'home:desk')!;
   const d = UPSTAIRS.find((u) => u.kind === 'desk')!.rect;
   assert.ok(desk.level === 'up' && desk.x > d[0] && desk.x < d[2] && d[1] - desk.z < 1.2, 'at the desk, behind its chair');
-  // The stairs both ways land where he can stand, each near the prompt that takes him back
-  const down = HOME_PORTALS.find((p) => p.id === 'home:down')!;
-  assert.ok(down.level === 'up' && down.to.y === SLAB_Y && !homeWall(down.to.x, down.to.z, R));
-  const stairUp = HOME_PORTALS.find((p) => p.id === 'home:up')!;
-  assert.ok(Math.hypot(down.x - stairUp.to.x, down.z - stairUp.to.z) < 1.2 && Math.hypot(down.to.x - stairUp.x, down.to.z - stairUp.z) < 1);
+});
+
+test('the turned stair (docs/house-plan.md Phase 2): walked from the room round the half landing up to the landing and down again, its rails round it', () => {
+  const { well, a, half, b, spine, window: win } = STAIR;
+  const [x0, z0, x1, z1] = well;
+  const up = SLAB_Y + UP_Y;
+  // In the stair hall in the front east corner: the first flight up the east wall to the half landing across the front,
+  // the second back beside it to the landing's floor, the spine between; they fill the well
+  const area = (r: readonly number[]) => (r[2] - r[0]) * (r[3] - r[1]);
+  assert.ok(Math.abs(area(a) + area(half) + area(b) + area(spine) - area(well)) < 1e-9, 'the well filled');
+  assert.ok(Math.abs(a[2] - x1) < 1e-9 && Math.abs(half[1] - z0) < 1e-9 && Math.abs(b[0] - x0) < 1e-9);
+  assert.ok(a[2] - a[0] >= 0.85 && b[2] - b[0] >= 0.85, 'flights a body and more wide');
+  // Its floor: the room's at the first flight's foot, half way up on the half landing, the landing's at the second's head
+  const [ax, bx, hz] = [(a[0] + a[2]) / 2, (b[0] + b[2]) / 2, (half[1] + half[3]) / 2];
+  assert.ok(Math.abs(stairY(ax, a[3])! - SLAB_Y) < 1e-9 && Math.abs(stairY(ax, hz)! - (SLAB_Y + UP_Y / 2)) < 1e-9 && Math.abs(stairY(bx, b[3])! - up) < 1e-9);
+  assert.equal(stairY((spine[0] + spine[2]) / 2, (spine[1] + spine[3]) / 2), null, 'not on the spine');
+  assert.equal(stairY(x0 - 0.1, hz), null);
+  // ...gentle: no steeper than the old straight flight (1.3 up over 2.8)
+  assert.ok(UP_Y / 2 / (a[3] - a[1]) <= 1.3 / 2.8 + 1e-9 && STAIR.steps >= 5);
+  // Walked (as walk.ts does: the ground under him asked from a little over his feet, walking's radius), from the room
+  // up and round to the landing: each step a small one, nothing stopping him
+  const RW = 0.17;
+  const path: [number, number][] = [];
+  for (let z = z1 + 0.6; z > hz; z -= 0.05) path.push([ax, z]);
+  for (let x = ax; x > bx; x -= 0.05) path.push([x, hz]);
+  for (let z = hz; z < z1 + 0.6; z += 0.05) path.push([bx, z]);
+  const walk = (pts: [number, number][], from: number) => {
+    let y = from;
+    for (const [x, z] of pts) {
+      const g = homeFloorY(x, z, y + 0.3) ?? SLAB_Y;
+      assert.ok(Math.abs(g - y) < 0.06, `a step of ${(g - y).toFixed(2)} at ${x.toFixed(2)}, ${z.toFixed(2)}`);
+      y = g;
+      assert.ok(!homeWall(x, z, RW, y), `stopped at ${x.toFixed(2)}, ${z.toFixed(2)}, ${(y - SLAB_Y).toFixed(2)} up`);
+    }
+    return y;
+  };
+  assert.equal(walk(path, SLAB_Y), up, 'up on the landing');
+  assert.equal(walk([...path].reverse(), up), SLAB_Y, 'and down in the room again');
+  // Its rails: from the room's floor, never onto it but at the first flight's foot (not up its side, not under the
+  // second flight's head, where the den's door is); from the landing's floor, never into the well but at the second
+  // flight's head; on it, never across the spine
+  for (let z = z0 + 0.2; z < z1; z += 0.2) {
+    assert.ok(homeWall(x0 - 0.1, z, RW, SLAB_Y), `up the side from the room at ${z}`);
+    assert.ok(homeWall(x0 - 0.1, z, RW, up), `into the well from the gallery at ${z}`);
+  }
+  assert.ok(homeWall(bx, z1 + 0.1, RW, SLAB_Y) && !homeWall(ax, z1 + 0.1, RW, SLAB_Y), 'the first flight\'s foot, open');
+  assert.ok(homeWall(ax, z1 + 0.1, RW, up) && !homeWall(bx, z1 + 0.1, RW, up), 'the second flight\'s head, open');
+  for (let z = spine[1] + 0.1; z < spine[3]; z += 0.2) assert.ok(homeWall((spine[0] + spine[2]) / 2, z, 0.05, stairY(ax, z)!), `across the spine at ${z}`);
+  assert.ok(stairRails(SLAB_Y + 0.6).every((r) => !overlap(r, half)), 'the half landing open across, for the turn');
+  // On the stair the camera's ceiling is the landing's (the room's is open over the well), and the roof's steps
+  // overhead are kept clear of it as they climb over the first flight
+  for (const [x, z] of [...path.filter((_, i) => i % 4 === 0)]) {
+    const y = stairY(x, z);
+    if (y === null) continue;
+    const over = homeCamera(y).filter((c) => c[5] > y && x > c[0] && x < c[2] && z > c[1] && z < c[3]);
+    assert.ok(over.length && Math.min(...over.map((c) => c[5])) - y > 1, `room over his head at ${x.toFixed(2)}, ${z.toFixed(2)}`);
+  }
+  const steps = ROOF_STEPS.rect;
+  assert.ok(within(steps, well) && steps[0] >= a[0] - 0.1, 'the roof\'s steps over the first flight, in the well');
+  // The stair's window over the half landing, in the front wall, over its floor and under the room's ceiling
+  assert.ok(win.x0 > x0 && win.x1 < x1 && win.y0 > UP_Y / 2 && win.y1 <= CEIL - 0.05);
+  for (const w of ROOM_WINDOWS) assert.ok(w.x1 < x0 || w.x0 > x1 || w.z > z1, 'the room\'s windows clear of the stair hall');
 });
 
 test('the polish (docs/interior-plan.md Phase 5): a tall plant in the lounge, the bedroom and on the landing, each in its corner, clear of the rest, the curtains and the doorways', () => {
@@ -511,18 +590,18 @@ test('the roof terrace: up from the landing to the roof inside its rail, the hou
   const R = 0.14;
   for (let x = hx0; x <= hx1; x += 0.25) for (const z of [hz0 + 0.1, hz1 - 0.1]) assert.ok(roofWall(x, z, R), `over the edge at ${x}, ${z}`);
   for (let z = hz0; z <= hz1; z += 0.25) for (const x of [hx0 + 0.1, hx1 - 0.1]) assert.ok(roofWall(x, z, R), `over the edge at ${x}, ${z}`);
-  // What stands on it: on the terrace, apart; the hatch over the stairs below
+  // What stands on it: on the terrace, apart; the hatch over the roof's steps, over the stair's well
   for (const t of ROOF_THINGS) assert.ok(within(t.rect, TERRACE, 1e-9) && t.h > 0 && t.h < 0.8, `${t.kind} off the terrace`);
   for (let i = 0; i < ROOF_THINGS.length; i++) for (let j = i + 1; j < ROOF_THINGS.length; j++) assert.ok(!overlap(ROOF_THINGS[i].rect, ROOF_THINGS[j].rect), `${ROOF_THINGS[i].kind} on ${ROOF_THINGS[j].kind}`);
-  const stairs = FURNITURE.find((f) => f.kind === 'stairs')!.rect;
-  assert.ok(overlap(HATCH, stairs), 'the hatch is over the stairs');
+  assert.ok(within(HATCH, STAIR.well) && ROOF_STEPS.rect[0] > HATCH[0] && ROOF_STEPS.rect[2] < HATCH[2] && ROOF_STEPS.rect[1] > HATCH[1] && ROOF_STEPS.rect[1] < HATCH[3], 'the hatch over the well, the steps up through it');
   assert.deepEqual(ROOF_THINGS[0], { kind: 'hatch', rect: HATCH, h: ROOF_THINGS[0].h });
   // The steps' fades (Phase 3: from the landing upstairs to the hatch's side, and down again), each landing where he can stand
   const up = HOME_PORTALS.find((p) => p.id === 'home:roof')!;
   const down = HOME_PORTALS.find((p) => p.id === 'home:roofdown')!;
   const upFloor = SLAB_Y + UP_Y;
   assert.ok(up.level === 'up' && inHouse(up.x, up.z, upFloor) && !homeWall(up.x, up.z, R, upFloor), 'the way up stands on the landing');
-  assert.ok(Math.hypot(up.x - Math.max(stairs[0], Math.min(stairs[2], up.x)), up.z - Math.max(stairs[1], Math.min(stairs[3], up.z))) < 0.6, 'by the stairwell');
+  const steps = ROOF_STEPS.rect;
+  assert.ok(up.x > steps[0] && up.x < steps[2] && up.z > steps[3] && up.z - steps[3] < 0.5, 'at the steps\' foot');
   assert.equal(up.to.y, roof);
   assert.ok(!roofWall(up.to.x, up.to.z, R), 'he arrives on the terrace');
   assert.ok(down.level === 'roof' && !roofWall(down.x, down.z, R) && Math.hypot(down.x - up.to.x, down.z - up.to.z) < 1, 'the way down is where he arrives');
@@ -552,9 +631,7 @@ test('the roof terrace: up from the landing to the roof inside its rail, the hou
   // Each floor shows its own prompts: on the terrace only the way down; in the room and the yard, theirs
   assert.deepEqual(homePlaces(roof).map((p) => p.id), ['home:roofdown']);
   const low = homePlaces(SLAB_Y).map((p) => p.id);
-  assert.deepEqual(low, ['home:in', 'home:out', 'home:yard', 'home:back', 'home:up', 'home:cellar']);
-  const stairUp = HOME_PORTALS.find((p) => p.id === 'home:up')!;
-  for (const p of homePlaces(SLAB_Y)) if (p.id !== 'home:up') assert.ok(Math.hypot(p.x - stairUp.x, p.z - stairUp.z) > 0.6, `home:up and ${p.id} apart`);
+  assert.deepEqual(low, ['home:in', 'home:out', 'home:yard', 'home:back', 'home:cellar']);
   // The camera's box on the roof is the whole house under the parapet's top, so the camera stays over it up there
   const [box] = homeCamera(roof);
   assert.ok(roof < box[4] && roof + 1 > box[4]);
@@ -582,10 +659,10 @@ test('the basement (docs/compound-plan.md Phase 4): his trading den under the ho
     assert.ok(u.h > 0 && u.h <= BASE_CEIL - BASE_Y + 1e-9);
   }
   for (let i = 0; i < BASEMENT.length; i++) for (let j = i + 1; j < BASEMENT.length; j++) assert.ok(!overlap(BASEMENT[i].rect, BASEMENT[j].rect), `${BASEMENT[i].kind} on ${BASEMENT[j].kind}`);
-  // The steps run down along the east wall from under the stairs (their top at the front)
-  const stairs = FURNITURE.find((f) => f.kind === 'stairs')!.rect;
+  // The steps run down along the east wall under the stair (their top at the front)
+  const stairs = STAIR.well;
   const steps = BASEMENT.find((u) => u.kind === 'steps')!.rect;
-  assert.ok(overlap(steps, stairs) && Math.abs(steps[1] - stairs[1]) < 1e-9, 'under the stairs');
+  assert.ok(overlap(steps, stairs) && Math.abs(steps[1] - stairs[1]) < 1e-9, 'under the stair');
   // From where he arrives he can walk up to everything (a flood over the floor)
   const step = 0.1;
   const key = (i: number, j: number) => `${i},${j}`;
@@ -621,7 +698,8 @@ test('the basement (docs/compound-plan.md Phase 4): his trading den under the ho
   assert.ok(reach(stash.x, stash.z, 0.15) && stash.z > vault[3] && stash.z - vault[3] < 0.5, 'its prompt in front of it');
   assert.ok(!homeWall(up.x, up.z, R, floor) && reach(up.x, up.z, 0.2) && Math.hypot(up.x - down.to.x, up.z - down.to.z) < 1);
   assert.ok(down.level === 'room' && inHouse(down.x, down.z) && !homeWall(down.x, down.z, R));
-  assert.ok(Math.hypot(down.x - Math.max(stairs[0], Math.min(stairs[2], down.x)), down.z - Math.max(stairs[1], Math.min(stairs[3], down.z))) < 0.6, 'by the stairs');
+  // (at the den's door under the stair's second flight: docs/house-plan.md Phase 2)
+  assert.ok(down.x > STAIR.b[0] && down.x < STAIR.b[2] && down.z > stairs[3] && down.z - stairs[3] < 0.5, 'at the den\'s door');
   assert.ok(up.to.y === SLAB_Y && !homeWall(up.to.x, up.to.z, R) && Math.hypot(up.to.x - down.x, up.to.z - down.z) < 1);
   for (const p of homePlaces(SLAB_Y)) if (p.id !== 'home:cellar') assert.ok(Math.hypot(p.x - down.x, p.z - down.z) > 0.6, `home:cellar and ${p.id} apart`);
   assert.deepEqual([down.label, up.label], ['Basement', 'Upstairs']);

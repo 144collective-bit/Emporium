@@ -819,8 +819,108 @@ const inConvex = (poly: Pt[], p: Pt) => inside(poly, p);
 /** Is a point in a lobby's hall or its doorway, and which */
 export const lobbyAt = (x: number, z: number): Lobby | null => LOBBIES.find((l) => inConvex(l.poly, [x, z]) || inConvex(l.doorPoly, [x, z])) ?? null;
 
+/* ---------- Degen's flat (docs/brutalist-plan.md Phase 7a) ---------- */
+
+/** The flat's floor: Kite Point's 15th (the owner's pick, 2026-11-23), behind the door where The Core's bridge meets it */
+export const FLAT_FLOOR = 15;
+/**
+ * Degen's flat in Kite Point (the owner's picks: the top gallery's floor, bought once with Dorras): its rooms on the
+ * 15th floor behind the bridge's door, laid out in (u, o): u along the tower's face (`t`), o out of the door (`n`,
+ * to The Core; inside is negative). Its living room along the front by the door (the city through its windows: the
+ * tower's face, seen from inside), a hall to the right of the door, the bedroom behind the hall past a partition;
+ * their floors are southsky.ts's flat shapes, walked only once it's his
+ */
+export const FLAT = (() => {
+  const br = BRIDGES.find((q) => q.id === `core-kite-${FLAT_FLOOR}`)!;
+  const end = 'block' in br.b && br.b.block === 'kite' ? 1 : 0;
+  const door = br.pts[end];
+  const other = br.pts[1 - end];
+  const l = Math.hypot(other[0] - door[0], other[1] - door[1]);
+  const n: Pt = [(other[0] - door[0]) / l, (other[1] - door[1]) / l];
+  const t: Pt = [-n[1], n[0]];
+  const at = (u: number, o: number): Pt => [door[0] + t[0] * u + n[0] * o, door[1] + t[1] * u + n[1] * o];
+  const rect = (u0: number, u1: number, o0: number, o1: number): Pt[] => [at(u0, o0), at(u1, o0), at(u1, o1), at(u0, o1)];
+  const y = floorY(KITE.base, FLAT_FLOOR);
+  return {
+    door,
+    t,
+    n,
+    y,
+    /** Its ceiling: two storeys up (the 16th floor's taken into it: a storey's no more than his height), under the 17th's slab */
+    ceil: floorY(KITE.base, FLAT_FLOOR + 2) - 0.06,
+    /** The whole flat's outline (its walls inside the tower: hollow for the camera) */
+    outline: rect(-5.5, 3, -0.3, -5.8),
+    /** Its floors, laid round what's in the rooms (walked only where they are: the sofa, the counter and the bed stop you) */
+    rooms: {
+      door: rect(-0.6, 0.6, 0.35, -0.55),
+      living: rect(-4.75, 0.75, -0.35, -4.65),
+      hall: rect(0.65, 2.9, -0.35, -3.05),
+      bedroom: rect(0.95, 2.9, -2.95, -3.95),
+      bedside: rect(0.95, 1.25, -3.9, -5.7),
+    },
+    /** What's in the rooms, in (u0, u1, o0, o1, height): southblocks3d.ts draws them */
+    things: {
+      sofa: [-3.7, -0.7, -4.7, -5.65, 0.42],
+      table: [-2.7, -1.7, -3.4, -4.0, 0.28],
+      counter: [-5.45, -4.8, -0.8, -5.65, 0.55],
+      bed: [1.3, 2.95, -4.0, -5.75, 0.36],
+      telly: [-3.0, -1.4, -0.42, -0.5, 0.62],
+    } as Record<string, [number, number, number, number, number]>,
+    /** Where he wakes there (the owner's pick: a choice on its card), facing out of the windows */
+    wake: (() => {
+      const p = at(-2.4, -2.6);
+      // (walk.ts's yaw: 0 looks north, -z; facing out of the front windows, along n)
+      return { x: p[0], z: p[1], yaw: Math.atan2(-n[0], -n[1]) };
+    })(),
+    at,
+  };
+})();
+
+/**
+ * Strips (`cover()`'s) hollowed over an outline between two heights: where a strip's middle line crosses the outline,
+ * that span split into the strip under the floor (to `lo`) and a box over the ceiling (from `hi` up: its bottom the
+ * sixth number, which the walk camera and flying read; walking reads none, so it stays solid on the street)
+ */
+function hollowAt(strips: Box[], poly: Pt[], lo: number, hi: number): Box[] {
+  const out: Box[] = [];
+  for (const q of strips) {
+    // (only what stands up past the ceiling: the lobby's bench and stairs, low down, as they are)
+    if (q[4] <= hi) {
+      out.push(q);
+      continue;
+    }
+    const alongZ = q[3] - q[1] > q[2] - q[0];
+    const [u0, u1] = alongZ ? [q[1], q[3]] : [q[0], q[2]];
+    const mid = alongZ ? (q[0] + q[2]) / 2 : (q[1] + q[3]) / 2;
+    let [m0, m1] = [Infinity, -Infinity];
+    for (let u = u0; u <= u1 + 1e-6; u += 0.05) if (inside(poly, alongZ ? [mid, u] : [u, mid])) [m0, m1] = [Math.min(m0, u), Math.max(m1, u)];
+    if (!(m0 < m1)) {
+      out.push(q);
+      continue;
+    }
+    const piece = (a: number, c: number): [number, number, number, number] => (alongZ ? [q[0], a, q[2], c] : [a, q[1], c, q[3]]);
+    if (m0 > u0 + 0.01) out.push([...piece(u0, m0), q[4]]);
+    if (u1 > m1 + 0.01) out.push([...piece(m1, u1), q[4]]);
+    out.push([...piece(m0, m1), lo], [...piece(m0, m1), q[4], hi] as unknown as Box);
+  }
+  return out;
+}
 /** A block's footprint covered in strips (`cover()`), its lobby's hall and doorway cut out of them (finer strips there) */
 function coverWithHall(b: Block): Box[] {
+  // (The Core: solid up to The Perch's floor, its lift house over its roof a box with a bottom, so the camera has room
+  // in The Perch, docs/brutalist-plan.md Phase 3)
+  if (b.id === 'twin-core') {
+    const top = PERCH.y0 - 0.26;
+    const [cx, cz] = PERCH.at;
+    const house = [cx - 1.2, cz - 1.2, cx + 1.2, cz + 1.2, topOf(b), PERCH.y1 + 0.3] as unknown as Box;
+    return [...cover(b.foot, top, 0.6), house];
+  }
+  // (Kite Point: hollow round Degen's flat at its floor, for the camera; walking up there keeps to its floor's shapes)
+  if (b.id === 'kite') return hollowAt(coverLobby(b), FLAT.outline, FLAT.y - 0.25, FLAT.ceil);
+  return coverLobby(b);
+}
+/** A block's footprint in strips with its lobby's hall and doorway cut out (finer strips there) */
+function coverLobby(b: Block): Box[] {
   const l = LOBBIES.find((q) => q.of === b.id);
   const all = cover(b.foot, topOf(b), 0.6, b.arch ? ARCH_X : undefined);
   if (!l) return all;

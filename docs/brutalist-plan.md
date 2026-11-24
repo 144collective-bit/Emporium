@@ -61,7 +61,7 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 6. **The lobbies.** Done (2026-11-23, below). Each block's ground-floor hall walked into from its door: post boxes, a noticeboard, a bench, the
    lift doors (the lift card, as at the cores), the stairs; the towers' halls glazed and lit warm at night. A hall is
    its own inside (as the tube's halls are), near only.
-7. **A flat of your own, and shops to run.** A flat for Degen in one of the blocks (the owner's pick: his own to
+7. **A flat of your own, and shops to run.** The flat done (7a, 2026-11-23, below); the shops next (7b). A flat for Degen in one of the blocks (the owner's pick: his own to
    live in, not flats let out): its door off a gallery, inside it a few rooms to walk (as his home's), and a choice
    to wake there instead of at home (docs/spawn-plan.md, a save setting with its migration). And the shops under the
    podium deck, a launderette and a corner shop (made-up names), each run as Makers' Row's units are (levels,
@@ -179,6 +179,25 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
   open, one dented), the noticeboard with a notice hanging off, a bench, the lift doors and their lit strip, the
   stairs up in the corner; a strip light (tired or dead), tags, litter and a boarded pane. Nothing threatening.
 
+## What Phase 7a did (2026-11-23: Degen's flat)
+
+- **Where** (the owner's pick): Kite Point's 15th floor, behind the door where The Core's 15th-floor bridge meets it
+  (southblocks.ts `FLAT`, `FLAT_FLOOR`; two storeys high, the 16th taken into it: a storey's no more than his height): a living room along the tower's front (its face seen from inside: windows on
+  the city), a hall right of the door, the bedroom past a partition. Its floors are sky shapes laid round the sofa,
+  counter and bed (southsky.ts `flatShapes()`), walked only once it's his (`setFlatOpen()`); its door's prompt on the
+  bridge (`flatDoors()`).
+- **The camera:** Kite's solids hollowed round it at its floor (`hollowAt()`: a strip under the floor, a box with a
+  bottom over the ceiling: the camera and flying read the bottom, walking doesn't, so the tower stays solid on the
+  street); The Core's the same under The Perch (Phase 3's lookout had no room for the camera over The Core).
+- **Bought once with Dorras** (the owner's pick; tycoon.ts `buyFlat()`, `FLAT_PRICE` 40,000 from level 5, a flat game
+  price; free while free play's on): his to live in, never let out, never in the estate's worth. The save's `flat`
+  (null till he buys it), its migration in `cleanSave()`.
+- **Its card** (flat-ui.ts, lazy, the arcade kit) at the door: Buy till it's his, then Wake here / Wake at home
+  (`setWake()`). **Waking there** (index.ts `wake()`): the block's chunk loaded first, standing by the front windows.
+- **Drawn** (southblocks3d.ts `drawFlat()`, its own site out of the sun's shadow): a dark wood floor, plaster walls,
+  the partition, his dark sofa with his neon in its cushions, a low table on a rug, the telly, the kitchen counter and
+  cupboards, the fridge, the bed, a wardrobe, warm strip lights.
+
 ## The owner's decisions (2026-11-21)
 
 - **The concrete:** a cool grey, each block's own accent kept bold as a stripe on its end; after the first look, darker
@@ -188,4 +207,4 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 - **The shops under the deck:** a launderette and a corner shop.
 - **The order:** the look first (phases 1 to 5), then the places (6 to 8).
 - The shops' names (2026-11-23): The Wash House and Deck Stores; the empty units shuttered and tagged.
-- Still to pick, at its phase: which block the flat is in (Claude to suggest a block when Phase 7 starts).
+- The flat (2026-11-23): Kite Point's 15th floor, bought once with Dorras, the flat first, then the shops.

@@ -30,6 +30,7 @@
  * `GARDEN_SOLIDS` (in solids.ts `SOLIDS`): the walls, the hedges, the
  * fountains, the urns and the planters. The kerbs and edges aren't solid.
  */
+import { BUILT, baked } from './baked';
 import { offsetLine } from './streetplan';
 import {
   BENCHES,
@@ -39,16 +40,19 @@ import {
   GARDEN_XS,
   GARDEN_Z,
   GATES,
-  JETTY,
   LAKE_C,
   MALL,
+  PROMENADE_HALF,
   PARK_LAMPS,
-  PARK_TREES,
   PATHS,
   PIER,
   ZS,
   distToLine,
   inLake,
+  onGrand,
+  onOverlook,
+  nearStands,
+  nearRock,
   inset,
   nearTerrace,
   onPath,
@@ -57,7 +61,7 @@ import {
   type Rect,
 } from './westlake';
 import type { Box } from './solids';
-import { inCivic, inSquare } from './civic';
+import { HALL, inCivic, inSquare } from './civic';
 
 /** The lawns' slab (world.ts SLAB): everything here stands on it */
 const SLAB = 0.15;
@@ -77,12 +81,12 @@ export function dense(pts: Pt[], step: number, loop = false): Pt[] {
   return out;
 }
 /** A line offset `d` to one side (closed lines mitred round their seam) */
-function offset(pts: Pt[], d: number, loop: boolean): Pt[] {
+export function offset(pts: Pt[], d: number, loop: boolean): Pt[] {
   if (!loop) return offsetLine(pts, d);
   return offsetLine([pts.at(-1)!, ...pts, pts[0]], d).slice(1, -1);
 }
 /** Cut a line into runs where `keep` holds (a closed one starts where a run breaks, so none wraps) */
-function runs(pts: Pt[], keep: (p: Pt) => boolean, loop: boolean, min = 2): Pt[][] {
+export function runs(pts: Pt[], keep: (p: Pt) => boolean, loop: boolean, min = 2): Pt[][] {
   const yes = pts.map(keep);
   const n = pts.length;
   if (loop && yes.every(Boolean)) return [[...pts, pts[0]]];
@@ -106,54 +110,18 @@ const hyp = (a: Pt, b: Pt) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 /* ---------- The walks: paved with kerbs, or gravel with a flush edge ---------- */
 
 /** The formal garden's round places (where its walks cross the cross walk), declared early for the walks' edges */
-const ROUND_AT: Pt[] = GARDEN_XS.map((x) => [x, GARDEN_Z]);
-const ROUND_R = 4.6;
+export const ROUND_AT: Pt[] = GARDEN_XS.map((x) => [x, GARDEN_Z]);
+export const ROUND_R = 4.6;
 
 /** The main walks, paved, kerbed both sides */
-export const MAIN_WALKS = ['ring', 'loop', 'mall', 'civic-w', 'civic-e'];
+export const MAIN_WALKS = ['ring', 'loop', 'mall', 'promenade', 'civic-w', 'civic-e'];
 export const isMain = (q: ParkPath) => MAIN_WALKS.includes(q.id);
 /** The kerbs: their width (inside the walk's edge) and height over the paving */
 export const KERB = { w: 0.14, h: 0.07 };
 /** The small paths' flush stone edge (inside their edge) */
 export const EDGE_W = 0.18;
 
-/** Each path's bounds, out as far as `edgeCut()` looks (a point outside them is off it: no need to measure) */
-const REACH = new Map(
-  PATHS.map((r) => {
-    const m = r.half + 0.15;
-    const xs = r.pts.map((p) => p[0]);
-    const zs = r.pts.map((p) => p[1]);
-    return [r, [Math.min(...xs) - m, Math.min(...zs) - m, Math.max(...xs) + m, Math.max(...zs) + m] as Rect];
-  })
-);
-/** Where a walk's edge mustn't run: across another path, the jetty, a terrace, or between a gate's piers */
-function edgeCut(q: ParkPath, p: Pt) {
-  if (PATHS.some((r) => r !== q && inRect(REACH.get(r)!, p) && distToLine(r.pts, p, r.loop) < r.half + 0.15)) return true;
-  if (Math.abs(p[0] - JETTY.x) < JETTY.half + 0.4 && p[1] > JETTY.z0 - 0.6 && p[1] < JETTY.z1) return true;
-  // (and the garden's round places, which the walks open into)
-  if (ROUND_AT.some(([x, z]) => Math.hypot(p[0] - x, p[1] - z) < ROUND_R + 0.1)) return true;
-  // (and the civic square, paved edge to edge: the walks that cross it or come into it open into it)
-  if (inSquare(p, 0.1)) return true;
-  return nearTerrace(p, 0.4);
-}
-/** Runs along both edges of each path, `inside` in from its edge, broken where something crosses */
-function edgesOf(main: boolean, inside: number) {
-  const out: { path: string; side: 1 | -1; pts: Pt[] }[] = [];
-  for (const q of PATHS.filter((r) => isMain(r) === main)) {
-    const line = dense(q.pts, 0.5, q.loop);
-    for (const side of [1, -1] as const) {
-      const edge = offset(line, side * (q.half - inside / 2), !!q.loop);
-      // (inside a sharp corner the offset folds back on itself: those points are nearer the middle than the edge)
-      const folded = (p: Pt) => distToLine(q.pts, p, q.loop) < q.half - inside / 2 - 0.05;
-      for (const pts of runs(edge, (p) => !edgeCut(q, p) && !folded(p), !!q.loop)) out.push({ path: q.id, side, pts });
-    }
-  }
-  return out;
-}
-/** The main walks' kerbs: each run's centre line */
-export const KERBS = edgesOf(true, KERB.w);
-/** The small paths' edges: each run's centre line */
-export const EDGES = edgesOf(false, EDGE_W);
+/* (the kerbs and edges along the walks are gardenedges.ts's: drawing only, out of the boot) */
 
 /* ---------- The park's edge wall ---------- */
 
@@ -192,6 +160,19 @@ export const GARDEN_WALLS: Pt[][] = (() => {
   return runs(dense(ring, 0.25, true), (p) => !open(p), true, 3);
 })();
 
+/**
+ * The wisteria pergola along the garden's north side, inside its wall (docs/westlake-plan.md Phase 4): a covered walk
+ * from one side to the other (`z0`..`z1` deep), stone columns in pairs along it every `every` but where the Mall and
+ * the garden's walks pass under, timber beams across them hung with wisteria
+ */
+export const PERGOLA = { z0: GARDEN_IN[1] + 0.4, z1: GARDEN_IN[1] + 3.6, x0: GARDEN_IN[0] + 0.8, x1: GARDEN_IN[2] - 0.8, every: 2.6, col: 0.32, h: 2.5 };
+export const PERGOLA_COLUMNS: Pt[] = (() => {
+  const out: Pt[] = [];
+  const clear = (x: number) => Math.abs(x - MALL.x) > PROMENADE_HALF + 0.3 && GARDEN_XS.every((g) => Math.abs(x - g) > GARDEN_WALK + 0.5);
+  for (let x = PERGOLA.x0; x <= PERGOLA.x1 + 1e-6; x += PERGOLA.every) if (clear(x)) for (const z of [PERGOLA.z0 + 0.3, PERGOLA.z1 - 0.3]) out.push([x, z]);
+  return out;
+})();
+
 /** The round places where each garden walk crosses the cross walk, and the fountain in each */
 export const ROUNDS: { c: Pt; r: number }[] = ROUND_AT.map((c) => ({ c, r: ROUND_R }));
 export const FOUNTAIN = { r: 2.2, h: 0.45, bowl: 0.7, top: 1.5 };
@@ -217,7 +198,7 @@ const area = (poly: Pt[]) => poly.reduce((a, p, i) => a + p[0] * poly[(i + 1) % 
 const sameWay = (poly: Pt[]) => (Math.sign(area(poly)) === Math.sign(area(BIG)) ? poly : [...poly].reverse());
 
 export const PARTERRES: Parterre[] = (() => {
-  const [gx0, gz0, gx1, gz1] = GARDEN_IN;
+  const [gx0, , gx1, gz1] = GARDEN_IN;
   const m = 0.8;
   const out: Parterre[] = [];
   for (const [ri, walkX] of GARDEN_XS.entries()) {
@@ -226,8 +207,9 @@ export const PARTERRES: Parterre[] = (() => {
     // Each side of the garden's walk: out to the garden's wall, or in to the Mall
     const sides: [number, number][] = walkX < MALL.x ? [[gx0 + m, walkX - GARDEN_WALK - m], [walkX + GARDEN_WALK + m, MALL.x - MALL.half - m]] : [[MALL.x + MALL.half + m, walkX - GARDEN_WALK - m], [walkX + GARDEN_WALK + m, gx1 - m]];
     for (const [x0, x1] of sides)
+      // (the north row starts behind the pergola, Phase 4)
       for (const [z0, z1] of [
-        [gz0 + m, GARDEN_Z - CROSS - m],
+        [PERGOLA.z1 + m, GARDEN_Z - CROSS - m],
         [GARDEN_Z + CROSS + m, gz1 - m],
       ] as [number, number][]) {
         // The corner by the round place is cut by an arc round it
@@ -258,7 +240,7 @@ export const PARTERRES: Parterre[] = (() => {
 })();
 
 /** Benches round each fountain (on the diagonals, facing it) and along the Mall in the garden (facing the beds) */
-export const GARDEN_BENCHES: { at: Pt; ry: number }[] = (() => {
+export const GARDEN_BENCHES: { at: Pt; ry: number }[] = baked('garden-benches', BUILT ? undefined : () => {
   const out: { at: Pt; ry: number }[] = [];
   for (const { c } of ROUNDS)
     for (let k = 0; k < 4; k++) {
@@ -268,9 +250,9 @@ export const GARDEN_BENCHES: { at: Pt; ry: number }[] = (() => {
     }
   for (const z of [GARDEN_IN[1] + 6, GARDEN_Z - 6, GARDEN_Z + 6, GARDEN_IN[3] - 6]) for (const side of [-1, 1]) out.push({ at: [MALL.x + side * (MALL.half + 0.45), z], ry: side > 0 ? Math.PI / 2 : -Math.PI / 2 });
   return out;
-})();
+});
 /** Urns on plinths in the garden's corners, inside its wall */
-export const URNS: Pt[] = (() => {
+export const URNS: Pt[] = baked('garden-urns', BUILT ? undefined : () => {
   const [x0, z0, x1, z1] = GARDEN_IN;
   return [
     [x0 + 1, z0 + 1],
@@ -278,7 +260,7 @@ export const URNS: Pt[] = (() => {
     [x0 + 1, z1 - 1],
     [x1 - 1, z1 - 1],
   ];
-})();
+});
 export const URN = { plinth: 0.6, h: 0.6 };
 /** Lanterns round the fountains, behind the benches (x, z, ry: the arm over the round place) */
 export const GARDEN_LAMPS: [number, number, number][] = ROUNDS.flatMap(({ c }) =>
@@ -290,7 +272,7 @@ export const GARDEN_LAMPS: [number, number, number][] = ROUNDS.flatMap(({ c }) =
   })
 );
 /** People in the garden: some on the benches round the fountains, some looking at the beds (act, facing; y over the slab) */
-export const GARDEN_PEOPLE: { x: number; z: number; y: number; ry: number; act: 'sit' | 'look' | 'chat' }[] = (() => {
+export const GARDEN_PEOPLE: { x: number; z: number; y: number; ry: number; act: 'sit' | 'look' | 'chat' }[] = baked('garden-people', BUILT ? undefined : () => {
   const out: { x: number; z: number; y: number; ry: number; act: 'sit' | 'look' | 'chat' }[] = [];
   GARDEN_BENCHES.slice(0, 8).forEach((b, i) => {
     if (i % 3 === 1) return;
@@ -300,7 +282,7 @@ export const GARDEN_PEOPLE: { x: number; z: number; y: number; ry: number; act: 
   // At every other parterre's gap, on the garden's walk, looking in at the bed
   for (const p of PARTERRES.filter((_, i) => i % 2 === 0)) out.push({ x: p.gap[0] - p.inX * 0.9, z: p.gap[1] + 0.5, y: 0, ry: p.inX > 0 ? Math.PI / 2 : -Math.PI / 2, act: 'look' });
   return out;
-})();
+});
 
 /* ---------- Flower beds along the walks ---------- */
 
@@ -309,34 +291,34 @@ export const PLANTER = { h: 0.42, wall: 0.12 };
 /** Is a spot clear for a planter of radius r: on the park, off every path, the lake, the lamps, benches, trees and courts */
 function plantable(p: Pt, r: number, others: Pt[]) {
   if (onPath(p, r + 0.25) || inCivic(p, r + 0.6)) return false;
-  if (inLake(p[0], p[1], r + 0.5) || nearTerrace(p, r + 0.5)) return false;
+  // (off the promenade's avenue: its two rows of elms either side, parktrees.ts, Phase 5)
+  if (p[1] < HALL.rear[1] && p[1] > GARDEN_SITE[3] && [1.75, 4.7].some((o) => Math.abs(Math.abs(p[0] - MALL.x) - (PROMENADE_HALF + o)) < r + 1)) return false;
+  if (inLake(p[0], p[1], r + 0.5) || nearTerrace(p, r + 0.5) || nearRock(p, r + 0.5) || onGrand(p[0], p[1], -r - 0.5) || onOverlook(p[0], p[1], r + 0.5) || nearStands(p, r + 0.5)) return false;
   if (inRect(GARDEN_SITE, p, r + 0.5) || inRect(BOATHOUSE.rect, p, r + 1)) return false;
   if (PARK_LAMPS.some(([x, z]) => Math.hypot(x - p[0], z - p[1]) < r + 0.6)) return false;
   if (BENCHES.some((b) => hyp(b.at, p) < r + 1)) return false;
-  if (PARK_TREES.some((t) => Math.hypot(t.x - p[0], t.z - p[1]) < r + 0.9)) return false;
   if (GATES.some((g) => hyp(g.at, p) < r + 2.5)) return false;
   if (WALLS.some((w) => w.some((q) => hyp(q, p) < r + WALL.w / 2 + 0.4))) return false;
   return others.every((o) => hyp(o, p) > 2 * r + 0.6);
 }
-/** Oblong beds along the Mall between its trees, either side (x0, z0, x1, z1) */
-export const MALL_BEDS: Rect[] = (() => {
+/** Oblong beds along the Mall's promenade, between its avenue's two rows and its trees, either side (x0, z0, x1, z1) */
+export const MALL_BEDS: Rect[] = baked('mall-beds', BUILT ? undefined : () => {
   const out: Rect[] = [];
   for (let z = ZS - 3 - 2.25; z > GARDEN_SITE[3] + 3; z -= 4.5)
     for (const side of [-1, 1]) {
-      const x = MALL.x + side * (MALL.half + 1.45);
+      const x = MALL.x + side * (PROMENADE_HALF + 3.2);
       const r: Rect = [x - 0.45, z - 1, x + 0.45, z + 1];
       const clear =
         !inCivic([x, z], 1.5) &&
-        PATHS.every((q) => q.id === 'mall' || distToLine(q.pts, [x, z], q.loop) > q.half + 1.6) &&
+        PATHS.every((q) => q.id === 'mall' || q.id === 'promenade' || distToLine(q.pts, [x, z], q.loop) > q.half + 1.6) &&
         PARK_LAMPS.every(([lx, lz]) => !inRect(r, [lx, lz], 0.4)) &&
-        BENCHES.every((b) => !inRect(r, b.at, 0.6)) &&
-        PARK_TREES.every((t) => !inRect(r, [t.x, t.z], 0.5));
+        BENCHES.every((b) => !inRect(r, b.at, 0.6));
       if (clear) out.push(r);
     }
   return out;
-})();
+});
 /** Round planters: in pairs where a path comes into a main walk, at the corners where main walks cross, and along the ring walk and the lake loop */
-export const PLANTERS: { at: Pt; r: number }[] = (() => {
+export const PLANTERS: { at: Pt; r: number }[] = baked('park-planters', BUILT ? undefined : () => {
   const out: { at: Pt; r: number }[] = [];
   const put = (p: Pt, r: number) => {
     if (plantable(p, r, out.map((o) => o.at))) out.push({ at: p, r });
@@ -368,7 +350,7 @@ export const PLANTERS: { at: Pt; r: number }[] = (() => {
     for (let i = 0; i < pick.length; i += every * 2) put(pick[i], 0.7);
   }
   return out;
-})();
+});
 
 /* ---------- Solids ---------- */
 
@@ -391,8 +373,10 @@ function runBoxes(run: Pt[], half: number, h: number): Box[] {
 }
 const WALL_BOXES = [...WALLS.flatMap((r) => runBoxes(r, WALL.w / 2, WALL.h)), ...GARDEN_WALLS.flatMap((r) => runBoxes(r, WALL.w / 2, WALL.h))];
 const HEDGE_BOXES = PARTERRES.flatMap((p) => p.hedge.flatMap((r) => runBoxes(r, HEDGE.w / 2, HEDGE.h)));
+const PERGOLA_BOXES: Box[] = PERGOLA_COLUMNS.map(([x, z]): Box => [x - PERGOLA.col / 2, z - PERGOLA.col / 2, x + PERGOLA.col / 2, z + PERGOLA.col / 2, SOLID_H(PERGOLA.h)]);
 const BED_BOXES = [...MALL_BEDS.map((r): Box => [...r, SOLID_H(PLANTER.h)]), ...PLANTERS.map(({ at: [x, z], r }): Box => [x - r * 0.8, z - r * 0.8, x + r * 0.8, z + r * 0.8, SOLID_H(PLANTER.h)])];
 export const GARDEN_SOLIDS: Box[] = [
+  ...PERGOLA_BOXES,
   ...WALL_BOXES,
   ...HEDGE_BOXES,
   ...ROUNDS.map(({ c }): Box => [c[0] - FOUNTAIN.r, c[1] - FOUNTAIN.r, c[0] + FOUNTAIN.r, c[1] + FOUNTAIN.r, SOLID_H(FOUNTAIN.h)]),

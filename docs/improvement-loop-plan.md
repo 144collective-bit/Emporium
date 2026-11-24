@@ -389,6 +389,8 @@ session.)
   as phones have now: about 32 KB, fits); (b) another district trims its textures by 90 KB or
   more; (c) raise `texFull` to about 5060 KB on purpose (your call only, in `scripts/budget.mjs`).
   Until the build passes, every loop pass stops at rule 1; the bake fix merges with your answer.
+  **Owner's answer (2026-11-24): (a).** The brutalist plan's session applied it with the bake fix: the turf is
+  a pixel a tile on both tiers (488 x 714), merged with the estate's Phase 7a.
   (Also from this pass: Riverside Raceway's Phase 4a broke the build's typecheck with an unused
   constant: I ran plain `tsc`, not `npm run typecheck`, which adds `--noUnusedLocals`. Another
   session fixed it at 21:14; the kart passes run `npm run typecheck` from now on.)

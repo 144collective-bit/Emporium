@@ -68,6 +68,7 @@ export const LIVE_PLACES = [
   { id: 'sphere', name: 'The Sphere' },
   { id: 'lot9', name: 'Lot 9' },
   { id: 'northgate', name: 'Northgate Air Base' },
+  { id: 'lakehouse', name: 'The Lakehouse Café' },
   { id: 'endswood', name: 'Endswood Estate' },
   { id: 'aldwyns', name: "St Aldwyn's" },
   { id: 'bunker', name: 'Bunker Sound' },

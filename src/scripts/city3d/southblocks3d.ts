@@ -29,7 +29,7 @@ import { PLANT } from './palette';
 import { shift } from './streetfaces';
 import {
   ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
-  DECK_SHOPS, DECK_SHOP_NAMES, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
+  DECK_SHOPS, DECK_SHOP_NAMES, FLAT, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
 import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
@@ -593,8 +593,12 @@ function drawTower(b: Batch, t: Block, low: boolean) {
     for (const f of SKY_FLOORS) {
       const y = floorY(base, f);
       out.forEach((p, j) => quad(b, p, out[(j + 1) % out.length], y - 0.12, y + 0.14, outward(out, j), CONC));
-      flat(b, out, y + 0.14, CONC);
-      flat(b, out, y - 0.12, CONC_DARK, false);
+      // (its top and underside a band round the walls, not across the tower: Degen's flat is inside, Phase 7a)
+      out.forEach((p, j) => {
+        const band = [p, out[(j + 1) % out.length], ring[(j + 1) % ring.length], ring[j]];
+        flat(b, band, y + 0.14, CONC);
+        flat(b, band, y - 0.12, CONC_DARK, false);
+      });
     }
     // The plant room: a plain concrete box set back on the roof, its corners cut as the tower's, and its beacon
     prism(b, grow(ring, -TOWER_HALF * 0.3), top, top + PLANT_H, CONC, ROOF);
@@ -1361,6 +1365,79 @@ function drawLobby(b: Batch, l: (typeof LOBBIES)[number], low: boolean) {
   });
 }
 
+/* ---------- Degen's flat (docs/brutalist-plan.md Phase 7a) ---------- */
+
+/** The flat's palette: a dark wood floor, plaster walls, his dark sofa with his neon in its cushions, a navy duvet */
+const FLAT_WOOD = toon('#5a4330');
+const PLASTER = toon('#d8d2c4');
+const SOFA_DARK = toon('#25222c');
+const DUVET = toon('#34466a');
+const WORKTOP = toon('#cfc9be');
+const CUSHION = toon('#ff4fb8');
+const SCREEN = lit(toon('#141820', { emissive: '#7fe9ff' }), 0.15, 0.6);
+
+/**
+ * Degen's flat (southblocks.ts `FLAT`): its floor, ceiling and walls seen from inside (its front's the tower's own face,
+ * seen from inside: windows on the city), the partition between the living room and the bedroom; its things (the
+ * sofa, the low table, the kitchen counter, the telly, the bed, a rug, lamps), the lights over them lit warm at night
+ */
+function drawFlat(b: Batch, low: boolean) {
+  const k = kit(b, WORLD);
+  const { at, y, ceil, t, n } = FLAT;
+  const [u0, u1, o0, o1] = [-5.5, 3, -0.3, -5.8];
+  const rect = (a: number, c: number, p: number, q: number): Pt[] => [at(a, p), at(c, p), at(c, q), at(a, q)];
+  const ry = -Math.atan2(t[1], t[0]);
+  const box = ([a, c, p, q, h]: [number, number, number, number, number], m: THREE.Material, from = y) => {
+    const m0 = at((a + c) / 2, (p + q) / 2);
+    b.add(plain(new THREE.BoxGeometry(Math.abs(c - a), h, Math.abs(q - p)).rotateY(ry).translate(m0[0], from + h / 2, m0[1])), m);
+  };
+  k.all(() => {
+    flat(b, rect(u0, u1, o0, o1), y + 0.012, FLAT_WOOD);
+    flat(b, rect(u0, u1, o0, o1), ceil, PLASTER, false);
+    // (its walls inside the tower: the back, the two ends; the front is the tower's face, its windows)
+    quad(b, at(u0, o1), at(u1, o1), y, ceil, n, PLASTER);
+    quad(b, at(u0, o0), at(u0, o1), y, ceil, t, PLASTER);
+    quad(b, at(u1, o1), at(u1, o0), y, ceil, [-t[0], -t[1]], PLASTER);
+    // (the partition: the living room's side and the bedroom's)
+    box([0.75, 0.95, -3.05, o1, ceil - y], PLASTER);
+    // (and what's in the rooms: you walk round them, southsky.ts)
+    const th = FLAT.things;
+    box(th.sofa, SOFA_DARK);
+    box([th.sofa[0], th.sofa[1], th.sofa[3] + 0.25, th.sofa[3], 0.8], SOFA_DARK);
+    box(th.counter, CONC_DARK);
+    box([th.counter[0], th.counter[1], th.counter[2], th.counter[3], 0.04], WORKTOP, y + th.counter[4]);
+    box(th.bed, CONC_DARK);
+    box([th.bed[0] + 0.05, th.bed[1] - 0.05, th.bed[2] - 0.05, th.bed[3] + 0.35, 0.1], DUVET, y + th.bed[4]);
+    box(th.telly, RAIL);
+    // (its windows along the front: a low sill, mullions every 1.4 and a head, the doorway clear)
+    for (const [a, c] of [[u0, -0.65], [0.65, u1]] as [number, number][]) {
+      along(b, at(a, -0.34), at(c, -0.34), 0.08, y, y + 0.22, CONC);
+      along(b, at(a, -0.34), at(c, -0.34), 0.08, ceil - 0.16, ceil, CONC);
+      for (let u = a + 0.05; u <= c - 0.05; u += 1.4) along(b, at(u - 0.03, -0.34), at(u + 0.03, -0.34), 0.06, y + 0.22, ceil - 0.16, RAIL);
+    }
+    for (const u of [-0.65, 0.65]) along(b, at(u, -0.05), at(u, -0.36), 0.1, y, ceil, CONC);
+    // (his lights: a strip over the living room, one over the bed)
+    along(b, at(-3.4, -2.6), at(-1.0, -2.6), 0.1, ceil - 0.04, ceil - 0.01, STRIP);
+    along(b, at(1.5, -4.6), at(2.5, -4.6), 0.1, ceil - 0.04, ceil - 0.01, STRIP);
+  });
+  if (low) return;
+  b.detail(() => {
+    const th = FLAT.things;
+    // The low table, a rug under it, his neon in the sofa's cushions, the telly's screen on its stand
+    box(th.table, RAIL);
+    flat(b, rect(-3.4, -1.0, -3.0, -4.5), y + 0.018, toon('#6e2a5c'));
+    for (const u of [-3.3, -2.2, -1.1]) box([u, u + 0.5, th.sofa[3] + 0.3, th.sofa[3] + 0.45, 0.32], CUSHION, y + th.sofa[4]);
+    const sc = at((th.telly[0] + th.telly[1]) / 2, -0.47);
+    b.add(plain(new THREE.BoxGeometry(1.3, 0.5, 0.04).rotateY(ry).translate(sc[0], y + th.telly[4] + 0.3, sc[1])), SCREEN);
+    // The kitchen's cupboards over the counter, a kettle, the fridge at its end
+    box([th.counter[0], th.counter[1] + 0.2, th.counter[2] - 0.2, th.counter[3], 0.35], CONC_DARK, y + 1.0);
+    box([th.counter[0], th.counter[1], th.counter[2] + 0.6, th.counter[2], 1.2], DISH);
+    // The bed's pillows, a side lamp, a wardrobe by the bedroom's door
+    box([th.bed[0] + 0.2, th.bed[1] - 0.2, th.bed[3] + 0.32, th.bed[3] + 0.08, 0.1], DISH, y + th.bed[4]);
+    box([2.4, 2.9, -3.1, -3.5, 1.15], CONC_DARK);
+  });
+}
+
 /* ---------- The Perch (docs/brutalist-plan.md Phase 3) ---------- */
 
 /** Its floor slab's depth, its glass band's height over its floor, its ceiling under its roof */
@@ -1772,6 +1849,12 @@ export function register({ low, scene }: { low: boolean; scene: THREE.Scene | nu
       drawShops(b, low);
       b.build(into, opts);
     });
+  // Degen's flat (Phase 7a): its own site, out of the sun's shadow (inside Kite Point)
+  site('south-blocks flat', rectOf(FLAT.outline, 1), (into) => {
+    const b = new Batch();
+    drawFlat(b, low);
+    b.build(into, { cast: false, receive: false, lift: false });
+  });
   // The lobbies (Phase 6): each its own site, out of the sun's shadow (they're inside the blocks)
   for (const l of LOBBIES)
     site(`south-blocks ${l.id}`, rectOf([...l.poly, ...l.doorPoly], 1), (into) => {

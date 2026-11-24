@@ -40,6 +40,8 @@ export const BENCH_VIEWS: BenchView[] = [
   { id: 'highway', name: 'The ring highway, a junction', pos: [0, 30, -120], target: [30, 0, -170] },
   { id: 'trenches', name: 'The Trenches, round The Block', pos: [-60, 30, 120 + WIDEN], target: [-100, 0, 175 + WIDEN] },
   { id: 'park', name: 'Westlake Park, over the lake', pos: [-48, 24, -12], target: [-100, 0, -62] },
+  // (docs/westlake-plan.md Phase 7: the grand terrace and its fountain from over the water, the bandstand beyond)
+  { id: 'park-terrace', name: 'Westlake Park, the grand terrace', pos: [-102, 11, -58], target: [-122, 0, -66] },
   { id: 'uptown', name: 'Uptown, its towers from the river', pos: [-60, 16, 92], target: [-120, 12, 30] },
   // (the polish plan's Phase 10: the districts that had no view)
   { id: 'uptown-north', name: 'Uptown North, from the park', pos: [-62, 20, -20], target: [-25, 10, -100] },

@@ -95,6 +95,16 @@ export const TREE = {
   /** A planted median's columnar tree (Uptown's, the ring's) and its slimmer trunk */
   column: '#24603a',
   columnTrunk: '#5a4232',
+  /** Westlake Park's planting (docs/westlake-plan.md Phase 5): the elms' and oaks' deeper greens, the planes' lighter,
+   * the willows' pale yellow-green, its bark; the reeds and the lily pads in the coves */
+  elm: '#2b8a55',
+  oak: '#2e7a45',
+  plane: '#5aa864',
+  willow: '#8cbf5a',
+  bark: '#5b4434',
+  reed: '#6f9a48',
+  lily: '#3d8f55',
+  lilyFlower: '#f2d6e6',
 } as const;
 
 /** The roads' paint (the polish plan's Phase 10): asphalt, the lane lines, zebras, the yellow centre line */
@@ -124,6 +134,9 @@ export const PLANT = {
   shrub: '#2a7048',
   shrubDark: '#1f5a3a',
   box: '#2f6a3c',
+  /** Westlake Park's formal garden (docs/westlake-plan.md Phase 4): the pergola's wisteria, its leaves */
+  wisteria: '#9a7fd6',
+  wisteriaLeaf: '#5f8f4a',
 } as const;
 
 /** Soil in a bed */
@@ -139,6 +152,32 @@ export const BANK = {
   sand: '#cdbb8e',
   pebbles: '#8f8a80',
   rock: '#77738a',
+  /** Westlake Park's lake bed, deep under its water (docs/westlake-plan.md Phase 3b) */
+  bed: '#173447',
+} as const;
+
+/** Westlake Park's outcrops (docs/westlake-plan.md Phase 1): a grey stone laid in layers, its tops lighter, lichen in its cracks */
+export const OUTCROP = {
+  face: '#7a7590',
+  dark: '#5f5b76',
+  top: '#928ca8',
+  lichen: '#7f8f62',
+} as const;
+
+/** Westlake Park's ornate masonry and ironwork (docs/westlake-plan.md Phase 3): a warm carved stone, its darker
+ * rough-cut, a lighter dressed stone for keystones and caps, the cream-painted cast iron, the bridge's timber deck */
+export const ORNATE = {
+  stone: '#d6c3a0',
+  rough: '#b6a283',
+  dressed: '#e6d8bb',
+  iron: '#ece4d0',
+  ironDark: '#cfc5ad',
+  plank: '#9b7653',
+  urn: '#cdb994',
+  /** The arcade's tiles (Phase 3b), and the fountain's bronze */
+  tile: '#c08048',
+  tileDark: '#7d4c2a',
+  bronze: '#8a6a3c',
 } as const;
 
 /** The street lamps' light: white in town, sodium orange in The Trenches, along the waterfront and in the Docks */

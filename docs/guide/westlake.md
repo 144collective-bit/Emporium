@@ -3,6 +3,10 @@
 Part of the project guide (`CLAUDE.md` is its index). Moved here word for word from `CLAUDE.md`;
 keep it up to date when what it describes changes.
 
+- **The redesign** (the owner's call, 2026-11-21: "like central park",
+  ornate masonry, a bandstand and a café) is planned in
+  `docs/westlake-plan.md` in seven phases, each with the owner's sign-off;
+  keep it up to date.
 - **Westlake Park** (growth plan Phase 9b, the owner's call: a park
   district with a stadium as its attraction, scenery only for now) on the
   land west of town, north of the river, between the ring highway and the
@@ -16,21 +20,48 @@ keep it up to date when what it describes changes.
     sidewalk alongside the Parkway's, `Z0` the highway's north side round
     its north-west bend, `ZS` the west ring avenue), `WESTLAKE_BLOCKS` in
     the street plan as a park, `WESTLAKE_RECT` (the outskirts' trees keep off it);
-    the lake (`LAKE_C`, `lakeR()`, `lakeAt()`, `lakeLine()`, `inLake()`:
+    the lake (`LAKE_C`; redesigned in `docs/westlake-plan.md` Phase 1: an
+    outline, `LAKE_POLY`, baked, its coves, point, arm and inlet
+    `LAKE_COVES`, `LAKE_POINT`, `LAKE_ARM`, `LAKE_INLET`, the open water
+    `lakeCoreLine()` for the boats; `lakeAt()`, `lakeLine()`, `lakeDist()`, `inLake()`:
     walk.ts stops you on the lawn at its rim (`RIM`), cars stop at
     `LAKE_WALLS`, which drive-sim.ts adds near it); the paths (`PATHS`:
     `ring` round the big block, `loop` round the lake (`LOOP_OUT`), the
     Mall (`MALL`) from City Hall's back door (the civic quarter, below) out
     of the north gate (where it ran on to the stadium's forecourt), the ways
     in from `GATES`; `onPath()`); the gates' piers
-    (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_TREES` (the Mall's
-    avenue, clumps from a seeded noise; `clump` ones,
-    every other, left out on phones), `PARK_LAMPS` and `BENCHES`;
+    (`GATE_PIERS`, `WESTLAKE_SOLIDS` in `SOLIDS`); `PARK_LAMPS` and `BENCHES` (the trees are parktrees.ts's since Phase 5);
+    the paths as re-laid in `docs/westlake-plan.md` Phase 2 (the rounded,
+    wandering `RING_WALK` and `ringLine()`, the Mall's `promenade` and
+    `PROMENADE_HALF`, the Great Lawn `LAWN`, `onLawn()` and its walks, the
+    ramble's `ramble-e`, `ramble-n`, `ramble-w`; `loopLine()` for the loop's
+    lanes);
+    the lake lowered into its embankment and the grand terrace
+    (`docs/westlake-plan.md` Phase 3b: `WATER_Y`, `BED_Y`, `LAKE_PARTS`,
+    `LAKE_HOLE`; `GRAND`, `grandY()`, `onGrand()`, `GRAND_CUT`,
+    `GRAND_SOLIDS`; ground layer `grand`; drawn by `grandterrace3d.ts`);
+    the bandstand and The Lakehouse Café, a place `lakehouse` (Phase 6:
+    westlake.ts `BANDSTAND`, `LAKEHOUSE`, `onCafeDeck()`, `nearStands()`;
+    parkstands.ts its benches and tables; drawn by parkstands3d.ts);
+    the park's planting (`docs/westlake-plan.md` Phase 5: `parktrees.ts`
+    `PARK_TREES`, `SHRUBS`, `REEDS`, `LILIES`, out of the boot, drawn by
+    `parktrees3d.ts` with the park's chunk);
+    the formal garden made ornate (`docs/westlake-plan.md` Phase 4:
+    gardens.ts `PERGOLA`, `PERGOLA_COLUMNS`; gardens3d.ts `balustrade()`,
+    `pergola()`, `patternBed()`, the carved `fountain()`);
+    the overlook at the rocky point (`OVERLOOK`, `onOverlook()`,
+    `OVERLOOK_RAIL`; Phase 3c) and the walks' kerbs and edges
+    (`gardenedges.ts`, drawing only, out of the boot);
+    the bridges (`docs/westlake-plan.md` Phase 3a: `BRIDGES`, `onBridge()`,
+    `bridgeY()`, the loop over them, `arm-walk` and `inlet-walk`; a ground
+    layer `park-bridge` in groundheight.ts; drawn by `parkbridges3d.ts`);
+    the rock outcrops (`ROCKS`, `ROCK_SOLIDS`, `nearRock()`; drawn by
+    westlake3d.ts `registerRocks()`);
     `GARDEN_SITE` (the stadium's old site, kept for the formal garden); step 3's
     land: the boathouse (`BOATHOUSE`, solid) and its jetty (`JETTY`,
     `onJetty()`: walk.ts lets you out along it, at its deck's height). Its
-    trees and lamps are placed
-    at the boot with the town's (`addTree()` / `addLamp()` in index.ts).
+    lamps are placed at the boot with the town's (`addLamp()` in
+    index.ts); its trees come with its chunk (parktrees3d.ts, Phase 5).
   - `westlake3d.ts` draws the rest as sites: the paths (a stretch a
     site: the main walks paved, the rest pale gravel), the lake's stone rim (in quarters), the
     gates (stone piers, caps, lanterns; the Mall's north gate with iron posts, a beam
@@ -47,7 +78,7 @@ keep it up to date when what it describes changes.
     up and down the Mall (`PARK_PEOPLE`, `trim` ones left
     out on phones), dogs on the lead ahead of their walkers (`DOGS`,
     `LEAD`), people on every third bench, picnics in the glades
-    (`PICNICS`) and the boats on the lake (`BOATS`: rowing boats and swan pedalos on rings
+    (`PICNICS`, baked) and the boats on the lake (`BOATS`: rowing boats and swan pedalos on rings
     along the shore's normals, `ringLine()`, `RINGS`, each its own pace and
     way round so none meet; rowers and swan riders aboard; two moored at the
     jetty). The people are the crowd's (life.ts, kind `park`; clips `jog`
@@ -57,6 +88,27 @@ keep it up to date when what it describes changes.
     and their leads, an instanced mesh a kind (not drawn
     while the camera is far from the park). Its sound: `park` (birds by
     day, an owl at night) in ambience.ts, the lake in `water`.
+  - **The park's people who come with its chunk** (`docs/westlake-plan.md`
+    Phase 7) are `parkcrowd.ts` (DOM-free, out of the boot, tested in
+    `tests/parkcrowd.test.ts`), handed to the crowd's spare slots by
+    parkstands3d.ts `registerStandsLife()` (life.ts `addPeople()`, which
+    now carries an idle's `when`): the brass band at the bandstand (`BAND`,
+    six seated players facing the benches, acts `brass` and `drum` in
+    acts.ts / crowdclips.ts) from 6 to 9:30 pm on five evenings in seven
+    (`BAND_HOURS`, `bandDay()`, `bandOn()`: seeded by the day, the same for
+    everyone), its listeners on the bandstand's benches (`listeners()`);
+    the Lakehouse Café's diners at its tables from 8 am to 6 pm
+    (`DINERS`, `SEATED`, `chairsOf()`, `CAFE_HOURS`) and its waiter on a
+    round from the door (`waiter()`, `WAITER_STOPS`; the strip's tables
+    stand either side of the door to keep it clear); the woodland walk's
+    walkers, joggers and dog walkers out along the ramble's paths and back
+    (`RAMBLE_PEOPLE`, `RAMBLE_DOGS`: parklife.ts `lanePerson()`; the dogs
+    drawn with the others by parklife3d.ts). The band's chairs, stands and
+    instruments are drawn only while it plays, and `BAND_NOW` tells
+    sound.ts it is: the band's march (ambience `band`), the café's murmur
+    and cups by day (`cafe`), the grand terrace's fountain in `fountain`.
+    The bandstand's lanterns light at night (small, under the bloom's
+    threshold). `?bench` has a `park-terrace` view.
   - **Sector 7 Stadium was removed** (2026-11-22, the owner's call: room
     in the boot, and the place wasn't wanted; CLAUDE.md's retired list).
     Its bowl, masts, screen, gate and panel, its car park and one-way loop,
