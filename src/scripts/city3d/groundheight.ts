@@ -31,7 +31,7 @@ import { KART_PARK } from './kartpark';
 import { KARTS2, KART2_LAND } from './kartswitch';
 import { footbridgeY } from './liberty';
 import { swingY } from './swingbridge';
-import { JETTY, onJetty, terraceY } from './westlake';
+import { JETTY, LAKEHOUSE, bridgeY, grandY, onCafeDeck, onJetty, terraceY } from './westlake';
 import { civicY } from './civic';
 import { viaductY } from './viaground';
 import { skyDeckY } from './skydeck';
@@ -169,7 +169,14 @@ export const GROUND_LAYERS: GroundLayer[] = [
   { id: 'turntable', how: 'take', at: (x, z, _y, g) => (g.slab && Math.hypot(x - DISC.x, z - DISC.z) < DISC.r ? SLAB + DISC.top : null) },
   // Westlake Park's jetty and its lakeside terraces (westlake.ts), Sector 7 Tower's sky deck (skydeck.ts)
   { id: 'jetty', how: 'lift', at: (x, z) => (onJetty(x, z) ? SLAB + JETTY.y : null) },
-  { id: 'terrace', how: 'lift', at: (x, z) => lift(terraceY(x, z), SLAB) },
+  // (the terraces step down the lake's embankment to the water, below the lawn: taken, not lifted, Phase 3b)
+  { id: 'terrace', how: 'take', at: (x, z) => lift(terraceY(x, z), SLAB) },
+  // (its grand terrace's sunken plaza and the steps down to it, below the lawn: taken, Phase 3b)
+  { id: 'grand', how: 'take', at: (x, z) => lift(grandY(x, z), SLAB) },
+  // (and its bridges' decks, over the arm and the inlet: docs/westlake-plan.md Phase 3a)
+  { id: 'park-bridge', how: 'lift', at: (x, z) => lift(bridgeY(x, z), SLAB) },
+  // (and the Lakehouse Café's deck out over the inlet, Phase 6)
+  { id: 'cafe-deck', how: 'lift', at: (x, z) => (onCafeDeck(x, z) ? SLAB + LAKEHOUSE.deckY : null) },
   { id: 'skydeck', how: 'lift', at: (x, z, yNow) => lift(skyDeckY(x, z, yNow - SLAB), SLAB) },
   // City Hall's and the courthouse's steps and porticos' floors (civic.ts, docs/civic-plan.md): heights of their own
   { id: 'civic', how: 'lift', at: (x, z) => civicY(x, z) },

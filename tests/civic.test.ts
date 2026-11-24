@@ -3,6 +3,7 @@
 // joining the park's; nothing on the lake; the park's own trees, lamps, benches and beds kept off it; one line from
 // City Hall's door over the zebra and down Uptown's lane to the plaza's cross.
 import { test } from 'node:test';
+import { PARK_TREES } from '../src/scripts/city3d/parktrees';
 import assert from 'node:assert/strict';
 import {
   AXIS,
@@ -23,7 +24,7 @@ import {
   type Pt,
   type Rect,
 } from '../src/scripts/city3d/civic';
-import { BENCHES, BIG, GATES, LOOP_OUT, MALL, PARK_LAMPS, PARK_TREES, PATHS, ZS, distToLine, inLake, inPark, onPath } from '../src/scripts/city3d/westlake';
+import { BENCHES, BIG, GATES, LOOP_OUT, MALL, PARK_LAMPS, PATHS, ZS, distToLine, inLake, inPark, onPath } from '../src/scripts/city3d/westlake';
 import { MALL_BEDS, PLANTERS, WALLS, WALL } from '../src/scripts/city3d/gardens';
 import { PARK_EDGE_TREES } from '../src/scripts/city3d/ringstreet';
 import { AXIS_X, AXIS_ZEBRAS, UPTOWN_LANES } from '../src/scripts/city3d/uptown';

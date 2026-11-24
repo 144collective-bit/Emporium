@@ -28,23 +28,29 @@ import {
   BENCHES,
   BIG,
   JETTY,
+  WATER_Y,
+  bridgeY,
+  onGrand,
+  onOverlook,
+  nearStands,
   LOOP_OUT,
   MALL,
-  PARK_TREES,
-  RING_IN,
   GARDEN_SITE,
   Z0,
   inLake,
   inPark,
-  inset,
-  lakeLine,
+  lakeCoreLine,
+  nearRock,
+  loopLine,
+  ringLine as ringWalkLine,
   onPath,
   type Pt,
 } from './westlake';
 import { HALL, inCivic } from './civic';
+import { BUILT, baked } from './baked';
 
 /** What a person in the park is doing at a moment: where, facing (0 is +z), standing (or seat) height, the crowd clip, how fast */
-export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic' | 'row' | 'pedal' | 'shoot' | 'swing' | 'golf' | 'putt';
+export type ParkClip = 'walk' | 'jog' | 'look' | 'idle' | 'chat' | 'sit' | 'picnic' | 'row' | 'pedal' | 'shoot' | 'swing' | 'golf' | 'putt' | 'serve';
 export interface Moment {
   x: number;
   z: number;
@@ -122,15 +128,15 @@ export const LANES: Lane[] = (() => {
   const out: Lane[] = [];
   const lane = (id: string, pts: Pt[], dir: 1 | -1, pace: number, count: number, dogs: number[] = []) => out.push({ id, loop: loopOf(pts), dir, pace, count, dogs });
   // The lake loop (1.1 either side of its line): walkers 0.35 off its middle, joggers 0.8, either way
-  lane('loop-in', lakeLine(LOOP_OUT - 0.35, 240), 1, WALK_PACE, 4, [1]);
-  lane('loop-out', lakeLine(LOOP_OUT + 0.35, 240), -1, WALK_PACE, 4, [2]);
-  lane('loop-jog-in', lakeLine(LOOP_OUT - 0.8, 240), -1, JOG_PACE, 2);
-  lane('loop-jog-out', lakeLine(LOOP_OUT + 0.8, 240), 1, JOG_PACE, 2);
+  lane('loop-in', loopLine(-0.35), 1, WALK_PACE, 4, [1]);
+  lane('loop-out', loopLine(0.35), -1, WALK_PACE, 4, [2]);
+  lane('loop-jog-in', loopLine(-0.8), -1, JOG_PACE, 2);
+  lane('loop-jog-out', loopLine(0.8), 1, JOG_PACE, 2);
   // The ring walk round the big block (1.2 either side)
-  lane('ring-in', inset(BIG, RING_IN + 0.35), 1, WALK_PACE, 4, [0]);
-  lane('ring-out', inset(BIG, RING_IN - 0.35), -1, WALK_PACE, 4, [3]);
-  lane('ring-jog-in', inset(BIG, RING_IN + 0.85), -1, JOG_PACE, 3);
-  lane('ring-jog-out', inset(BIG, RING_IN - 0.85), 1, JOG_PACE, 2);
+  lane('ring-in', ringWalkLine(-0.35), 1, WALK_PACE, 4, [0]);
+  lane('ring-out', ringWalkLine(0.35), -1, WALK_PACE, 4, [3]);
+  lane('ring-jog-in', ringWalkLine(-0.85), -1, JOG_PACE, 3);
+  lane('ring-jog-out', ringWalkLine(0.85), 1, JOG_PACE, 2);
   // The Mall, up one side and down the other
   lane('mall', thin([[MALL.x, HALL.rear[1] - 1.2], [MALL.x, Z0 + 1.2]], 1.0), 1, WALK_PACE, 6, [3]);
   return out;
@@ -157,10 +163,27 @@ function walkerAt(w: Walker, t: number, out: Moment, ahead = 0, side = 0) {
   out.x = scratch.x - dz * side;
   out.z = scratch.z + dx * side;
   out.ry = Math.atan2(dx, dz);
-  out.y = SLAB;
+  // (up over a bridge's deck where the loop crosses the arm or the inlet)
+  out.y = SLAB + (bridgeY(out.x, out.z) ?? 0);
   out.clip = l.pace > 1 ? 'jog' : 'walk';
   out.speed = l.pace;
   return out;
+}
+
+/** A dog on its lead ahead of walker `w` (`LEAD`) */
+function dogAt(w: Walker) {
+  const m = moment();
+  return (t: number, o: { x: number; z: number; ry: number; speed: number }) => {
+    walkerAt(w, t, m, LEAD.ahead, LEAD.side);
+    return Object.assign(o, { x: m.x, z: m.z, ry: m.ry, speed: m.speed });
+  };
+}
+/** One person out along an open path and back (`off` either side of its middle), `frac` of the way round at t = 0, and their dog if they walk one (the woodland walk's, parkcrowd.ts) */
+export function lanePerson(id: string, pts: Pt[], off: number, pace: number, frac: number, trim: boolean, dog: boolean) {
+  const loop = loopOf(thin(pts, off));
+  const w: Walker = { lane: { id, loop, dir: 1, pace, count: 1, dogs: [] }, u0: frac * loop.len };
+  const person: ParkPerson = { id, trim, at: (t, out) => walkerAt(w, t, out) };
+  return { person, dog: dog ? dogAt(w) : null };
 }
 
 /* ---------- Picnics ---------- */
@@ -173,8 +196,9 @@ export interface Picnic {
   /** Who's sitting round it: where and facing */
   people: { x: number; z: number; ry: number }[];
 }
-/** In the glades: on the big block's lawns, well off the paths, the water, the formal garden and every tree; seeded */
-export const PICNICS: Picnic[] = (() => {
+/** In the glades: on the big block's lawns, well off the paths, the water, the formal garden and every tree; seeded, worked out once at the build (baked) */
+export const PICNICS: Picnic[] = baked('park-picnics', BUILT ? undefined : () => {
+  const cm = (v: number) => Math.round(v * 1000) / 1000;
   let s = 4242;
   const r = () => ((s = (s * 16807) % 2147483647) - 1) / 2147483646;
   const out: Picnic[] = [];
@@ -182,9 +206,8 @@ export const PICNICS: Picnic[] = (() => {
   const [z0, z1] = [Math.min(...BIG.map((p) => p[1])), Math.max(...BIG.map((p) => p[1]))];
   for (let tries = 0; tries < 4000 && out.length < 9; tries++) {
     const p: Pt = [x0 + r() * (x1 - x0), z0 + r() * (z1 - z0)];
-    if (!inPark(p, 4) || onPath(p, 3.2) || inCivic(p, 4) || inLake(p[0], p[1], LOOP_OUT + 3.5)) continue;
+    if (!inPark(p, 4) || onPath(p, 3.2) || inCivic(p, 4) || inLake(p[0], p[1], LOOP_OUT + 3.5) || nearRock(p, 2.5) || onGrand(p[0], p[1], -3) || onOverlook(p[0], p[1], 3) || nearStands(p, 3)) continue;
     if (p[0] > GARDEN_SITE[0] - 5 && p[0] < GARDEN_SITE[2] + 5 && p[1] > GARDEN_SITE[1] - 5 && p[1] < GARDEN_SITE[3] + 5) continue;
-    if (PARK_TREES.some((t) => Math.hypot(t.x - p[0], t.z - p[1]) < 3.2)) continue;
     if (out.some((o) => Math.hypot(o.at[0] - p[0], o.at[1] - p[1]) < 16)) continue;
     const ry = r() * Math.PI;
     const n = 2 + Math.floor(r() * 2);
@@ -194,15 +217,15 @@ export const PICNICS: Picnic[] = (() => {
       const [x, z] = [p[0] + Math.sin(a) * 0.95, p[1] + Math.cos(a) * 0.75];
       return { x, z, ry: Math.atan2(p[0] - x, p[1] - z) };
     });
-    out.push({ at: p, ry, half: [0.9, 0.7], people });
+    out.push({ at: [cm(p[0]), cm(p[1])], ry: cm(ry), half: [0.9, 0.7], people: people.map((q) => ({ x: cm(q.x), z: cm(q.z), ry: cm(q.ry) })) });
   }
   return out;
-})();
+});
 
 /* ---------- Boats ---------- */
 
-/** The water's top (westlake3d.ts lays it at SLAB + 0.04), and a seat's height in a boat over it */
-export const BOAT_Y = SLAB + 0.04;
+/** The water's top (westlake3d.ts lays it at SLAB + WATER_Y, down in its embankment: docs/westlake-plan.md Phase 3b), and a seat's height in a boat over it */
+export const BOAT_Y = SLAB + WATER_Y;
 export const BOAT_SEAT = 0.16;
 /** A boat's length and beam (rowing boat, swan) */
 export const HULL = { row: { l: 2.2, w: 0.9 }, swan: { l: 2.0, w: 1.15 } };
@@ -216,15 +239,13 @@ export interface Boat {
   at(t: number, out: { x: number; z: number; yaw: number }): { x: number; z: number; yaw: number };
 }
 const bp = { x: 0, z: 0, yaw: 0 };
-/** A ring this far in from the water's edge, along its normals (a radial offset would bunch the rings where the shore slants) */
+/**
+ * A ring this far in from the open water's edge, along its normals (a radial offset would bunch the rings where the
+ * shore slants): round the lake's body only, so the boats keep out of the arm and the inlet (docs/westlake-plan.md
+ * Phase 1)
+ */
 export function ringLine(d: number): Pt[] {
-  const edge = lakeLine(0, 240);
-  const wrap = [edge.at(-1)!, ...edge, edge[0]];
-  const a = offsetLine(wrap, d).slice(1, -1);
-  // (whichever side is the water's)
-  const b = offsetLine(wrap, -d).slice(1, -1);
-  const inside = (pts: Pt[]) => pts.filter((p) => inLake(p[0], p[1])).length;
-  return inside(a) >= inside(b) ? a : b;
+  return lakeCoreLine(-d, 240);
 }
 /** The rings the boats go round: this far in from the water's edge, the way round and the pace (a ring's boats spread evenly) */
 export const RINGS = [
@@ -314,27 +335,14 @@ export interface Dog {
   size: number;
   at(t: number, out: { x: number; z: number; ry: number; speed: number }): { x: number; z: number; ry: number; speed: number };
 }
-const COATS = ['#c8915a', '#2b2622', '#f2ede3', '#8a6a4a', '#d9c39a', '#5b4636'];
+export const COATS = ['#c8915a', '#2b2622', '#f2ede3', '#8a6a4a', '#d9c39a', '#5b4636'];
 export const DOGS: Dog[] = (() => {
   const out: Dog[] = [];
   let k = 0;
   WALKERS.forEach((w, i) => {
     const n = WALKERS.filter((v, j) => v.lane === w.lane && j < i).length;
     if (!w.lane.dogs.includes(n)) return;
-    const m = moment();
-    out.push({
-      walker: i,
-      coat: COATS[k % COATS.length],
-      size: [1, 0.8, 1.15, 0.9][k++ % 4],
-      at: (t, o) => {
-        walkerAt(w, t, m, LEAD.ahead, LEAD.side);
-        o.x = m.x;
-        o.z = m.z;
-        o.ry = m.ry;
-        o.speed = m.speed;
-        return o;
-      },
-    });
+    out.push({ walker: i, coat: COATS[k % COATS.length], size: [1, 0.8, 1.15, 0.9][k++ % 4], at: dogAt(w) });
   });
   return out;
 })();

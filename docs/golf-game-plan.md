@@ -19,7 +19,8 @@ Nothing is built until the owner signs off a phase; keep this plan up to date. T
 | Phase 1 | Go (2026-11-22); built, signed off (2026-11-23: "1") |
 | Phase 2 | Go (2026-11-23); built, signed off (2026-11-23: "3", hold before Phase 3) |
 | Phase 3 | Go (2026-11-23: "1"); built, signed off (2026-11-23: "1") |
-| Phase 4 | Go (2026-11-23: "1"); built, waiting for the owner's sign-off |
+| Phase 4 | Go (2026-11-23: "1"); built, signed off (2026-11-24) |
+| Phase 5 | Golf paused after Phase 4 (the owner's call, 2026-11-24): not started |
 
 ## What it is
 
@@ -159,7 +160,7 @@ aim's ring and line, the green's chevrons), 120 on the phone tier; `?bench`'s `g
 course. The boot unchanged (770.7 KB): all of it in the game's chunk and sound.ts's. The smoke's `golf` plays the 1st
 hole through to its card, `golf-touch` a phone's pull-back swing.
 
-### Phase 5 (later, the owner's to choose)
+### Phase 5 (later, the owner's to choose; golf paused after Phase 4, 2026-11-24)
 
 The daily challenge (closest to the pin on a par 3), the practice range's and putting green's games, records and
 boards ready for the game server, a caddie's tip.

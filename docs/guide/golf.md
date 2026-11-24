@@ -151,7 +151,7 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   the driver picked first off a tee only (`pickClub()`); Degen put back where he stood at the door, facing it
   (walk.ts `golfFrom`). Missions `tee-off`, `birdie`, `nine-holes` and badges `golf-18`, `birdies-10`, `ace-1`,
   `under-par` (missions.ts).
-  Phase 4 (phones, pads and polish) built: **touch** (shown on a coarse pointer, golf.css): ◀ ▶ aim, Club ▲ ▼, View in
+  Phase 4 (phones, pads and polish) built and signed off (2026-11-24; golf paused there, the owner's call): **touch** (shown on a coarse pointer, golf.css): ◀ ▶ aim, Club ▲ ▼, View in
   a row over the meter (`.golf-touch`, `.golf-tb`), and the swing's **pull-back** anywhere over the course between the
   HUD's blocks and that row (`.golf-pull`: down from where the finger went is the power, full at `PULL`'s share of
   the screen's height, past it to the meter's top; its lean off straight down the accuracy, as a slingshot's: right a
