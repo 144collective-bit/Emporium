@@ -1220,8 +1220,8 @@ function drawShops(b: Batch, low: boolean) {
 /* ---------- The shops you own under the deck, from the save (docs/brutalist-plan.md Phase 7b) ---------- */
 
 /** Lit warm inside, a little by day (minimal bloom: as the glass it's drawn over) */
-const PANE = lit(toon('#efe4cc', { emissive: '#ffe2b4' }), 0.18, 0.9);
-const MACHINE = toon('#e7e4dc');
+const PANE = lit(toon('#c4ab84', { emissive: '#ffd9a0' }), 0.12, 0.8);
+const MACHINE = toon('#f2f1ec');
 const PORT_RIM = toon('#9aa1a8');
 const PORT = toon('#3a4654');
 const SHELF = toon('#6f6a62');
@@ -1268,7 +1268,7 @@ function registerDeckShops(scene: THREE.Scene | null, tick?: (f: Tick) => void) 
   const g = new THREE.Group();
   g.name = 'south-blocks deck shops';
   scene.add(g);
-  const drums = new THREE.InstancedMesh(new THREE.CircleGeometry(PORT_R * 0.8, 10, 0, Math.PI), LAUNDRY, Math.max(...WASH.machines));
+  const drums = new THREE.InstancedMesh(new THREE.CircleGeometry(PORT_R * 0.62, 10, 0, Math.PI), LAUNDRY, Math.max(...WASH.machines));
   drums.frustumCulled = false;
   drums.count = 0;
   scene.add(drums);
