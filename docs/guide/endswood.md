@@ -246,11 +246,11 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   landing, in the den), brass wall lights by the front door (`sconce()`), reading lights on swing arms over the
   bedsides, tall plants (`potted()` draws a plant 0.9 or taller as a tall one: the lounge's front corner, the bedroom,
   the landing). They reuse the palette's colours: the house's draw calls didn't change.
-  **The house rebuilt** (the owner's call, 2026-11-23) is planned in `docs/house-plan.md`. Phase 1 is built: `HOUSE`
+  **The house rebuilt** (the owner's call, 2026-11-23) is planned in `docs/house-plan.md`. Phase 1 is live: `HOUSE`
   is 10.4 by 7.5 (it was 9 by 6.5), its back and west wall where they were, grown east and north; the front door in the
   middle of its front, the side door on its east wall. The east lawn starts `LAWN_SET` back from the house's front so
   the bollards (four by the house, five by the workshop) stand clear of the drive. The rooms are re-laid in
-  `homerooms.ts` with room to breathe. Phase 2 (the turned stair, walked) is built: `STAIR` in `home.ts` (the stair
+  `homerooms.ts` with room to breathe. Phase 2 (the turned stair, walked) is live: `STAIR` in `home.ts` (the stair
   hall in the front east corner, its two flights, the half landing, the spine, the stair's window), its floor
   `stairY()` (asked through `homeFloorY()`), its rails `stairRails()` (in `homeWall()`), the camera open over its well
   (`homeCamera()`), its foot waiting while the street loads (`STAIR_GATE`, set by index.ts with the curtains); drawn by

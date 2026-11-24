@@ -41,7 +41,7 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    roof and terrace with it; the compound's things round it moved to fit; every room re-laid in the bigger floors with
    space to breathe (`homerooms.ts`), the stair hall's place kept clear for Phase 2 (the fades stay until then);
    `npm test`, `npm run test:wide`, the smoke run; shots.
-2. **The turned stair, walked.** *Built, waiting for the owner's sign-off.* In the stair hall in the front east
+2. **The turned stair, walked.** *Signed off by the owner and live (2026-11-24).* In the stair hall in the front east
    corner (`STAIR` in `home.ts`, 1.9 by 2.4): the first flight up the east wall toward the front, the half landing
    across the front wall under the stair's own window (in the front, as it is outside: `houseWindows()`, the window
    east of the door now stops at the stair hall), the turn, the second flight back beside the first up to the landing;
