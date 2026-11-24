@@ -61,6 +61,8 @@ interface SentMesh {
 export interface BuiltSite {
   id: string;
   meshes: SentMesh[] | null;
+  /** How long it took the worker to build (ms): a slow site keeps its near pieces (tileplan.ts `keepsNear()`) */
+  ms?: number;
 }
 type FromWorker = { ready: string[]; loaded?: string } | { failed: string } | BuiltSite;
 
@@ -120,7 +122,9 @@ export function serveSites(scope: Scope, init: SiteInit) {
     const s = sites.get(id);
     if (!s) return scope.postMessage({ id, meshes: null });
     const g = new THREE.Group();
+    const t0 = performance.now();
     s.build(g);
+    const ms = performance.now() - t0;
     g.updateMatrixWorld(true);
     const meshes: SentMesh[] = [];
     const transfer = new Set<ArrayBuffer>();
@@ -144,7 +148,7 @@ export function serveSites(scope: Scope, init: SiteInit) {
       transfer.add(index.buffer as ArrayBuffer);
       meshes.push({ key, matrix: m.matrixWorld.toArray(), layers: m.layers.mask, cast: m.castShadow, receive: m.receiveShadow, order: m.renderOrder, lod: m.userData.lod, attrs, index });
     }
-    scope.postMessage({ id, meshes }, [...transfer]);
+    scope.postMessage({ id, meshes, ms }, [...transfer]);
   };
   scope.postMessage({ ready: [...sites.keys()] });
 }

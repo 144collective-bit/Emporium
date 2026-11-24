@@ -146,6 +146,10 @@ export interface TileBatches {
   regained(tile: string): void;
   /** The sites whose near pieces a tile let go */
   lostSites(tile: string): string[];
+  /** The bytes a site's near pieces hold in the shared materials (what letting them go would free) */
+  nearBytesOf(site: string): number;
+  /** A site's near pieces never let go from now on (a slow site: tilework.ts) */
+  keep(site: string): void;
   /** Bytes of near pieces that could be let go, held now */
   heldBytes(): number;
 }
@@ -523,7 +527,9 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
     p.set.holes++;
   }
 
-  const evictable = (p: Piece) => p.lod === 'near' && p.site !== '' && !!p.set.bm.material && !!(p.set.bm.material as THREE.Material).userData.shared;
+  // The sites whose near pieces are never let go
+  const kept = new Set<string>();
+  const evictable = (p: Piece) => p.lod === 'near' && p.site !== '' && !kept.has(p.site) && !!p.set.bm.material && !!(p.set.bm.material as THREE.Material).userData.shared;
 
   /** What a tile past the haze lets go: everything a site drew in the shared materials, whatever its level */
   const losable = (p: Piece) => p.site !== '' && !!(p.set.bm.material as THREE.Material)?.userData.shared;
@@ -632,6 +638,12 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       return out;
     },
     lostSites: (key) => [...(tiles.get(key)?.lost ?? [])],
+    nearBytesOf(site) {
+      let n = 0;
+      for (const t of tiles.values()) if (t.sites.has(site)) for (const p of t.pieces) if (p.site === site && evictable(p)) n += p.bytes;
+      return n;
+    },
+    keep: (site) => void kept.add(site),
     heldBytes: () => {
       let n = 0;
       for (const t of tiles.values()) for (const p of t.pieces) if (evictable(p)) n += p.bytes;

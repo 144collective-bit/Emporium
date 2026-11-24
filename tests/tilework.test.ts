@@ -7,6 +7,7 @@ import * as THREE from 'three';
 import { createTileWork, site } from '../src/scripts/city3d/tilework';
 import { tileBatch } from '../src/scripts/city3d/tilebatch';
 import { tilesNear } from '../src/scripts/city3d/tiles';
+import { SLOW_SITE_MS } from '../src/scripts/city3d/tileplan';
 
 const paint = new THREE.MeshBasicMaterial();
 paint.userData.shared = true;
@@ -154,4 +155,52 @@ test('a site across tiles that let go runs once for them all, and a tile shows a
   assert.equal(runs.filter((r) => r === 'small').length, 2);
   assert.equal(works.stats().rebuilt, 3);
   assert.equal(works.stats().released, 0);
+});
+
+test('a slow site keeps its near pieces when its tile is far; a quick one beside it lets go and is built again', () => {
+  const runs: string[] = [];
+  const at = (into: THREE.Object3D, x: number) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1).translate(x, 0.5, 15), paint);
+    m.userData.batched = true;
+    m.userData.lod = 'near';
+    into.add(m);
+  };
+  site('home', [13, 13, 17, 17], (into) => {
+    runs.push('home');
+    at(into, 15);
+  });
+  // Far east, on two tiles: one site slow to build (past SLOW_SITE_MS), one quick
+  site('slow', [613, 13, 617, 17], (into) => {
+    runs.push('slow');
+    const t = performance.now();
+    while (performance.now() - t < SLOW_SITE_MS + 10);
+    at(into, 615);
+  });
+  site('quick', [633, 13, 657, 17], (into) => {
+    runs.push('quick');
+    for (let k = 0; k < 20; k++) at(into, 635 + k);
+  });
+  // (a box's near piece, in bytes: the budget's share fits the slow site's one box, the quick site's twenty are over it)
+  const probe = new THREE.Scene();
+  const g = new THREE.Group();
+  probe.add(g);
+  at(g, 15);
+  const box = tileBatch(probe, [probe]);
+  box.add([g], { site: 'probe' });
+  const B = box.nearBytesOf('probe');
+  assert.ok(B > 0);
+  const scene = new THREE.Scene();
+  const works = createTileWork(scene, { budget: 4 * B + 1, compile: () => {} });
+  const tiled = tileBatch(scene, [scene, ...works.boot(tilesNear(15, 15, 40))]);
+  works.attach(tiled);
+  works.want(630, 15, 60);
+  assert.ok(works.stats().kept > 0);
+  tiled.update(15, 30, 15, 100);
+  works.step(0, 15, 30, 15, 0.016, 100);
+  // Only the quick site's tile let go; coming back, only it runs again
+  assert.equal(works.stats().released, 1);
+  works.step(1e6, 630, 30, 15, 0.016, 100);
+  assert.equal(works.stats().released, 0);
+  assert.equal(runs.filter((r) => r === 'slow').length, 1);
+  assert.equal(runs.filter((r) => r === 'quick').length, 2);
 });

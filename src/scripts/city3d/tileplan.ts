@@ -81,6 +81,17 @@ export interface HeldTile {
   near: boolean;
 }
 
+/** A site that takes longer than this to build (ms) keeps its near pieces once built: built again as you came back,
+ * it would be most of a frame (memcheck's phone: Crestmont's mansion-8 194 ms, Degen's home 156) */
+export const SLOW_SITE_MS = 60;
+/** What the slow sites may keep, a share of the tier's near budget (on top of it: what they keep isn't let go) */
+export const KEEP_SHARE = 0.25;
+
+/** Whether a site built in `ms`, its near pieces `bytes`, keeps them, with `kept` bytes kept by others already */
+export function keepsNear(ms: number, bytes: number, kept: number, budget: number) {
+  return ms > SLOW_SITE_MS && bytes > 0 && kept + bytes <= budget * KEEP_SHARE;
+}
+
 /**
  * The tiles to let go of their near pieces: none while what's held fits
  * `budget`; past it, the furthest first until it fits, never one drawn near

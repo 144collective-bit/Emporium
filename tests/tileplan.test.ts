@@ -3,7 +3,7 @@
 // first past the budget, never near the camera, and built again before they're needed.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { KEEP_LEAD, LOOK_AHEAD, REBUILD_LEAD, bootSites, focusOf, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toRebuild, toRelease, type HeldTile, type SiteArea, HAZE_SEEN, HORIZON_BACK, HORIZON_OUT, hazeHorizon, toReturn, toVanish } from '../src/scripts/city3d/tileplan';
+import { KEEP_LEAD, KEEP_SHARE, SLOW_SITE_MS, keepsNear, LOOK_AHEAD, REBUILD_LEAD, bootSites, focusOf, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toRebuild, toRelease, type HeldTile, type SiteArea, HAZE_SEEN, HORIZON_BACK, HORIZON_OUT, hazeHorizon, toReturn, toVanish } from '../src/scripts/city3d/tileplan';
 import { TILE, tileKey, tileOf, tilesNear } from '../src/scripts/city3d/tiles';
 
 let seed = 7;
@@ -118,4 +118,15 @@ test('past the haze a tile lets everything go, and comes back before it could sh
   assert.deepEqual(toReturn(gone, Infinity), ['r', 'p', 'q']);
   // A tile let go at the margin isn't asked back at once
   assert.deepEqual(toReturn([t('x', 200 + HORIZON_OUT + 1, { gone: true })], 200), []);
+});
+
+test('a slow site keeps its near pieces, while what the slow sites keep fits their share of the budget', () => {
+  const MB = 2 ** 20;
+  assert.equal(keepsNear(SLOW_SITE_MS + 1, MB, 0, 32 * MB), true);
+  // (a quick one is built again as it comes back)
+  assert.equal(keepsNear(SLOW_SITE_MS - 1, MB, 0, 32 * MB), false);
+  // (nothing near to keep)
+  assert.equal(keepsNear(200, 0, 0, 32 * MB), false);
+  // (past the share: the slow sites already keep most of it)
+  assert.equal(keepsNear(200, 2 * MB, 32 * MB * KEEP_SHARE - MB, 32 * MB), false);
 });

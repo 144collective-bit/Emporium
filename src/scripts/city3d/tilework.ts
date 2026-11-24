@@ -24,7 +24,7 @@ import type { TileBatches } from './tilebatch';
 import type { BuiltSite, SiteWorker } from './sitework';
 import { boxInView, tileKey, type Plane, type Rect, type TileIx } from './tiles';
 import { inTexScope } from './texscope';
-import { HORIZON_OUT, bootSites, focusOf, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toRebuild, toRelease, toReturn, toVanish } from './tileplan';
+import { HORIZON_OUT, bootSites, focusOf, keepsNear, keyRect, nextSite, rectDistance, sitesNear, tilesOfRect, toRebuild, toRelease, toReturn, toVanish } from './tileplan';
 
 export interface Site {
   id: string;
@@ -61,7 +61,7 @@ export interface TileWork {
   want(x: number, z: number, r: number): void;
   /** Build now everything waiting in a view (the intro) */
   wantView(planes: readonly Plane[], far: number, x: number, y: number, z: number): void;
-  stats(): { built: number; waiting: number; atBoot: number; released: number; held: number; budget: number; rebuilt: number; gone: number; goneBytes: number; returned: number; trimmed: number; bootMs: number; laterMs: number; slowest: { ms: number; id: string }; offMain: number };
+  stats(): { built: number; waiting: number; atBoot: number; released: number; held: number; budget: number; kept: number; rebuilt: number; gone: number; goneBytes: number; returned: number; trimmed: number; bootMs: number; laterMs: number; slowest: { ms: number; id: string }; offMain: number };
 }
 
 /** Past the haze: the meshes are made smaller once this much has been let go, and no more often than this (ms) */
@@ -123,8 +123,22 @@ export function createTileWork(
   let offMain = 0;
   const byWorker = (s: Site) => !!worker?.can(s.id) && !here.has(s.id);
 
-  /** Run a site (or join one the worker built, `g`); `keep` limits what's kept (building near pieces again) */
-  function run(s: Site, keep?: (tile: string, lod: string) => boolean, made0?: THREE.Group) {
+  // The slow sites that keep their near pieces (tileplan.ts `keepsNear()`), what they hold, and the boot's times
+  const keeping = new Set<string>();
+  let kept = 0;
+  const bootTimes: [string, number][] = [];
+  /** A site that took `ms` to build: if it's slow, its near pieces are kept from now on (never built again) */
+  function slow(id: string, ms: number) {
+    if (!tiled || keeping.has(id) || ms <= 0) return;
+    const bytes = tiled.nearBytesOf(id);
+    if (!keepsNear(ms, bytes, kept, opts.budget)) return;
+    keeping.add(id);
+    tiled.keep(id);
+    kept += bytes;
+  }
+
+  /** Run a site (or join one the worker built, `g`, in `workerMs`); `keep` limits what's kept (building near pieces again) */
+  function run(s: Site, keep?: (tile: string, lod: string) => boolean, made0?: THREE.Group, workerMs?: number) {
     const t0 = performance.now();
     const g = made0 ?? new THREE.Group();
     scene.add(g);
@@ -137,6 +151,7 @@ export function createTileWork(
     const ms = performance.now() - t0;
     laterMs += ms;
     if (ms > slowest.ms) slowest = { ms, id: s.id };
+    slow(s.id, made0 ? (workerMs ?? 0) + ms : ms);
   }
 
   function build(i: number) {
@@ -162,7 +177,7 @@ export function createTileWork(
         continue;
       }
       const [s] = queue.splice(i, 1);
-      run(s, undefined, g);
+      run(s, undefined, g, b.ms);
       built++;
       offMain++;
     }
@@ -229,6 +244,7 @@ export function createTileWork(
   return {
     attach(t) {
       tiled = t;
+      for (const [id, ms] of bootTimes.splice(0)) slow(id, ms);
     },
     boot(tiles) {
       const t0 = performance.now();
@@ -240,7 +256,9 @@ export function createTileWork(
         const g = new THREE.Group();
         g.userData.site = s.id;
         scene.add(g);
+        const t1 = performance.now();
         s.build(g);
+        bootTimes.push([s.id, performance.now() - t1]);
         groups.push(g);
         built++;
       }
@@ -361,6 +379,6 @@ export function createTileWork(
       queue.push(...more);
       return more.length;
     },
-    stats: () => ({ built, waiting: queue.length, atBoot, released: released.size, held: tiled?.heldBytes() ?? 0, budget: opts.budget, rebuilt, bootMs, laterMs, slowest, offMain, gone: gone.size, goneBytes, returned, trimmed: trimmedBytes }),
+    stats: () => ({ built, waiting: queue.length, atBoot, released: released.size, held: tiled?.heldBytes() ?? 0, budget: opts.budget, kept, rebuilt, bootMs, laterMs, slowest, offMain, gone: gone.size, goneBytes, returned, trimmed: trimmedBytes }),
   };
 }
