@@ -8,7 +8,8 @@ keep it up to date when what it describes changes.
 - **The next move** (the owner's ask, 2026-11-23, signed off: Riverside Raceway): to the south bank west of the Docks, on
   a new winding circuit about 2.2 times today's with a tunnel under a hill (`kartcircuit2.ts`, its site and ground `kartpark2.ts`,
   `npm run kart-fit`; Phases 0 to 3 done: drawn and raced behind `?karts=new`, `kartswitch.ts`, `kartcourse2.ts`,
-  `kart-track.ts`, `kartgrounds2-3d.ts`; `npm run smoke -- karts2`), built up as a real kart venue with night racing, a
+  `kart-track.ts`, `kartgrounds2-3d.ts`; `npm run smoke -- karts2`; its venue `kartvenue2.ts` / `kartvenue2-3d.ts`, Phases 4a
+  and 4b done: the workshops, the tyre store and the hire-kart garage), built up as a real kart venue with night racing, a
   river bus stop at its gate, records and trophies reset: `docs/kart-harbour-plan.md`. Until its switch, what's below describes the
   park as it stands.
 

@@ -22,6 +22,8 @@ import { CUTTING_HALF, hillAt, kart2Ground, kart2GroundAt } from './kartpark2';
 import { F_CUT, RIVER_COURSES, WALL2_T, gridSlots2Of } from './kartcourse2';
 import { F, frame, type Line } from './kartpark';
 import { buildFx, chainMesh } from './grime';
+import { CLUB } from './kartvenue2';
+import { registerVenue } from './kartvenue2-3d';
 import type { Tick } from './world';
 import { COVER, ROAD as PAL_ROAD } from './palette';
 
@@ -59,7 +61,8 @@ const RED = toon('#e23b3b');
 const TUNNEL_IN = toon('#2b2550');
 const CEILING = toon('#141226');
 const PORTAL = toon('#4a3f7a');
-const TYRE = toon('#17151f');
+const CLUB_A = toon(CLUB.a);
+const CLUB_B = toon(CLUB.b);
 const soft = (c: string) => neon(c, 0.5, 1.3);
 
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
@@ -473,10 +476,11 @@ function barriers(b: Batch, low: boolean, run: number[]) {
     }
     flush();
   }
-  // The tyre walls: stacks of two, a stack every 0.75 tiles
+  // The tyre walls: stacks of two, a stack every 0.75 tiles, painted in the club's colours (kartvenue2.ts CLUB, Phase 4a)
   b.detail(() => {
     const ring = new THREE.CylinderGeometry(0.33, 0.33, 0.24, low ? 6 : 9);
     let last: Pt | null = null;
+    let k = 0;
     for (const i of run) {
       const s = tyreSide(i);
       if (!s || !barrierOk(i, s)) continue;
@@ -484,7 +488,8 @@ function barriers(b: Batch, low: boolean, run: number[]) {
       if (last && Math.hypot(x - last[0], z - last[1]) < 0.72) continue;
       last = [x, z];
       const y = kart2GroundAt(x, z);
-      for (let h = 0; h < 2; h++) b.add(place(ring, x, y + 0.12 + h * 0.25, z), h ? WHITE : TYRE);
+      const paint = [CLUB_A, WHITE, CLUB_B, WHITE][k++ % 4];
+      for (let h = 0; h < 2; h++) b.add(place(ring, x, y + 0.12 + h * 0.25, z), paint);
     }
   });
 }
@@ -520,6 +525,8 @@ function catchFence(b: Batch, fxb: Batch) {
 }
 
 export function register({ low }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+  // The venue round it (Phase 4: kartvenue2-3d.ts)
+  registerVenue({ low });
   // The lawn over the site
   site('riverside lawn', [SITE2.x0, SITE2.z0, SITE2.x1, SITE2.z1], (into) => {
     const b = new Batch();

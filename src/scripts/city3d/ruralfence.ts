@@ -8,10 +8,12 @@
  */
 import { RURAL, RURAL_RUNS, type RuralRun } from './rural';
 import { VISITORS_DRIVE } from './airbase';
+import { CLUB_GAPS } from './golflift';
 import type { Rect } from './tiles';
 
-/** The drives that cross a country road's fence (the visitors' car park's at Northgate Air Base) */
-const DRIVES: Rect[] = [VISITORS_DRIVE];
+/** The drives that cross a country road's fence (the visitors' car park's at Northgate Air Base; the golf course's drive
+ * and footpath, golflift.ts) */
+const DRIVES: Rect[] = [VISITORS_DRIVE, ...CLUB_GAPS];
 import { atRun, loopCentre, riverSide } from './ruraldress';
 import type { Pt } from './streetplan';
 

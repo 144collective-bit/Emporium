@@ -123,7 +123,8 @@ function layCover() {
   // (off the footpaths and the Ridgeline Walk)
   for (const d of DRIFTS) d.clumps = d.clumps.filter((c) => !onTrail(c.x, c.z, 0.4) && !onGardenPath(c.x, c.z, 0.4) && !onWalk(c.x, c.z, 0.4));
   for (const [k, o] of OUTCROPS.entries()) OUTCROPS[k] = o.filter((c) => !onTrail(c.x, c.z, 0.6) && !onGardenPath(c.x, c.z, 0.6) && !onWalk(c.x, c.z, 0.6 + c.s * 0.5));
-  return { drifts: DRIFTS, outcrops: OUTCROPS };
+  // (a drift the paths cut down to less than a drift is left out)
+  return { drifts: DRIFTS.filter((d) => d.clumps.length >= 3), outcrops: OUTCROPS };
 }
 
 /* ---------- Footpaths between the roads ---------- */

@@ -4,7 +4,7 @@
  * centimetres to keep snapshots light. No DOM, no scene code.
  */
 import { MOD_LEVELS, type GunMods } from '../city3d/catalog';
-import { WEAPON_IDS, type WeaponId } from '../city3d/combat-sim';
+import { WEAPON_IDS, type WeaponId } from '../city3d/weapons';
 import { WORLD_BOUNDS } from '../city3d/layout';
 import { CAR_PAINTS, PLAYER_AIRCRAFT, PLAYER_BIKES, PLAYER_CARS, PLAYER_KARTS, type PaintId } from '../city3d/vehicleids';
 import { CEILING } from '../city3d/flight-sim';

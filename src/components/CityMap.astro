@@ -60,7 +60,7 @@ const spots: Record<SpotId, Spot> = {
   mall: { title: 'Starlight Mall', sub: 'Shopping mall' },
   hotel: { title: 'The Coralline', sub: 'Grand hotel' },
   civichall: { title: 'Civic Hall', sub: 'Crestmont' },
-  golfclub: { title: 'Crestmont Hills Club', sub: 'Country club' },
+  golfclub: { title: 'Knob Hill Golf Club', sub: 'Golf club' },
   overlook: { title: 'The Overlook', sub: 'The view' },
   reservoir: { title: 'The Reservoir', sub: 'In the hills' },
   asterly: { title: 'The Asterly', sub: 'Fine dining' },
@@ -1208,11 +1208,11 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
     <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
   </template>
 
-  <template data-panel-tpl="golfclub" data-marquee="Six holes on the slopes">
-    <p class="kicker"><span class="kicker-num">23</span> Crestmont</p>
-    <h2 id="city-panel-title" class="city-panel-title">Crestmont Hills Club</h2>
-    <p class="city-panel-text">Six holes up the hill. Golf coming soon.</p>
-    <button type="button" class="chip-link kart-walkin" data-crest-walkin>Walk in</button>
+  <template data-panel-tpl="golfclub" data-marquee="Eighteen holes over the Knob">
+    <p class="kicker"><span class="kicker-num">23</span> North-east</p>
+    <h2 id="city-panel-title" class="city-panel-title">Knob Hill Golf Club</h2>
+    <p class="city-panel-text">Eighteen holes over the hills past Crestmont. Walk in and Play golf at the door: a hole, a nine or all eighteen.</p>
+    <button type="button" class="chip-link kart-walkin" data-golf-walkin>Walk in</button>
   </template>
 
   <template data-panel-tpl="overlook" data-marquee="The whole city from the ridge">

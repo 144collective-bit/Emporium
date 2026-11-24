@@ -4,7 +4,7 @@
 // growing on them; the water held in by its banks and dams.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ASTERLY, CIVIC, CLUB, EASE, FAIRWAY, FENCE, FRINGE, HOLES, HOTEL, HOTEL_PALMS, OVERLOOK, RESERVOIR, SITE_CUT, SITE_DOORS, SITE_LEVELS, SITE_SOLIDS, SITE_SPAWNS, TALLEST, bunkersOf, onSite } from '../src/scripts/city3d/crestsites';
+import { ASTERLY, CIVIC, EASE, FENCE, HOTEL, HOTEL_PALMS, OVERLOOK, RESERVOIR, SITE_CUT, SITE_DOORS, SITE_LEVELS, SITE_SOLIDS, SITE_SPAWNS, TALLEST, onSite } from '../src/scripts/city3d/crestsites';
 import { BED, CREST_LAMPS, FLATS_X, BOULEVARD, nearHillRoad } from '../src/scripts/city3d/crestmont';
 import { KEPT } from '../src/scripts/city3d/estates';
 import { MANSIONS, onMansion } from '../src/scripts/city3d/mansions';
@@ -36,9 +36,8 @@ test('their ground: held level, off every road, mansion and each other, never a 
     for (const [x, z] of [[x0, z0], [x1, z0], [x0, z1], [x1, z1]]) assert.ok(Math.abs(naturalAt(x, z) - l.y) <= SITE_CUT);
     for (const o of SITE_LEVELS) if (o !== l && !(o.of && o.of === l.of)) assert.ok(apart(o.rect, l.rect, 2 * EASE));
   }
-  // The streets' own ground stays flat (the civic hall and the clubhouse sit at the Flats' level)
+  // The streets' own ground stays flat (the civic hall sits at the Flats' level)
   assert.equal(CIVIC.y, 0);
-  assert.equal(CLUB.y, 0);
 });
 
 test('the hotel on the block kept for it; the civic hall on the boulevard; all under the Emporium', () => {
@@ -57,26 +56,9 @@ test('the hotel on the block kept for it; the civic hall on the boulevard; all u
   }
 });
 
-test('the country club: six holes on the lower slopes, off the roads and the mansions', () => {
-  assert.equal(HOLES.length, 6);
-  for (const h of HOLES) {
-    for (const [x, z] of [h.tee, h.green]) {
-      assert.ok(!nearHillRoad(x, z, FAIRWAY + 2), `hole ${h.n} by a road`);
-      for (const m of MANSIONS) assert.ok(!inside(m.rect, x, z, EASE + FRINGE), `hole ${h.n} on ${m.id}`);
-      assert.ok(naturalAt(x, z) < 9, `hole ${h.n} off the lower slopes`);
-    }
-    // Along the fairway, clear of the roads and the mansions' ground
-    for (let t = 0; t <= 1; t += 0.05) {
-      const [x, z] = [h.tee[0] + (h.green[0] - h.tee[0]) * t, h.tee[1] + (h.green[1] - h.tee[1]) * t];
-      assert.ok(!nearHillRoad(x, z, FAIRWAY + 1));
-      for (const m of MANSIONS) assert.ok(!inside(m.rect, x, z, EASE + FAIRWAY - 1), `hole ${h.n}'s fairway on ${m.id}`);
-    }
-    assert.equal(bunkersOf(h).length, 2);
-  }
-  // No two holes' fairways run into each other
-  const along = (h: (typeof HOLES)[number]) => Array.from({ length: 21 }, (_, k) => [h.tee[0] + ((h.green[0] - h.tee[0]) * k) / 20, h.tee[1] + ((h.green[1] - h.tee[1]) * k) / 20]);
-  for (const [i, a] of HOLES.entries())
-    for (const b of HOLES.slice(i + 1)) for (const p of along(a)) for (const q of along(b)) assert.ok(Math.hypot(p[0] - q[0], p[1] - q[1]) > 2 * FAIRWAY - 1, `holes ${a.n} and ${b.n} run into each other`);
+test('the country club retired (docs/golf-plan.md Phase 4): no clubhouse, no holes, no door of its own on the hills', () => {
+  assert.ok(!SITE_DOORS.some((d) => (d.id as string) === 'golfclub'));
+  assert.ok(!('golfclub' in SITE_SPAWNS));
 });
 
 test('the overlook high on the ridge, the reservoir held in by its banks and dams', () => {
@@ -111,7 +93,7 @@ test('the overlook high on the ridge, the reservoir held in by its banks and dam
 });
 
 test('nothing grows on them, and no lamp stands there', () => {
-  const on = (x: number, z: number) => SITE_LEVELS.some((l) => inside(l.rect, x, z)) || HOLES.some((h) => Math.hypot(x - h.green[0], z - h.green[1]) < FRINGE) || inside(FENCE, x, z);
+  const on = (x: number, z: number) => SITE_LEVELS.some((l) => inside(l.rect, x, z)) || inside(FENCE, x, z);
   for (const p of [...OAKS, ...SCRUB]) assert.ok(!onSite(p.x, p.z), `planted on a landmark at ${p.x.toFixed(1)}, ${p.z.toFixed(1)}`);
   for (const p of PALMS) assert.ok(!on(p.x, p.z), `a palm on a landmark at ${p.x.toFixed(1)}, ${p.z.toFixed(1)}`);
   for (const [x, z] of CREST_LAMPS) assert.ok(!on(x, z));
@@ -120,7 +102,7 @@ test('nothing grows on them, and no lamp stands there', () => {
 test("the doors (the polish plan's Phase 7): one a place, on its ground by the building or the view, clear of everything solid, a step from where you arrive", () => {
   assert.deepEqual(
     SITE_DOORS.map((d) => d.id),
-    ['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse']
+    ['hotel', 'civichall', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse']
   );
   for (const d of SITE_DOORS) {
     for (const s of SOLIDS) assert.ok(!inside([s[0], s[1], s[2], s[3]], d.x, d.z), `${d.id}'s door in ${s.join()}`);
@@ -128,12 +110,11 @@ test("the doors (the polish plan's Phase 7): one a place, on its ground by the b
     const at = SITE_SPAWNS[d.id];
     assert.ok(Math.hypot(d.x - at.x, d.z - at.z) < 24, `${d.id}'s door far from where you arrive`);
   }
-  // Each by its building's front (the hotel's under the porte-cochère, the hall's in its colonnade, the clubhouse's on its terrace)
+  // Each by its building's front (the hotel's under the porte-cochère, the hall's in its colonnade)
   const by = (r: readonly number[], x: number, z: number, m: number) => inside([r[0] - m, r[1] - m, r[2] + m, r[3] + m], x, z);
   const door = (id: string) => SITE_DOORS.find((d) => d.id === id)!;
   assert.ok(by(HOTEL.porte, door('hotel').x, door('hotel').z, 0.1) && door('hotel').x < HOTEL.body[0]);
   assert.ok(by(CIVIC.hall, door('civichall').x, door('civichall').z, 1) && door('civichall').z > CIVIC.hall[3]);
-  assert.ok(by(CLUB.terrace, door('golfclub').x, door('golfclub').z, 0.1));
   assert.ok(inside(OVERLOOK.rect, door('overlook').x, door('overlook').z), 'the overlook\'s on its pad');
   assert.ok(door('reservoir').x < FENCE[0] && door('reservoir').z > FENCE[1] && door('reservoir').z < FENCE[3], "the reservoir's outside its fence on the west bank");
   // (THE ASTERLY's on the overlook's pad at its bridge, the premium upgrade's Phase 4)

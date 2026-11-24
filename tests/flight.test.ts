@@ -13,11 +13,11 @@ import {
   floorAt,
   hullAt,
   newFlight,
-  stepFly,
   type FlyInput,
   type FlyState,
   type FlyWorld,
 } from '../src/scripts/city3d/flight-sim';
+import { stepFly } from '../src/scripts/city3d/flight-step';
 import { AIRPORT_SOLIDS, HANGAR, HANGAR_DOOR, HANGAR_ROOF, HANGAR_SPOT, PROP_STAND, RUNWAY, STANDS, TERMINAL } from '../src/scripts/city3d/airfield';
 import { DEFAULT_PLANE, PLAYER_AIRCRAFT, cleanPlane, type PlaneId } from '../src/scripts/city3d/myplane';
 import { WORLD_BOUNDS } from '../src/scripts/city3d/layout';

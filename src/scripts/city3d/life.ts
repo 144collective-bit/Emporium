@@ -1283,6 +1283,10 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
   const outfitFor = (p: Person): Outfit => {
     const r = seeded(p.seed);
     if (p.kind === 'ride') return cityOutfit(r, { district: 'town', role: 'walk', kinds: ['hoodie'] });
+    // (the first spare slots, one of each kind, hold a golf club before a chunk fills them: so every kind's meshes
+    // carry the club for the golfers who come with the course's chunk, docs/golf-plan.md Phase 5)
+    const k = spare.indexOf(p);
+    if (k >= 0 && k < kinds.length) return { ...cityOutfit(r, { role: 'golfer', kinds: [kinds[k]] }), held: 'club' };
     // (where they'll be: a walker's block, a mover's place at the start of the clock, an idle's spot)
     let x = p.x;
     let z = p.z;
@@ -1297,7 +1301,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
       role = roleOf({ clip: m.clip, scale: p.park.scale, id: p.park.id });
     }
     const o = cityOutfit(r, { district: districtAt(x, z), role, kinds });
-    return phoneOf(p) ? { ...o, held: 'phone' } : shopper(p) ? { ...o, held: 'shopping' } : o;
+    return phoneOf(p) ? { ...o, held: 'phone' } : shopper(p) ? { ...o, held: 'shopping' } : role === 'golfer' ? { ...o, held: 'club' } : o;
   };
   const people3d = createCrowd(scene, people.map(outfitFor), { light: opts.light });
   // (a spare slot filled later takes its district's look: `addPeople()`)
@@ -1455,7 +1459,7 @@ function buildPeople(scene: THREE.Scene, opts: LifeOpts, crowd: Idle[], tick: (f
         const sc = p.park!.scale ?? PERSON_SCALE;
         const py = seated(c) ? m.y - (HIP_HEIGHT - 0.03) * sc : m.y;
         const clip = c === 'walk' ? walkClip : c === 'idle' ? idleClip : c;
-        const u = c === 'walk' || c === 'jog' ? p.walked / (strideOf(clip) * sc) + seed : playAt(clip);
+        const u = c === 'walk' || c === 'jog' ? p.walked / (strideOf(clip) * sc) + seed : m.since !== undefined ? m.since / secondsOf(clip) : playAt(clip);
         people3d.set(i, p.x, py, p.z, p.face, sc, clip, u);
       } else if (p.kind === 'walk' && standing) {
         // Stopped: watching you go by, or at a kerb (the `wait` row from the moment they stopped: a look both ways)

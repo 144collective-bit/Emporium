@@ -15,7 +15,7 @@
  */
 import * as THREE from 'three';
 import type { Combat, CombatDeps } from './combat';
-import { WEAPONS, weaponUnlocked, type WeaponId } from './combat-sim';
+import { WEAPONS, weaponUnlocked, type WeaponId } from './weapons';
 import { SKINS, type SkinId } from './guns';
 import { gunMods, ownsGun } from './tycoon';
 import { applyGunMods } from './catalog';
