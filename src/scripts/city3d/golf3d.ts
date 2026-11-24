@@ -21,7 +21,7 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { Batch, FONT_DISPLAY, canvasTex, fx, lit, neon, siteMat, toon } from './kit';
+import { Batch, FONT_DISPLAY, canvasTex, fx, lit, neon, paintsHalf, siteMat, toon } from './kit';
 import { hip } from './roofs3d';
 import { site } from './tilework';
 import { COVER, LAMP, LAMP_POST, ROAD, STONE } from './palette';
@@ -62,8 +62,11 @@ type Rect = [number, number, number, number];
 
 /* ---------- The turf's texture ---------- */
 
-/** Pixels a tile (phones get half: canvasTex) */
-export const TURF_SCALE = 2;
+/**
+ * Pixels a tile, on every tier: one (the owner's call, 2026-11-24, to keep the full tier's textures in their budget).
+ * Phones ask for two, as the texture is big enough for them to paint it at half (canvasTex), so both get one.
+ */
+export const TURF_SCALE = 1;
 const [X0, Z0, X1, Z1] = GOLF_RECT;
 /** How far apart a fairway's mown stripes are (tiles along it), and a green's */
 const FAIRWAY_STRIPE = 7;
@@ -301,7 +304,8 @@ let TURF_MAT: THREE.Material | null = null;
 /** The turf's material (made once: its texture painted, or downloaded as the build made it) */
 function turfMat() {
   if (!TURF_MAT) {
-    TURF = canvasTex(Math.round((X1 - X0) * TURF_SCALE), Math.round((Z1 - Z0) * TURF_SCALE), drawTurf);
+    const k = TURF_SCALE * (paintsHalf() ? 2 : 1);
+    TURF = canvasTex(Math.round((X1 - X0) * k), Math.round((Z1 - Z0) * k), drawTurf);
     TURF.anisotropy = 4;
     TURF_MAT = siteMat('golf-turf', toon('#ffffff', { map: TURF, alphaTest: 0.5 }));
   }
