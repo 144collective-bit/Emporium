@@ -56,7 +56,7 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    the first flight to the hatch (`ROOF_STEPS`), still a fade till Phase 3. `tests/home.test.ts` walks it up and down;
    the smoke run walks it up (`hometerrace`) and down (`homestairs`). The shell's floor slab is open over the well too.
    Draw calls unchanged: 313 desktop, 198 phone. Shots: `docs/house-shots/phase-2-*.webp`.
-3. **The den's and the roof's steps, walked.** *Built, waiting for the owner's sign-off.* The den's door under the
+3. **The den's and the roof's steps, walked.** *Signed off by the owner and live (2026-11-24).* The den's door under the
    second flight's high end stands open (its walnut leaf slid back into the wall, `DEN_STEPS.door`), and the den's
    steps go down under the stair as it turns (`DEN_STEPS`, `denY()` in `home.ts`): north under the second flight, the
    turn under the half landing, south under the first to the basement's floor at its foot, six risers a flight, walnut
@@ -85,7 +85,8 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    the floor, `houseWindows()`). The front door in a dark stone portal under a thin white canopy (`CANOPY`), timber
    under it and a downlight, his mark (the D) on a stone plaque on its lip lit in his neon, the neon either side (no
    house number: no numbers on signs). Downpipes with hoppers and shoes at four corners, steel vents in the render. The
-   garage, workshop, gatehouse and wall keep the loft's brick. Measured on the phone tier.
+   garage, workshop, gatehouse and wall keep the loft's brick. Draw calls unchanged: 313 desktop, 198 phone
+   (the phone tier). Shots: `docs/house-shots/phase-4-*.webp`.
 5. **The detail inside.** What a well-built house has: doors in frames with architraves and handles, cornices,
    skirting throughout, light switches and sockets, radiators under the windows, the kitchen's splashback and
    handles, the hall's mirror and console at the stair's foot, the stair's lights in the wall by the treads; the
