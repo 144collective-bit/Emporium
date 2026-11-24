@@ -100,7 +100,11 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   block but The Core, `LOBBIES` in southblocks.ts, cut out of its solids, `coverWithHall()`, walked on groundheight.ts's
   `lobby` layer, its lift doors calling the block's lift, `lobbyLiftDoor()`; drawn rough by `drawLobby()`); Degen's flat (Phase 7a: `FLAT` in Kite Point's 15th floor, its rooms walked once it's
   his, southsky.ts `setFlatOpen()`, its card flat-ui.ts, drawn by `drawFlat()`; Kite's solids hollowed round it for the
-  camera, `hollowAt()`); the glass
+  camera, `hollowAt()`); the two open shops run as places (Phase 7b: tycoon.ts places `e0` The Wash House and `e1`
+  Deck Stores, `ESTATE_PLACES`; their door spots `DECK_SHOP_DOORS`; once yours, their insides seen through the glass,
+  drawn from the save: southblocks.ts `DECK_LOOK` / `setDeckLook()`, set by index.ts from tycoon.ts `deckLook()`, drawn
+  by southblocks3d.ts `registerDeckShops()`, near only: the washers and dryers as many as its level has, the drums
+  turning, Deck Stores' shelves stocked in its goods' colours as full as they are); the glass
   and the slots dark glass by day, lit warm at night (`lit()` toons); the podium deck on its columns; Bunker Sound's door
   with its neon. Built with `lift: false` (kit.ts `Batch.build()`): they stand level on their plinths, not on the
   rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in solids.ts. Bench views `south-blocks` and
