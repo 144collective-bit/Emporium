@@ -1166,21 +1166,18 @@ function drawShops(b: Batch, low: boolean) {
     const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
     const t: Pt = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
     const at = (u: number, out: number): Pt => [a[0] + t[0] * u + n[0] * out, a[1] + t[1] * u + n[1] * out];
-    // (read left to right from in front: from the left of someone facing it)
-    const left = (u: number, out: number, w: number): [Pt, Pt] => {
-      const m = at(u, out);
-      const l: Pt = [-n[1], n[0]];
-      return [[m[0] + l[0] * w, m[1] + l[1] * w], [m[0] - l[0] * w, m[1] - l[1] * w]];
-    };
+    // (read left to right from in front: from the left of someone facing it; laid along the front itself, which needn't
+    // be square to n: a sign laid square to n dipped behind the fascia at one end)
+    const leftward = t[0] * -n[1] + t[1] * n[0] > 0;
+    const left = (u: number, out: number, w: number): [Pt, Pt] => (leftward ? [at(u + w, out), at(u - w, out)] : [at(u - w, out), at(u + w, out)]);
     k.all(() => {
       if (sh.name) {
         quad(b, at(0.1, 0.014), at(len - 0.1, 0.014), base + 0.05, base + 1.02, n, GLASS);
         quad(b, at(len - 0.8, 0.022), at(len - 0.2, 0.022), base, base + 1.0, n, DOOR);
-        // (the fascia a box board standing proud of the wall, so nothing on the wall's face shows through the sign on it)
-        along(b, at(0, 0.06), at(len, 0.06), 0.12, base + 1.04, base + 1.38, CONC_DARK);
+        quad(b, at(0, 0.016), at(len, 0.016), base + 1.04, base + 1.38, n, CONC_DARK);
         const row = DECK_SHOP_NAMES.indexOf(sh.name as (typeof DECK_SHOP_NAMES)[number]);
         const H = SHOP_ROW * DECK_SHOP_NAMES.length;
-        const [p0, p1] = left(len / 2, 0.126, Math.min(1.6, len / 2 - 0.15));
+        const [p0, p1] = left(len / 2, 0.026, Math.min(1.6, len / 2 - 0.15));
         texQuad(b, p0, p1, base + 1.07, base + 1.35, n, 1 - ((row + 1) * SHOP_ROW) / H, 1 - (row * SHOP_ROW) / H, SHOP_NEON);
       } else {
         quad(b, at(0.05, 0.02), at(len - 0.05, 0.02), base, base + 1.06, n, SHUTTER);
