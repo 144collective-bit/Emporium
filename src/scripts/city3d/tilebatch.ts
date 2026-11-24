@@ -64,6 +64,43 @@ interface MatSet {
   bm: THREE.BatchedMesh;
   /** Pieces deleted since the last `optimize()` (their room can be taken back) */
   holes: number;
+  /** The room deleted pieces left, until the next `optimize()`: a piece that fits one goes there (`takeSlot()`) */
+  free: Slot[];
+}
+
+/** A run of a batched mesh's vertices and the run of its indices that went with them */
+interface Slot {
+  v0: number;
+  vn: number;
+  i0: number;
+  in: number;
+}
+type GeoInfo = { vertexStart: number; reservedVertexCount: number; indexStart: number; reservedIndexCount: number };
+const geoInfo = (bm: THREE.BatchedMesh, id: number) => (bm as unknown as { _geometryInfo: GeoInfo[] })._geometryInfo[id];
+
+/** The free slot that fits `v` vertices and `i` indices best (the smallest), taken; what's left of it stays free */
+export function takeSlot(free: Slot[], v: number, i: number): Slot | null {
+  let best = -1;
+  for (let n = 0; n < free.length; n++) if (free[n].vn >= v && free[n].in >= i && (best < 0 || free[n].vn < free[best].vn)) best = n;
+  if (best < 0) return null;
+  const s = free[best];
+  if (s.vn > v && s.in > i) free[best] = { v0: s.v0 + v, vn: s.vn - v, i0: s.i0 + i, in: s.in - i };
+  else free.splice(best, 1);
+  return { v0: s.v0, vn: v, i0: s.i0, in: i };
+}
+
+/** A geometry added in a slot rather than after everything (only that run is uploaded, not the mesh moved up) */
+function addAt(bm: THREE.BatchedMesh, g: THREE.BufferGeometry, s: Slot) {
+  const f = bm as unknown as { _nextVertexStart: number; _nextIndexStart: number };
+  const [nv, ni] = [f._nextVertexStart, f._nextIndexStart];
+  f._nextVertexStart = s.v0;
+  f._nextIndexStart = s.i0;
+  try {
+    return bm.addGeometry(g, s.vn, s.in);
+  } finally {
+    f._nextVertexStart = nv;
+    f._nextIndexStart = ni;
+  }
 }
 
 /** What the merge made: the batched meshes, and how many tile pieces they hold */
@@ -346,12 +383,12 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         }
         need.set(inc.key, n);
       }
-    const grown = new Set<string>();
     const touched = new Set<MatSet>();
+    // One geometry a tile (and level), each incoming's
+    const made1 = new Map<Incoming, { keys: string[]; geos: THREE.BufferGeometry[] }>();
+    const byKey = new Map<string, THREE.BufferGeometry[]>();
     for (const inc of incoming.values()) {
       if (!inc.pieces.size) continue;
-      const site = inc.site;
-      // One geometry a tile (and level)
       const keys = [...inc.pieces.keys()];
       const geos = [...inc.pieces.values()].map((pl) => {
         if (pl.length === 1) return pl[0];
@@ -359,6 +396,44 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         for (const g of pl) g.dispose();
         return merged;
       });
+      made1.set(inc, { keys, geos });
+      if (sets.has(inc.key)) (byKey.get(inc.key) ?? byKey.set(inc.key, []).get(inc.key)!).push(...geos);
+    }
+    // Where each goes in a mesh that's there already: in the room a deleted piece left, if one fits (a site coming
+    // back fits its own old room), else after everything, the mesh compacted or grown first if there's no room
+    // (`fit()`: either uploads the whole mesh again, 0.6 s of one frame for 19 MB on memcheck's phone)
+    const slotted = new Map<THREE.BufferGeometry, Slot>();
+    for (const [key, all] of need) {
+      const set = sets.get(key);
+      if (!set) continue;
+      const geos = byKey.get(key) ?? [];
+      const plan = () => {
+        let v = 0;
+        let i = 0;
+        for (const g of geos) {
+          const s = set.free.length ? takeSlot(set.free, g.attributes.position.count, g.index!.count) : null;
+          if (s) slotted.set(g, s);
+          else {
+            v += g.attributes.position.count;
+            i += g.index!.count;
+          }
+        }
+        return [v, i];
+      };
+      const [v, i] = plan();
+      if (set.bm.unusedVertexCount < v || set.bm.unusedIndexCount < i) {
+        // (no room after everything: the slots given back, the mesh made room for all of them)
+        for (const g of geos) {
+          const s = slotted.get(g);
+          if (s) set.free.push(s);
+          slotted.delete(g);
+        }
+        fit(set, all.count, all.verts, all.indices);
+        plan();
+      } else fit(set, all.count, 0, 0);
+    }
+    for (const [inc, { keys, geos }] of made1) {
+      const site = inc.site;
       let set = sets.get(inc.key);
       const all = need.get(inc.key)!;
       if (!set) {
@@ -373,14 +448,10 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         bm.layers.mask = inc.layers;
         bm.renderOrder = inc.order;
         bm.userData.tiled = true;
-        sets.set(inc.key, (set = { bm, holes: 0 }));
+        sets.set(inc.key, (set = { bm, holes: 0, free: [] }));
         scene.add(bm);
         meshes.push(bm);
         made.push(bm);
-        grown.add(inc.key);
-      } else if (!grown.has(inc.key)) {
-        fit(set, all.count, all.verts, all.indices);
-        grown.add(inc.key);
       }
       touched.add(set);
       const bm = set.bm;
@@ -395,7 +466,8 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
           g.dispose();
           return;
         }
-        const geo = bm.addGeometry(g);
+        const slot = slotted.get(g);
+        const geo = slot ? addAt(bm, g, slot) : bm.addGeometry(g);
         const id = bm.addInstance(geo);
         const [t, lod] = keys[n].split('|') as [string, Lod];
         const tile = tileOfKey(t);
@@ -431,6 +503,7 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       // Take back the room let go first
       bm.optimize();
       set.holes = 0;
+      set.free = [];
     }
     const fields = bm as unknown as { _maxVertexCount: number; _maxIndexCount: number };
     if (bm.unusedVertexCount < verts || bm.unusedIndexCount < indices) {
@@ -440,6 +513,14 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       bm.setGeometrySize(roomFor(usedV + verts, sv), roomFor(usedI + indices, si));
     }
     if (bm.instanceCount + count > bm.maxInstanceCount) bm.setInstanceCount(Math.ceil((bm.instanceCount + count) * ROOM));
+  }
+
+  /** A piece deleted, its room kept as a free slot */
+  function drop(p: Piece) {
+    const g = geoInfo(p.set.bm, p.geo);
+    p.set.free.push({ v0: g.vertexStart, vn: g.reservedVertexCount, i0: g.indexStart, in: g.reservedIndexCount });
+    p.set.bm.deleteGeometry(p.geo);
+    p.set.holes++;
   }
 
   const evictable = (p: Piece) => p.lod === 'near' && p.site !== '' && !!p.set.bm.material && !!(p.set.bm.material as THREE.Material).userData.shared;
@@ -470,8 +551,7 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       let freed = 0;
       t.pieces = t.pieces.filter((p) => {
         if (!evictable(p)) return true;
-        p.set.bm.deleteGeometry(p.geo);
-        p.set.holes++;
+        drop(p);
         t.lost.add(p.site);
         freed += p.bytes;
         return false;
@@ -486,8 +566,7 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
       let freed = 0;
       t.pieces = t.pieces.filter((p) => {
         if (!losable(p)) return true;
-        p.set.bm.deleteGeometry(p.geo);
-        p.set.holes++;
+        drop(p);
         t.lost.add(p.site);
         freed += p.bytes;
         return false;
@@ -504,6 +583,7 @@ export function tileBatch(scene: THREE.Scene, parents: THREE.Object3D[]): TileBa
         const f = bm as unknown as { _maxVertexCount: number; _maxIndexCount: number };
         bm.optimize();
         set.holes = 0;
+        set.free = [];
         const [sv, si] = strides(bm);
         const v = Math.max(1, roomFor(f._maxVertexCount - bm.unusedVertexCount, sv));
         const i = Math.max(1, roomFor(f._maxIndexCount - bm.unusedIndexCount, si));

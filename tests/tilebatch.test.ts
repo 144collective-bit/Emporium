@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import { PACKED, UV, compact, dropsUv, splitByTile, tileBatch, ROOM_MAX, roomFor } from '../src/scripts/city3d/tilebatch';
+import { PACKED, UV, compact, dropsUv, splitByTile, takeSlot, tileBatch, ROOM_MAX, roomFor } from '../src/scripts/city3d/tilebatch';
 import { tileKey, tileOf } from '../src/scripts/city3d/tiles';
 
 // A plain colour and a neon, as the Batches' shared materials (kit.ts marks them `shared`)
@@ -360,4 +360,52 @@ test("a mesh's room past what it holds: a quarter over, at most ROOM_MAX (a big 
   assert.ok((roomFor(n, 16) - n) * 16 <= ROOM_MAX + 16);
   // (never less than it holds)
   for (const [k, b] of [[0, 4], [1, 4], [5e6, 2], [12345, 40]]) assert.ok(roomFor(k, b) >= k);
+});
+
+test('a piece coming back goes in the room a deleted one left, if it fits: the mesh is neither compacted nor moved', () => {
+  const scene = new THREE.Scene();
+  const tiled = tileBatch(scene, [scene]);
+  tiled.update(0, 10, 0, 50);
+  const site = () => {
+    const g = new THREE.Group();
+    scene.add(g);
+    for (let k = 0; k < 4; k++) piece(g, 315 + k * 30, 315, 'near');
+    return g;
+  };
+  tiled.add([site()], { site: 'row' });
+  const bm = tiled.meshes[0];
+  const f = bm as unknown as { _nextVertexStart: number; _geometryInfo: { vertexStart: number; active: boolean }[] };
+  const end = f._nextVertexStart;
+  const starts = () => f._geometryInfo.filter((g) => g.active).map((g) => g.vertexStart).sort((a, b) => a - b);
+  const before = starts();
+  let compacted = 0;
+  const optimize = bm.optimize.bind(bm);
+  bm.optimize = () => (compacted++, optimize());
+  // Two tiles let go and come back: their pieces fill the room they left, not the end of the mesh
+  tiled.release('11,10');
+  tiled.release('12,10');
+  tiled.add([site()], { site: 'row', keep: (t, lod) => lod === 'near' && (t === '11,10' || t === '12,10') });
+  assert.equal(f._nextVertexStart, end);
+  assert.deepEqual(starts(), before);
+  assert.equal(compacted, 0);
+  // and every piece is drawn (four boxes, each in its own tile)
+  tiled.restored('11,10');
+  tiled.restored('12,10');
+  tiled.update(330, 10, 315, 500);
+  assert.equal(visible(bm), 4);
+});
+
+test('the free slot that fits best is taken; what is left of it stays free', () => {
+  const free = [
+    { v0: 0, vn: 100, i0: 0, in: 300 },
+    { v0: 200, vn: 30, i0: 600, in: 90 },
+    { v0: 400, vn: 24, i0: 900, in: 20 },
+  ];
+  // (the smallest that fits both: the third has too few indices)
+  assert.deepEqual(takeSlot(free, 24, 36), { v0: 200, vn: 24, i0: 600, in: 36 });
+  assert.deepEqual(free[1], { v0: 224, vn: 6, i0: 636, in: 54 });
+  // An exact fit leaves nothing behind
+  assert.deepEqual(takeSlot(free, 24, 20), { v0: 400, vn: 24, i0: 900, in: 20 });
+  assert.equal(free.length, 2);
+  assert.equal(takeSlot(free, 200, 10), null);
 });
