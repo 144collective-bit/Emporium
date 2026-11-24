@@ -314,7 +314,16 @@ sets the order (rule 2).
 - [ ] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
       with paths stopping short, no plots, and straight hedge pieces standing alone in the open land beyond. R3: plots
       with low hedges or fences and front paths, the stray hedges joined into field boundaries or gone.
-- [ ] **The hunt of Endswood, Aldwyn's Green and Lot 9, part 2:** Lot 9 from the air and on foot, the night shots, and
+- [ ] **J9 (R1/R3): Lot 9's empty pitches and lanes** (the hunt, part 2, `h-lot9-air`): the empty pitches are bare
+      grey slabs and the lanes plain grey strips meeting square, no verge or kerb. R1 for the pads (gravel, a hook-up
+      post, worn edges), R3 for the lanes' verges and corners.
+- [ ] **J3's night side: the twin towers' lawn and podium unlit** (part 2, `h-ends-air` at night): lit only along the
+      streets, the lawn and podium go to a void. With J3's paths, low bollard lights along them (small and dim: the
+      bloom rule), and the podium's edge lit.
+- [x] **The hunt of Endswood, Aldwyn's Green and Lot 9, part 2** (2026-11-24, night 3 pass 2: Lot 9 by day, Endswood
+      and Aldwyn's Green from the air at night; J9 and J3's night side logged; the Green reads well at night). The
+      on-foot shots stood inside things (`h-highroad-foot`, `h-lot9-foot`): retaken with the next hunt here, on the
+      streets' own points. Its cameras, as part 1 left them: Lot 9 from the air and on foot, the night shots, and
       the on-foot shots retaken (`h-highroad-foot` stood inside a building). The cameras, for `SHOTS_EXTRA`:
       `h-ends-air` [-40,95,300] to [-55,0,395]; `h-circus-foot` [-92,1.7,402] to [-66,5,392]; `h-green-air`
       [-200,75,355] to [-200,0,455]; `h-church-foot` [-228,1.7,474] to [-205,5,462]; `h-council-air` [-300,60,320] to
@@ -499,3 +508,7 @@ session.)
   Endswood, Aldwyn's Green and Lot 9 (never run: the first night's third pass took J1). Day shots from the air and on
   foot (seven cameras, six taken in the time): six finds logged as J3 to J8, a new model repair R3 (empty open patch);
   Lot 9, night and the on-foot retakes are its part 2. Nothing fixed (the hunt's rule). Plan only: typecheck, lint.
+- 2026-11-24, night 3 pass 2 (23:07): the hunt of the south, part 2 (the board's top Ready card). Lot 9 from the air
+  by day, Endswood and Aldwyn's Green from the air at night: J9 (Lot 9's bare pitches and square lanes) and J3's night
+  side (the towers' lawn and podium unlit) logged; the Green reads well at night. Two on-foot cameras stood inside
+  things, to retake on the streets' own points. Nothing fixed. Plan only: typecheck, lint.
