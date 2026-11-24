@@ -95,9 +95,11 @@ const BUDGETS = {
   texLow: 3450,
   /**
    * ... and as everyone else does. From 4950 to 4955 on purpose (the owner's call, 2026-11-20): main alone at 4942.9,
-   * Northgate Air Base's signs' atlas (cut to its three rows, 1024 by 192) took the merge to 4952.1
+   * Northgate Air Base's signs' atlas (cut to its three rows, 1024 by 192) took the merge to 4952.1. From 4955 to 5100
+   * on purpose (the owner's call, 2026-11-24): the golf course's turf (golf3d.ts `TURF`, 976 by 1428, about 120 KB)
+   * took the set to 5045.3; the bake had been failing on main since the golf game landed, so nobody saw it till it ran
    */
-  texFull: 4955,
+  texFull: 5100,
   /** Their transcoder (three's Basis wasm and its script) */
   transcoder: 300,
   /**
