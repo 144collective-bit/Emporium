@@ -263,7 +263,11 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   the den's door under the second flight, turning under the stair to the basement's floor), `ROOF_STEPS` and
   `roofStepY()` (up from the landing to a platform in the hatch, out over `HATCH_WAY`); `homeFloorY()` takes the highest
   floor he's on where they stand over one another; drawn by home3d.ts `denSteps()` and `upStair()`. The house's only
-  fades are its doors out.
+  fades are its doors out. Phase 4 (the modern villa outside) is built: home3d.ts `house()` under "The modern villa"
+  (`RENDER`, `VILLA_STONE` to `BASE_TOP`, the roof's edge `EDGE_OUT` with its timber `SOFFIT` and steel coping, the
+  windows' surrounds `REVEAL` and stone sills, the front door's stone portal and `CANOPY` with his mark lit on it, the
+  bedroom's glass `BALCONY` (looks only: its window a door down to the floor in `houseWindows()`), downpipes, vents).
+  The garage, workshop, gatehouse and wall keep the loft's brick (`LOFT_*`).
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,
