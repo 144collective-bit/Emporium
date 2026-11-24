@@ -322,6 +322,37 @@ export function swingPose(p: Pose, t: number) {
   p.headYaw = 0;
 }
 
+export const BRASS_SECONDS = 4;
+/** A brass player in the band (the park's bandstand, docs/westlake-plan.md Phase 7): sat up, the instrument held to the lips in both hands, swaying a little with the tune, a breath at the bar's end */
+export const BRASS = { hands: [V(-0.05, 0.37, 0.25), V(0.05, 0.35, 0.2)], lean: 0.02, sway: 0.03, grip: 0.7 };
+export function brassPose(p: Pose, t: number) {
+  const w = t % BRASS_SECONDS;
+  sitPose(p, 0);
+  for (const i of [0, 1] as const) hand(p, i, BRASS.hands[i], BRASS.hands[i], 0);
+  p.lean = BRASS.lean;
+  p.side = Math.sin((w / BRASS_SECONDS) * Math.PI * 2) * BRASS.sway;
+  p.headPitch = 0.02;
+  p.headYaw = 0;
+}
+export const DRUM_SECONDS = 2;
+/** The band's drummer: sat at the drum, a stick in each hand coming down in turn on the beat, the head nodding along */
+export const DRUM = { rest: [V(-0.13, 0.12, 0.3), V(0.13, 0.12, 0.3)], up: 0.14, grip: 0.8 };
+export function drumPose(p: Pose, t: number) {
+  const w = t % DRUM_SECONDS;
+  sitPose(p, 0);
+  // (eight strokes a loop, the hands in turn: each lifted and brought down)
+  const beat = (w / DRUM_SECONDS) * 8;
+  for (const i of [0, 1] as const) {
+    const ph = (beat + i) % 2;
+    tmp.copy(DRUM.rest[i]);
+    tmp.y += DRUM.up * (ph < 1 ? Math.sin(ph * Math.PI) : 0);
+    reachArm(p, i, tmp);
+  }
+  p.lean = 0.08;
+  p.headPitch = -0.1 + 0.05 * Math.abs(Math.sin(beat * Math.PI * 0.5));
+  p.headYaw = 0;
+}
+
 /* ---------- On a motorbike (vehicle plan Phases 7 and 8) ---------- */
 
 /** Where a rider's root goes on a bike (bike space: his hips on the seat), at the riders' size (`DRIVER_SCALE`) */
