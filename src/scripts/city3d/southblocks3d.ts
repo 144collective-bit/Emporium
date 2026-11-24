@@ -1176,10 +1176,11 @@ function drawShops(b: Batch, low: boolean) {
       if (sh.name) {
         quad(b, at(0.1, 0.014), at(len - 0.1, 0.014), base + 0.05, base + 1.02, n, GLASS);
         quad(b, at(len - 0.8, 0.022), at(len - 0.2, 0.022), base, base + 1.0, n, DOOR);
-        quad(b, at(0, 0.016), at(len, 0.016), base + 1.04, base + 1.38, n, CONC_DARK);
+        // (the fascia a box board standing proud of the wall, so nothing on the wall's face shows through the sign on it)
+        along(b, at(0, 0.06), at(len, 0.06), 0.12, base + 1.04, base + 1.38, CONC_DARK);
         const row = DECK_SHOP_NAMES.indexOf(sh.name as (typeof DECK_SHOP_NAMES)[number]);
         const H = SHOP_ROW * DECK_SHOP_NAMES.length;
-        const [p0, p1] = left(len / 2, 0.026, Math.min(1.6, len / 2 - 0.15));
+        const [p0, p1] = left(len / 2, 0.126, Math.min(1.6, len / 2 - 0.15));
         texQuad(b, p0, p1, base + 1.07, base + 1.35, n, 1 - ((row + 1) * SHOP_ROW) / H, 1 - (row * SHOP_ROW) / H, SHOP_NEON);
       } else {
         quad(b, at(0.05, 0.02), at(len - 0.05, 0.02), base, base + 1.06, n, SHUTTER);
