@@ -169,7 +169,16 @@ keep it up to date when what it describes changes.
     `compileAsync`, each site as it's built and each place's far form as
     it's made). `renderer.compile()` with the screen as the target makes
     sRGB programs no frame uses, and the real ones then compile the first
-    time they're drawn (a hitch): never call it bare.
+    time they're drawn (a hitch): never call it bare. `compileFor()` also
+    uses each program it made once, there and then (`firstUse()`): three.js
+    checks a program's link the first time it's used, and where the browser
+    can't compile in parallel (no `KHR_parallel_shader_compile`, as on
+    memcheck's headless phone) that's when its compile really happens, 0.2
+    to 1.5 s of software rendering, which used to fall on the first frame a
+    view showed a material made while the city loaded (a site's batch, the
+    far forms, the cars' detail: memcheck's `crest-hills` and `south-high`,
+    1.1-2.2 s, 2026-11-24). Where it can, a program still compiling is left
+    to finish (`isReady()`).
   - **Textures made at build time** (performance phase 4): every canvas
     texture the boot paints (`canvasTex()` in `kit.ts`) is painted once by
     `scripts/bake-textures.mjs` (`npm run bake:textures` after a build;

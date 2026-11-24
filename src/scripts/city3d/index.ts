@@ -593,7 +593,29 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
     renderer.setRenderTarget(post.composer.renderTarget1);
     const r = how(o);
     renderer.setRenderTarget(prev);
+    if (r instanceof Promise) void r.then(() => firstUse(o));
+    else firstUse(o);
     return r;
+  };
+  /**
+   * Each program a compile made, used once now rather than the first time it's drawn. A program's link is only
+   * checked on its first use (three.js `onFirstUse`), and where the browser can't compile in parallel
+   * (KHR_parallel_shader_compile) that's when its compile really happens: 0.2-1.5 s of one frame on memcheck's
+   * phone, the first frame a view showed a material built while the city was loading (a site's batch, the far
+   * forms, the cars' detail). Here it falls where the material was made. Where the browser compiles in parallel, a
+   * program still compiling is left alone (`isReady()`: using it would wait on it)
+   */
+  type Prog = { isReady(): boolean; getUniforms(): unknown };
+  const firstUse = (o: THREE.Object3D) => {
+    const mats = new Set<THREE.Material>();
+    o.traverse((x) => {
+      const m = (x as THREE.Mesh).material;
+      if (m) for (const one of Array.isArray(m) ? m : [m]) mats.add(one);
+    });
+    for (const m of mats) {
+      const progs = (renderer.properties.get(m) as { programs?: Map<string, Prog> }).programs;
+      if (progs) for (const p of progs.values()) if (p.isReady()) p.getUniforms();
+    }
   };
 
   // The city's size on the page, kept from the last resize (the frame loop never asks the page for it), and whether
