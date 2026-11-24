@@ -50,6 +50,7 @@ import { COURSE_IDS, RIVER_COURSE_IDS } from './kartcircuit';
 import { PLACE_IDS as MAP_PLACES } from './places';
 import { CORNER_SHOPS, type CornerId } from './projects';
 import { MY_STALL_DOOR } from './nightmarket';
+import { DECK_SHOP_DOORS } from './southblocks';
 import { cleanInventory, cleanStash, emptyInventory, type Inventory, type Stash } from './inventory-save';
 import { FREE_PLAY } from './freeplay';
 import { FLYERS, flyersShare } from './boosts';
@@ -75,6 +76,7 @@ import {
   LOT_LEVEL_COSTS,
   CORNER_LEVEL_COSTS,
   NIGHT_LEVEL_COSTS,
+  ESTATE_LEVEL_COSTS,
   MOD_LEVELS,
   NO_CAR_MODS,
   NO_GUN_MODS,
@@ -253,6 +255,21 @@ export type WakeAt = 'home' | 'flat';
 export interface Flat {
   wake: WakeAt;
 }
+/*
+ * The shops under Endswood's podium deck (docs/brutalist-plan.md Phase 7b, the owner's picks): The Wash House, a
+ * launderette whose machines take washes on their own (no stock to buy or run out of), and Deck Stores, a shop run as
+ * a corner shop is; each bought once with Dorras from level ESTATE_LEVEL, a flat game price
+ */
+export const ESTATE_PRICE = FREE_PLAY ? 0 : 30000;
+export const ESTATE_LEVEL = FREE_PLAY ? 1 : 5;
+/** Deck Stores: always a shop, the estate's footfall a little under The Trenches' */
+export const DECK_STORE = { slots: 4, capacity: 60, pace: 1.8 } as const;
+/** The Wash House: its machines at each level, a wash's minutes on a machine, and what a wash takes */
+export const WASH = { machines: [4, 6, 8], minutes: 4, fee: 30 } as const;
+/** The Wash House you own: what's left over of a wash between ticks */
+export interface WashHouse {
+  carry: number;
+}
 /** The stall: a food counter, always a shop, a few kinds at a time, its queue quicker than a corner shop's while the market's open */
 export const NIGHT_STALL = { slots: 3, capacity: 40, pace: 3 } as const;
 /** When it trades, by the visitor's clock: from 18:00 to 02:00 the next morning */
@@ -306,15 +323,21 @@ export interface Corner {
   slots: Slot[];
 }
 export type NightId = 'm0';
-export type PlaceId = 'stall' | 'workshop' | 'u0' | 'u1' | 'u2' | 'u3' | 'l0' | 'l1' | 'l2' | CornerId | NightId;
+/** The estate's shops (Phase 7b): The Wash House, Deck Stores */
+export type EstateId = 'e0' | 'e1';
+export type PlaceId = 'stall' | 'workshop' | 'u0' | 'u1' | 'u2' | 'u3' | 'l0' | 'l1' | 'l2' | CornerId | NightId | EstateId;
 export const UNIT_PLACES = ['u0', 'u1', 'u2', 'u3'] as const;
 export const LOT_PLACES = ['l0', 'l1', 'l2'] as const;
 export const CORNER_PLACES = ['c0', 'c1', 'c2', 'c3'] as const;
 export const NIGHT_PLACE: NightId = 'm0';
-export const PLACE_IDS: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', ...CORNER_PLACES, NIGHT_PLACE, 'workshop'];
+export const WASH_PLACE: EstateId = 'e0';
+export const STORE_PLACE: EstateId = 'e1';
+export const ESTATE_PLACES = [WASH_PLACE, STORE_PLACE] as const;
+export const PLACE_IDS: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', ...CORNER_PLACES, NIGHT_PLACE, ...ESTATE_PLACES, 'workshop'];
 /** The Vault's ledger: where Dorras came from and went */
 export const ENTRIES = {
   sales: { name: 'Sales', in: true },
+  washes: { name: 'Washes', in: true },
   bonus: { name: 'Delivery bonuses', in: true },
   soldOut: { name: 'Sold out', in: true },
   contracts: { name: 'Contracts', in: true },
@@ -507,6 +530,9 @@ export interface TycoonSave {
   night: Corner | null;
   /** Degen's flat in Kite Point (docs/brutalist-plan.md Phase 7a): null until he buys it; where he wakes, once it's his */
   flat: Flat | null;
+  /** The estate's shops (docs/brutalist-plan.md Phase 7b): null until you buy each */
+  washHouse: WashHouse | null;
+  deckStore: Corner | null;
   ledger: Ledger;
   loan: Loan | null;
   /* Phase 5: the city's game */
@@ -644,6 +670,8 @@ export function newSave(now: number): TycoonSave {
     corners: Array.from({ length: CORNER_COUNT }, () => null),
     night: null,
     flat: null,
+    washHouse: null,
+    deckStore: null,
     ledger: { totals: {}, recent: [] },
     loan: null,
     xp: 0,
@@ -757,6 +785,9 @@ export function cleanSave(raw: unknown, now: number): TycoonSave {
     // (v14: a save from before the Night Market's stall doesn't own it)
     night: cleanNight(o.night, mul(NIGHT_PLACE)),
     flat: null,
+    // (a save from before the estate's shops owns neither)
+    washHouse: cleanWash(o.washHouse),
+    deckStore: cleanStore(o.deckStore, mul(STORE_PLACE)),
     ledger: cleanLedger(o.ledger, now),
     loan: null,
     xp: Math.floor(num(o.xp, 0, 1e9, 0)),
@@ -836,6 +867,14 @@ function cleanCorner(raw: unknown, mul = 1): Corner | null {
   if (!raw || typeof raw !== 'object') return null;
   return { slots: cleanSlots(obj(raw).slots, CORNER.slots, Math.round(CORNER.capacity * mul)) };
 }
+function cleanWash(raw: unknown): WashHouse | null {
+  if (!raw || typeof raw !== 'object') return null;
+  return { carry: num(obj(raw).carry, 0, 1, 0) };
+}
+function cleanStore(raw: unknown, mul = 1): Corner | null {
+  if (!raw || typeof raw !== 'object') return null;
+  return { slots: cleanSlots(obj(raw).slots, DECK_STORE.slots, Math.round(DECK_STORE.capacity * mul)) };
+}
 function cleanNight(raw: unknown, mul = 1): Corner | null {
   if (!raw || typeof raw !== 'object') return null;
   return { slots: cleanSlots(obj(raw).slots, NIGHT_STALL.slots, Math.round(NIGHT_STALL.capacity * mul)) };
@@ -892,10 +931,24 @@ export const cornerIndex = (p: PlaceId) => (p.startsWith('c') ? Number(p.slice(1
 export const cornerAt = (s: TycoonSave, p: PlaceId) => s.corners[cornerIndex(p)] ?? null;
 /** The Night Market's stall, if you own it */
 export const nightAt = (s: TycoonSave, p: PlaceId) => (p === NIGHT_PLACE ? s.night : null);
-/** What's built at a place you own (a unit's or a big lot's kind; a corner shop is always one, the Night Market's stall too), if anything */
-export const kindAt = (s: TycoonSave, p: PlaceId): UnitKind | LotKind | 'corner' | 'night' | null => unitAt(s, p)?.kind ?? lotAt(s, p)?.kind ?? (cornerAt(s, p) ? 'corner' : nightAt(s, p) ? 'night' : null);
-/** Places that sell to the public: the stall, your shops, superstores, corner shops and the Night Market's stall */
-export const sells = (s: TycoonSave, p: PlaceId) => p === 'stall' || ['shop', 'superstore', 'corner', 'night'].includes(kindAt(s, p) ?? '');
+/** The estate's shops (Phase 7b), if you own them */
+export const washAt = (s: TycoonSave, p: PlaceId) => (p === WASH_PLACE ? s.washHouse : null);
+export const storeAt = (s: TycoonSave, p: PlaceId) => (p === STORE_PLACE ? s.deckStore : null);
+/** What's built at a place you own (a unit's or a big lot's kind; a corner shop is always one, the Night Market's stall and the estate's shops too), if anything */
+export const kindAt = (s: TycoonSave, p: PlaceId): UnitKind | LotKind | 'corner' | 'night' | 'wash' | 'store' | null =>
+  unitAt(s, p)?.kind ?? lotAt(s, p)?.kind ?? (cornerAt(s, p) ? 'corner' : nightAt(s, p) ? 'night' : washAt(s, p) ? 'wash' : storeAt(s, p) ? 'store' : null);
+/** Places that sell to the public: the stall, your shops, superstores, corner shops, the Night Market's stall and Deck Stores */
+export const sells = (s: TycoonSave, p: PlaceId) => p === 'stall' || ['shop', 'superstore', 'corner', 'night', 'store'].includes(kindAt(s, p) ?? '');
+/** The Wash House's machines at its level (none till it's yours) */
+export const washMachines = (s: TycoonSave) => (s.washHouse ? WASH.machines[placeLevel(s, WASH_PLACE) - 1] : 0);
+/** How the estate's shops look from the court (southblocks.ts `DeckLook`): The Wash House's machines, Deck Stores'
+ * shelves (each one's goods' colour, and how full in sixths, so the front's redrawn only now and then) */
+export function deckLook(s: TycoonSave) {
+  const cap = Math.round(DECK_STORE.capacity * capacityMul(s, STORE_PLACE));
+  return { wash: washMachines(s), store: s.deckStore ? s.deckStore.slots.map((x) => ({ color: good(x.good).color, fill: Math.ceil((x.qty / cap) * 6) / 6 })) : null };
+}
+/** About how many washes an hour it takes, standing there or not (`serving`) */
+export const washesAnHour = (s: TycoonSave, serving = false) => (washMachines(s) / WASH.minutes) * 60 * (serving ? SERVING : 1);
 /** Places you can load your car from (stock on sale stays on the shelves) */
 export const loadsFrom = (s: TycoonSave, p: PlaceId) => p === 'workshop' || ['garden', 'warehouse', 'depot', 'factory'].includes(kindAt(s, p) ?? '');
 /** Places that make things: the Workshop and your factories */
@@ -908,6 +961,8 @@ function shelves(s: TycoonSave, p: PlaceId) {
   }
   const c = cornerAt(s, p);
   if (c) return { slots: c.slots, max: CORNER.slots, capacity: Math.round(CORNER.capacity * capacityMul(s, p)), pace: CORNER.pace * paceMul(s, p), set: (v: Slot[]) => (c.slots = v) };
+  const d = storeAt(s, p);
+  if (d) return { slots: d.slots, max: DECK_STORE.slots, capacity: Math.round(DECK_STORE.capacity * capacityMul(s, p)), pace: DECK_STORE.pace * paceMul(s, p), set: (v: Slot[]) => (d.slots = v) };
   const m = nightAt(s, p);
   if (m) return { slots: m.slots, max: NIGHT_STALL.slots, capacity: Math.round(NIGHT_STALL.capacity * capacityMul(s, p)), pace: NIGHT_STALL.pace * paceMul(s, p), set: (v: Slot[]) => (m.slots = v) };
   const u = unitAt(s, p) ?? lotAt(s, p);
@@ -1179,6 +1234,8 @@ export interface Sales {
   /** Grown in gardens, made at the Workshop */
   grown: Partial<Record<GoodId, number>>;
   made: Partial<Record<GoodId, number>>;
+  /** The Wash House's washes (Phase 7b) */
+  washes: number;
   /** Shelves that sold out (their goods) and what their bonuses paid, straight to your balance */
   soldOut: GoodId[];
   bonus: number;
@@ -1199,7 +1256,7 @@ const add = (m: Partial<Record<GoodId, number>>, id: GoodId, n: number) => (m[id
  * `serving`: the place you're standing at (true: the stall).
  */
 export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean = false): Sales {
-  const out: Sales = { minutes: 0, away: 0, sold: {}, earned: 0, grown: {}, made: {}, soldOut: [], bonus: 0, wages: 0, quit: [], repaid: 0, arrived: [], expired: [] };
+  const out: Sales = { minutes: 0, away: 0, sold: {}, earned: 0, grown: {}, made: {}, washes: 0, soldOut: [], bonus: 0, wages: 0, quit: [], repaid: 0, arrived: [], expired: [] };
   const gap = (now - s.at) / 60000;
   const from = s.at;
   s.at = Math.max(s.at, now);
@@ -1269,6 +1326,26 @@ export function advance(s: TycoonSave, now: number, serving: PlaceId | boolean =
         }
         slot.run = 0;
       }
+    }
+  }
+  // The Wash House's machines take their washes (no stock to run out of: as many as it has machines; a quarter as many
+  // while you're away, for up to OFFLINE_CAP minutes, as a shop without a clerk)
+  const wash = s.washHouse;
+  if (wash) {
+    const want = (washMachines(s) / WASH.minutes) * (away ? OFFLINE_PACE : at === WASH_PLACE ? SERVING : 1) * minutes + wash.carry;
+    const n = Math.floor(want);
+    wash.carry = want - n;
+    if (n > 0) {
+      const pay = n * WASH.fee;
+      const repay = s.loan ? Math.min(s.loan.owed, Math.floor(pay * LOAN_SHARE)) : 0;
+      if (repay) payLoan(s, repay);
+      s.till += pay - repay;
+      book(s, 'washes', pay);
+      out.washes = n;
+      out.repaid += repay;
+      out.earned += pay - repay;
+      count(s, 'earned', pay - repay);
+      addXp(s, n * XP.sale);
     }
   }
   // Gardens grow until their bins are full (as fast while you're away; bigger bins and faster growth at higher levels)
@@ -1381,7 +1458,9 @@ export const placeAt = (p: PlaceId) =>
           ? CORNER_SHOPS[cornerIndex(p)].door
           : p === NIGHT_PLACE
             ? MY_STALL_DOOR
-            : UNIT_SITE[unitIndex(p)].door;
+            : p.startsWith('e')
+              ? DECK_SHOP_DOORS[ESTATE_PLACES.indexOf(p as EstateId)]
+              : UNIT_SITE[unitIndex(p)].door;
 /** A courier's journey in minutes: a minute to load, then about 40 tiles a minute */
 export const shipMinutes = (from: PlaceId, to: PlaceId) => {
   const a = placeAt(from);
@@ -1583,6 +1662,23 @@ export function buyCorner(s: TycoonSave, i: number): BuyResult {
   return r;
 }
 
+/* The estate's shops (docs/brutalist-plan.md Phase 7b) */
+
+/** What one of them costs (null once it's yours) */
+export const estatePrice = (s: TycoonSave, p: EstateId) => ((p === WASH_PLACE ? s.washHouse : s.deckStore) ? null : ESTATE_PRICE);
+/** Buy The Wash House (its machines start straight away) or Deck Stores (a shop straight away, its shelves empty) */
+export function buyEstateShop(s: TycoonSave, p: EstateId): BuyResult {
+  if (!ESTATE_PLACES.includes(p)) return { ok: false, why: 'place' };
+  if (estatePrice(s, p) === null) return { ok: false, why: 'owned' };
+  const r = pay(s, ESTATE_PRICE, ESTATE_LEVEL, 'property');
+  if (!r.ok) return r;
+  if (p === WASH_PLACE) s.washHouse = { carry: 0 };
+  else s.deckStore = { slots: [] };
+  count(s, 'land', 1);
+  addXp(s, XP.property);
+  return r;
+}
+
 /* The Night Market's stall (the polish plan's Phase 10) */
 
 /** What the stall costs (null once it's yours) */
@@ -1644,6 +1740,7 @@ export function propertyValue(s: TycoonSave) {
   v += LOT_PRICES.slice(0, lots.length).reduce((a, b) => a + b, 0) + lots.reduce((a, l) => a + (l.kind ? LOT_KINDS[l.kind].cost : 0), 0);
   v += CORNER_PRICES.slice(0, s.corners.filter(Boolean).length).reduce((a, b) => a + b, 0);
   if (s.night) v += NIGHT_PRICE;
+  v += ESTATE_PRICE * [s.washHouse, s.deckStore].filter(Boolean).length;
   // Phase 5: the places' levels
   for (const p of PLACE_IDS) v += levelCosts(p).slice(1, placeLevel(s, p)).reduce((a, b) => a + b, 0);
   return v;
@@ -2075,7 +2172,7 @@ export function plotRefund(raw: unknown) {
 
 /* ---------- Levels for the places you run ---------- */
 
-export const levelCosts = (p: PlaceId) => (p === 'workshop' ? WORKSHOP_LEVEL_COSTS : p.startsWith('l') ? LOT_LEVEL_COSTS : p.startsWith('c') ? CORNER_LEVEL_COSTS : p === NIGHT_PLACE ? NIGHT_LEVEL_COSTS : p === 'stall' ? [] : UNIT_LEVEL_COSTS);
+export const levelCosts = (p: PlaceId) => (p === 'workshop' ? WORKSHOP_LEVEL_COSTS : p.startsWith('l') ? LOT_LEVEL_COSTS : p.startsWith('c') ? CORNER_LEVEL_COSTS : p === NIGHT_PLACE ? NIGHT_LEVEL_COSTS : p.startsWith('e') ? ESTATE_LEVEL_COSTS : p === 'stall' ? [] : UNIT_LEVEL_COSTS);
 /** What the next level costs (null at the top, or where there's nothing to level yet) */
 export function placeLevelCost(s: TycoonSave, p: PlaceId) {
   if (p === 'stall') return null;

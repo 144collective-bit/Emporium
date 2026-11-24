@@ -105,6 +105,15 @@ import {
   FLAT_PRICE,
   FLAT_LEVEL,
   nightOpen,
+  DECK_STORE,
+  ESTATE_LEVEL,
+  ESTATE_PRICE,
+  WASH,
+  buyEstateShop,
+  estatePrice,
+  washMachines,
+  washesAnHour,
+  upgradePlace,
   nightPrice,
   nightShare,
   buyCorner,
@@ -114,8 +123,9 @@ import {
   placeLevelCost,
   placeAt,
 } from '../src/scripts/city3d/tycoon';
-import { CORNER_LEVEL_COSTS, NIGHT_LEVEL_COSTS, xpForLevel } from '../src/scripts/city3d/catalog';
+import { CORNER_LEVEL_COSTS, ESTATE_LEVEL_COSTS, NIGHT_LEVEL_COSTS, xpForLevel } from '../src/scripts/city3d/catalog';
 import { MY_STALL_DOOR } from '../src/scripts/city3d/nightmarket';
+import { DECK_SHOPS, DECK_SHOP_DOORS, DECK_SHOP_NAMES } from '../src/scripts/city3d/southblocks';
 
 const T0 = Date.UTC(2026, 9, 20, 12, 0, 0);
 const MIN = 60000;
@@ -957,4 +967,78 @@ test("Degen's flat in Kite Point (docs/brutalist-plan.md Phase 7a): bought once 
   assert.equal(cleanSave(old, T0).flat, null);
   assert.deepEqual(cleanSave({ ...old, flat: { wake: 'somewhere' } }, T0).flat, { wake: 'home' });
   assert.equal(cleanSave({ ...old, flat: 'yes' }, T0).flat, null);
+});
+
+test("the estate's shops (docs/brutalist-plan.md Phase 7b): The Wash House's machines take washes on their own, Deck Stores is a shop", () => {
+  const s = newSave(T0);
+  s.dorras = 1e6;
+  assert.equal(s.washHouse, null);
+  assert.equal(s.deckStore, null);
+  assert.deepEqual(buyEstateShop(s, 'e0'), { ok: false, why: 'level' }, "a new player can't buy them");
+  assert.equal(estatePrice(s, 'e0'), ESTATE_PRICE);
+  s.xp = xpForLevel(ESTATE_LEVEL);
+  assert.ok(buyEstateShop(s, 'e0').ok);
+  assert.ok(buyEstateShop(s, 'e1').ok);
+  assert.equal(s.dorras, 1e6 - 2 * ESTATE_PRICE);
+  assert.deepEqual([estatePrice(s, 'e0'), estatePrice(s, 'e1')], [null, null]);
+  assert.deepEqual(buyEstateShop(s, 'e1'), { ok: false, why: 'owned' });
+  assert.equal(propertyValue(s), 2 * ESTATE_PRICE);
+  // The Wash House holds no goods and has no staff; it levels up to more machines
+  assert.equal(sells(s, 'e0'), false);
+  assert.equal(room(s, 'tees', 'e0'), 0);
+  assert.equal(roleAt(s, 'e0'), null);
+  assert.equal(washMachines(s), WASH.machines[0]);
+  assert.equal(placeLevelCost(s, 'e0'), ESTATE_LEVEL_COSTS[1]);
+  // Its washes, a minute at a time: as many as its machines take, the fee each, in the till
+  s.at = T0;
+  const till = s.till;
+  let washes = 0;
+  for (let i = 1; i <= 60; i++) washes += advance(s, T0 + i * MIN).washes;
+  assert.equal(washes, Math.round(washesAnHour(s)));
+  assert.equal(s.till - till, washes * WASH.fee);
+  assert.equal(s.ledger.totals.washes, washes * WASH.fee);
+  // Standing at its door: twice as many; away for a day: a quarter as many, for four hours only
+  s.at = T0 + 60 * MIN;
+  let served = 0;
+  for (let i = 1; i <= 60; i++) served += advance(s, T0 + (60 + i) * MIN, 'e0').washes;
+  assert.equal(served, 2 * washes);
+  const away = advance(s, T0 + 120 * MIN + 24 * 60 * MIN);
+  assert.equal(away.washes, Math.floor((washMachines(s) / WASH.minutes) * 0.25 * 240));
+  s.dorras = 1e6;
+  assert.ok(upgradePlace(s, 'e0').ok);
+  assert.equal(washMachines(s), WASH.machines[1]);
+  // Deck Stores: a shop like a corner shop (products only, a clerk can work it, it sells)
+  assert.ok(sells(s, 'e1'));
+  assert.equal(room(s, 'sugar', 'e1'), 0);
+  assert.equal(room(s, 'tees', 'e1'), DECK_STORE.capacity);
+  assert.equal(roleAt(s, 'e1'), 'clerk');
+  const t = s.at;
+  buy(s, 'glow', 30, t, 'e1');
+  advance(s, t + 2 * MIN);
+  assert.ok(holds(s, 'e1', 'glow') < 30, 'it sold');
+});
+
+test("the estate's shops' doors stand in the court in front of each shop's door, by name", () => {
+  assert.deepEqual([placeAt('e0'), placeAt('e1')], DECK_SHOP_DOORS);
+  DECK_SHOP_NAMES.forEach((name, i) => {
+    const sh = DECK_SHOPS.find((d) => d.name === name)!;
+    const d = DECK_SHOP_DOORS[i];
+    // (in front of its face, by about a step, and within its front's length)
+    const out = (d.x - sh.a[0]) * sh.n[0] + (d.z - sh.a[1]) * sh.n[1];
+    assert.ok(out > 0.4 && out < 0.8, `${name}'s door spot is a step out: ${out}`);
+    const len = Math.hypot(sh.c[0] - sh.a[0], sh.c[1] - sh.a[1]);
+    const along = ((d.x - sh.a[0]) * (sh.c[0] - sh.a[0]) + (d.z - sh.a[1]) * (sh.c[1] - sh.a[1])) / len;
+    assert.ok(along > len - 1 && along < len, `${name}'s door spot is by its door: ${along} of ${len}`);
+  });
+});
+
+test("a save from before the estate's shops owns neither; a save with them keeps them, clamped", () => {
+  const old = cleanSave({ v: 15, dorras: 500 }, T0);
+  assert.equal(old.washHouse, null);
+  assert.equal(old.deckStore, null);
+  const s = cleanSave({ v: 15, levels: { e0: 3, e1: 2 }, washHouse: { carry: 7 }, deckStore: { slots: [{ good: 'tees', qty: 9999, price: 'low' }, { good: 'cotton', qty: 5 }] } }, T0);
+  assert.equal(s.washHouse!.carry, 1);
+  assert.equal(washMachines(s), WASH.machines[2]);
+  assert.deepEqual(s.deckStore!.slots.map((x) => [x.good, x.qty, x.price]), [['tees', Math.round(DECK_STORE.capacity * 1.5), 'low']]);
+  assert.deepEqual([cleanSave({ washHouse: 'junk', deckStore: 3 }, T0).washHouse, cleanSave({ deckStore: 3 }, T0).deckStore], [null, null]);
 });
