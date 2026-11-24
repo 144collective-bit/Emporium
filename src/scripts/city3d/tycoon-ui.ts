@@ -151,6 +151,14 @@ import {
   nightAt,
   nightOpen,
   nightPrice,
+  DECK_STORE,
+  ESTATE_LEVEL,
+  WASH,
+  buyEstateShop,
+  estatePrice,
+  storeAt,
+  washMachines,
+  washesAnHour,
 } from './tycoon';
 import { CORNER_SHOPS } from './projects';
 import { DOORS } from './solids';
@@ -162,7 +170,7 @@ import { CARS } from './carspec';
 import { LV, whyNot } from './ui';
 import { confirmHtml, focusConfirm } from './menukit';
 import { BACKUP_KEYS, TYCOON_KEY as KEY, backupName, packBackup, readBackup, type ReadBackup } from './backup';
-import { CORNER_IDS, LETTER, LOT_IDS, NIGHT_ID, PLACE_LIST, ROW_IDS, STAND, TABS, UNIT_IDS, cornerName, fmt, nightName, type Tab, type TycoonCore, type TycoonScreens } from './tycoon-boot';
+import { CORNER_IDS, ESTATE_IDS, LETTER, LOT_IDS, NIGHT_ID, PLACE_LIST, estateName, estateSel, ROW_IDS, STAND, TABS, UNIT_IDS, cornerName, fmt, nightName, type Tab, type TycoonCore, type TycoonScreens } from './tycoon-boot';
 
 /** A car this close to a place is parked there */
 const CAR_R = 9;
@@ -311,9 +319,10 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
   function shelvesView(p: PlaceId, now: number) {
     const big = kindAt(save, p) === 'superstore';
     const corner = cornerAt(save, p);
+    const store = storeAt(save, p);
     const night = nightAt(save, p);
-    const spec = corner ? CORNER : night ? NIGHT_STALL : big ? SUPERSTORE : SHOP;
-    const slots = p === 'stall' ? save.stall.slots : (corner ?? night ?? unitAt(save, p) ?? lotAt(save, p))!.slots;
+    const spec = corner ? CORNER : store ? DECK_STORE : night ? NIGHT_STALL : big ? SUPERSTORE : SHOP;
+    const slots = p === 'stall' ? save.stall.slots : (corner ?? store ?? night ?? unitAt(save, p) ?? lotAt(save, p))!.slots;
     const max = p === 'stall' ? stallLevel(save.stall.level).slots : spec.slots;
     const capacity = p === 'stall' ? stallLevel(save.stall.level).capacity : Math.round(spec.capacity * capacityMul(save, p));
     const free = max - slots.length;
@@ -340,7 +349,7 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
     return `<div class="stall-actions biz-level">${
       cost === null
         ? `<span class="stall-max">Top level (${PLACE_LEVELS})</span>`
-        : `<button type="button" class="chip-link" data-upgrade-place="${p}" ${save.dorras >= cost ? '' : 'disabled'}>Upgrade · ${fmt.format(cost)}</button><small class="biz-level-note">Level ${l + 1}: ${p === 'workshop' || makes(save, p) ? 'a bigger bay and faster jobs' : sells(save, p) ? 'fuller shelves, more customers' : unitAt(save, p)?.kind === 'garden' ? 'bigger bins and faster growth' : 'more room'}.</small>`
+        : `<button type="button" class="chip-link" data-upgrade-place="${p}" ${save.dorras >= cost ? '' : 'disabled'}>Upgrade · ${fmt.format(cost)}</button><small class="biz-level-note">Level ${l + 1}: ${kindAt(save, p) === 'wash' ? `${WASH.machines[l]} machines` : p === 'workshop' || makes(save, p) ? 'a bigger bay and faster jobs' : sells(save, p) ? 'fuller shelves, more customers' : unitAt(save, p)?.kind === 'garden' ? 'bigger bins and faster growth' : 'more room'}.</small>`
     }</div>`;
   };
   const serveNote = (p: PlaceId) =>
@@ -415,6 +424,28 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
       <div class="stall-actions"><button type="button" class="shop-take" data-to-market data-at="${p}">Market hall</button></div>
       ${upgradeRow(p)}`;
   }
+  /** The estate's shops under Endswood's podium deck (docs/brutalist-plan.md Phase 7b; on the Units tab after the Night Market's stall) */
+  function estateView(i: number, now: number) {
+    const p = ESTATE_IDS[i];
+    const name = estateName(i);
+    if (estatePrice(save, p) !== null) {
+      const price = estatePrice(save, p) ?? 0;
+      const lv = level(save);
+      const what = i ? `a corner shop under Endswood's podium deck. ${DECK_STORE.slots} shelves` : `a launderette under Endswood's podium deck. ${WASH.machines[0]} machines, no stock to buy`;
+      return `<p class="stall-empty">${esc(name)}, ${what}, ${LV(ESTATE_LEVEL)}.</p>
+        <div class="stall-actions"><button type="button" class="shop-take" data-buy-estate="${i}" ${save.dorras >= price && lv >= ESTATE_LEVEL ? '' : 'disabled'}>Buy · ${fmt.format(price)}</button>${lv < ESTATE_LEVEL ? `<small class="biz-level-note">Needs level ${ESTATE_LEVEL} (you're ${lv})</small>` : ''}</div>`;
+    }
+    if (!i) {
+      const here = serving() === p;
+      return `<p class="stall-status">Launderette · ${washMachines(save)} machines · about ${fmt.format(Math.round(washesAnHour(save, here)))} washes an hour${levelNote(p)}${here ? ' · <b class="stall-serving">Here: 2x washes</b>' : ''}</p>
+        <p class="stall-empty">${D(WASH.fee)} a wash, into the till. No stock to buy.</p>
+        ${upgradeRow(p)}`;
+    }
+    return `<p class="stall-status">Corner shop · ${DECK_STORE.slots} kinds of goods, ${Math.round(DECK_STORE.capacity * capacityMul(save, p))} of each${levelNote(p)}${serveNote(p)}</p>
+      ${shelvesView(p, now)}${carHere(p)}
+      <div class="stall-actions"><button type="button" class="shop-take" data-to-market data-at="${p}">Market hall</button></div>
+      ${upgradeRow(p)}`;
+  }
   /** A corner shop's view (on the Units tab, after the big lots) */
   function cornerView(i: number, now: number) {
     const p = CORNER_IDS[i];
@@ -443,8 +474,15 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
     }).join('');
     const nightSel = ROW_IDS.length + CORNER_IDS.length;
     const night = `<button type="button" data-unit="${nightSel}" aria-pressed="${nightSel === state.unitSel}">${esc(nightName().split(' ')[0])}<small>${save.night ? 'Yours' : 'For sale'}</small></button>`;
+    const estate = ESTATE_IDS.map((p, i) => {
+      const k = estateSel(i);
+      return `<button type="button" data-unit="${k}" aria-pressed="${k === state.unitSel}">${esc(estateName(i).replace(/^The /, '').split(' ')[0])}<small>${estatePrice(save, p) === null ? 'Yours' : 'For sale'}</small></button>`;
+    }).join('');
     const tabs = `<p class="biz-label">Makers' Row · big lots</p><div class="seg biz-units" role="group" aria-label="Your units and lots">${chips}</div>
-      <p class="biz-label">The Trenches · corner shops</p><div class="seg biz-units" role="group" aria-label="The Trenches' corner shops and the Night Market's stall">${corners}${night}</div>`;
+      <p class="biz-label">The Trenches · corner shops</p><div class="seg biz-units" role="group" aria-label="The Trenches' corner shops and the Night Market's stall">${corners}${night}</div>
+      <p class="biz-label">Endswood · the deck</p><div class="seg biz-units" role="group" aria-label="The shops under Endswood's podium deck">${estate}</div>`;
+    const ei = ESTATE_IDS.findIndex((_, i) => estateSel(i) === state.unitSel);
+    if (ei >= 0) return tabs + estateView(ei, now);
     if (state.unitSel === nightSel) return tabs + nightView(now);
     if (state.unitSel >= ROW_IDS.length) return tabs + cornerView(state.unitSel - ROW_IDS.length, now);
     if (state.unitSel >= 4) return tabs + lotView(state.unitSel - 4, now);
@@ -686,6 +724,7 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
       </ul>
       <p class="biz-label">Estate agent · corner shops</p>${cornersView()}
       <p class="biz-label">Estate agent · the Night Market</p>${nightRow()}
+      <p class="biz-label">Estate agent · Endswood's deck</p>${estateRows()}
       <p class="biz-label">Loans</p>${loan}
       <div class="biz-ledger"><div><p class="biz-label">In, all time</p><ul>${rows(true)}</ul></div><div><p class="biz-label">Out, all time</p><ul>${rows(false)}</ul></div></div>
       ${recent ? `<p class="biz-label">Latest</p><ul class="biz-recent">${recent}</ul>` : ''}
@@ -776,6 +815,21 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
     return `<ul class="market-list biz-estate"><li class="market-row"><div class="market-top"><b>${esc(nightName())}</b><span class="market-price">${mine ? '<span class="tag tag-mine">Yours</span>' : D(price)}</span></div>
         <div class="market-acts"><small>${mine ? `Food stall · level ${placeLevel(save, NIGHT_ID)}` : lv < NIGHT_LEVEL ? `Needs level ${NIGHT_LEVEL} (you're ${lv})` : `${NIGHT_STALL.slots} shelves, open after dusk`}</small>${acts}</div></li></ul>`;
   }
+  /** The estate's shops at the estate agent (Phase 7b): buy one, or go to yours */
+  function estateRows() {
+    const lv = level(save);
+    const rows = ESTATE_IDS.map((p, i) => {
+      const price = estatePrice(save, p);
+      const mine = price === null;
+      const acts = mine
+        ? `<span class="market-btns"><button type="button" data-open-estate="${i}">Run it</button></span>`
+        : `<span class="market-btns"><button type="button" data-buy-estate="${i}" ${lv >= ESTATE_LEVEL && save.dorras >= price ? '' : 'disabled'}>Buy</button></span>`;
+      const what = i ? (mine ? `Corner shop · level ${placeLevel(save, p)}` : `${DECK_STORE.slots} shelves, the estate's footfall`) : mine ? `Launderette · level ${placeLevel(save, p)}` : `${WASH.machines[0]} machines, no stock`;
+      return `<li class="market-row"><div class="market-top"><b>${esc(estateName(i))}</b><span class="market-price">${mine ? '<span class="tag tag-mine">Yours</span>' : D(price)}</span></div>
+        <div class="market-acts"><small>${!mine && lv < ESTATE_LEVEL ? `Needs level ${ESTATE_LEVEL} (you're ${lv})` : what}</small>${acts}</div></li>`;
+    }).join('');
+    return `<ul class="market-list biz-estate">${rows}</ul>`;
+  }
   /** The corner shops at the estate agent: buy one, or go to yours */
   function cornersView() {
     const lv = level(save);
@@ -840,6 +894,14 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
     } else if ('openNight' in ds) {
       openCard(NIGHT_ID);
       return;
+    } else if (ds.openEstate) {
+      openCard(ESTATE_IDS[Number(ds.openEstate)]);
+      return;
+    } else if (ds.buyEstate) {
+      const i = Number(ds.buyEstate);
+      const r = buyEstateShop(save, ESTATE_IDS[i]);
+      state.note = r.ok ? (i ? `${estateName(i)} is yours. Stock it at the market hall.` : `${estateName(i)} is yours. Its machines are running.`) : whyNot(r.why, ESTATE_LEVEL);
+      h.sfx(r.ok ? 'buy' : 'denied');
     } else if ('buyNight' in ds) {
       const r = buyNightStall(save);
       state.note = r.ok ? `${nightName()} is yours. It trades from ${NIGHT_HOURS.open}:00.` : whyNot(r.why, NIGHT_LEVEL);
@@ -1032,7 +1094,7 @@ export function createTycoonScreens(core: TycoonCore): TycoonScreens {
   function marketView(now: number) {
     // Where Buy can deliver to and Sell can take from
     const car = h.car();
-    const at: (PlaceId | 'car')[] = ['stall', ...ROW_IDS.filter((p) => kindAt(save, p) && kindAt(save, p) !== 'offices'), ...CORNER_IDS.filter((p) => cornerAt(save, p)), ...(save.night ? [NIGHT_ID] : []), 'workshop', ...(car && carAtEmporium() ? (['car'] as const) : [])];
+    const at: (PlaceId | 'car')[] = ['stall', ...ROW_IDS.filter((p) => kindAt(save, p) && kindAt(save, p) !== 'offices'), ...CORNER_IDS.filter((p) => cornerAt(save, p)), ...(save.night ? [NIGHT_ID] : []), ...(save.deckStore ? (['e1'] as const) : []), 'workshop', ...(car && carAtEmporium() ? (['car'] as const) : [])];
     if (!at.includes(marketAt)) marketAt = 'stall';
     const row = (id: GoodId) => {
       const t = trend(id, now);

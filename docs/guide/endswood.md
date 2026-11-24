@@ -100,7 +100,11 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   block but The Core, `LOBBIES` in southblocks.ts, cut out of its solids, `coverWithHall()`, walked on groundheight.ts's
   `lobby` layer, its lift doors calling the block's lift, `lobbyLiftDoor()`; drawn rough by `drawLobby()`); Degen's flat (Phase 7a: `FLAT` in Kite Point's 15th floor, its rooms walked once it's
   his, southsky.ts `setFlatOpen()`, its card flat-ui.ts, drawn by `drawFlat()`; Kite's solids hollowed round it for the
-  camera, `hollowAt()`); the glass
+  camera, `hollowAt()`); the two open shops run as places (Phase 7b: tycoon.ts places `e0` The Wash House and `e1`
+  Deck Stores, `ESTATE_PLACES`; their door spots `DECK_SHOP_DOORS`; once yours, their insides seen through the glass,
+  drawn from the save: southblocks.ts `DECK_LOOK` / `setDeckLook()`, set by index.ts from tycoon.ts `deckLook()`, drawn
+  by southblocks3d.ts `registerDeckShops()`, near only: the washers and dryers as many as its level has, the drums
+  turning, Deck Stores' shelves stocked in its goods' colours as full as they are); the glass
   and the slots dark glass by day, lit warm at night (`lit()` toons); the podium deck on its columns; Bunker Sound's door
   with its neon. Built with `lift: false` (kit.ts `Batch.build()`): they stand level on their plinths, not on the
   rolling ground. Their solids are `BLOCK_SOLIDS`, added unlifted in solids.ts. Bench views `south-blocks` and
@@ -259,7 +263,11 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `stairY()` (asked through `homeFloorY()`), its rails `stairRails()` (in `homeWall()`), the camera open over its well
   (`homeCamera()`), its foot waiting while the street loads (`STAIR_GATE`, set by index.ts with the curtains); drawn by
   home3d.ts `stair()` and `upStair()` (with the roof's steps, `ROOF_STEPS`). Nothing in the rooms' lists stands in
-  its well (tests). The den's door is under its second flight; the den's and the roof's steps are still fades.
+  its well (tests). Phase 3 (the den's and the roof's steps, walked) is built: `DEN_STEPS` and `denY()` (down through
+  the den's door under the second flight, turning under the stair to the basement's floor), `ROOF_STEPS` and
+  `roofStepY()` (up from the landing to a platform in the hatch, out over `HATCH_WAY`); `homeFloorY()` takes the highest
+  floor he's on where they stand over one another; drawn by home3d.ts `denSteps()` and `upStair()`. The house's only
+  fades are its doors out.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

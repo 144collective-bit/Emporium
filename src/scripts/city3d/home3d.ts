@@ -43,7 +43,7 @@ import { glow, METAL } from './infill';
 import { SHELF, type TrophySlot } from './hometrophies';
 import {
   BASE_CEIL, BASE_Y, BOLLARD, BOLLARDS, CEIL, CURTAIN, CABANA, CABANA_H, HELIPAD, CABANA_POSTS, CABANA_SOFA, FIRE_ESCAPE, FOUNTAIN, LOUNGERS, POOL, POOL_EDGE, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, PALM_PLANTER, PALMS, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, WALL, WALL_H, WALL_T,
-  HOUSE_GEO, curtainPanels, STAIR, ROOF_STEPS, HATCH,
+  HOUSE_GEO, curtainPanels, STAIR, ROOF_STEPS, HATCH, HATCH_KERB, HATCH_WAY, DEN_STEPS,
 } from './home';
 import { houseRooms, type BaseThing, type Furniture, type UpThing } from './homerooms';
 import { curtains } from './spawn';
@@ -497,7 +497,8 @@ function house(b: Batch, low: boolean) {
   cube(b, [x1 - T, z0 + T, x1, z1 - T], S, S + E, LOFT_BRICK);
   // (the upper floor's slab open over the stair's well: docs/house-plan.md Phase 2)
   for (const r of aroundWell(x0 + T, z0 + T, x1 - T, z1 - T)) cube(b, r, S + CEIL + 0.004, S + CEIL + 0.1, COPING);
-  cube(b, [x0, z0, x1, z1], S + E, S + E + 0.06, FELT);
+  // (the roof's open over the hatch, the roof's steps up through it: docs/house-plan.md Phase 3)
+  for (const r of aroundHatch(x0, z0, x1, z1)) cube(b, r, S + E, S + E + 0.06, FELT);
   // The parapet round the roof under a stone coping; over the door's bay on the front it steps up
   const dx = HOME.door[0];
   for (const r of [
@@ -616,13 +617,19 @@ function house(b: Batch, low: boolean) {
       const [a0, c0, a1, c1] = t.rect;
       if (t.kind === 'sign') continue;
       if (t.kind === 'hatch') {
-        // (a kerb round the opening, the dark of the stairs in it, the lid stood open on its east side)
-        const K = 0.08;
+        // (a kerb round the opening but on its west by the steps' head, where a steel sill at the roof's floor
+        // reaches the steps' platform (docs/house-plan.md Phase 3: walked up through it); a rail along the steps' open
+        // side south of the way out; the lid stood open on its east side)
+        const K = HATCH_KERB;
+        const [w0, w1] = HATCH_WAY;
         cube(b, [a0, c0, a1, c0 + K], y, y + 0.18, COPING);
         cube(b, [a0, c1 - K, a1, c1], y, y + 0.18, COPING);
-        cube(b, [a0, c0 + K, a0 + K, c1 - K], y, y + 0.18, COPING);
+        cube(b, [a0, w1, a0 + K, c1 - K], y, y + 0.18, COPING);
         cube(b, [a1 - K, c0 + K, a1, c1 - K], y, y + 0.18, COPING);
-        flat(b, [a0 + K, c0 + K, a1 - K, c1 - K], y + 0.02, DARK);
+        cube(b, [a0, w0, ROOF_STEPS.rect[0] + 0.01, w1], y - 0.04, y + 0.004, GATE);
+        const rx = ROOF_STEPS.rect[0] - 0.02;
+        cube(b, [rx - 0.015, w1, rx + 0.015, c1 - K], y + 0.62, y + 0.65, GATE);
+        for (const z of [w1 + 0.02, c1 - K - 0.03]) cube(b, [rx - 0.02, z - 0.02, rx + 0.02, z + 0.02], y, y + 0.65, GATE);
         cube(b, [a1 - 0.05, c0, a1, c1], y + 0.18, y + t.h + 0.5, GATE);
       } else if (t.kind === 'sofa') {
         // An outdoor sofa facing the front rail: its seat, its back on the south, arms, two cushions in his magenta
@@ -962,7 +969,8 @@ function inside(into: THREE.Object3D, low: boolean) {
   face(b, cx, z1, w, S, top, Math.PI, WALLS_IN, 0.9);
   face(b, x0, cz, d, S, top, Math.PI / 2, WALLS_IN, 0.82);
   face(b, x1, cz, d, S, top, -Math.PI / 2, WALLS_IN, 0.82);
-  iflat(b, ROOM, ON, LAMINATE);
+  // (the floor open over the stair's well, the den's steps down under the stair in it: docs/house-plan.md Phase 3)
+  for (const r of aroundWell(ROOM[0], ROOM[1], ROOM[2], ROOM[3])) iflat(b, r, ON, LAMINATE);
   // (the ceiling, but over the stair's well: open up to the landing's)
   for (const [a0, b0, a1, b1] of aroundWell(x0, z0, x1, z1)) sheet(b, a1 - a0, b1 - b0, Math.PI / 2, 0, (a0 + a1) / 2, top, (b0 + b1) / 2, paint(CEILING_IN));
   // (the walnut's boards: fine darker lines along the room, a hair over the floor)
@@ -1379,6 +1387,16 @@ function aroundWell(x0: number, z0: number, x1: number, z1: number): Rect[] {
     [wx0, wz1, x1, z1],
   ];
 }
+/** A rect x0, z0, x1, z1 but for the hatch in the roof over the well (home.ts `HATCH`), as four rects */
+function aroundHatch(x0: number, z0: number, x1: number, z1: number): Rect[] {
+  const [a0, c0, a1, c1] = HATCH;
+  return [
+    [x0, z0, a0, z1],
+    [a1, z0, x1, z1],
+    [a0, z0, a1, c0],
+    [a0, c1, a1, z1],
+  ];
+}
 /** A flat four-cornered face through p0..p3 (x, y, z each), seen from both sides: the stair's sloped stringers and sides */
 function quad(b: Batch, p: number[], hex: string, k = SIDE_X) {
   const g = new THREE.BufferGeometry();
@@ -1442,17 +1460,28 @@ function stair(b: Batch, low: boolean) {
   // stringer; at the second flight's back the same, round the den's door under its high end
   xBand(b, x0 - 0.006, z0 + 0.006, f[1], S, S, S + H - STRING_DN, S + H - STRING_DN, WOOD_DARK);
   xBand(b, x0 - 0.006, f[1], z1, S, S, S + H - STRING_DN, S + UP_Y - STRING_DN, WOOD_DARK);
-  const door = (f[0] + f[2]) / 2;
-  icube(b, [f[0], z1 + 0.004, f[2], z1 + 0.012], S, S + CEIL, WOOD_DARK);
+  // (the second flight's back: over the den's doorway, the flight's whole width, and either side of it if it's narrower)
+  const [d0, d1] = DEN_STEPS.door;
+  if (d0 > f[0] + 0.04) icube(b, [f[0], z1 + 0.004, d0 - 0.04, z1 + 0.012], S, S + CEIL, WOOD_DARK);
+  if (d1 < f[2] - 0.04) icube(b, [d1 + 0.04, z1 + 0.004, f[2], z1 + 0.012], S, S + CEIL, WOOD_DARK);
+  icube(b, [d0, z1 + 0.004, d1, z1 + 0.012], S + 1.04, S + CEIL, WOOD_DARK);
   b.detail(() => {
     for (let z = z0 + 0.03; z < z1 - 0.05; z += 0.1) icube(b, [x0 - 0.03, z, x0 - 0.012, z + 0.072], S, lineB(z + 0.036) - STRING_DN - 0.004, WOOD);
-    for (let x = f[0] + 0.03; x < f[2] - 0.05; x += 0.1) if (Math.abs(x + 0.036 - door) > 0.38) icube(b, [x, z1 + 0.012, x + 0.072, z1 + 0.03], S, S + UP_Y - STRING_DN - 0.03, WOOD);
+    for (let x = f[0] + 0.03; x < f[2] - 0.05; x += 0.1) if (x + 0.072 < d0 || x > d1) icube(b, [x, z1 + 0.012, x + 0.072, z1 + 0.03], S, S + UP_Y - STRING_DN - 0.03, WOOD);
   });
-  // (the den's door: a walnut leaf in a black steel frame, a brass pull)
-  icube(b, [door - 0.3, z1 + 0.012, door + 0.3, z1 + 0.024], S, S + 1.0, WOOD);
-  for (const x of [door - 0.34, door + 0.3]) icube(b, [x, z1 + 0.012, x + 0.04, z1 + 0.036], S, S + 1.04, INK);
-  icube(b, [door - 0.34, z1 + 0.012, door + 0.34, z1 + 0.036], S + 1.0, S + 1.04, INK);
-  icube(b, [door + 0.19, z1 + 0.024, door + 0.215, z1 + 0.05], S + 0.35, S + 0.75, BRASS);
+  // (the den's door, open (docs/house-plan.md Phase 3): its black steel frame lining the doorway, the walnut leaf slid
+  // back into the wall west of it, its edge and brass pull showing at the frame)
+  for (const x of [d0, d1 - 0.04]) icube(b, [x, z1 + 0.012, x + 0.04, z1 + 0.036], S, S + 1.04, INK);
+  icube(b, [d0, z1 + 0.012, d1, z1 + 0.036], S + 1.0, S + 1.04, INK);
+  icube(b, [d0 + 0.04, z1 - 0.004, d0 + 0.07, z1 + 0.03], S, S + 1.0, WOOD);
+  icube(b, [d0 + 0.07, z1 + 0.004, d0 + 0.08, z1 + 0.02], S + 0.4, S + 0.7, BRASS);
+  // Under the stair, the soffits over the den's steps: plastered under the second flight, the half landing and the
+  // first, along their stringers' feet
+  const [yH, yU] = [S + H - STRING_DN, S + UP_Y - STRING_DN];
+  quad(b, [x0, yH, f[1], spine[0], yH, f[1], spine[0], yU, z1, x0, yU, z1], WALLS_IN, 0.7);
+  quad(b, [x0, yH, z0 + 0.006, x1 - E, yH, z0 + 0.006, x1 - E, yH, f[1], x0, yH, f[1]], WALLS_IN, 0.7);
+  quad(b, [spine[2], yH, a[1], x1 - E, yH, a[1], x1 - E, S - STRING_DN, a[3], spine[2], S - STRING_DN, a[3]], WALLS_IN, 0.7);
+  denSteps(b, low);
   // Over the well the room's ceiling is open: the floor's edge round it (its sides into the well), the front and east
   // walls on up between the two floors
   // (a hair proud of the shell's slab, whose edge it covers)
@@ -1496,6 +1525,67 @@ function stair(b: Batch, low: boolean) {
 }
 
 /**
+ * The den's steps (home.ts `DEN_STEPS`, docs/house-plan.md Phase 3) under the stair: from the den's door down under the
+ * second flight, the turn under the half landing, on down under the first to the basement's floor; walnut treads
+ * over black risers as the stair's, black stringers, a black handrail along the walls, a cyan strip of the den's
+ * light down the last flight; walled in the den's colour from the basement's floor up: the well's west side, the
+ * second flight's back under the room's floor, the spine between the flights
+ */
+function denSteps(b: Batch, low: boolean) {
+  const { a, half, b: f, steps: n } = DEN_STEPS;
+  const [x0, z0, x1, z1] = STAIR.well;
+  const { spine } = STAIR;
+  const D = BASE_Y / 2;
+  const run = a[3] - a[1];
+  const [r, t] = [-D / n, run / n];
+  const E = 0.012;
+  const fy = S + BASE_Y;
+  // Down under the second flight, north: the doorway's sill at the room's floor, then a tread a riser down each,
+  // each over the slope he walks at its middle; a black riser under each nosing
+  for (let k = 0; k < n; k++) {
+    const y = S - k * r;
+    const [zs, zn] = [z1 - Math.max(0, k - 0.5) * t, z1 - (k + 0.5) * t];
+    icube(b, [f[0] + 0.004, zn - 0.02, f[2] - 0.004, zs], y - 0.035, y, WOOD);
+    icube(b, [f[0] + 0.004, zn - 0.034, f[2] - 0.004, zn - 0.02], y - r, y - 0.035, INK);
+  }
+  // The turn under the half landing, and on down under the first flight, south, to the basement's floor
+  const zt = half[3] + 0.5 * t;
+  icube(b, [half[0] + 0.004, half[1] + 0.006, spine[0], zt], S + D - 0.035, S + D, WOOD);
+  icube(b, [spine[0], half[1] + 0.006, half[2] - E, zt], S + D - 0.035, S + D, WOOD);
+  for (let k = 1; k <= n; k++) {
+    const y = S + D - k * r;
+    const zn = a[1] + (k - 0.5) * t;
+    if (k < n) icube(b, [a[0] + 0.004, zn, a[2] - E, zn + t + 0.02], y - 0.035, y, WOOD);
+    icube(b, [a[0] + 0.004, zn + 0.02, a[2] - E, zn + 0.034], y, y + r - 0.035, INK);
+  }
+  // The stringers along each flight's sides
+  const lineB = (z: number) => S + D * Math.min(1, Math.max(0, (z1 - z) / run));
+  const lineA = (z: number) => S + D + D * Math.min(1, Math.max(0, (z - a[1]) / run));
+  for (const x of [x0 + 0.006, spine[0] - 0.006]) xBand(b, x, z1, f[1], lineB(z1) - STRING_DN, lineB(f[1]) - STRING_DN, lineB(z1) + STRING_UP, lineB(f[1]) + STRING_UP, INK);
+  for (const x of [spine[2] + 0.006, x1 - E - 0.006]) xBand(b, x, a[1], a[3], lineA(a[1]) - STRING_DN, fy, lineA(a[1]) + STRING_UP, fy + STRING_UP, INK);
+  // The walls round them, from the basement's floor: the well's west side, the second flight's back, the spine
+  xBand(b, x0 - 0.006, z0 + 0.006, z1, fy, fy, S, S, DEN_WALL, 0.82);
+  quad(b, [x0, fy, z1 - 0.004, spine[0], fy, z1 - 0.004, spine[0], S, z1 - 0.004, x0, S, z1 - 0.004], DEN_WALL, 0.9);
+  xBand(b, (spine[0] + spine[2]) / 2, a[3], a[1], fy, fy, S + 0.01, S + UP_Y / 2 - STRING_DN, DEN_WALL, 0.82);
+  // (and the front and east walls on up past the basement's ceiling to the room's floor, round the well)
+  icube(b, [x0, z0 + 0.004, x1 - 0.004, z0 + 0.008], S + BASE_CEIL - 0.02, S + 0.01, DEN_WALL);
+  icube(b, [x1 - 0.008, z0 + 0.004, x1 - 0.004, z1], S + BASE_CEIL - 0.02, S + 0.01, DEN_WALL);
+  // The handrails: along the west wall down the second flight, along the east wall down the first, on brackets
+  const [wx, ex] = [x0 + 0.05, x1 - E - 0.05];
+  rod(b, V(wx, lineB(z1) + RAIL_H, z1 - 0.05), V(wx, lineB(f[1]) + RAIL_H, f[1]), 0.01, paint(INK));
+  rod(b, V(ex, lineA(a[1]) + RAIL_H, a[1]), V(ex, lineA(a[3]) + RAIL_H, a[3] - 0.05), 0.01, paint(INK));
+  b.detail(() => {
+    for (const u of [0.2, 0.8]) {
+      const [zb, za] = [z1 - u * run, a[1] + u * run];
+      rod(b, V(wx, lineB(zb) + RAIL_H, zb), V(x0 + 0.006, lineB(zb) + RAIL_H, zb), 0.006, paint(INK));
+      rod(b, V(ex, lineA(za) + RAIL_H, za), V(x1 - E, lineA(za) + RAIL_H, za), 0.006, paint(INK));
+    }
+  });
+  // (the den's cyan down the last flight, low on the east wall: not on phones)
+  if (!low) b.detail(() => rod(b, V(x1 - E - 0.01, lineA(a[1]) + 0.1, a[1]), V(x1 - E - 0.01, fy + 0.1, a[3]), 0.006, LED_CYAN));
+}
+
+/**
  * Upstairs round the well (home.ts `STAIR`): its black steel balustrade along the gallery and its newels, and the
  * roof's steps (`ROOF_STEPS`): steep walnut treads on black stringers up over the first flight to the hatch in the
  * ceiling, a handrail on their open side
@@ -1511,23 +1601,27 @@ function upStair(b: Batch, fy: number, low: boolean) {
   b.detail(() => {
     for (let z = z0 + 0.18; z < z1 - 0.06; z += 0.14) rod(b, V(rx, fy + 0.08, z), V(rx, fy + RAIL_H, z), 0.006, paint(INK));
   });
-  // The roof's steps
+  // The roof's steps (walked: docs/house-plan.md Phase 3): steep walnut treads, each over the slope he walks at its
+  // middle, up to a little platform at the roof's floor in the hatch; black stringers; a handrail on their open side
   const [sx0, sz0, sx1, sz1] = ROOF_STEPS.rect;
   const n = ROOF_STEPS.steps;
-  const [rise, run] = [(ROOF_Y - UP_Y) / n, (sz1 - sz0) / n];
-  const lid = S + UP_CEIL - 0.012;
+  const zh = sz0 + ROOF_STEPS.top;
+  const [rise, run] = [(ROOF_Y - UP_Y) / n, (sz1 - zh) / n];
+  const roof = S + ROOF_Y;
   for (let k = 1; k < n; k++) {
     const y = fy + k * rise;
-    if (y > lid - 0.01) break;
-    icube(b, [sx0 + 0.03, sz1 - k * run, sx1 - 0.03, sz1 - (k - 1) * run + 0.015], y - 0.03, y, WOOD);
+    icube(b, [sx0 + 0.03, sz1 - (k + 0.5) * run, sx1 - 0.03, sz1 - (k - 0.5) * run + 0.015], y - 0.03, y, WOOD);
   }
-  // (their stringers, cut off at the ceiling: above it they're in the hatch, under the roof)
-  const yAt = (z: number) => fy + ((sz1 - z) / (sz1 - sz0)) * (ROOF_Y - UP_Y);
-  const zTop = sz1 - ((lid - 0.02 - STRING_UP - fy) / (ROOF_Y - UP_Y)) * (sz1 - sz0);
-  for (const x of [sx0 + 0.02, sx1 - 0.02]) xBand(b, x, sz1, zTop, fy, yAt(zTop) - 0.14, fy + STRING_UP, yAt(zTop) + STRING_UP, INK);
-  rod(b, V(sx0 + 0.02, fy + RAIL_H, sz1), V(sx0 + 0.02, Math.min(lid - 0.05, yAt(zTop) + RAIL_H), sz1 - ((Math.min(lid - 0.05, yAt(zTop) + RAIL_H) - fy - RAIL_H) / (ROOF_Y - UP_Y)) * (sz1 - sz0)), 0.01, paint(INK));
-  // (the hatch's opening in the ceiling over them: dark, a hair under the ceiling)
-  sheet(b, HATCH[2] - HATCH[0], HATCH[3] - HATCH[1], Math.PI / 2, 0, (HATCH[0] + HATCH[2]) / 2, lid, (HATCH[1] + HATCH[3]) / 2, paint(SHELF_BACK));
+  icube(b, [sx0 + 0.03, sz0, sx1 - 0.03, zh + 0.5 * run + 0.015], roof - 0.04, roof, WOOD);
+  const yAt = (z: number) => fy + Math.min(1, Math.max(0, (sz1 - z) / (sz1 - zh))) * (ROOF_Y - UP_Y);
+  for (const x of [sx0 + 0.02, sx1 - 0.02]) xBand(b, x, sz1, zh, fy - 0.1, yAt(zh) - 0.14, fy + STRING_UP, roof + STRING_UP, INK);
+  rod(b, V(sx0 + 0.02, fy + RAIL_H, sz1), V(sx0 + 0.02, roof + 0.2, HATCH_WAY[1] + 0.05), 0.01, paint(INK));
+  // (the hatch's lining from the ceiling up to the roof's top, round the opening)
+  const [ha0, hc0, ha1, hc1] = HATCH;
+  icube(b, [ha0, hc0, ha1, hc0 + 0.01], S + UP_CEIL - 0.012, roof, WALLS_IN);
+  icube(b, [ha0, hc1 - 0.01, ha1, hc1], S + UP_CEIL - 0.012, roof, WALLS_IN);
+  icube(b, [ha0, hc0, ha0 + 0.01, hc1], S + UP_CEIL - 0.012, roof, WALLS_IN);
+  icube(b, [ha1 - 0.01, hc0, ha1, hc1], S + UP_CEIL - 0.012, roof, WALLS_IN);
   if (!low) b.detail(() => b.add(new THREE.CylinderGeometry(0.1, 0.1, 0.02, 12).translate((STAIR.b[0] + STAIR.b[2]) / 2, S + UP_CEIL - 0.016, z0 + 0.5), glow(PAL.warm)));
 }
 
@@ -1573,7 +1667,8 @@ function upstairs(b: Batch, low: boolean) {
   face(b, x0, cz, d, fy, top, Math.PI / 2, WALLS_IN, 0.82);
   face(b, x1, cz, d, fy, top, -Math.PI / 2, WALLS_IN, 0.82);
   for (const r of aroundWell(ROOM[0], ROOM[1], ROOM[2], ROOM[3])) iflat(b, r, fy + G, LAMINATE);
-  sheet(b, w, d, Math.PI / 2, 0, cx, top, cz, paint(CEILING_IN));
+  // (the ceiling open over the hatch, the roof's steps up through it: docs/house-plan.md Phase 3)
+  for (const [a0, b0, a1, b1] of aroundHatch(x0, z0, x1, z1)) sheet(b, a1 - a0, b1 - b0, Math.PI / 2, 0, (a0 + a1) / 2, top, (b0 + b1) / 2, paint(CEILING_IN));
   // The stair's well: its balustrade, the roof's steps up over it to the hatch (docs/house-plan.md Phase 2)
   upStair(b, fy, low);
   // The three tall front windows, where they are outside (`houseWindows()`), a hair off the wall
@@ -1857,7 +1952,8 @@ function basement(b: Batch, low: boolean) {
   face(b, x0, cz, d, fy, top, Math.PI / 2, DEN_WALL, 0.82);
   face(b, x1, cz, d, fy, top, -Math.PI / 2, DEN_WALL, 0.82);
   iflat(b, ROOM, fy + G, DEN_FLOOR);
-  sheet(b, w, d, Math.PI / 2, 0, cx, top, cz, paint(DEN_CEIL));
+  // (the ceiling open over the stair's well, the den's steps coming down under the stair: docs/house-plan.md Phase 3)
+  for (const [a0, b0, a1, b1] of aroundWell(x0, z0, x1, z1)) sheet(b, a1 - a0, b1 - b0, Math.PI / 2, 0, (a0 + a1) / 2, top, (b0 + b1) / 2, paint(DEN_CEIL));
   // LED strips round the ceiling's edge, his magenta along the front and back, cyan down the sides
   const L = 0.02;
   b.add(new THREE.BoxGeometry(w - 0.1, L, L).translate(cx, top - 0.03, z0 + 0.02), LED_MAGENTA);
@@ -1909,15 +2005,6 @@ function denFurnish(b: Batch, { kind, rect, h }: BaseThing, fy: number, low: boo
       icube(b, [x1 + 0.03, z0 + 0.006, x1 + 0.13, z0 + 0.03], fy + 0.5, fy + 0.66, INK);
       b.add(new THREE.SphereGeometry(0.01, 4, 3).translate(x1 + 0.08, fy + 0.63, z0 + 0.035), glow('#7dff9a'));
     });
-  } else if (kind === 'steps') {
-    // The steps down from under the stairs: treads rising north to the room's floor, a black steel rail on the open side
-    const n = 9;
-    const run = (z1 - z0) / n;
-    const rise = (S - fy) / n;
-    for (let k = 0; k < n; k++) icube(b, [x0 + 0.04, z1 - (k + 1) * run, x1 - 0.006, z1 - k * run + 0.004], fy + (k + 1) * rise - 0.05, fy + (k + 1) * rise, WOOD);
-    // (its rail ends under the room's floor: it mustn't show up there)
-    rod(b, V(x0 + 0.03, fy + 0.45, z1), V(x0 + 0.03, S + BASE_CEIL - 0.04, z0 + 0.45), 0.014, paint(INK));
-    rod(b, V(x0 + 0.03, fy + 0.02, z1), V(x0 + 0.03, S - 0.02, z0 + 0.05), 0.025, paint(INK));
   } else if (kind === 'tv') {
     // Wall-hung on the front wall, cyan glowing round it from behind, a standby light
     icube(b, [x0, z1 - 0.06, x1, z1], fy + 0.3, fy + h, SCREEN);
