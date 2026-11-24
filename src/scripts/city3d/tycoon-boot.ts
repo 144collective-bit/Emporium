@@ -24,6 +24,7 @@ import {
   plotRefund,
   roleAt,
   sells,
+  kindAt,
   DESTS,
   ROLES,
   type GoodId,
@@ -33,6 +34,7 @@ import {
 } from './tycoon';
 import { CORNER_SHOPS } from './projects';
 import { MY_STALL_DOOR, MY_STALL_NAME } from './nightmarket';
+import { DECK_SHOP_DOORS, DECK_SHOP_NAMES } from './southblocks';
 import { LOT_SITE, STALL_SPOT, UNIT_SITE } from './solids';
 import type { Sfx } from './combat';
 import { createMissionsUI } from './missions-ui';
@@ -44,7 +46,7 @@ export const fmt = new Intl.NumberFormat('en-US');
 const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 
 /** Where you stand to run a place, and where your car parks to load and unload */
-export const PLACE_LIST: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', 'c0', 'c1', 'c2', 'c3', 'm0', 'workshop'];
+export const PLACE_LIST: PlaceId[] = ['stall', 'u0', 'u1', 'u2', 'u3', 'l0', 'l1', 'l2', 'c0', 'c1', 'c2', 'c3', 'm0', 'e0', 'e1', 'workshop'];
 export const STAND = Object.fromEntries(PLACE_LIST.map((p) => [p, placeAt(p)])) as Record<PlaceId, { x: number; z: number }>;
 /** Standing this close serves a stall's or shop's customers */
 const SERVE_R = 2.2;
@@ -58,6 +60,11 @@ export const cornerName = (i: number) => CORNER_SHOPS[i].name.toLowerCase().repl
 /** The Night Market's stall (the polish plan's Phase 10): on the Units tab after the corner shops */
 export const NIGHT_ID = 'm0' as const;
 export const nightName = () => MY_STALL_NAME;
+/** The estate's shops under Endswood's podium deck (docs/brutalist-plan.md Phase 7b): on the Units tab after the Night Market's stall */
+export const ESTATE_IDS = ['e0', 'e1'] as const;
+export const estateName = (i: number) => DECK_SHOP_NAMES[i];
+/** The Units tab's chip for each: after the corner shops and the Night Market's stall */
+export const estateSel = (i: number) => ROW_IDS.length + CORNER_IDS.length + 1 + i;
 export const LETTER = 'ABC';
 export type Tab = 'stall' | 'units' | 'workshop' | 'car';
 export const TABS: { id: Tab; label: string }[] = [
@@ -189,6 +196,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     if (p === 'workshop') return 'The Workshop';
     if (p === NIGHT_ID) return nightName();
     const i = Number(p.slice(1));
+    if (p.startsWith('e')) return estateName(i);
     if (p.startsWith('c')) return cornerName(i);
     if (p.startsWith('l')) {
       const l = save.lots[i];
@@ -207,7 +215,8 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
   }
   const serving = () => {
     const p = standingAt();
-    return p && sells(save, p) ? p : null;
+    // (The Wash House's machines too: standing at its door, twice the washes)
+    return p && (sells(save, p) || kindAt(save, p) === 'wash') ? p : null;
   };
 
   /* ---------- The readout ---------- */
@@ -244,6 +253,9 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     } else if (at === NIGHT_ID) {
       state.tab = 'units';
       state.unitSel = ROW_IDS.length + CORNER_IDS.length;
+    } else if (at?.startsWith('e')) {
+      state.tab = 'units';
+      state.unitSel = estateSel(Number(at.slice(1)));
     }
     state.note = '';
     if (!cardOpen()) {
@@ -293,7 +305,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
     screens?.paintCard();
     screens?.paintPanel();
     // The city only redraws what changed (crate stacks, units, the contracts' beams)
-    const shown = JSON.stringify([save.stall, save.units, save.lots, save.corners, save.contracts.map((c) => c.to), save.levels, guideAt(save)]);
+    const shown = JSON.stringify([save.stall, save.units, save.lots, save.corners, !!save.washHouse, save.deckStore, save.contracts.map((c) => c.to), save.levels, guideAt(save)]);
     if (shown !== lastShown) {
       lastShown = shown;
       h.stock(save);
@@ -400,6 +412,7 @@ export function createTycoonUI(root: HTMLElement, h: TycoonHooks) {
         ...LOT_IDS.map((p, i) => ({ id: p as string, ...LOT_SITE[i].door, label: save.lots[i] ? placeName(p) : `Lot ${LETTER[i]} · For sale` })),
         ...CORNER_IDS.map((p, i) => ({ id: p as string, ...CORNER_SHOPS[i].door, label: save.corners[i] ? placeName(p) : `${cornerName(i)} · For sale` })),
         { id: NIGHT_ID as string, ...MY_STALL_DOOR, label: save.night ? nightName() : `${nightName()} · For sale` },
+        ...ESTATE_IDS.map((p, i) => ({ id: p as string, ...DECK_SHOP_DOORS[i], label: (i ? save.deckStore : save.washHouse) ? estateName(i) : `${estateName(i)} · For sale` })),
         ...save.contracts.map((c) => ({ id: 'car', ...destAt(c.to), label: `Deliver · ${DESTS[c.to]}` })),
       ];
     },

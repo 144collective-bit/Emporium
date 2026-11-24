@@ -61,7 +61,7 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 6. **The lobbies.** Done (2026-11-23, below). Each block's ground-floor hall walked into from its door: post boxes, a noticeboard, a bench, the
    lift doors (the lift card, as at the cores), the stairs; the towers' halls glazed and lit warm at night. A hall is
    its own inside (as the tube's halls are), near only.
-7. **A flat of your own, and shops to run.** The flat done (7a, 2026-11-23, below); the shops next (7b). A flat for Degen in one of the blocks (the owner's pick: his own to
+7. **A flat of your own, and shops to run.** The flat done (7a, 2026-11-23, below); the shops done (7b, 2026-11-24, below). A flat for Degen in one of the blocks (the owner's pick: his own to
    live in, not flats let out): its door off a gallery, inside it a few rooms to walk (as his home's), and a choice
    to wake there instead of at home (docs/spawn-plan.md, a save setting with its migration). And the shops under the
    podium deck, a launderette and a corner shop (made-up names), each run as Makers' Row's units are (levels,
@@ -198,6 +198,23 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
   the partition, his dark sofa with his neon in its cushions, a low table on a rug, the telly, the kitchen counter and
   cupboards, the fridge, the bed, a wardrobe, warm strip lights.
 
+## What Phase 7b did (2026-11-24: the shops under the deck)
+
+- **The Wash House** (the owner's pick: its machines earn): no stock to buy; its washers and dryers (4, 6 and 8 by
+  level) take a wash every few minutes each, a flat game fee into the till, twice as many with you at its door, a
+  quarter as many while you're away (for up to four hours, as a shop without a clerk). No staff. tycoon.ts
+  `washHouse`, `WASH`, `washMachines()`, in `advance()`; the ledger's "Washes".
+- **Deck Stores**: a shop run as a corner shop is (4 shelves of 60, a clerk can work it, stocked at the market hall or
+  by car and courier). tycoon.ts `deckStore`, `DECK_STORE`.
+- **Bought** (the owner's picks) at each shop's door (its prompt opens the business card on it: the Units tab's
+  "Endswood · the deck") and at the Vault's estate agent, 30,000 Dorras each from level 5 (free while free play's
+  on), in the worth as the corner shops are; levels 1-3. The save's `washHouse` and `deckStore`, null till bought,
+  their migration in `cleanSave()` (no version change: older saves own neither).
+- **The fronts show it** (the owner's pick: no walk-in rooms): once yours, a warm-lit inside behind the glass, drawn
+  from the save near only (southblocks.ts `DECK_LOOK`, southblocks3d.ts `registerDeckShops()`): The Wash House's
+  machines, a washer under a dryer, their drums turning (still under reduced motion); Deck Stores' shelves, a column
+  of packs in each kind's colour, as full as the shelf is. No new textures.
+
 ## The owner's decisions (2026-11-21)
 
 - **The concrete:** a cool grey, each block's own accent kept bold as a stripe on its end; after the first look, darker
@@ -208,3 +225,8 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 - **The order:** the look first (phases 1 to 5), then the places (6 to 8).
 - The shops' names (2026-11-23): The Wash House and Deck Stores; the empty units shuttered and tagged.
 - The flat (2026-11-23): Kite Point's 15th floor, bought once with Dorras, the flat first, then the shops.
+- The shops (2026-11-24, Phase 7b): The Wash House earns from its machines (no stock: washers and dryers take Dorras
+  on their own, capped while away; upgrades add machines); Deck Stores is a shop like a corner shop. Each bought at its
+  door's card and in the Vault's estate agent list, 30,000 Dorras each from level 5 (free while free play's on). No walk-in rooms:
+  the card at the door, and once it's yours the front shows it (the machines turning and lit, the shelves full
+  through the glass, from the save).

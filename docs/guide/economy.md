@@ -40,7 +40,16 @@ keep it up to date when what it describes changes.
   without a version, Degen's flat in Kite Point, `flat`: null till he buys
   it, `{ wake }` after, docs/brutalist-plan.md Phase 7a, `buyFlat()`,
   `FLAT_PRICE`, `FLAT_LEVEL`, `setWake()`, `wakeAt()`: a home, never in the
-  worth, `propertyValue()`); keep that migration when the save changes. New economy rules go here
+  worth, `propertyValue()`; and the estate's shops under Endswood's podium deck, docs/brutalist-plan.md Phase 7b:
+  `washHouse` { carry } and `deckStore` { slots }, null till each is bought, `cleanWash()`, `cleanStore()`; places
+  `e0` and `e1` (`ESTATE_PLACES`, `WASH_PLACE`, `STORE_PLACE`), `buyEstateShop()`, `estatePrice()`, `ESTATE_PRICE`
+  30,000 each from `ESTATE_LEVEL` 5, ledger `property`, in the worth as a corner shop is, levels 1-3
+  (`ESTATE_LEVEL_COSTS` in catalog.ts); The Wash House holds no goods and has no staff: its machines (`WASH.machines`
+  4 / 6 / 8 by level, `washMachines()`) take a wash each `WASH.minutes` for `WASH.fee` into the till in `advance()`
+  (`Sales.washes`, ledger `washes` ("Washes"), XP a wash as a sale's; twice as many with you at its door, a quarter as
+  many away, for `OFFLINE_CAP` minutes); Deck Stores is a shop (`DECK_STORE`, 4 shelves of 60, a clerk can work it);
+  both on the business card's Units tab ("Endswood · the deck", tycoon-boot.ts `ESTATE_IDS`, `estateSel()`) and the
+  Vault's estate agent (tycoon-ui.ts `estateRows()`)); keep that migration when the save changes. New economy rules go here
   first.
 - **Balance** (the polish plan's Phase 9, the owner's call; the numbers
   before and after are in `docs/tycoon-plan.md`, "Balance"): **the daily

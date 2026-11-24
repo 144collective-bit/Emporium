@@ -589,6 +589,29 @@ export const DECK_SHOPS: DeckShop[] = (() => {
   }
   return out;
 })();
+/** How the two open shops look from the court (Phase 7b): The Wash House's machines (0 till it's yours), Deck Stores'
+ * shelves (null till it's yours: each shelf's goods' colour and how full, in sixths) */
+export interface DeckLook {
+  wash: number;
+  store: { color: string; fill: number }[] | null;
+}
+/** As the save has them (`setDeckLook()`, from index.ts whenever the save's stock changes), drawn by southblocks3d.ts;
+ * `v` goes up each time it changes */
+export const DECK_LOOK: DeckLook & { v: number } = { v: 0, wash: 0, store: null };
+export function setDeckLook(l: DeckLook) {
+  if (l.wash === DECK_LOOK.wash && JSON.stringify(l.store) === JSON.stringify(DECK_LOOK.store)) return;
+  Object.assign(DECK_LOOK, l, { v: DECK_LOOK.v + 1 });
+}
+/**
+ * Where you stand to run the two open shops (Phase 7b): in front of each one's door (the front's last stretch, as
+ * drawn: southblocks3d.ts `drawShops()`), a step out into the court; by name, as `DECK_SHOP_NAMES`
+ */
+export const DECK_SHOP_DOORS = DECK_SHOP_NAMES.map((name) => {
+  const sh = DECK_SHOPS.find((d) => d.name === name)!;
+  const len = Math.hypot(sh.c[0] - sh.a[0], sh.c[1] - sh.a[1]);
+  const [tx, tz] = [(sh.c[0] - sh.a[0]) / len, (sh.c[1] - sh.a[1]) / len];
+  return { x: sh.a[0] + tx * (len - 0.5) + sh.n[0] * 0.6, z: sh.a[1] + tz * (len - 0.5) + sh.n[1] * 0.6 };
+});
 
 export const BRIDGES: Bridge[] = [
   // The Rampart to the towers' core, at the third, sixth and ninth floors
