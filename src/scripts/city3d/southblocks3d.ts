@@ -17,6 +17,10 @@
  * - **The podium deck** on its columns; **Teasel House's** hoarded half (boarded windows, hoarding at the ground) and
  *   Bunker Sound's door under it.
  *
+ * - **The shops you own under the deck** (docs/brutalist-plan.md Phase 7b): seen through the glass once they're yours,
+ *   drawn from the save (`DECK_LOOK`, `registerDeckShops()`): The Wash House's washers and dryers (as many as its level
+ *   has), their drums turning; Deck Stores' shelves stocked in its goods' colours, as full as they are. Near only.
+ *
  * The blocks stand level on their own plinths (their bases): their Batches aren't lifted onto the rolling ground
  * (`build()`'s `lift`). Their solids are solids.ts's (`BLOCK_SOLIDS`).
  */
@@ -29,12 +33,14 @@ import { PLANT } from './palette';
 import { shift } from './streetfaces';
 import {
   ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
-  DECK_SHOPS, DECK_SHOP_NAMES, FLAT, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
+  DECK_SHOPS, DECK_SHOP_DOORS, DECK_SHOP_NAMES, FLAT, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
 import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
 import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, COLUMN_R, DECK_COLUMNS, DECK_PROPS, FRAME, SANDPIT, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
-import { COURTS, DESIRE_LINES, GRASS, PLAY, landingPosts } from './southblocks';
+import { COURTS, DECK_LOOK, DESIRE_LINES, GRASS, PLAY, landingPosts } from './southblocks';
+import { CROWD_VIEW } from './character';
+import { WASH } from './tycoon';
 import { BANK, COVER, ROAD, STONE } from './palette';
 import { parkedCars } from './cars';
 import type { CarId } from './carspec';
@@ -1160,12 +1166,10 @@ function drawShops(b: Batch, low: boolean) {
     const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
     const t: Pt = [(c[0] - a[0]) / len, (c[1] - a[1]) / len];
     const at = (u: number, out: number): Pt => [a[0] + t[0] * u + n[0] * out, a[1] + t[1] * u + n[1] * out];
-    // (read left to right from in front: from the left of someone facing it)
-    const left = (u: number, out: number, w: number): [Pt, Pt] => {
-      const m = at(u, out);
-      const l: Pt = [-n[1], n[0]];
-      return [[m[0] + l[0] * w, m[1] + l[1] * w], [m[0] - l[0] * w, m[1] - l[1] * w]];
-    };
+    // (read left to right from in front: from the left of someone facing it; laid along the front itself, which needn't
+    // be square to n: a sign laid square to n dipped behind the fascia at one end)
+    const leftward = t[0] * -n[1] + t[1] * n[0] > 0;
+    const left = (u: number, out: number, w: number): [Pt, Pt] => (leftward ? [at(u + w, out), at(u - w, out)] : [at(u - w, out), at(u + w, out)]);
     k.all(() => {
       if (sh.name) {
         quad(b, at(0.1, 0.014), at(len - 0.1, 0.014), base + 0.05, base + 1.02, n, GLASS);
@@ -1209,6 +1213,126 @@ function drawShops(b: Batch, low: boolean) {
       }
     });
   }
+}
+
+/* ---------- The shops you own under the deck, from the save (docs/brutalist-plan.md Phase 7b) ---------- */
+
+/** Lit warm inside, a little by day (minimal bloom: as the glass it's drawn over) */
+const PANE = lit(toon('#c4ab84', { emissive: '#ffd9a0' }), 0.12, 0.8);
+const MACHINE = toon('#f2f1ec');
+const PORT_RIM = toon('#9aa1a8');
+const PORT = toon('#3a4654');
+const SHELF = toon('#6f6a62');
+/** What's tumbling in the drums */
+const LAUNDRY = toon('#d9668f');
+/** The display's width behind the glass (from 0.12 to `SHOW_U1` along the front: the door's to the right of it) */
+const SHOW_U0 = 0.12;
+const SHOW_U1 = 2.58;
+/** Washers and dryers, a column at a time: a washer under a dryer */
+const MACHINE_W = 0.44;
+const MACHINE_GAP = 0.1;
+const ROWS_Y = [0.3, 0.76];
+const PORT_R = 0.14;
+/** Deck Stores' shelves (their heights over the floor) and how many packs a shelf of one kind holds */
+const SHELVES_Y = [0.32, 0.6, 0.88];
+const PACKS = 5;
+/** Drawn when the camera's this near */
+const SHOP_NEAR = 80;
+
+/** A disc of radius r facing n, its centre at p, height y */
+function disc(b: Batch, p: Pt, y: number, r: number, n: Pt, m: THREE.Material) {
+  b.add(plain(new THREE.CircleGeometry(r, 16).rotateY(Math.atan2(n[0], n[1])).translate(p[0], y, p[1])), m);
+}
+/** A front's frame: a point `u` along it and `out` in front of its face */
+function frontOf(name: string) {
+  const sh = DECK_SHOPS.find((d) => d.name === name)!;
+  const len = Math.hypot(sh.c[0] - sh.a[0], sh.c[1] - sh.a[1]);
+  const t: Pt = [(sh.c[0] - sh.a[0]) / len, (sh.c[1] - sh.a[1]) / len];
+  return { sh, at: (u: number, out: number): Pt => [sh.a[0] + t[0] * u + sh.n[0] * out, sh.a[1] + t[1] * u + sh.n[1] * out] };
+}
+/** The Wash House's machines' centres along its front (a column a pair) */
+const columnsOf = (machines: number) => {
+  const cols = Math.ceil(machines / 2);
+  const w = cols * MACHINE_W + (cols - 1) * MACHINE_GAP;
+  const u0 = (SHOW_U0 + SHOW_U1 - w) / 2 + MACHINE_W / 2;
+  return Array.from({ length: cols }, (_, i) => u0 + i * (MACHINE_W + MACHINE_GAP));
+};
+
+/** The two shops' insides as the save has them: a group rebuilt when the look changes, drums turned while near */
+function registerDeckShops(scene: THREE.Scene | null, tick?: (f: Tick) => void) {
+  if (!scene || !tick) return;
+  const wash = frontOf(DECK_SHOP_NAMES[0]);
+  const store = frontOf(DECK_SHOP_NAMES[1]);
+  const g = new THREE.Group();
+  g.name = 'south-blocks deck shops';
+  scene.add(g);
+  const drums = new THREE.InstancedMesh(new THREE.CircleGeometry(PORT_R * 0.62, 10, 0, Math.PI), LAUNDRY, Math.max(...WASH.machines));
+  drums.frustumCulled = false;
+  drums.count = 0;
+  scene.add(drums);
+  const spots: { p: Pt; y: number }[] = [];
+  const face = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.atan2(wash.sh.n[0], wash.sh.n[1]));
+  const [q, m, one, pos, z] = [new THREE.Quaternion(), new THREE.Matrix4(), new THREE.Vector3(1, 1, 1), new THREE.Vector3(), new THREE.Vector3(0, 0, 1)];
+  let v = -1;
+  function build() {
+    for (const o of [...g.children]) {
+      g.remove(o);
+      (o as THREE.Mesh).geometry?.dispose();
+    }
+    spots.length = 0;
+    const b = new Batch();
+    const base = wash.sh.base;
+    if (DECK_LOOK.wash) {
+      const { at, sh } = wash;
+      quad(b, at(SHOW_U0, 0.046), at(SHOW_U1, 0.046), base + 0.05, base + 1.02, sh.n, PANE);
+      for (const u of columnsOf(DECK_LOOK.wash))
+        ROWS_Y.forEach((y, row) => {
+          if (row && spots.length >= DECK_LOOK.wash) return;
+          along(b, at(u - MACHINE_W / 2, 0.062), at(u + MACHINE_W / 2, 0.062), 0.02, base + y - 0.2, base + y + 0.2, MACHINE);
+          disc(b, at(u, 0.0735), base + y, PORT_R, sh.n, PORT_RIM);
+          disc(b, at(u, 0.0775), base + y, PORT_R * 0.82, sh.n, PORT);
+          spots.push({ p: at(u, 0.0815), y: base + y });
+        });
+      for (let u = 0.1 + 0.9; u < SHOW_U1; u += 0.9) along(b, at(u, 0.095), at(u + 0.04, 0.095), 0.01, base + 0.05, base + 1.02, CONC_DARK);
+    }
+    if (DECK_LOOK.store) {
+      const { at, sh } = store;
+      quad(b, at(SHOW_U0, 0.046), at(SHOW_U1, 0.046), base + 0.05, base + 1.02, sh.n, PANE);
+      for (const y of SHELVES_Y) along(b, at(SHOW_U0 + 0.04, 0.062), at(SHOW_U1 - 0.04, 0.062), 0.03, base + y - 0.02, base + y, SHELF);
+      // A column of shelves a kind of goods, its packs as many as it's full
+      const col = (SHOW_U1 - SHOW_U0) / Math.max(4, DECK_LOOK.store.length);
+      DECK_LOOK.store.forEach((slot, i) => {
+        const mat = toon(slot.color);
+        let left = Math.round(slot.fill * PACKS * SHELVES_Y.length);
+        for (const y of SHELVES_Y)
+          for (let k = 0; k < PACKS && left > 0; k++, left--) {
+            const u = SHOW_U0 + i * col + 0.06 + k * ((col - 0.12) / PACKS);
+            along(b, at(u, 0.064), at(u + (col - 0.12) / PACKS - 0.02, 0.064), 0.026, base + y, base + y + 0.13, mat);
+          }
+      });
+      for (let u = 0.1 + 0.9; u < SHOW_U1; u += 0.9) along(b, at(u, 0.095), at(u + 0.04, 0.095), 0.01, base + 0.05, base + 1.02, CONC_DARK);
+    }
+    b.build(g, { cast: false, receive: false, lift: false });
+    drums.count = spots.length;
+  }
+  tick(({ t }) => {
+    const e = CROWD_VIEW.eye;
+    const d = DECK_SHOP_DOORS[0];
+    const near = Math.hypot(e.x - d.x, e.z - d.z) < SHOP_NEAR;
+    g.visible = drums.visible = near;
+    if (!near) return;
+    if (DECK_LOOK.v !== v) {
+      v = DECK_LOOK.v;
+      build();
+    }
+    // The drums turning (each its own pace; still under reduced motion, as the city's clock is)
+    spots.forEach((s, i) => {
+      q.setFromAxisAngle(z, t * (2.4 + (i % 3) * 0.7) + i * 1.9).premultiply(face);
+      m.compose(pos.set(s.p[0], s.y, s.p[1]), q, one);
+      drums.setMatrixAt(i, m);
+    });
+    drums.instanceMatrix.needsUpdate = true;
+  });
 }
 
 /**
@@ -1743,8 +1867,9 @@ const rectHas = (r: Rect, [x, z]: Pt) => x > r[0] && x < r[2] && z > r[1] && z <
 
 /* ---------- Registered ---------- */
 
-export function register({ low, scene }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   registerYard(low, scene);
+  registerDeckShops(scene, tick);
   const opts = { cast: true, receive: true, lift: false };
   for (const blk of BLOCKS) {
     if (blk.spine)

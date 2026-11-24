@@ -337,16 +337,8 @@ await scene('homeden', '-229,387.05,0', async (t) => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
     return !!m && Number(m[2]) < 384.7;
   });
-  await t.hold('a', 'across the turn', () => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+)/)?.[1] ?? -999) < -228.6);
-  // (he glides on a little once the key's let go, so he's lined up with the den's door, 0.7 wide, before going on:
-  // tapped back while he's off its middle)
-  for (let k = 0; k < 4; k++) {
-    await t.page.waitForTimeout(500);
-    const [x] = await t.where();
-    if (x < -229.15) await t.hold('d', 'lined up with the den\'s door', (lim) => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+)/)?.[1] ?? -999) > lim, -229.12);
-    else if (x > -228.85) await t.hold('a', 'lined up with the den\'s door', (lim) => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+)/)?.[1] ?? -999) < lim, -228.88);
-    else break;
-  }
+  // (west past the spine's end: the den's doorway is the flight's whole width, so anywhere under the flight goes out)
+  await t.hold('a', 'across the turn', () => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+)/)?.[1] ?? -999) < -228.85);
   await t.hold('s', 'up under the second flight and out by the den\'s door', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
     return !!m && Number(m[2]) > 386.8 && !/ · down /.test(document.querySelector('.city-stats')?.textContent ?? '');
