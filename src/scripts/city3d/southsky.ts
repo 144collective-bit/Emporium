@@ -13,7 +13,7 @@
  *   picker (skylift-ui.ts) and the ride (index.ts `rideTo()`).
  */
 import {
-  BLOCKS, BLOCKS_RECT, BRIDGES, BRIDGE_HALF, CAGE, CAGES, CORES, DECKS, GALLERY_W, SKY_FLOORS, LOBBIES, PERCH, TOP_FLOOR, lobbyAt, TWIN_CORE_HALF, blockById, floorY,
+  BLOCKS, BLOCKS_RECT, BRIDGES, BRIDGE_HALF, CAGE, CAGES, CORES, DECKS, GALLERY_W, SKY_FLOORS, FLAT, LOBBIES, PERCH, TOP_FLOOR, lobbyAt, TWIN_CORE_HALF, blockById, floorY,
   lineLength, outward, pointAt, section, storeysOf, type Block, type Pt,
 } from './southblocks';
 import { inside, shift } from './streetfaces';
@@ -237,7 +237,25 @@ const stairShapes = (): SkyShape[] => {
 
 /* ---------- Every shape ---------- */
 
-export const SKY_SHAPES: SkyShape[] = [...galleryShapes(), ...landingShapes(), ...bridgeShapes(), ...DECKS.map((d) => level(`deck ${d.id}`, d.poly, d.y)), ...stairShapes()];
+/* ---------- Degen's flat (docs/brutalist-plan.md Phase 7a) ---------- */
+
+/** The flat's rooms (southblocks.ts `FLAT`): its doorway off the bridge, the living room, the hall, the bedroom; the
+ * partition between the living room and the bedroom is where no room is */
+const flatShapes = (): SkyShape[] => Object.entries(FLAT.rooms).map(([id, poly]) => level(`flat ${id}`, poly, FLAT.y));
+/** Whether the flat's door lets him in: once it's his (set from the save, index.ts) */
+const FLAT_STATE = { open: false };
+export function setFlatOpen(on: boolean) {
+  FLAT_STATE.open = on;
+}
+export const flatOpen = () => FLAT_STATE.open;
+/** The flat's door's prompt, on the bridge a step out from it, for someone at its floor: its card (flat-ui.ts) */
+export function flatDoors(y: number): { id: string; x: number; z: number; label: string }[] {
+  if (Math.abs(y - FLAT.y) > REACH) return [];
+  const p = FLAT.at(0, 0.9);
+  return [{ id: 'flat:door', x: p[0], z: p[1], label: FLAT_STATE.open ? 'Your flat' : 'Flat' }];
+}
+
+export const SKY_SHAPES: SkyShape[] = [...galleryShapes(), ...landingShapes(), ...bridgeShapes(), ...DECKS.map((d) => level(`deck ${d.id}`, d.poly, d.y)), ...stairShapes(), ...flatShapes()];
 const BOX = SKY_SHAPES.map((s) => [Math.min(...s.poly.map((p) => p[0])), Math.min(...s.poly.map((p) => p[1])), Math.max(...s.poly.map((p) => p[0])), Math.max(...s.poly.map((p) => p[1]))]);
 const inRect = (x: number, z: number) => x > BLOCKS_RECT[0] && x < BLOCKS_RECT[2] && z > BLOCKS_RECT[1] && z < BLOCKS_RECT[3];
 
@@ -249,6 +267,8 @@ function standOn(x: number, z: number, y: number): number[] {
     const b = BOX[i];
     if (x < b[0] || x > b[2] || z < b[1] || z > b[3] || y < s.lo - REACH || y > s.hi + REACH) continue;
     if (!inside(s.poly, [x, z])) continue;
+    // (the flat's rooms only once it's his: till then its door's shut)
+    if (s.id.startsWith('flat ') && !FLAT_STATE.open) continue;
     // (the podium deck's planters and benches stand on it: not stood in, southyard.ts)
     if (s.id.startsWith('deck') && onDeckProp(x, z)) continue;
     const fy = s.y(x, z);

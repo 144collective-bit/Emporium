@@ -422,7 +422,8 @@ export function glName(gl: WebGLRenderingContext | WebGL2RenderingContext): stri
  * graphics' name comes from a throwaway context, let go at once. Not with ?textures=0 (painting on purpose, to compare).
  */
 let halfPaint: boolean | undefined;
-function paintsHalf() {
+/** Whether this browser paints a big canvas texture at half size (phones and weak graphics: `paint()`) */
+export function paintsHalf() {
   if (halfPaint !== undefined) return halfPaint;
   halfPaint = HALF_TEX;
   if (!halfPaint && !BAKING && !BUILT && !/[?&](textures=0|fight|district)\b/.test(location.search)) {
