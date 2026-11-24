@@ -2,6 +2,11 @@
 // highway and its slip lanes, the Parkway, the avenues and everything that was there; the lake, its loop, the paths,
 // the gates, trees, lamps and benches where they belong; the stadium's old site kept clear for the garden.
 import { test } from 'node:test';
+import { BANDSTAND_BENCHES, CAFE_TABLES } from '../src/scripts/city3d/parkstands';
+import { BANDSTAND, LAKEHOUSE, LAKEHOUSE_DOOR, LAKEHOUSE_SPAWN, onCafeDeck, nearStands } from '../src/scripts/city3d/westlake';
+import { PLACES } from '../src/scripts/city3d/places';
+import { LIVE_PLACES } from '../src/scripts/city3d/live';
+import { PARK_TREES } from '../src/scripts/city3d/parktrees';
 import assert from 'node:assert/strict';
 import {
   BENCHES,
@@ -12,7 +17,6 @@ import {
   LAKE_WALLS,
   LOOP_OUT,
   PARK_LAMPS,
-  PARK_TREES,
   PATHS,
   GARDEN_SITE,
   WESTLAKE_SOLIDS,
@@ -23,12 +27,38 @@ import {
   inPark,
   lakeLine,
   lakeR,
+  LAKE_REACH,
+  LAKE_ARM,
+  LAKE_INLET,
+  LAKE_POLY,
+  ROCKS,
+  lakeCoreLine,
+  lakeDist,
+  RIM,
+  lakeAt,
   onPath,
+  onBridge,
+  LAKE_PARTS,
+  GRAND,
+  grandAt,
+  grandY,
+  onGrand,
+  onOverlook,
+  OVERLOOK,
+  OVERLOOK_RAIL,
+  LAKE_HOLE,
+  WATER_Y,
+  BED_Y,
+  bridgeY,
+  BRIDGES,
+  onLawn,
+  PROMENADE_HALF,
 } from '../src/scripts/city3d/westlake';
 import { PLAN, distToStreet, inPoly, polyArea } from '../src/scripts/city3d/streetplan';
 import { fromHighway, insideHighway } from '../src/scripts/city3d/highway';
 import { RIVER, WALK_W } from '../src/scripts/city3d/layout';
 import { SOLIDS } from '../src/scripts/city3d/solids';
+import { SQUARE } from '../src/scripts/city3d/civic';
 import { GARDEN_SOLIDS } from '../src/scripts/city3d/gardens';
 import { CITYHALL_SOLIDS, FLAG_SOLIDS, FLANK_SOLIDS, FOUNTAIN_SOLIDS } from '../src/scripts/city3d/civic';
 import { PADS } from '../src/scripts/city3d/outer';
@@ -82,7 +112,8 @@ test('its blocks are the street plan\'s, and no other block or pad is on them', 
 
 test('the lake: inside the big block, its loop round it on the park, its walls covering it for cars', () => {
   for (const p of lakeLine(LOOP_OUT + 2, 180)) assert.ok(inPoly(BIG, p), `the loop's land at ${p}`);
-  for (let a = 0; a < 2 * Math.PI; a += 0.05) assert.ok(lakeR(a) > 10 && lakeR(a) < 36, `a sensible radius at ${a}`);
+  // (out to the arm's tip, the redesign's Phase 1)
+  for (let a = 0; a < 2 * Math.PI; a += 0.05) assert.ok(lakeR(a) > 10 && lakeR(a) <= LAKE_REACH + 1e-9 && LAKE_REACH < 56, `a sensible radius at ${a}`);
   assert.ok(inLake(LAKE_C[0], LAKE_C[1]));
   assert.ok(!inLake(LAKE_C[0] + 40, LAKE_C[1]));
   // A walker's radius keeps them off the water at its edge
@@ -100,7 +131,8 @@ test('the paths: on the park, off the lake and the garden\'s site (but the Mall 
     for (let i = 1; i < pts.length; i++)
       for (const p of along(pts[i - 1], pts[i], 1)) {
         assert.ok(inPark(p, -0.01), `${q.id} on the park at ${p}`);
-        assert.ok(!inLake(p[0], p[1], q.half + 0.5), `${q.id} in the lake at ${p}`);
+        // (but where the loop crosses a bridge over the arm or the inlet: docs/westlake-plan.md Phase 3a)
+        if (!onBridge(p[0], p[1], -1.5)) assert.ok(!inLake(p[0], p[1], q.half + 0.5), `${q.id} in the lake at ${p}`);
         const [x0, z0, x1, z1] = GARDEN_SITE;
         if (q.id !== 'mall' && !q.id.startsWith('garden-')) assert.ok(!(p[0] > x0 && p[0] < x1 && p[1] > z0 && p[1] < z1), `${q.id} on the garden's site at ${p}`);
       }
@@ -114,15 +146,19 @@ test('the paths: on the park, off the lake and the garden\'s site (but the Mall 
 
 test('trees, lamps and benches: on the park, off the paths, the water and the garden\'s site', () => {
   // (fewer since the civic quarter took the park's south end, civic.ts, the owner's call: it has trees of its own)
-  assert.ok(PARK_TREES.length > 220, `${PARK_TREES.length} trees`);
-  assert.ok(PARK_TREES.filter((t) => t.clump).length > 150);
+  // (fewer since the lake's arm reached into the north-east woods and the Great Lawn was cleared, the redesign's
+  // Phases 1 and 2: Phase 5 plants the park anew)
+  assert.ok(PARK_TREES.length > 120, `${PARK_TREES.length} trees`);
+  assert.ok(PARK_TREES.filter((t) => t.clump).length > 100);
   const [x0, z0, x1, z1] = GARDEN_SITE;
   const onSite = (p: Pt, m: number) => p[0] > x0 - m && p[0] < x1 + m && p[1] > z0 - m && p[1] < z1 + m;
   for (const t of PARK_TREES) {
     const p: Pt = [t.x, t.z];
     assert.ok(inPark(p, 1), `a tree off the park at ${p}`);
     assert.ok(!onPath(p, 1), `a tree on a path at ${p}`);
-    assert.ok(!inLake(t.x, t.z, LOOP_OUT + 2), `a tree in the lake at ${p}`);
+    // (but the willows, by the water between its rim and the loop, Phase 5)
+    if (t.kind === 'willow') assert.ok(!inLake(t.x, t.z, RIM.w + 0.5) && inLake(t.x, t.z, LOOP_OUT), `a willow off the water at ${p}`);
+    else assert.ok(!inLake(t.x, t.z, LOOP_OUT + 2), `a tree in the lake at ${p}`);
     assert.ok(!onSite(p, 2), `a tree on the garden's site at ${p}`);
   }
   for (let i = 0; i < PARK_TREES.length; i++)
@@ -139,6 +175,186 @@ test('trees, lamps and benches: on the park, off the paths, the water and the ga
   for (const b of BENCHES) {
     assert.ok(inPark(b.at, 0.5), `a bench off the park at ${b.at}`);
     assert.ok(!inLake(b.at[0], b.at[1], 0.6), `a bench in the lake at ${b.at}`);
-    for (const q of PATHS) if (q.id !== 'loop' && q.id !== 'mall') assert.ok(distToLine(q.pts, b.at, q.loop) > q.half + 0.6, `a bench on ${q.id} at ${b.at}`);
+    for (const q of PATHS) if (q.id !== 'loop' && q.id !== 'mall' && q.id !== 'promenade') assert.ok(distToLine(q.pts, b.at, q.loop) > q.half + 0.6, `a bench on ${q.id} at ${b.at}`);
   }
+});
+
+/** Whether a closed outline crosses itself */
+function crosses(pts: Pt[]) {
+  const n = pts.length;
+  const cut = (a: Pt, b: Pt, c: Pt, d: Pt) => {
+    const o = (p: Pt, q: Pt, r: Pt) => Math.sign((q[0] - p[0]) * (r[1] - p[1]) - (q[1] - p[1]) * (r[0] - p[0]));
+    return o(a, b, c) * o(a, b, d) < 0 && o(c, d, a) * o(c, d, b) < 0;
+  };
+  for (let i = 0; i < n; i++) for (let j = i + 2; j < n; j++) if ((j + 1) % n !== i && cut(pts[i], pts[(i + 1) % n], pts[j], pts[(j + 1) % n])) return true;
+  return false;
+}
+
+test('the lake redesigned (docs/westlake-plan.md Phase 1): round its old centre, its arm north and its inlet, coves and a point, a clean outline', () => {
+  assert.ok(!crosses(LAKE_POLY), 'the shore crosses itself');
+  assert.ok(inLake(LAKE_C[0], LAKE_C[1], -10), 'its middle well out in the water');
+  // The arm and the inlet: water out along each line to near its end
+  for (const arm of [LAKE_ARM, LAKE_INLET]) {
+    for (const p of arm.line.slice(0, -1)) assert.ok(inLake(p[0], p[1]), `the arm's line at ${p} in the water`);
+    const end = arm.line.at(-1)!;
+    assert.ok(inLake(end[0], end[1]) && lakeDist(end[0], end[1]) > -arm.w.at(-1)!, `its end at ${end}`);
+  }
+  assert.ok(LAKE_POLY.some((p) => p[1] < -95), 'the arm reaches north into the woods');
+  // The open water (the boats') is inside the lake, a clean outline; the lines off the shore (the rim, the loop and its lanes) too
+  for (const p of lakeCoreLine(-0.5, 120)) assert.ok(inLake(p[0], p[1]), `the open water at ${p} out of the lake`);
+  for (const out of [RIM.w, LOOP_OUT - 0.8, LOOP_OUT, LOOP_OUT + 0.8, LOOP_OUT + 1.1]) {
+    const line = lakeLine(out, 240);
+    assert.ok(!crosses(line), `the line ${out} off the shore crosses itself`);
+    for (const p of line) assert.ok(!inLake(p[0], p[1], out - 0.3), `the line ${out} off the shore at ${p} too near the water`);
+  }
+  // Its north shore by the boathouse and the jetty where it was
+  assert.ok(Math.abs(lakeAt(-Math.PI / 2)[1] - -67.9) < 0.6, `the north shore at ${lakeAt(-Math.PI / 2)}`);
+});
+
+test('the rock outcrops: on the park, off the paths and the water, apart, solid, the trees off them', () => {
+  // (fewer since the point's tip went to the overlook, Phase 3c)
+  assert.ok(ROCKS.length >= 20, `${ROCKS.length} rocks`);
+  // (on the point's flanks either side of the overlook)
+  for (const deg of [136, 164]) {
+    const point = lakeAt((deg * Math.PI) / 180, 1.5);
+    assert.ok(ROCKS.some((k) => Math.hypot(k.x - point[0], k.z - point[1]) < 4), `stones by the point at ${point}`);
+  }
+  for (const k of ROCKS) assert.ok(!onOverlook(k.x, k.z, k.r), 'a rock on the overlook');
+  for (const k of ROCKS) {
+    const p: Pt = [k.x, k.z];
+    assert.ok(inPark(p, 1.5), `a rock off the park at ${p}`);
+    assert.ok(!onPath(p, k.r * 0.7), `a rock on a path at ${p}`);
+    assert.ok(!inLake(k.x, k.z, k.r * 0.5 + RIM.w), `a rock in the water at ${p}`);
+    assert.ok(SOLIDS.some((b) => k.x > b[0] && k.x < b[2] && k.z > b[1] && k.z < b[3]), `a rock not solid at ${p}`);
+    for (const t of PARK_TREES) assert.ok(Math.hypot(t.x - k.x, t.z - k.z) > k.r + 1, `a tree in a rock at ${p}`);
+    for (const b of BENCHES) assert.ok(Math.hypot(b.at[0] - k.x, b.at[1] - k.z) > k.r + 0.9, `a bench against a rock at ${p}`);
+    for (const l of PARK_LAMPS) assert.ok(Math.hypot(l[0] - k.x, l[1] - k.z) > k.r + 0.7, `a lamp in a rock at ${p}`);
+  }
+  for (let i = 0; i < ROCKS.length; i++)
+    for (let j = i + 1; j < ROCKS.length; j++) assert.ok(Math.hypot(ROCKS[i].x - ROCKS[j].x, ROCKS[i].z - ROCKS[j].z) > (ROCKS[i].r + ROCKS[j].r) * 0.74, 'two rocks in one');
+});
+
+test('the paths re-laid (docs/westlake-plan.md Phase 2): none a dead end, the Great Lawn open, the promenade\'s double avenue', () => {
+  // Every walk's ends meet another walk or a gate
+  for (const q of PATHS.filter((r) => !r.loop))
+    for (const end of [q.pts[0], q.pts.at(-1)!]) {
+      // (or the civic square, paved edge to edge, which the civic quarter's walks open into)
+      const onSquare = end[0] > SQUARE[0] - 1 && end[0] < SQUARE[2] + 1 && end[1] > SQUARE[1] - 1 && end[1] < SQUARE[3] + 1;
+      const met = onSquare || PATHS.some((r) => r !== q && distToLine(r.pts, end, r.loop) < r.half + q.half + 0.6) || GATES.some((g) => Math.hypot(g.at[0] - end[0], g.at[1] - end[1]) < g.half + 1);
+      assert.ok(met, `${q.id} ends nowhere at ${end.map((v) => v.toFixed(1))}`);
+    }
+  for (const id of ['lawn', 'promenade', 'ramble-e', 'ramble-n', 'ramble-w', 'lawn-lake', 'mall-lawn', 'lawn-n']) assert.ok(PATHS.some((q) => q.id === id), `no ${id}`);
+  // The lawn: no trees, no rocks
+  for (const t of PARK_TREES) assert.ok(!onLawn([t.x, t.z], -1), `a tree on the Great Lawn at ${t.x}, ${t.z}`);
+  for (const k of ROCKS) assert.ok(!onLawn([k.x, k.z], -1), `a rock on the Great Lawn at ${k.x}, ${k.z}`);
+  // The promenade: trees either side in two rows, benches along its edges
+  const prom = PATHS.find((q) => q.id === 'promenade')!;
+  const avenue = PARK_TREES.filter((t) => Math.abs(t.x - prom.pts[0][0]) < PROMENADE_HALF + 6 && t.z < prom.pts[0][1] && t.z > prom.pts[1][1]);
+  for (const side of [-1, 1]) for (const row of [1.75, 4.7]) assert.ok(avenue.filter((t) => Math.abs(t.x - (prom.pts[0][0] + side * (PROMENADE_HALF + row))) < 0.01).length >= 2, `the avenue's row ${side * row}`);
+  assert.ok(BENCHES.filter((b) => Math.abs(Math.abs(b.at[0] - prom.pts[0][0]) - (PROMENADE_HALF + 0.45)) < 0.01).length >= 4, 'benches along the promenade');
+});
+
+test('the bridges (docs/westlake-plan.md Phase 3a): over the arm and the inlet, landing on the loop, the loop over them, their walks round', () => {
+  assert.deepEqual(BRIDGES.map((k) => k.id), ['iron', 'stone']);
+  const loop = PATHS.find((q) => q.id === 'loop')!;
+  for (const k of BRIDGES) {
+    // Its ends on the land, on the loop; its middle over the water, its deck up off it
+    for (const e of [k.a, k.b]) {
+      assert.ok(!inLake(e[0], e[1], 0.5), `${k.id}'s end at ${e} in the water`);
+      assert.ok(distToLine(loop.pts, e, true) < 0.2, `${k.id}'s end at ${e} off the loop`);
+    }
+    assert.ok(k.len > 8 && k.len < 25, `${k.id}: ${k.len.toFixed(1)} long`);
+    const water = Array.from({ length: 41 }, (_, i) => (i / 40) * k.len).filter((s) => inLake(k.a[0] + k.u[0] * s, k.a[1] + k.u[1] * s));
+    assert.ok(water.length > 3, `${k.id} over no water`);
+    const m: Pt = [k.a[0] + k.u[0] * (k.len / 2), k.a[1] + k.u[1] * (k.len / 2)];
+    assert.ok(onBridge(m[0], m[1], 0.5) && Math.abs(bridgeY(m[0], m[1])! - k.rise) < 1e-6, `${k.id}'s deck at its middle`);
+    assert.ok(bridgeY(k.a[0], k.a[1])! < 0.05, `${k.id}'s deck at its end`);
+    // The loop runs across it
+    for (let s = 1; s < k.len - 1; s += 1) assert.ok(distToLine(loop.pts, [k.a[0] + k.u[0] * s, k.a[1] + k.u[1] * s], true) < 0.2, `the loop off ${k.id} at ${s}`);
+  }
+  // The walks round the arm and the inlet, from one end of its bridge to the other, on the land
+  for (const [id, k] of [['arm-walk', BRIDGES[0]], ['inlet-walk', BRIDGES[1]]] as const) {
+    const q = PATHS.find((r) => r.id === id)!;
+    const ends = [q.pts[0], q.pts.at(-1)!];
+    for (const e of ends) assert.ok([k.a, k.b].some((b) => Math.hypot(b[0] - e[0], b[1] - e[1]) < 0.01), `${id} ends off ${k.id}`);
+    for (const p of q.pts) assert.ok(!inLake(p[0], p[1], q.half + 0.3), `${id} in the water at ${p}`);
+  }
+});
+
+test('the lake lowered into its embankment (docs/westlake-plan.md Phase 3b): its convex pieces cover it, the ground cut under it, the water down', () => {
+  const area = (q: Pt[]) => Math.abs(q.reduce((t, p, i) => t + p[0] * q[(i + 1) % q.length][1] - q[(i + 1) % q.length][0] * p[1], 0)) / 2;
+  const whole = area(lakeLine(0.15, 240));
+  const parts = LAKE_PARTS.reduce((t, q) => t + area(q), 0);
+  assert.ok(Math.abs(parts - whole) / whole < 0.002, `the pieces cover ${parts.toFixed(1)} of ${whole.toFixed(1)}`);
+  // Each piece convex (to a millimetre's rounding) and the water inside one of them
+  const cr = (a: Pt, b: Pt, c: Pt) => (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+  for (const q of LAKE_PARTS) {
+    const sg = Math.sign(q.reduce((t, p, i) => t + p[0] * q[(i + 1) % q.length][1] - q[(i + 1) % q.length][0] * p[1], 0));
+    for (let i = 0; i < q.length; i++) assert.ok(cr(q[i], q[(i + 1) % q.length], q[(i + 2) % q.length]) * sg > -0.01, 'a piece not convex');
+  }
+  for (const p of lakeLine(-0.5, 120)) assert.ok(p[0] > LAKE_HOLE[0] && p[0] < LAKE_HOLE[2] && p[1] > LAKE_HOLE[1] && p[1] < LAKE_HOLE[3], 'the ground left over the water');
+  assert.ok(WATER_Y < -1.5 && BED_Y < WATER_Y, 'the water down in its embankment');
+});
+
+test('the grand terrace (docs/westlake-plan.md Phase 3b): its plaza at the water, steps evenly down from the lawn, over the water and into the land, clear', () => {
+  const { front, back, half, foot, flight, plaza } = GRAND;
+  assert.ok(plaza > WATER_Y && plaza - WATER_Y < 0.4, 'the plaza just over the water');
+  // On the plaza, the plaza's height; down the steps, each lower than the last, from the lawn to the plaza
+  assert.equal(grandY(...grandAt((front + back) / 2 - 2, 0)), plaza);
+  for (const sg of [-1, 1]) {
+    let last = Infinity;
+    for (let a = half - 0.05; a > foot + 0.05; a -= 0.1) {
+      const y = grandY(...grandAt(back - flight / 2, sg * a))!;
+      assert.ok(y <= last + 1e-9 && y < 0 && y > plaza, `a step at ${a}`);
+      assert.ok(last === Infinity || last - y < 0.2, 'a step too tall');
+      last = y;
+    }
+  }
+  assert.equal(grandY(...grandAt(back + 0.5, 0)), null);
+  // Out over the water and into the land
+  const pts = Array.from({ length: 21 }, (_, i) => grandAt(front + 0.5, -half + i)).concat(Array.from({ length: 21 }, (_, i) => grandAt(back - 0.5, -half + i)));
+  assert.ok(pts.some((p) => inLake(p[0], p[1])) && pts.some((p) => !inLake(p[0], p[1])), 'over the water and the land both');
+  // No path through it, no tree, lamp, bench or rock on it
+  for (const q of PATHS) for (const p of q.pts) assert.ok(!onGrand(p[0], p[1], -0.2), `${q.id} through the terrace at ${p}`);
+  for (const t of PARK_TREES) assert.ok(!onGrand(t.x, t.z, -1), 'a tree on the terrace');
+  for (const [x, z] of PARK_LAMPS) assert.ok(!onGrand(x, z, -0.5), 'a lamp on the terrace');
+  for (const b of BENCHES) assert.ok(!onGrand(b.at[0], b.at[1], -0.5), 'a bench on the terrace');
+  for (const k of ROCKS) assert.ok(!onGrand(k.x, k.z, -1), 'a rock on the terrace');
+});
+
+test('the overlook (docs/westlake-plan.md Phase 3c): at the point, its balustrade along the rim, solid, nothing on it', () => {
+  assert.ok(OVERLOOK_RAIL.length > 10, 'its balustrade');
+  for (const p of OVERLOOK_RAIL) {
+    assert.ok(!inLake(p[0], p[1]) && inLake(p[0], p[1], RIM.w + 0.2), `the balustrade off the rim at ${p}`);
+    assert.ok(SOLIDS.some((b) => p[0] > b[0] && p[0] < b[2] && p[1] > b[1] && p[1] < b[3]), 'the balustrade not solid');
+  }
+  for (const t of PARK_TREES) assert.ok(!onOverlook(t.x, t.z, 0.5), 'a tree on the overlook');
+  for (const [x, z] of PARK_LAMPS) assert.ok(!onOverlook(x, z), 'a lamp on the overlook');
+  for (const b of BENCHES) assert.ok(!onOverlook(b.at[0], b.at[1]), 'a bench on the overlook');
+  assert.ok(onOverlook(...lakeAt((150 * Math.PI) / 180, 1.5)) && !onOverlook(OVERLOOK.tip[0] + 20, OVERLOOK.tip[1]));
+});
+
+test('the bandstand and the Lakehouse Café (docs/westlake-plan.md Phase 6): on the lawn and the east shore, off every walk, solid; the café a place', () => {
+  // The bandstand inside the Great Lawn's walk, its benches round it on the lawn, off the walks
+  assert.ok(onLawn(BANDSTAND.c, BANDSTAND.r + 1), 'the bandstand on the Great Lawn');
+  for (const b of BANDSTAND_BENCHES) assert.ok(onLawn(b.at, 0.6) && !onPath(b.at, 0.6), `a bench off the lawn at ${b.at}`);
+  // The café's pavilion on the land off every walk; its deck over the water, its landward edge on the bank
+  const [x0, z0, x1, z1] = LAKEHOUSE.rect;
+  for (let x = x0; x <= x1; x += 0.7)
+    for (let z = z0; z <= z1; z += 0.7) {
+      assert.ok(!onPath([x, z], 0.1) && !inLake(x, z, 0.5) && inPark([x, z], 0.5), `the pavilion on a walk or the water at ${x}, ${z}`);
+    }
+  const d = LAKEHOUSE.deck;
+  assert.ok(inLake(d[0] + 0.5, (d[1] + d[3]) / 2) && !inLake(d[2] - 0.2, (d[1] + d[3]) / 2), 'the deck from the bank out over the water');
+  for (const t of CAFE_TABLES) assert.ok(onCafeDeck(t[0], t[1], 0.4) || (!onPath(t, 0.4) && !inLake(t[0], t[1], 0.4)), `a table off the deck and the strip at ${t}`);
+  for (const p of [BANDSTAND.c, [(x0 + x1) / 2, (z0 + z1) / 2] as Pt]) assert.ok(SOLIDS.some((b) => p[0] > b[0] && p[0] < b[2] && p[1] > b[1] && p[1] < b[3]), `not solid at ${p}`);
+  // Nothing else on them
+  for (const t of PARK_TREES) assert.ok(!nearStands([t.x, t.z], 1), `a tree on a stand at ${t.x}, ${t.z}`);
+  for (const [x, z] of PARK_LAMPS) assert.ok(!nearStands([x, z], 0.5), 'a lamp on a stand');
+  for (const k of ROCKS) assert.ok(!nearStands([k.x, k.z], k.r), 'a rock on a stand');
+  // The café a place: its door at its front, its spawn on the walk facing it, in the places and the live places
+  assert.ok(Math.abs(LAKEHOUSE_DOOR.x - x0) < 0.6 && LAKEHOUSE_DOOR.z > z0 && LAKEHOUSE_DOOR.z < z1);
+  assert.ok(LAKEHOUSE_SPAWN.x < x0 && !inLake(LAKEHOUSE_SPAWN.x, LAKEHOUSE_SPAWN.z, 0.5));
+  assert.ok(PLACES.some((p) => p.id === 'lakehouse'), 'not in the places');
+  assert.ok(LIVE_PLACES.some((p) => p.id === 'lakehouse'), 'not in the live places');
 });

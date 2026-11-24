@@ -1121,7 +1121,7 @@ export function addPeople(idle: readonly Idle[], movers: readonly ParkPerson[]) 
   for (const c of idle) {
     const p = spare.pop();
     if (!p) break;
-    Object.assign(p, { x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry });
+    Object.assign(p, { x: c.x, z: c.z, y: c.y, act: c.act, scale: c.scale, ry: c.ry, face: c.ry, when: c.when, home: c.when && { x: c.x, z: c.z } });
     dresser?.(p);
   }
   for (const pp of movers) {

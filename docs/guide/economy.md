@@ -36,8 +36,11 @@ keep it up to date when what it describes changes.
   the Night Market's stall, `night`, below; v13 the daily prize cap's count,
   `prizes`, below; v12 Build mode retired, the district plots a save owned
   refunded in full, `plotRefund()`, with a toast once; v11 brought the
-  inventory, `inventory`; v10 The Trenches' corner shops, `corners`);
-  keep that migration when the save changes. New economy rules go here
+  inventory, `inventory`; v10 The Trenches' corner shops, `corners`; and
+  without a version, Degen's flat in Kite Point, `flat`: null till he buys
+  it, `{ wake }` after, docs/brutalist-plan.md Phase 7a, `buyFlat()`,
+  `FLAT_PRICE`, `FLAT_LEVEL`, `setWake()`, `wakeAt()`: a home, never in the
+  worth, `propertyValue()`); keep that migration when the save changes. New economy rules go here
   first.
 - **Balance** (the polish plan's Phase 9, the owner's call; the numbers
   before and after are in `docs/tycoon-plan.md`, "Balance"): **the daily

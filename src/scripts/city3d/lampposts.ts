@@ -12,7 +12,7 @@
  * - `lantern`: an ornate black post with a lantern on top (Crestmont).
  * - `suburb`: a short residential post with a globe (Sunridge).
  * - `cobra`: a tall pole with a cobra head out over the road (The Trenches, Lot 9, Endswood Estate: the sodium districts' own).
- * - `park`: a park lantern on a short post (Westlake Park, its gardens).
+ * - `park`: an ornate black post with twin lanterns on its arms (Westlake Park, its gardens).
  * - `strip`: a double-arm post with a head each side and a neon line down the pole (the Neon Mile).
  * - `airport`: a tall grey mast with a wide head (the airport's roads).
  */
@@ -57,7 +57,8 @@ export const LAMP_POSTS: Record<LampKind, LampPost> = {
   lantern: { h: 1.45, r: [0.035, 0.06], arm: 0, double: false, head: [0.15, 0.22, 0.15], headY: 1.58, cap: true, neon: false, post: 'black' },
   suburb: { h: 1.1, r: [0.028, 0.04], arm: 0, double: false, head: [0.16, 0.16, 0.16], headY: 1.2, cap: true, neon: false, post: 'green' },
   cobra: { h: 1.85, r: [0.035, 0.055], arm: 0.65, double: false, head: [0.32, 0.06, 0.14], headY: 1.8, cap: false, neon: false, post: 'ink' },
-  park: { h: 1.25, r: [0.03, 0.045], arm: 0, double: false, head: [0.16, 0.18, 0.16], headY: 1.36, cap: true, neon: false, post: 'black' },
+  // (Westlake Park's own ornate post: a fluted black column with twin lanterns hung from its arms, docs/westlake-plan.md Phase 3c)
+  park: { h: 1.5, r: [0.035, 0.08], arm: 0.3, double: true, head: [0.15, 0.22, 0.15], headY: 1.42, cap: false, neon: false, post: 'black' },
   strip: { h: 2.2, r: [0.04, 0.055], arm: 0.45, double: true, head: [0.22, 0.06, 0.12], headY: 2.14, cap: false, neon: true, post: 'steel' },
   airport: { h: 3.0, r: [0.045, 0.07], arm: 0.7, double: false, head: [0.4, 0.08, 0.2], headY: 2.94, cap: false, neon: false, post: 'steel' },
 };

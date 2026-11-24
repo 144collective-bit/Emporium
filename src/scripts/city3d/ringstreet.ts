@@ -18,7 +18,7 @@ import { BUS_STOPS } from './transit';
 import { ALLEYS } from './downtown';
 import { STATIONS, TRACKS } from './metro';
 import { AXIS_X, LANE_HALF, UPTOWN_LAMPS, E as UPTOWN_E, W as UPTOWN_W } from './uptown';
-import { BENCHES as PARK_BENCHES, GATES, PARK_LAMPS, PARK_TREES, ZS as PARK_EDGE, treeFree } from './westlake';
+import { BENCHES as PARK_BENCHES, GATES, PARK_LAMPS, ZS as PARK_EDGE, treeFree } from './westlake';
 import { GARDEN_SOLIDS, MALL_BEDS, PLANTERS } from './gardens';
 import { LOOP, MALL_LAMPS, NORTH_Z as MALL_NORTH, ZEBRA as COURT_ZEBRA } from './mall';
 import { vergeY } from './verges';
@@ -212,7 +212,6 @@ export const EDGE_TREE_IN = 2.6;
 export const EDGE_TREE_S = 1.05;
 const clearOfPark = (q: Pt) =>
   treeFree(q) &&
-  PARK_TREES.every((t) => Math.hypot(t.x - q[0], t.z - q[1]) > 2.2) &&
   PARK_LAMPS.every(([x, z]) => Math.hypot(x - q[0], z - q[1]) > 1.5) &&
   PARK_BENCHES.every((b) => Math.hypot(b.at[0] - q[0], b.at[1] - q[1]) > 1.6) &&
   PLANTERS.every((p) => Math.hypot(p.at[0] - q[0], p.at[1] - q[1]) > p.r + 1.2) &&

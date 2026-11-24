@@ -55,6 +55,7 @@ async function richSave() {
     await build({
       stdin: {
         contents: `
+          import './golfbake';
           import { newSave, addXp, buyUnit, buildUnit, buyLot, buildLot, buyCorner, upgradePlace, UNIT_KIND_IDS, LOT_KIND_IDS, CORNER_PLACES } from './tycoon';
           export function make(now) {
             const s = newSave(now);
