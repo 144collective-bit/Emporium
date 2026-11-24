@@ -446,7 +446,14 @@ keep it up to date when what it describes changes.
     `south-rampart` and `crest-drive`; a tile at a time, 204 and 119 ms,
     a big site such as Degen's home, 156 ms, still running with its
     tile's others and a site across four tiles four times; a site at a
-    time, `south-rampart` 44 ms, 2026-11-23.) The room they took is reused: a
+    time, `south-rampart` 44 ms, 2026-11-23.) A site slow to build (past
+    `SLOW_SITE_MS`, 60 ms: the boot, the main thread and the site worker
+    each time it) keeps its near pieces and is never let go, while what the
+    slow sites keep fits `KEEP_SHARE` (a quarter) of the tier's near budget,
+    on top of it (tileplan.ts `keepsNear()`, tilebatch.ts `keep()`): built
+    again as you came back, one was most of a frame (memcheck's phone:
+    Crestmont's `mansion-8` 194 ms, Degen's home 156 ms, 2026-11-24). The
+    room they took is reused: a
     piece let go leaves its room as a free slot, and a piece coming back
     (the same size: a site builds the same pieces again) goes in the slot
     that fits it best (tilebatch.ts `takeSlot()`), so only that run is
