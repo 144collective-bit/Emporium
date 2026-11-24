@@ -55,6 +55,9 @@ async function richSave() {
     await build({
       stdin: {
         contents: `
+          // (the golf course's ground is worked out here, as the tests do: the save reads the ground's heights, and
+          // without a build's baked data golflift.ts needs golfbake.ts loaded first)
+          import './golfbake';
           import { newSave, addXp, buyUnit, buildUnit, buyLot, buildLot, buyCorner, upgradePlace, UNIT_KIND_IDS, LOT_KIND_IDS, CORNER_PLACES } from './tycoon';
           export function make(now) {
             const s = newSave(now);
