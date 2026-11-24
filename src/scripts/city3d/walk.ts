@@ -746,7 +746,8 @@ export function createWalk(d: WalkDeps) {
     // Inside Degen's house (home.ts, docs/home-plan.md Phase 3): only the room's walls, what stands in it and the
     // stair's rails stop you (docs/house-plan.md Phase 2: the stair walked)
     if (inHouse(x, z, y)) return homeWall(x, z, RADIUS, y);
-    // ...and up on his roof terrace (docs/ends-far-west-plan.md Phase 3) only its rail and what stands on it
+    // ...and up on his roof terrace (docs/ends-far-west-plan.md Phase 3) only its rail, the hatch's kerb (open by
+    // the roof's steps' head: docs/house-plan.md Phase 3) and what stands on it
     if (onRoof(x, z, y)) return roofWall(x, z, RADIUS);
     // Below ground (underground.ts: Lot 9's tunnel, the Circus's subways and plaza): down there only their walls stop you;
     // at street level the open cuttings' and the well's edges do
