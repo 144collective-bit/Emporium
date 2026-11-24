@@ -310,6 +310,18 @@ phone tier and the boot):
   ground), each hole its own bunkers (one to four, sized and placed for that hole, no mirrored pairs; a few fairway
   bunkers where the drive lands; a waste bunker on a par 5), crisp turf edges with an ink line round greens and
   bunkers, the smears and stray arcs fixed.
+  **Built (2026-11-24), waiting for the owner's sign-off.** Seven green shapes (`Lobes` in golf.ts: pear, front-heavy,
+  peanut, kidney either way, round, long), no two greens alike in size and shape; every hole's bunkers placed by
+  hand (two to four, fairway bunkers where the drive lands on most par 4s and 5s, each with its own seeded outline and
+  turn), greenside ones pushed out to `BUNKER_CLEAR` from the fringe, which ends the smears; an ink line round every
+  green and bunker (`INK_LOOPS`, ribbons on the turf, near only, in the turf's batch: no new draw calls); the stray
+  arcs gone with the old matching pairs. The ground holds each green to its plane over its new shape; the rakes sit
+  by the new lips. Greens fitted to their ground after the reshaping: 2 and 17 smaller, 9 front-heavy (it reached the
+  clubhouse's level grounds). The waste bunker on a par 5 isn't built yet. Checks: `npm test` and `npm run test:wide` (2388 each), typecheck,
+  lint, the budget (boot 769.8 of 775 KB); the shots `docs/golf-shots/design-d1-greens.webp` (desktop, holes 1, 3, 5,
+  6, 8, 12, 16 and 18) and `docs/blend-shots/golf-d1-low/` (the phone tier, 6 and 16); the map
+  `docs/golf-shots/design-d1.png`. `?bench` headless closed the browser here (as before D1), so no draw table; the
+  ink adds none.
 - **D2, the woods and the rough**: clumps of trees between the holes (the east arm most), a deep belt of tall pines
   along the north and east fences to hide the wall's foot, the rough in two tones (a longer band and the native
   beyond), wildflower patches in the native.
