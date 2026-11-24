@@ -284,7 +284,7 @@ paints the level pill at once; the kart park's and the metro's drawing, which th
 - Play a hole, nine or eighteen; rewards Dorras and XP only. Its save (`degen-city-golf-v1`) with its migration and its
   key in `BACKUP_KEYS`; in through `live.closed()`; touch controls.
 
-### The design pass (the owner's call, 2026-11-24: "do a design pass across the golf course"; D1 first, go 2026-11-24; the lakes stay where they are)
+### The design pass (the owner's call, 2026-11-24: "do a design pass across the golf course"; D1 first, go 2026-11-24; the lakes stay where they are; D1 signed off 2026-11-24, D2 next, go 2026-11-24)
 
 The survey (2026-11-24): every hole from behind its tee and from short of its green, the lakes, the clubhouse, on the
 desktop by day (`docs/golf-shots/design-0-*.webp`: `greens-a` holes 1 to 6's greens, `greens-b` 7 to 12's, `tees-a`
@@ -310,7 +310,7 @@ phone tier and the boot):
   ground), each hole its own bunkers (one to four, sized and placed for that hole, no mirrored pairs; a few fairway
   bunkers where the drive lands; a waste bunker on a par 5), crisp turf edges with an ink line round greens and
   bunkers, the smears and stray arcs fixed.
-  **Built (2026-11-24), waiting for the owner's sign-off.** Seven green shapes (`Lobes` in golf.ts: pear, front-heavy,
+  **Built and signed off (2026-11-24, the owner).** Seven green shapes (`Lobes` in golf.ts: pear, front-heavy,
   peanut, kidney either way, round, long), no two greens alike in size and shape; every hole's bunkers placed by
   hand (two to four, fairway bunkers where the drive lands on most par 4s and 5s, each with its own seeded outline and
   turn), greenside ones pushed out to `BUNKER_CLEAR` from the fringe, which ends the smears; an ink line round every
