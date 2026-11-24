@@ -65,7 +65,10 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   import golf.ts or golfground.ts from the boot's code: they'd come into the boot.
   - `LAND` (off, native, rough well clear of the holes, play: golfbake.ts `landAt()`, `TREES_CLEAR`), `golfTrees()`
     (the course's woods: `WOODS_CHANCE` a grid point, seeded, none by the play or off the course, `keep` for phones;
-    placed with the outskirts' trees, world.ts `scatterOutskirts()`), `DRIVE` / `DRIVE_HALF` (Clubhouse Drive: `DRIVE_CORNERS` rounded, `rounded()`),
+    placed with the outskirts' trees, world.ts `scatterOutskirts()`; the design pass's D2: in copses and glades by
+    `copseAt()` / `copseNear()`, seeded value noise every `COPSE_CELL` grid points, bigger trees in a copse's heart;
+    tall pines in a belt `PINE_BELT.depth` in from the course's edge along its north and east sides, `inPineBelt()`,
+    the wall's side; the ball meets them all, golfgame-sim.ts `inTree()`), `DRIVE` / `DRIVE_HALF` (Clubhouse Drive: `DRIVE_CORNERS` rounded, `rounded()`),
     `FOOTPATH` / `PATH_HALF`, `CLUB_GAPS` (where they cross the country road's fence: ruralfence.ts `DRIVES`).
   - `golfStreets()` (Clubhouse Drive a street of the plan, `docs/golf-plan.md`: `golf-drive` off `ew0-e` at
     `golf-drive-gate`, the one-way turning loop `golf-drive-turn` by the car park, `DRIVE_TURN` round, at
@@ -84,7 +87,11 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   `golfMesh()`'s own triangles `TURF_LIFT` over the grass, only where `mownNear()`, near and far; a site a tile, in the FX layer.
   The ink round the greens' fringes and the bunkers' lips (D1: the texture's two pixels a tile can't hold a crisp
   edge): `INK_LOOPS`, cut to each tile by `inkRuns()`, laid by `inkMesh()` (roads3d.ts `ribbon()`, `EDGE_INK` wide and
-  over the turf) in `COVER.courseInk`, near only, in the turf's own batch (no draws of its own)
+  over the turf) in `COVER.courseInk`, near only, in the turf's own batch (no draws of its own). The second cut
+  (D2, `SECOND_CUT` in golf.ts, `COVER.secondCut`): a band of shorter rough past each fairway's first cut, each green's
+  fringe and round each tee, painted first, under the paths (only paint: it plays as the rough). The wildflowers (D2,
+  `flowersIn()`, `FLOWERS`, `FLOWER_COLOURS` from the palette): patches in the native grass's glades, a colour a patch,
+  a flattened head each, near only, in the edge's sites (the fence, the reeds), half on phones
   (kit.ts `fx()`: the ink's pre-pass draws a mesh solid, the texture's clear parts too, so the turf's triangles came
   out as ink zig-zags across the rough; fixed in Phase 5). The
   cart paths painted in it, under what's mown. Clubhouse Drive (`driveMesh()`, `DRIVE_LIFT`, `DRIVE_LAMPS`, `LAMP_H`),

@@ -30,10 +30,11 @@ import { TILE } from './tiles';
 import { registerGolfLife } from './golflife3d';
 import { ribbon } from './roads3d';
 import type { Tick } from './world';
-import { CLUB_NAME, DRIVE, DRIVE_HALF, FOOTPATH, GOLF_CLUBHOUSE, GOLF_RECT, PATH_HALF, clubLevel, golfIn, golfLift, golfMesh, golfWater } from './golflift';
+import { CLUB_NAME, DRIVE, DRIVE_HALF, FOOTPATH, GOLF_CLUBHOUSE, GOLF_RECT, GOLF_STEP, LAND, PATH_HALF, clubLevel, copseNear, golfIn, golfLand, golfLift, golfMesh, golfWater } from './golflift';
 import {
   COURSE,
   FIRST_CUT,
+  SECOND_CUT,
   PATHS,
   fromPaths,
   insetOf,
@@ -126,7 +127,27 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
     ctx.ellipse((c[0] - X0) * sx, (c[1] - Z0) * sz, r[0] * sx, r[1] * sz, Math.atan2(dir[1], dir[0]), 0, Math.PI * 2);
   };
   ctx.clearRect(0, 0, w, h);
-  // The cart paths (and the footpath's stretch on the course), under all that's mown
+  // The second cut (D2: the rough in two tones), past the first round each fairway, past each green's fringe, round
+  // each tee; under the paths and all the rest
+  ctx.fillStyle = COVER.secondCut;
+  for (const hole of HOLES) {
+    if (hole.fairway) {
+      const band = fairwayOutline(hole, FIRST_CUT + SECOND_CUT);
+      poly(band.edge);
+      ctx.fill();
+      ctx.beginPath();
+      for (const [c, r] of band.caps) circle(c, r);
+      ctx.fill();
+    }
+    poly(greenOutline(hole, FRINGE + SECOND_CUT, 96));
+    ctx.fill();
+    const t = teeOf(hole);
+    const at = (u: number, v: number): Pt => [t.at[0] + t.dir[0] * u - t.dir[1] * v, t.at[1] + t.dir[1] * u + t.dir[0] * v];
+    const [u, v] = [TEE[0] + SECOND_CUT / 2, TEE[1] + SECOND_CUT / 2];
+    poly([at(-u, -v), at(u, -v), at(u, v), at(-u, v)]);
+    ctx.fill();
+  }
+  // The cart paths (and the footpath's stretch on the course), over the second cut, under the rest that's mown
   ctx.strokeStyle = STONE.path;
   ctx.lineWidth = 2 * PATH_HALF * sx;
   ctx.lineCap = 'round';
@@ -232,6 +253,49 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
   ctx.globalCompositeOperation = 'source-over';
 }
 
+/* ---------- The wildflowers (the design pass's D2) ---------- */
+
+/** A seeded number in [0, 1) for a pair of whole numbers and a draw */
+function hash3(a: number, b: number, k: number) {
+  let h = Math.imul(a * 73856093 ^ b * 19349663 ^ k * 83492791, 2654435761) >>> 0;
+  h ^= h >>> 15;
+  h = Math.imul(h, 2246822519) >>> 0;
+  return ((h ^ (h >>> 13)) >>> 0) / 4294967296;
+}
+/** The wildflowers' patches: a cell this many tiles across holds a patch or not, how likely, and how open the native
+ * grass must be (golflift.ts `copseNear()`: under this, a glade) */
+export const FLOWERS = { cell: 10, chance: 0.4, glade: 0.42 };
+export const FLOWER_COLOURS = [COVER.flowerWhite, COVER.flowerYellow, COVER.flowerPurple] as const;
+/** The wildflowers in a box: in patches in the glades of the native grass, a colour to a patch (now and then another
+ * among it), a few heads to each grid point of it; `keep` under 1 leaves the rest out (phones) */
+export function flowersIn(r: Rect, keep = 1): { x: number; z: number; c: 0 | 1 | 2; s: number }[] {
+  const out: { x: number; z: number; c: 0 | 1 | 2; s: number }[] = [];
+  const [i0, j0] = [Math.ceil((r[0] - X0) / GOLF_STEP), Math.ceil((r[1] - Z0) / GOLF_STEP)];
+  for (let i = i0; X0 + i * GOLF_STEP < r[2]; i++)
+    for (let j = j0; Z0 + j * GOLF_STEP < r[3]; j++) {
+      const [gx, gz] = [X0 + i * GOLF_STEP, Z0 + j * GOLF_STEP];
+      const [cx, cz] = [Math.floor(gx / FLOWERS.cell), Math.floor(gz / FLOWERS.cell)];
+      if (hash3(cx, cz, 1) >= FLOWERS.chance) continue;
+      if (golfLand(gx, gz) !== LAND.native || copseNear(gx, gz) >= FLOWERS.glade) continue;
+      // (a patch thins out from its middle)
+      const [mx, mz] = [(cx + 0.5) * FLOWERS.cell, (cz + 0.5) * FLOWERS.cell];
+      if (Math.hypot(gx - mx, gz - mz) / (FLOWERS.cell * 0.6) > hash3(i, j, 2) + 0.35) continue;
+      const main = Math.floor(hash3(cx, cz, 3) * 3) as 0 | 1 | 2;
+      const n = 2 + Math.floor(hash3(i, j, 4) * 3);
+      for (let k = 0; k < n; k++) {
+        if (hash3(i, j, 10 + k) >= keep) continue;
+        const odd = hash3(i, j, 20 + k) < 0.12;
+        out.push({
+          x: gx + (hash3(i, j, 30 + k) - 0.5) * GOLF_STEP * 0.9,
+          z: gz + (hash3(i, j, 40 + k) - 0.5) * GOLF_STEP * 0.9,
+          c: odd ? (((main + 1 + Math.floor(hash3(i, j, 50 + k) * 2)) % 3) as 0 | 1 | 2) : main,
+          s: 0.8 + hash3(i, j, 60 + k) * 0.5,
+        });
+      }
+    }
+  return out;
+}
+
 /* ---------- Where the turf shows ---------- */
 
 /** Whether anything's mown within `pad` of x, z (a fairway with its first cut, a green with its fringe, a tee, a
@@ -242,17 +306,18 @@ export function mownNear(x: number, z: number, pad: number) {
   if ((Math.hypot((x - at[0]) / r[0], (z - at[1]) / r[1]) - 1) * Math.min(...r) <= FRINGE + pad) return true;
   for (const h of HOLES) {
     const n = nearestOn(h, x, z);
-    if (n.d > Math.max(h.fairway ? h.fairway.half + 4 : 0, Math.max(...h.green) * 1.4, TEE[0]) + FRINGE + FIRST_CUT + 16 + pad) continue;
+    if (n.d > Math.max(h.fairway ? h.fairway.half + 4 : 0, Math.max(...h.green) * 1.4, TEE[0]) + FRINGE + FIRST_CUT + SECOND_CUT + 16 + pad) continue;
     if (h.fairway) {
       const s = Math.max(h.fairway.from, Math.min(fairwayEnd(h), n.s));
       const p = along(h, s).at;
-      const reach = fairwayHalf(h, s) + FIRST_CUT + pad;
+      const reach = fairwayHalf(h, s) + FIRST_CUT + SECOND_CUT + pad;
       if (n.s >= h.fairway.from && n.s <= fairwayEnd(h) ? n.d <= reach : Math.hypot(x - p[0], z - p[1]) <= reach) return true;
     }
-    if ((onGreen(h, x, z) - 1) * Math.min(...h.green) <= FRINGE + pad) return true;
+    if ((onGreen(h, x, z) - 1) * Math.min(...h.green) <= FRINGE + SECOND_CUT + pad) return true;
     const t = teeOf(h);
     const [dx, dz] = [x - t.at[0], z - t.at[1]];
-    if (Math.abs(dx * t.dir[0] + dz * t.dir[1]) <= TEE[0] + pad && Math.abs(-dx * t.dir[1] + dz * t.dir[0]) <= TEE[1] + pad) return true;
+    const tp = SECOND_CUT / 2 + pad;
+    if (Math.abs(dx * t.dir[0] + dz * t.dir[1]) <= TEE[0] + tp && Math.abs(-dx * t.dir[1] + dz * t.dir[0]) <= TEE[1] + tp) return true;
     for (const b of bunkersOf(h)) if ((bunkerAt(b, x, z) - 1) * Math.min(...b.r) <= LIP + pad) return true;
   }
   return false;
@@ -638,6 +703,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   const rail = toon('#ece8dc');
   const reed = toon('#7f9a52');
   const reedTop = toon('#9c7a4a');
+  const petals = FLOWER_COLOURS.map((c) => toon(c));
   const drive = resample(DRIVE, 1);
   for (let k = 0; k < drive.length - 1; k += 40) {
     const part = drive.slice(k, Math.min(drive.length, k + 41));
@@ -657,7 +723,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       b.build(into, { cast: true, receive: true });
     });
   }
-  // The fence round the club's edge and the pillars and posts at its ways in (near only: far, the woods are the edge)
+  // The fence round the club's edge and the pillars and posts at its ways in, the reeds and the wildflowers (near only: far,
+  // the woods are the edge)
   for (let tx = Math.floor(X0 / TILE) * TILE; tx < X1; tx += TILE)
     for (let tz = Math.floor(Z0 / TILE) * TILE; tz < Z1; tz += TILE) {
       const r: Rect = [tx, tz, tx + TILE, tz + TILE];
@@ -665,7 +732,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       const runs = FENCE_RUNS.map((run) => run.filter((_, i) => i < run.length - 1 && inR(run[i])).map((p) => [p, run[run.indexOf(p) + 1]] as [Pt, Pt])).filter((x) => x.length);
       const gaps = FENCE_GAPS.filter((g) => inR(g.at));
       const lakes = LAKES.filter((l) => inR(l.at));
-      if (!runs.length && !gaps.length && !lakes.length) continue;
+      const flowers = flowersIn(r, low ? 0.5 : 1);
+      if (!runs.length && !gaps.length && !lakes.length && !flowers.length) continue;
       site(`golf edge ${tx} ${tz}`, r, (into) => {
         const b = new Batch();
         b.detail(() => {
@@ -697,6 +765,11 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
                 b.add(new THREE.BoxGeometry(0.85, 0.12, 0.85).translate(x, y + 1.56, z), pillar);
               } else b.add(new THREE.BoxGeometry(0.16, 1.2, 0.16).translate(x, y + 0.6, z), rail);
             }
+          }
+          // The wildflowers: a head each, on the grass (D2)
+          for (const f of flowers) {
+            const y = golfLift(f.x, f.z);
+            b.add(new THREE.OctahedronGeometry(0.12 * f.s, 0).scale(1, 0.55, 1).translate(f.x, y + 0.16 * f.s, f.z), petals[f.c]);
           }
           // Reeds round the lakes: a clump of blades and a seed head or two
           for (const l of lakes)

@@ -120,6 +120,9 @@ export const FAIRWAY_NECK = 7;
 export const TEE: Pt = [5, 3.2];
 export const FRINGE = 1.8;
 export const FIRST_CUT = 2.6;
+/** The second cut past the first, round the fairways, and past the greens' fringes and round the tees (the design
+ * pass's D2: the rough in two tones; only the paint, it plays as the rough) */
+export const SECOND_CUT = 4;
 /** Past this from every hole's line the rough runs to native grass (the woods' land, Phase 5) */
 export const NATIVE = 34;
 /** Each par's length (tiles, along the line): the city's half scale */
