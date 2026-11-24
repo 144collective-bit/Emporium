@@ -239,6 +239,22 @@ sets the order (rule 2).
         Lot 9, the air base)
   - [ ] Everything else (a search of every entrance off a street)
 
+#### R3. Empty open patch (the hunt, 2026-11-24)
+
+- **The fault:** a stretch of open ground in a built-up place (a lawn between blocks, a green behind terraces, the
+  land round bungalows) laid as one flat colour cut square into the paving or the road's verge, with nothing on it:
+  no paths where people would walk, no planting, no edging, sometimes a lone straight hedge or a stray slab standing
+  in it. From the air it reads as unfinished; on foot, as a void. It breaks "no ruler-straight edges".
+- **How to spot it:** from the air, a large single-value green or lilac patch with straight edges, or garden pieces
+  (fences, patios, sheds) scattered loose rather than closing a plot. In the code, a land rect drawn with a plain
+  cover and no `INFLUENCES` / dressing over it.
+- **The repair:** give the patch its use and its edges, in the area's own palette (`palette.ts`): worn desire paths
+  between the doors and stops round it (R2's rule for where they meet), planting along its edges (shrubs, hedges
+  closing plots, trees in groups, not lines), a kerb or mown edge where it meets paving, and its outline wandering.
+  Garden pieces close their plots (fences meet at the corners, patios against the back wall). Nothing that exists
+  moves; walking stays clear (bollards, not walls, across paths).
+- **Its sweep:** every estate green and open patch in the south first (the hunt's finds), then the rest by district.
+
 ### Jobs
 
 - [x] **J1 (R1), part 1: the galleries and balconies** (2026-11-22, pass 1; see the log). Part 2 below.
@@ -279,6 +295,30 @@ sets the order (rule 2).
       `crestgardens`, `crestbanks`, `coral`); then the owner's second ask:
       **every other driveway in the city checked to line up and not cover
       the sidewalk** (R2's sweep).
+- [ ] **J3 (R3): the twin towers' lawn in Endswood** (the hunt, 2026-11-24; camera `h-ends-air` below): the big
+      green round the twin towers is one flat patch cut square into the estate's paving, nothing on it but dashed
+      lines that need a look on foot (paths? cables' shadows?). R3 in full: desire paths from the towers' doors to the
+      stops and the Circus, planting in groups, a mown edge, its outline wandering.
+- [ ] **J4 (R1): the estate's bare concrete bits round the Circus** (`h-ends-air`, `h-circus-foot`): a long plain
+      concrete upstand standing on the paving with a cut-off end, the Circus's subway ramps as pale flat wedges, and
+      the games court's surround a bare lilac slab. R1: the concrete skin and caps (`docs/brutalist-plan.md` Phase 1's
+      material), the ramps' walls and handrails, the court's surface marked.
+- [ ] **J5 (R2/R3): paths whose edges break up over the lawn** (`h-circus-foot`): a lilac path's edges go ragged in
+      blobs where it meets the grass, and the lawn meets the paving with no kerb or edge. The paths' own edge (a clean
+      line or a kerb) and a mown edge or kerb at every lawn's meeting with paving.
+- [ ] **J6 (R3): Aldwyn's Green's back gardens** (`h-green-air`): behind the terraces the gardens are loose pale slabs
+      (patios, sheds) and short red fence pieces at odd angles that don't close any plot. R3's garden rule: fences meet
+      at the plot's corners, patios against the back wall, a shed in a corner.
+- [ ] **J7 (R1): St Aldwyn's churchyard wall and its yews** (`h-church-foot`): the wall is one plain grey slab with no
+      coping or coursing; the yews are bare cones. R1 for stone: a coping, courses, a darker plinth; the yews rounded.
+- [ ] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
+      with paths stopping short, no plots, and straight hedge pieces standing alone in the open land beyond. R3: plots
+      with low hedges or fences and front paths, the stray hedges joined into field boundaries or gone.
+- [ ] **The hunt of Endswood, Aldwyn's Green and Lot 9, part 2:** Lot 9 from the air and on foot, the night shots, and
+      the on-foot shots retaken (`h-highroad-foot` stood inside a building). The cameras, for `SHOTS_EXTRA`:
+      `h-ends-air` [-40,95,300] to [-55,0,395]; `h-circus-foot` [-92,1.7,402] to [-66,5,392]; `h-green-air`
+      [-200,75,355] to [-200,0,455]; `h-church-foot` [-228,1.7,474] to [-205,5,462]; `h-council-air` [-300,60,320] to
+      [-255,0,430]; `h-lot9-air` [-70,75,445] to [-70,0,545]; `h-lot9-foot` [-82,1.7,520] to [-58,1.5,540].
 
 ## Track C: the motorway exits (signed off by the owner, 2026-11-21)
 
@@ -454,3 +494,8 @@ session.)
   course's ground (fixed in a draft PR: the bake loads golfbake.ts first); with that, texFull is 5044.1 of 4955 KB
   (the golf turf, 976 x 1428). Both to Waiting on the owner; only this plan edit merged. Checks on the fix:
   typecheck, lint, build, texture bake (204 kept), budget (texLow 3372.4 of 3450 ok, texFull over).
+- 2026-11-24, night 3 pass 1 (22:07): main green again (the owner's (a), applied with the bake fix by #269; builds
+  #396 to #399 pass; the board's build card to Live, draft #267 superseded). The board's in-progress card, the hunt of
+  Endswood, Aldwyn's Green and Lot 9 (never run: the first night's third pass took J1). Day shots from the air and on
+  foot (seven cameras, six taken in the time): six finds logged as J3 to J8, a new model repair R3 (empty open patch);
+  Lot 9, night and the on-foot retakes are its part 2. Nothing fixed (the hunt's rule). Plan only: typecheck, lint.
