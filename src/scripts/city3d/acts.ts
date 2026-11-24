@@ -30,7 +30,7 @@ import * as THREE from 'three';
 import { ANKLE_H, HIP_HEIGHT, LEG_X, reachArm, reachLeg, torsoFrame, type Pose } from './skeleton';
 import { BIKES, steeringHead, type BikeId } from './mybike';
 import { DRIVER_SCALE } from './carinside';
-import { set, sitPose } from './poses';
+import { lookPose, set, sitPose } from './poses';
 
 /** Keys [second, value] eased smoothly from one to the next, held at either end */
 export function keyed(k: readonly (readonly [number, number])[], w: number): number {
@@ -322,6 +322,37 @@ export function swingPose(p: Pose, t: number) {
   p.headYaw = 0;
 }
 
+export const BRASS_SECONDS = 4;
+/** A brass player in the band (the park's bandstand, docs/westlake-plan.md Phase 7): sat up, the instrument held to the lips in both hands, swaying a little with the tune, a breath at the bar's end */
+export const BRASS = { hands: [V(-0.05, 0.37, 0.25), V(0.05, 0.35, 0.2)], lean: 0.02, sway: 0.03, grip: 0.7 };
+export function brassPose(p: Pose, t: number) {
+  const w = t % BRASS_SECONDS;
+  sitPose(p, 0);
+  for (const i of [0, 1] as const) hand(p, i, BRASS.hands[i], BRASS.hands[i], 0);
+  p.lean = BRASS.lean;
+  p.side = Math.sin((w / BRASS_SECONDS) * Math.PI * 2) * BRASS.sway;
+  p.headPitch = 0.02;
+  p.headYaw = 0;
+}
+export const DRUM_SECONDS = 2;
+/** The band's drummer: sat at the drum, a stick in each hand coming down in turn on the beat, the head nodding along */
+export const DRUM = { rest: [V(-0.13, 0.12, 0.3), V(0.13, 0.12, 0.3)], up: 0.14, grip: 0.8 };
+export function drumPose(p: Pose, t: number) {
+  const w = t % DRUM_SECONDS;
+  sitPose(p, 0);
+  // (eight strokes a loop, the hands in turn: each lifted and brought down)
+  const beat = (w / DRUM_SECONDS) * 8;
+  for (const i of [0, 1] as const) {
+    const ph = (beat + i) % 2;
+    tmp.copy(DRUM.rest[i]);
+    tmp.y += DRUM.up * (ph < 1 ? Math.sin(ph * Math.PI) : 0);
+    reachArm(p, i, tmp);
+  }
+  p.lean = 0.08;
+  p.headPitch = -0.1 + 0.05 * Math.abs(Math.sin(beat * Math.PI * 0.5));
+  p.headYaw = 0;
+}
+
 /* ---------- On a motorbike (vehicle plan Phases 7 and 8) ---------- */
 
 /** Where a rider's root goes on a bike (bike space: his hips on the seat), at the riders' size (`DRIVER_SCALE`) */
@@ -386,3 +417,78 @@ export function ridePose(p: Pose, id: BikeId, foot: number, steer = 0) {
     reachArm(p, i, tmp);
   }
 }
+
+/* ---------- Golf (docs/golf-plan.md Phase 5), standing over the look pose, right-handed: the target to the left (-x) ---------- */
+
+/** A full swing (`SWING_KEYS`: 0 the address, 1 the top of the backswing, 2 the strike, 3 the finish): the hands
+ * together on the club, the shoulders and hips turned away and through (`twist`, `turn`), the head down on the ball
+ * till the finish turns it after the shot */
+export const GOLF_SECONDS = 3.2;
+export const GOLF = {
+  hands: [
+    [V(-0.03, -0.15, 0.24), V(0.17, 0.36, 0.04), V(-0.03, -0.17, 0.25), V(-0.17, 0.42, 0.0)],
+    [V(0.0, -0.22, 0.25), V(0.21, 0.42, 0.0), V(0.0, -0.24, 0.26), V(-0.13, 0.46, 0.04)],
+  ],
+  twist: [0, 0.75, -0.15, -0.95],
+  turn: [0, 0.35, -0.25, -0.6],
+  lean: [0.34, 0.26, 0.32, 0.04],
+  headPitch: [-0.42, -0.36, -0.42, 0.06],
+  grip: 0.85,
+};
+export const SWING_KEYS: [number, number][] = [
+  [0, 0],
+  [0.8, 0],
+  [1.6, 1],
+  [1.82, 2],
+  [2.1, 3],
+  [2.85, 3],
+  [3.2, 0],
+];
+/** Between key a and the next, `k` of the way */
+const between = (list: readonly number[], c: number) => {
+  const a = Math.min(list.length - 1, Math.floor(c));
+  const b = Math.min(list.length - 1, a + 1);
+  return list[a] + (list[b] - list[a]) * (c - a);
+};
+export function golfPose(p: Pose, t: number) {
+  lookPose(p, 0);
+  const c = keyed(SWING_KEYS, t % GOLF_SECONDS);
+  const a = Math.min(3, Math.floor(c));
+  const k = c - a;
+  for (const i of [0, 1] as const) hand(p, i, GOLF.hands[i][a], GOLF.hands[i][Math.min(3, a + 1)], k);
+  p.twist = between(GOLF.twist, c);
+  p.turn = between(GOLF.turn, c);
+  p.lean = between(GOLF.lean, c);
+  p.headPitch = between(GOLF.headPitch, c);
+  // (the eyes on the ball, then turned after it, down the line to the left)
+  p.headYaw = c > 2 ? -0.6 * Math.min(1, c - 2) : 0;
+  p.legs[0].bend += 0.12;
+  p.legs[1].bend += 0.12;
+}
+
+/** A putt (`PUTT_KEYS`: 0 the address, 1 the stroke back, 2 through): bent over the ball, the hands together low,
+ * the shoulders rocking it back and through, the head still over the ball */
+export const PUTT_SECONDS = 2.4;
+export const PUTT = { at: [V(-0.02, -0.2, 0.22), V(0.01, -0.26, 0.23)], back: 0.07, through: -0.1, lean: 0.42, headPitch: -0.55, grip: 0.8 };
+export const PUTT_KEYS: [number, number][] = [
+  [0, 0],
+  [0.8, 0],
+  [1.25, 1],
+  [1.65, 2],
+  [2.1, 2],
+  [2.4, 0],
+];
+export function puttPose(p: Pose, t: number) {
+  lookPose(p, 0);
+  const c = keyed(PUTT_KEYS, t % PUTT_SECONDS);
+  // (along the line: back is +x, through to the target -x)
+  const dx = c <= 1 ? PUTT.back * c : PUTT.back + (PUTT.through - PUTT.back) * Math.min(1, c - 1);
+  for (const i of [0, 1] as const) hand(p, i, tmp2.copy(PUTT.at[i]).setX(PUTT.at[i].x + dx), tmp2, 0);
+  p.twist = -dx * 1.6;
+  p.lean = PUTT.lean;
+  p.headPitch = PUTT.headPitch;
+  p.headYaw = 0;
+  p.legs[0].bend += 0.15;
+  p.legs[1].bend += 0.15;
+}
+const tmp2 = new THREE.Vector3();

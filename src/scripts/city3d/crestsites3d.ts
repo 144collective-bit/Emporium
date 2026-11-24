@@ -3,8 +3,7 @@
  * (crestmont3d.ts `register()`), as sites: the grand hotel (its pink storeys and tower, white cornices, balconies,
  * the porte-cochère, the drive round its fountain, its name in script on the roof, the pool garden with cabanas), the
  * civic hall (white, a colonnade, the tower and its tiled dome, the park in front with its walk and fountains), the
- * country club (the clubhouse under red tiles, its terrace and cart shed, the carts; six holes laid on the ground:
- * tee boxes, fairways, fringes, greens with their flags, bunkers), the overlook (paving, a stone balustrade where the
+ * overlook (paving, a stone balustrade where the
  * ground falls away, benches, coin viewers, lamps) and the reservoir (its dams, its fence, the valve tower; the water
  * on the main thread, the city's water shader).
  */
@@ -14,10 +13,10 @@ import { site } from './tilework';
 import { waterMat } from './world';
 import { heightAt } from './terrain';
 import { drawnAt } from './drawn';
-import { DRAPE, OVERLOOK_PATH, discMesh, lineMesh } from './crestdrape';
+import { OVERLOOK_PATH, lineMesh } from './crestdrape';
 import { meshGeometry } from './mansions3d';
-import { ASTERLY, ASTERLY_NAME, HIGHCREST_NAME, CIVIC, CLUB, FAIRWAY, FENCE, FRINGE, GREEN_R, BUNKER_R, HOLES, HOTEL, HOTEL_NAME, OVERLOOK, RESERVOIR, SLAB_Y, TEE, bunkersOf, flagOf, type Hole } from './crestsites';
-import { WINDOW, hip, poolOf } from './estates3d';
+import { ASTERLY, ASTERLY_NAME, HIGHCREST_NAME, CIVIC, FENCE, HOTEL, HOTEL_NAME, OVERLOOK, RESERVOIR, SLAB_Y } from './crestsites';
+import { WINDOW, poolOf } from './estates3d';
 import { BULB, LED, PAVING, SPRAY, WATER, flat } from './mallkit';
 import { COVER } from './palette';
 import { UPLIGHT as UPLIGHT_AT, alongWall } from './crestnight';
@@ -38,17 +37,9 @@ const IRON = toon('#1e1d22');
 const GLASS_RAIL = toon('#a9dcef');
 const CONCRETE = toon('#b9b4aa');
 const CONCRETE_TOP = toon('#cfcac0');
-const FAIR = toon('#6dbb55');
-const FRINGE_GREEN = toon('#5fa84b');
-const GREEN = toon('#82d46b');
-const TEE_GREEN = toon('#77c862');
-const SAND = toon('#ead9a2');
-const FLAG = toon('#e23b3b');
 const ISLAND = toon(COVER.planted);
 const CABANA = toon('#f4ead2');
 const STRIPE = toon('#2f7f9e');
-const CART = toon('#f1ede2');
-const CART_ROOF = toon('#2f6a3a');
 const LAMP = neon('#ffe2a8', 0.2, 1.3);
 /**
  * The landmarks floodlit at night (the premium upgrade's Phase 1, "Glamorous"): their main walls warm a little (an
@@ -167,8 +158,6 @@ function windowsRound(b: Batch, r: Rect, y0: number, floors: number, ground: num
     }
   }
 }
-/** A disc (or an ellipse) on the ground: dense, on the grass as drawn (crestdrape.ts) */
-const disc = (x: number, z: number, rx: number, rz: number, off: number) => meshGeometry(discMesh(x, z, rx, rz, off));
 /** A strip along a line on the ground, `w` either side: dense, on the grass as drawn (crestdrape.ts) */
 const strip = (a: Pt, c: Pt, w: number, off: number) => meshGeometry(lineMesh([a, c], w, off));
 
@@ -297,51 +286,7 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
     p.build(into, { cast: false, receive: true });
   });
 
-  /* ---------- The country club ---------- */
-  const K = CLUB;
-  site('crestmont clubhouse', [K.pad[0] - 1, K.pad[1] - 1, K.pad[2] + 1, K.pad[3] + 1], (into) => {
-    const b = new Batch();
-    const y0 = K.y;
-    const { ground, upper } = K.storey;
-    const top = y0 + ground + upper;
-    box(b, K.house[0], y0, K.house[1], K.house[2], top, K.house[3], WHITE_LIT);
-    windowsRound(b, K.house, y0, 2, ground, upper, 1.7, undefined, 'club', low);
-    uplights(b, K.house, y0, (x, z) => x > K.terrace[0] - 0.3 && x < K.terrace[2] + 0.3 && z > K.terrace[1] - 0.3 && z < K.terrace[3] + 0.3);
-    // (hip() takes its front (v0) before its back (v1): here, the house's south side and north side)
-    const [r, soffit] = hip(K.house[0], K.house[3], K.house[2], K.house[1], top, 1.3, 0.4);
-    b.add(r, TILE);
-    b.add(soffit, WOOD);
-    // (the terrace in front: tables under umbrellas, near)
-    b.detail(() => {
-      for (let x = K.terrace[0] + 1.5; x < K.terrace[2] - 1; x += 3.2) {
-        cyl(b, 0.35, 0.05, x, y0 + 0.7, (K.terrace[1] + K.terrace[3]) / 2, WHITE, 10);
-        cyl(b, 0.04, 0.7, x, y0, (K.terrace[1] + K.terrace[3]) / 2, IRON, 5, 0.04, true);
-        b.add(new THREE.ConeGeometry(1, 0.35, 8, 1, true).translate(x, y0 + 2.3, (K.terrace[1] + K.terrace[3]) / 2), CART_ROOF);
-        cyl(b, 0.02, 1.6, x, y0 + 0.75, (K.terrace[1] + K.terrace[3]) / 2, IRON, 4, 0.02, true);
-      }
-    });
-    // The cart shed: a green roof on posts; the carts
-    const S = K.shed;
-    box(b, S[0], y0 + 2.2, S[1], S[2], y0 + 2.4, S[3], CART_ROOF);
-    for (const [x, z] of [[S[0], S[1]], [S[2], S[1]], [S[0], S[3]], [S[2], S[3]]]) box(b, x - 0.08, y0, z - 0.08, x + 0.08, y0 + 2.2, z + 0.08, WOOD);
-    for (const [x, z] of K.carts) {
-      box(b, x - 0.45, y0 + 0.2, z - 0.85, x + 0.45, y0 + 0.6, z + 0.85, CART);
-      box(b, x - 0.45, y0 + 1.4, z - 0.6, x + 0.45, y0 + 1.48, z + 0.85, CART_ROOF);
-      for (const dz of [-0.55, 0.8]) for (const dx of [-0.42, 0.42]) box(b, x + dx - 0.02, y0 + 0.6, z + dz - 0.02, x + dx + 0.02, y0 + 1.4, z + dz + 0.02, IRON);
-      for (const dz of [-0.6, 0.6]) for (const dx of [-0.45, 0.45]) cyl(b, 0.18, 0.12, x + dx * 1.05, y0 + 0.18, z + dz, IRON, 8);
-    }
-    b.build(into, { cast: true, receive: true });
-    const p = new Batch();
-    flat(p, K.terrace[0], K.terrace[1], K.terrace[2], K.terrace[3], y0 + 0.02, PAVING, 8);
-    flat(p, K.house[0] - 1, K.terrace[3], K.house[2] + 1, K.pad[3] - 0.5, y0 + 0.015, PAVING, 8);
-    p.build(into, { cast: false, receive: true });
-  });
-  // The holes, a site each
-  for (const h of HOLES) {
-    const xs = [h.tee[0], h.green[0]];
-    const zs = [h.tee[1], h.green[1]];
-    site(`crestmont hole ${h.n}`, [Math.min(...xs) - 8, Math.min(...zs) - 8, Math.max(...xs) + 8, Math.max(...zs) + 8], (into) => drawHole(h, into, low));
-  }
+  // (the country club and its six holes were here till they were retired: docs/golf-plan.md Phase 4)
 
   /* ---------- The overlook ---------- */
   const O = OVERLOOK;
@@ -548,31 +493,3 @@ export function registerSites(low: boolean, scene: THREE.Scene | null) {
   }
 }
 
-/** A hole: its tee box, the fairway, the fringe and green with its flag, the bunkers, all laid on the ground */
-function drawHole(h: Hole, into: THREE.Object3D, low: boolean) {
-  const b = new Batch();
-  const [dx, dz] = [h.green[0] - h.tee[0], h.green[1] - h.tee[1]];
-  const L = Math.hypot(dx, dz);
-  const [ux, uz] = [dx / L, dz / L];
-  // (the fairway from just past the tee to the fringe's edge)
-  const start: Pt = [h.tee[0] + ux * 3, h.tee[1] + uz * 3];
-  const end: Pt = [h.green[0] - ux * (FRINGE - 0.4), h.green[1] - uz * (FRINGE - 0.4)];
-  b.add(strip(start, end, FAIRWAY, DRAPE.fairway), FAIR);
-  b.add(strip([h.tee[0] - ux * TEE.half[1], h.tee[1] - uz * TEE.half[1]], [h.tee[0] + ux * TEE.half[1], h.tee[1] + uz * TEE.half[1]], TEE.half[0], DRAPE.tee), TEE_GREEN);
-  b.add(disc(h.green[0], h.green[1], FRINGE, FRINGE, DRAPE.fringe), FRINGE_GREEN);
-  b.add(disc(h.green[0], h.green[1], GREEN_R, GREEN_R, DRAPE.green), GREEN);
-  for (const [x, z] of bunkersOf(h)) b.add(disc(x, z, BUNKER_R, BUNKER_R * 0.75, DRAPE.bunker), SAND);
-  // The flag, the tee's markers
-  const [fx, fz] = flagOf(h);
-  const gy = heightAt(fx, fz);
-  b.add(new THREE.CylinderGeometry(0.03, 0.03, 2.2, 5).translate(fx, gy + 1.1, fz), WHITE);
-  b.add(new THREE.BoxGeometry(0.02, 0.4, 0.6).translate(fx, gy + 2.0, fz + 0.3), FLAG);
-  if (!low)
-    b.detail(() => {
-      for (const s of [-1, 1]) {
-        const [mx, mz] = [h.tee[0] + -uz * s * 1.2, h.tee[1] + ux * s * 1.2];
-        b.add(new THREE.SphereGeometry(0.1, 6, 4).translate(mx, heightAt(mx, mz) + 0.2, mz), WHITE);
-      }
-    });
-  b.build(into, { cast: false, receive: true });
-}

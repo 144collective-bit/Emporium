@@ -235,3 +235,25 @@ test('the ring and a ride', () => {
   pollPad(gp({ down: [B, R3, A, Y] }), 0.016, s2, r.h);
   assert.deepEqual(r.log, ['nextCam', 'skipRide']);
 });
+
+test("the golf game has the pad while it's on: the stick, the d-pad and its buttons go to it, nothing else", () => {
+  const s = state();
+  const calls: string[] = [];
+  const golf = {
+    active: true,
+    pad(edge: (i: number) => boolean, held: (i: number) => boolean, x: number) {
+      calls.push(`${[A, B, START, LB, UP].filter(edge).join('+')}|${[LEFT].filter(held).join('')}|${x.toFixed(1)}`);
+    },
+  };
+  const { h, log } = host({ golf });
+  pollPad(gp({ lx: -1, down: [A, LEFT] }), 0.016, s, h);
+  pollPad(gp({ down: [LEFT] }), 0.016, s, h);
+  pollPad(gp({ down: [START] }), 0.016, s, h);
+  assert.deepEqual(calls, ['0|14|-1.0', '|14|0.0', '9||0.0']);
+  assert.deepEqual(log, [], 'walk mode does nothing: no jump, no hub on Start');
+  assert.equal(s.pad.x, 0);
+  golf.active = false;
+  pollPad(gp(), 0.016, s, h);
+  pollPad(gp({ down: [START] }), 0.016, s, h);
+  assert.deepEqual(log, ['still:false', 'hub.show'], 'the round over, Start is the hub again');
+});

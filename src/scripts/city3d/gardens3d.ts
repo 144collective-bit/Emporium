@@ -21,9 +21,10 @@ import { Batch, neon, place, toon } from './kit';
 import { SLAB } from './world';
 import { site } from './tilework';
 import { inPoly, offsetLine } from './streetplan';
-import { EDGES, EDGE_W, FOUNTAIN, GARDEN_BENCHES, GARDEN_WALLS, HEDGE, KERB, KERBS, MALL_BEDS, PARTERRES, PLANTER, PLANTERS, ROUNDS, URN, URNS, WALL, WALLS } from './gardens';
-import { GARDEN_SITE, TERRACES, TERRACE_STEPS, type Pt } from './westlake';
-import { PLANT, SOIL as PAL_SOIL, STONE as PAL_STONE } from './palette';
+import { EDGE_W, FOUNTAIN, GARDEN_BENCHES, GARDEN_WALLS, HEDGE, KERB, MALL_BEDS, PARTERRES, PERGOLA, PERGOLA_COLUMNS, PLANTER, PLANTERS, ROUNDS, URN, URNS, WALL, WALLS } from './gardens';
+import { EDGES, KERBS } from './gardenedges';
+import { BED_Y, GARDEN_SITE, TERRACES, TERRACE_STEPS, type Pt } from './westlake';
+import { COVER, ORNATE, PLANT, SOIL as PAL_SOIL, STONE as PAL_STONE } from './palette';
 
 /** The gravel paths lie this far over the lawn (westlake3d.ts), the paving of the main walks over that, the edges between */
 export const PATH_Y = SLAB + 0.012;
@@ -51,6 +52,14 @@ const SETS = [
   [2, 1, 4],
 ].map((ks) => ks.map((k) => FLOWERS[k]));
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
+/** The formal garden as made ornate (docs/westlake-plan.md Phase 4) */
+const ORN = toon(ORNATE.stone);
+const ORN_DRESSED = toon(ORNATE.dressed);
+const LAWN = toon(COVER.garden);
+const BOX = toon(PLANT.box);
+const TIMBER = toon(ORNATE.plank);
+const WISTERIA = toon(PLANT.wisteria);
+const WISTERIA_LEAF = toon(PLANT.wisteriaLeaf);
 
 /* ---------- Shapes along lines ---------- */
 
@@ -173,6 +182,121 @@ function fill(b: Batch, poly: Pt[], y: number, mat: THREE.Material) {
   b.add(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2).translate(0, y, 0), mat);
 }
 
+/**
+ * A balustrade along a run (the formal garden's, in place of its low wall, Phase 4): a plinth, a rail on top, a pier
+ * every few metres and at its ends; the balusters near only
+ */
+function balustrade(b: Batch, run: Pt[], low: boolean) {
+  extrude(b, run, WALL.w, SLAB - 0.05, SLAB + 0.16, ORN_DRESSED);
+  extrude(b, run, WALL.w + 0.06, SLAB + 0.72, SLAB + 0.82, ORN_DRESSED);
+  let carry = 0;
+  const piers: Pt[] = [run[0], run.at(-1)!];
+  const posts: Pt[] = [];
+  for (let i = 1; i < run.length; i++) {
+    const [a, c] = [run[i - 1], run[i]];
+    const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    for (let t = carry; t < l; t += 0.28) {
+      const p: Pt = [a[0] + ((c[0] - a[0]) * t) / l, a[1] + ((c[1] - a[1]) * t) / l];
+      posts.push(p);
+      if (posts.length % 12 === 0) piers.push(p);
+    }
+    carry = (((carry - l) % 0.28) + 0.28) % 0.28;
+  }
+  for (const [x, z] of piers) {
+    b.box(x - 0.2, SLAB, z - 0.2, 0.4, 0.92, 0.4, ORN_DRESSED);
+    b.box(x - 0.24, SLAB + 0.92, z - 0.24, 0.48, 0.06, 0.48, ORN_DRESSED);
+  }
+  b.detail(() => {
+    if (low) return;
+    for (const [x, z] of posts) b.add(new THREE.LatheGeometry([new THREE.Vector2(0.045, 0), new THREE.Vector2(0.07, 0.12), new THREE.Vector2(0.045, 0.3), new THREE.Vector2(0.08, 0.44), new THREE.Vector2(0.045, 0.56)], 6).translate(x, SLAB + 0.16, z), ORN);
+  });
+}
+
+/** The wisteria pergola along the garden's north side: its gravel floor, columns, beams, the vine over it and its blooms */
+function pergola(b: Batch, low: boolean) {
+  const { x0, x1, z0, z1, h, col } = PERGOLA;
+  b.box(x0, PATH_Y + 0.004, z0, x1 - x0, 0.004, z1 - z0, GRAVEL);
+  for (const [x, z] of PERGOLA_COLUMNS) {
+    b.box(x - col / 2 - 0.06, SLAB, z - col / 2 - 0.06, col + 0.12, 0.2, col + 0.12, ORN_DRESSED);
+    b.add(new THREE.CylinderGeometry(col * 0.42, col * 0.5, h - 0.35, 10).translate(x, SLAB + 0.2 + (h - 0.35) / 2, z), ORN);
+    b.box(x - col / 2 - 0.05, SLAB + h - 0.15, z - col / 2 - 0.05, col + 0.1, 0.15, col + 0.1, ORN_DRESSED);
+  }
+  // Two long beams along it over the columns, joists across every half metre, their ends cut past the beams
+  for (const z of [z0 + 0.3, z1 - 0.3]) b.box(x0 - 0.3, SLAB + h, z - 0.1, x1 - x0 + 0.6, 0.22, 0.2, TIMBER);
+  for (let x = x0; x <= x1; x += 0.55) b.box(x - 0.05, SLAB + h + 0.22, z0 - 0.15, 0.1, 0.14, z1 - z0 + 0.3, TIMBER);
+  // The vine: leafy masses along the top, the blooms hanging under in long clusters
+  let k = 7;
+  const r = () => ((k = (k * 16807) % 2147483647) / 2147483647);
+  for (let x = x0 + 0.4; x < x1; x += 1.1) b.add(new THREE.IcosahedronGeometry(0.75, 0).scale(1.1, 0.35, (z1 - z0) / 1.7).translate(x + (r() - 0.5) * 0.4, SLAB + h + 0.4, (z0 + z1) / 2), WISTERIA_LEAF);
+  b.detail(() => {
+    const n = low ? 0.5 : 1;
+    for (let x = x0 + 0.3; x < x1; x += 0.42 / n)
+      for (const z of [z0 + 0.25, (z0 + z1) / 2, z1 - 0.25]) {
+        if (r() < 0.35) continue;
+        const l = 0.22 + r() * 0.28;
+        b.add(new THREE.ConeGeometry(0.06, l, 5).rotateX(Math.PI).translate(x + (r() - 0.5) * 0.2, SLAB + h - l / 2 + 0.02, z + (r() - 0.5) * 0.4), WISTERIA);
+      }
+  });
+}
+
+/**
+ * A parterre's bed in a pattern on lawn (Phase 4, in place of the grid of flowers on soil): its lawn, a knot of low
+ * clipped box (a diamond, and a ring round the middle), rings and corners of colour, a topiary on a plinth in the
+ * middle
+ */
+function patternBed(b: Batch, pt: (typeof PARTERRES)[number], i: number, low: boolean) {
+  fill(b, pt.bed, PATH_Y + 0.01, LAWN);
+  const xs = pt.bed.map((p) => p[0]);
+  const zs = pt.bed.map((p) => p[1]);
+  // (the pattern round the bed's own middle: its box's, not its outline's points', which crowd round the arc)
+  const [cx, cz] = [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...zs) + Math.max(...zs)) / 2];
+  const inside = (p: Pt) => inPoly(pt.bed, p);
+  // (the knot: the diamond as big as fits a hand inside the bed, and a ring)
+  let [hx, hz] = [0, 0];
+  for (let f = 0.86; f > 0.4; f -= 0.04) {
+    [hx, hz] = [((Math.max(...xs) - Math.min(...xs)) / 2) * f, ((Math.max(...zs) - Math.min(...zs)) / 2) * f];
+    const test: Pt[] = Array.from({ length: 16 }, (_, k) => {
+      const t = (k % 4) / 4;
+      const [a, c] = [[[cx + hx, cz], [cx, cz + hz], [cx - hx, cz], [cx, cz - hz]][Math.floor(k / 4)], [[cx, cz + hz], [cx - hx, cz], [cx, cz - hz], [cx + hx, cz]][Math.floor(k / 4)]] as Pt[];
+      return [a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t];
+    });
+    if (test.every((p) => inside(p) && inside([p[0] + 0.4, p[1]]) && inside([p[0] - 0.4, p[1]]) && inside([p[0], p[1] + 0.4]) && inside([p[0], p[1] - 0.4]))) break;
+  }
+  const diamond: Pt[] = [[cx + hx, cz], [cx, cz + hz], [cx - hx, cz], [cx, cz - hz], [cx + hx, cz]];
+  extrude(b, diamond, 0.3, PATH_Y, PATH_Y + 0.32, BOX, HEDGE_TOP);
+  const rr = Math.min(hx, hz) * 0.45;
+  const ring: Pt[] = Array.from({ length: 25 }, (_, k) => [cx + Math.cos((k / 24) * Math.PI * 2) * rr, cz + Math.sin((k / 24) * Math.PI * 2) * rr]);
+  extrude(b, ring, 0.26, PATH_Y, PATH_Y + 0.28, BOX, HEDGE_TOP);
+  // The colour: a ring of one between the knot's ring and the topiary, the diamond's corners of another
+  const set = SETS[i % SETS.length];
+  const inDiamond = (p: Pt, m: number) => Math.abs(p[0] - cx) / (hx - m) + Math.abs(p[1] - cz) / (hz - m) < 1;
+  b.add(new THREE.RingGeometry(1.05, rr - 0.25, 24).rotateX(-Math.PI / 2).translate(cx, PATH_Y + 0.016, cz), SOIL);
+  b.detail(() => {
+    const step = low ? 0.6 : 0.42;
+    for (let x = cx - rr; x < cx + rr; x += step)
+      for (let z = cz - rr; z < cz + rr; z += step) {
+        const d = Math.hypot(x - cx, z - cz);
+        if (d > 1.15 && d < rr - 0.35) b.add(clump.clone().translate(x, PATH_Y + 0.11, z), set[0]);
+      }
+    for (let x = Math.min(...xs); x < Math.max(...xs); x += step)
+      for (let z = Math.min(...zs); z < Math.max(...zs); z += step) {
+        const p: Pt = [x, z];
+        if (!inside(p) || inDiamond(p, -0.35)) continue;
+        if (pt.bed.some((q, k) => {
+          const e = pt.bed[(k + 1) % pt.bed.length];
+          const [dx, dz] = [e[0] - q[0], e[1] - q[1]];
+          const t = Math.max(0, Math.min(1, ((x - q[0]) * dx + (z - q[1]) * dz) / (dx * dx + dz * dz || 1)));
+          return Math.hypot(q[0] + dx * t - x, q[1] + dz * t - z) < 0.55;
+        })) continue;
+        b.add(clump.clone().translate(x, PATH_Y + 0.11, z), set[1 + (Math.floor((x + z) / 1.6) & 1)]);
+      }
+  });
+  b.add(new THREE.CylinderGeometry(0.55, 0.6, 0.35, 12).translate(cx, PATH_Y + 0.17, cz), ORN_DRESSED);
+  b.add(new THREE.SphereGeometry(0.5, 10, 8).scale(1, 1.3, 1).translate(cx, PATH_Y + 0.95, cz), HEDGE_C);
+  b.add(new THREE.SphereGeometry(0.32, 10, 8).translate(cx, PATH_Y + 1.75, cz), HEDGE_C);
+  b.add(new THREE.SphereGeometry(0.16, 8, 6).translate(cx, PATH_Y + 2.2, cz), HEDGE_TOP);
+}
+
 /* ---------- The pieces ---------- */
 
 /** A planter: a low stone wall round (or a box round an oblong), soil, flowers near only */
@@ -198,16 +322,36 @@ function oblongPlanter(b: Batch, [x0, z0, x1, z1]: [number, number, number, numb
 /** A fountain: a round stone basin with water in it, a pedestal, a bowl and its spray */
 function fountain(b: Batch, c: Pt) {
   const F = FOUNTAIN;
-  b.add(new THREE.CylinderGeometry(F.r, F.r + 0.06, F.h, 28, 1, true).translate(c[0], SLAB + F.h / 2, c[1]), STONE);
-  b.add(new THREE.CylinderGeometry(F.r - 0.25, F.r - 0.25, F.h, 28, 1, true).translate(c[0], SLAB + F.h / 2, c[1]), STONE);
-  b.add(new THREE.RingGeometry(F.r - 0.27, F.r + 0.04, 28).rotateX(-Math.PI / 2).translate(c[0], SLAB + F.h + 0.005, c[1]), CAP);
-  b.add(new THREE.CircleGeometry(F.r - 0.25, 28).rotateX(-Math.PI / 2).translate(c[0], SLAB + F.h - 0.13, c[1]), WATER);
-  b.add(new THREE.CylinderGeometry(0.18, 0.28, F.top, 10).translate(c[0], SLAB + F.top / 2, c[1]), CAP);
-  b.add(new THREE.CylinderGeometry(F.bowl, F.bowl * 0.4, 0.22, 16).translate(c[0], SLAB + F.top + 0.08, c[1]), CAP);
-  b.add(new THREE.CircleGeometry(F.bowl - 0.06, 16).rotateX(-Math.PI / 2).translate(c[0], SLAB + F.top + 0.18, c[1]), WATER);
+  const at = (g: THREE.BufferGeometry, y: number, m: THREE.Material) => b.add(g.translate(c[0], SLAB + y, c[1]), m);
+  // The basin (carved, Phase 4): a moulded base, its wall with eight piers round it, a rounded coping, the water
+  at(new THREE.CylinderGeometry(F.r + 0.1, F.r + 0.18, 0.14, 32, 1, true), 0.07, ORN_DRESSED);
+  at(new THREE.CylinderGeometry(F.r, F.r + 0.04, F.h, 32, 1, true), F.h / 2, ORN);
+  at(new THREE.CylinderGeometry(F.r - 0.25, F.r - 0.25, F.h, 28, 1, true), F.h / 2, ORN);
+  at(new THREE.TorusGeometry(F.r - 0.1, 0.14, 5, 32).rotateX(Math.PI / 2), F.h + 0.02, ORN_DRESSED);
+  for (let k = 0; k < 8; k++) {
+    const a = (k / 8) * Math.PI * 2;
+    b.box(c[0] + Math.cos(a) * (F.r + 0.02) - 0.13, SLAB, c[1] + Math.sin(a) * (F.r + 0.02) - 0.13, 0.26, F.h + 0.1, 0.26, ORN_DRESSED);
+  }
+  at(new THREE.CircleGeometry(F.r - 0.25, 28).rotateX(-Math.PI / 2), F.h - 0.13, WATER);
+  // The pedestal (turned), the lower bowl, a stem, the upper bowl, a pineapple finial
+  at(new THREE.LatheGeometry([new THREE.Vector2(0.45, 0), new THREE.Vector2(0.3, 0.15), new THREE.Vector2(0.18, 0.6), new THREE.Vector2(0.26, F.top - 0.15), new THREE.Vector2(0.14, F.top)], 12), 0, ORN);
+  const bowl = (r: number) => new THREE.LatheGeometry([new THREE.Vector2(0.12, 0), new THREE.Vector2(r * 0.55, 0.06), new THREE.Vector2(r, 0.22), new THREE.Vector2(r * 0.95, 0.26)], 18);
+  at(bowl(F.bowl + 0.3), F.top - 0.05, ORN_DRESSED);
+  at(new THREE.CircleGeometry(F.bowl + 0.22, 18).rotateX(-Math.PI / 2), F.top + 0.19, WATER);
+  at(new THREE.CylinderGeometry(0.08, 0.12, 0.55, 8), F.top + 0.48, ORN);
+  at(bowl(0.45), F.top + 0.7, ORN_DRESSED);
+  at(new THREE.CircleGeometry(0.4, 14).rotateX(-Math.PI / 2), F.top + 0.94, WATER);
+  at(new THREE.SphereGeometry(0.11, 8, 6).scale(1, 1.5, 1), F.top + 1.1, ORN_DRESSED);
   b.detail(() => {
-    b.add(new THREE.ConeGeometry(0.1, 0.6, 8).translate(c[0], SLAB + F.top + 0.48, c[1]), SPRAY);
-    b.add(new THREE.SphereGeometry(0.09, 8, 6).translate(c[0], SLAB + F.top + 0.82, c[1]), SPRAY);
+    // Water spilling from the bowls' lips in thin streams, and a jet over the top
+    for (const [rad, y0, y1, n] of [
+      [0.43, F.top + 0.96, F.top + 0.2, 8],
+      [F.bowl + 0.27, F.top + 0.2, F.h - 0.1, 12],
+    ] as const)
+      for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2;
+        b.add(new THREE.CylinderGeometry(0.014, 0.024, y0 - y1, 4).translate(c[0] + Math.cos(a) * rad, SLAB + (y0 + y1) / 2, c[1] + Math.sin(a) * rad), SPRAY);
+      }
   });
 }
 
@@ -243,10 +387,9 @@ export function registerGardens(low: boolean) {
   const [gx0, gz0, gx1, gz1] = GARDEN_SITE;
   site('westlake garden', [gx0 - 1, gz0 - 1, gx1 + 1, gz1 + 1], (into) => {
     const b = new Batch();
-    for (const run of GARDEN_WALLS) {
-      extrude(b, run, WALL.w, SLAB - 0.05, SLAB + WALL.h - 0.07, STONE);
-      extrude(b, run, WALL.w + 0.08, SLAB + WALL.h - 0.07, SLAB + WALL.h, CAP);
-    }
+    // Its wall a balustrade now, and the pergola along its north side (Phase 4)
+    for (const run of GARDEN_WALLS) balustrade(b, run, low);
+    pergola(b, low);
     for (const r of ROUNDS) {
       b.add(new THREE.CircleGeometry(r.r, 40).rotateX(-Math.PI / 2).translate(r.c[0], PATH_Y + 0.002, r.c[1]), GRAVEL);
       fountain(b, r.c);
@@ -254,17 +397,10 @@ export function registerGardens(low: boolean) {
     PARTERRES.forEach((pt, i) => {
       // The hedge, clipped low, open at its gap
       for (const run of pt.hedge) extrude(b, run, HEDGE.w, SLAB, SLAB + HEDGE.h, HEDGE_C, HEDGE_TOP);
-      // The gravel border inside it, the bed, the flowers in bands, the topiary cone in the middle
+      // The gravel border inside it, a stone rim, the bed in its pattern on lawn (Phase 4)
       fill(b, pt.line, PATH_Y, GRAVEL);
-      fill(b, pt.bed, PATH_Y + 0.01, SOIL);
-      // (a stone rim round the bed)
-      flatStrip(b, [...pt.bed, pt.bed[0]], 0.14, PATH_Y + 0.016, CAP);
-      const xs = pt.bed.map((p) => p[0]);
-      const zs = pt.bed.map((p) => p[1]);
-      b.detail(() => flowers(b, Math.min(...xs), Math.min(...zs), Math.max(...xs), Math.max(...zs), PATH_Y + 0.01, (p) => inPoly(pt.bed, p) && Math.hypot(p[0] - pt.mid[0], p[1] - pt.mid[1]) > 1.1, low ? 0.7 : 0.5, i * 3));
-      b.add(new THREE.CylinderGeometry(0.8, 0.8, 0.18, 14).translate(pt.mid[0], PATH_Y + 0.1, pt.mid[1]), CAP);
-      b.add(new THREE.ConeGeometry(0.6, 2.0, 10).translate(pt.mid[0], PATH_Y + 1.2, pt.mid[1]), HEDGE_C);
-      b.add(new THREE.SphereGeometry(0.22, 8, 6).translate(pt.mid[0], PATH_Y + 2.3, pt.mid[1]), HEDGE_TOP);
+      flatStrip(b, [...pt.bed, pt.bed[0]], 0.14, PATH_Y + 0.016, ORN_DRESSED);
+      patternBed(b, pt, i, low);
     });
     for (const [x, z] of URNS) {
       const P = URN.plinth;
@@ -310,9 +446,17 @@ export function registerGardens(low: boolean) {
       const b = new Batch();
       for (const [d0, d1, h] of TERRACE_STEPS) {
         const [cx, cz] = at((d0 + d1) / 2, 0);
-        // (down into the water for the steps over it)
-        const y0 = SLAB - 0.25;
+        // (from the lake's bed up, for the steps down the embankment over the water: Phase 3b)
+        const y0 = SLAB + BED_Y;
         b.add(place(unitBox, cx, (y0 + SLAB + h) / 2, cz, d0 - d1, SLAB + h - y0, tr.half * 2, 0, ry), STONE);
+        // Its walls either side, stepping down with it, where the flight goes down past the lawn
+        if (h < 0.15)
+          for (const sd of [-1, 1]) {
+            const [wx, wz] = at((d0 + d1) / 2, sd * (tr.half + 0.15));
+            const wt = Math.max(SLAB + h + 0.55, SLAB + 0.12);
+            b.add(place(unitBox, wx, (y0 + wt) / 2, wz, d0 - d1 + 0.01, wt - y0, 0.3, 0, ry), STONE);
+            b.add(place(unitBox, wx, wt + 0.03, wz, d0 - d1 + 0.04, 0.06, 0.38, 0, ry), CAP);
+          }
         // A paler nosing along each step's edge towards the water
         const [nx, nz] = at(d1 + 0.06, 0);
         b.add(place(unitBox, nx, SLAB + h + 0.006, nz, 0.12, 0.012, tr.half * 2 - 0.02, 0, ry), CAP);

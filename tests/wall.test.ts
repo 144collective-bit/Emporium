@@ -9,7 +9,8 @@ import { EXT, RIVER, WALL_MARGIN, WALL_OUT, WORLD_BOUNDS } from '../src/scripts/
 import { PLAN } from '../src/scripts/city3d/streetplan';
 import { EMPORIUM_ROOF } from '../src/scripts/city3d/projects';
 import { TALLEST as UPTOWN_TALLEST } from '../src/scripts/city3d/highrise';
-import { CEILING, EDGE_TURN, TUNES, newFlight, stepFly } from '../src/scripts/city3d/flight-sim';
+import { CEILING, EDGE_TURN, TUNES, newFlight } from '../src/scripts/city3d/flight-sim';
+import { stepFly } from '../src/scripts/city3d/flight-step';
 import { CAMERA_GRID, SOLIDS, SOLID_GRID, rayBoxes, type Box } from '../src/scripts/city3d/solids';
 import { newBoat, stepBoat } from '../src/scripts/city3d/boat-sim';
 import { RIVER_WALLS } from '../src/scripts/city3d/drive-sim';

@@ -12,6 +12,7 @@
 // renderer (a few frames a second), so every step waits on what it expects, not on the clock.
 //   CHROMIUM_PATH=...   the browser (default: Playwright's own, else /opt/pw-browsers/chromium)
 //   SMOKE_SHOTS=dir     keep a picture after each step
+//   SMOKE_CLEAN=1       ... without the ?fps readout over them (it's still read, only not shown)
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
@@ -40,10 +41,11 @@ const browser = await chromium.launch({
 const only = process.argv[2]?.split(',');
 let failed = 0;
 
-/** One scene: a fresh page at `spawn` (x,z), walking, then `play(t)`; a page error or a throw fails it */
-async function scene(name, spawn, play, init, query = '') {
+/** One scene: a fresh page at `spawn` (x,z), walking, then `play(t)`; a page error or a throw fails it. `device` is the
+ * browser's context instead of a desktop's (a phone: its size, touch); `query` is added to the page's address */
+async function scene(name, spawn, play, init, device, query = '') {
   if (only && !only.includes(name)) return;
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const ctx = await browser.newContext(device ?? { viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
   if (init) await page.addInitScript(init);
   const errors = [];
@@ -96,6 +98,17 @@ async function scene(name, spawn, play, init, query = '') {
       }
       await step(`${what} (${dist(from, await where()).toFixed(1)} tiles)`);
     },
+    /** Hold a key until the walk prompt reads `label` (a rail or wall ahead stops him if he's early) */
+    async toward(key, label, what) {
+      const from = await where();
+      await page.keyboard.down(key);
+      try {
+        await until(`${what}: the "${label}" prompt`, (l) => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').toLowerCase().includes(l), label.toLowerCase(), 30000);
+      } finally {
+        await page.keyboard.up(key);
+      }
+      await step(`${what} (${dist(from, await where()).toFixed(1)} tiles)`);
+    },
     /** The walk prompt reading `label`, then F */
     async prompt(label) {
       await until(`the "${label}" prompt`, (l) => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').toLowerCase().includes(l), label.toLowerCase(), 120000);
@@ -107,6 +120,7 @@ async function scene(name, spawn, play, init, query = '') {
   try {
     // (no spot given: he wakes where everyone does, in his room at home, docs/spawn-plan.md)
     await page.goto(`http://127.0.0.1:${server.address().port}/?fps${spawn ? `&spawn=${spawn}` : ''}${query}`);
+    if (process.env.SMOKE_CLEAN) await page.addStyleTag({ content: '.city-stats { opacity: 0 !important; }' });
     await t.click('[data-start-guest]');
     // (Single player goes straight into walking)
     await t.click('[data-start-single]');
@@ -215,13 +229,21 @@ await scene('homegarage', '-238.35,380', async (t) => {
   await t.step('the garage menu closed');
 });
 
-// Up through the house (docs/compound-plan.md Phase 3): at the stairs' foot in his room, up to the landing (a fade),
-// on up through the hatch to the roof terrace, a few steps along the rail, and down to the landing again
+// Up through the house (docs/house-plan.md Phase 2: the turned stair, walked): at the stair's foot in his room, up the
+// first flight to the half landing, across it, up the second to the landing; on up through the hatch to the roof
+// terrace (a fade), a few steps along the rail, and down to the landing again
 const shows = (label) => (l) => (document.querySelector('[data-walk-prompt]:not([hidden])')?.textContent ?? '').includes(l);
-await scene('hometerrace', '-228.85,386.5,3.14', async (t) => {
-  await t.prompt('Upstairs');
-  await t.until('the way up to the roof to show (he is on the landing)', shows(), 'Roof', 120000);
-  await t.step(`up on the landing, at ${(await t.where()).join(', ')}`);
+const upNowHome = () => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0);
+await scene('hometerrace', '-228,387.3,0', async (t) => {
+  await t.go('w', 2.5, 'walked up the first flight');
+  await t.go('a', 0.95, 'across the half landing');
+  await t.go('s', 2.4, 'and up the second flight');
+  await t.until('him up on the landing', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0) > 1.3, null, 60000);
+  await t.step(`up on the landing (${(await t.page.evaluate(upNowHome)).toFixed(1)}), at ${(await t.where()).join(', ')}`);
+  // (how far past the stair's head he stops varies: east over the first flight's head, then north to its rail, where
+  // the roof's steps start)
+  await t.go('d', 1.0, 'over to the first flight\'s head');
+  await t.toward('w', 'Roof', 'up to the roof\'s steps');
   await t.prompt('Roof');
   await t.until('the way down to show (he is on the terrace)', shows(), 'Downstairs', 120000);
   await t.step(`up on the terrace, at ${(await t.where()).join(', ')}`);
@@ -230,6 +252,17 @@ await scene('hometerrace', '-228.85,386.5,3.14', async (t) => {
   await t.prompt('Downstairs');
   await t.until('the way up to the roof to show (he is back on the landing)', shows(), 'Roof', 120000);
   await t.step('down on the landing again');
+});
+
+// Down the stair (docs/house-plan.md Phase 2): from the landing at the second flight's head, down it to the half
+// landing, across, down the first flight into the room
+await scene('homestairs', '-229,387.2,0,1.3', async (t) => {
+  await t.until('him on the landing', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0) > 1.3, null, 60000);
+  await t.go('w', 2.4, 'walked down the second flight');
+  await t.go('d', 0.95, 'across the half landing');
+  await t.go('s', 2.6, 'and down the first flight');
+  await t.until('him down in the room', () => !/ · up /.test(document.querySelector('.city-stats')?.textContent ?? '') && Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/)?.[2] ?? 0) > 386.6, null, 60000);
+  await t.step(`down in the room, at ${(await t.where()).join(', ')}`);
 });
 
 // Upstairs, the office's desk (docs/compound-plan.md Phase 3): it opens the business card, which closes again
@@ -242,19 +275,18 @@ await scene('homedesk', '-234.25,389.95,3.14,1.45', async (t) => {
   await t.step('the card closed');
 });
 
-// Down to his basement (docs/compound-plan.md Phase 4): by the stairs in his room, down the steps (a fade), a few
-// steps into the den, back, and up again
-await scene('homeden', '-228.85,384.65,3.14', async (t) => {
-  const z = () => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/)?.[2] ?? NaN);
+// Down to his basement (docs/compound-plan.md Phase 4): at the den's door under the stair in his room, down the steps
+// (a fade), a few steps into the den, back, and up again
+await scene('homeden', '-229,387.05,0', async (t) => {
   await t.prompt('Basement');
-  await t.until('him down in the den (past the steps\' foot)', `(${z})() > 386.3`, null, 120000);
+  await t.until('him down in the den', () => / · down /.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 120000);
   await t.step(`down in the den, at ${(await t.where()).join(', ')}`);
   const foot = await t.where();
   await t.go('w', 1.2, 'walked into the den');
   const there = await t.where();
   await t.go('s', Math.hypot(there[0] - foot[0], there[1] - foot[1]), 'and back to the steps');
   await t.prompt('Upstairs');
-  await t.until('him back in the room by the stairs', `(${z})() < 386`, null, 120000);
+  await t.until('him back in the room by the den\'s door', () => !/ · down /.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 120000);
   await t.step('up in the room again');
 });
 
@@ -391,6 +423,97 @@ await scene('karts', '-338.8,-46.9', async (t) => {
   await t.step('quit the race');
 });
 
+// Golf (docs/golf-game-plan.md Phase 2): at Knob Hill's door, Play golf, the 1st tee, a swing (start, power on the
+// way up, accuracy on the way down), the ball off and the next shot to play, Esc out
+await scene('golf', '528,-497.6', async (t) => {
+  await t.prompt('Play golf');
+  await t.until('the golf menu', () => !!document.querySelector('.golf-menu:not([hidden]) [data-golf-one]'), null, 120000);
+  await t.step('the menu');
+  await t.click('.golf-menu [data-golf-front]');
+  await t.until('the round', () => !!document.querySelector('.golf-hud:not([hidden])'), null, 120000);
+  await t.step('on the 1st tee');
+  const stroke = () => t.page.evaluate(() => document.querySelector('[data-golf-stroke]')?.textContent ?? '');
+  await t.page.keyboard.press('Space');
+  await t.page.waitForTimeout(800);
+  await t.page.keyboard.press('Space');
+  await t.page.waitForTimeout(1250);
+  await t.page.keyboard.press('Space');
+  await t.step('the swing');
+  await t.until('the next shot', () => (document.querySelector('[data-golf-stroke]')?.textContent ?? '') === 'Stroke 2', null, 60000);
+  await t.step(`the ball played: ${await stroke()}, ${await t.page.evaluate(() => document.querySelector('[data-golf-to]')?.textContent ?? '')}`);
+  // (Esc closes the control card first if it's up, then quits)
+  for (let i = 0; i < 3 && (await t.has('.city.is-golfing')); i++) {
+    await t.page.keyboard.press('Escape');
+    await t.page.waitForTimeout(1500);
+  }
+  if (await t.has('.city.is-golfing')) throw new Error('the round did not end on Esc');
+  await t.step(`quit the round, ${await t.page.evaluate(() => document.querySelector('.city-stats')?.textContent?.match(/at -?[\d.]+, -?[\d.]+/)?.[0] ?? '')}`);
+  // (the round left part-way is kept: the menu offers to carry it on)
+  await t.page.waitForTimeout(1500);
+  await t.prompt('Play golf');
+  await t.until('Continue on the menu', () => !!document.querySelector('.golf-menu:not([hidden]) [data-golf-continue]:not([hidden])'), null, 120000);
+  await t.step(`the menu offers ${await t.page.evaluate(() => document.querySelector('[data-golf-continue]')?.textContent ?? '')}`);
+  // A hole played through (Phase 4): the 1st on its own, every shot the meter's three presses, till its card
+  await t.click('.golf-menu [data-golf-one]');
+  await t.until('the 1st tee', () => !!document.querySelector('.golf-hud:not([hidden])'), null, 120000);
+  for (let shot = 1; shot <= 12; shot++) {
+    await t.until(
+      'a shot to play or the card',
+      () => !!document.querySelector('.golf-card:not([hidden])') || document.querySelector('[data-golf-tip]')?.textContent === 'Space: swing',
+      null,
+      120000
+    );
+    if (await t.has('.golf-card:not([hidden])')) break;
+    await t.page.keyboard.press('Space');
+    await t.page.waitForTimeout(700);
+    await t.page.keyboard.press('Space');
+    await t.page.waitForTimeout(1250);
+    await t.page.keyboard.press('Space');
+    // (the ball off: the tip goes till the next shot's ready)
+    await t.until('the swing', () => document.querySelector('[data-golf-tip]')?.textContent !== 'Space: accuracy', null, 60000);
+    await t.page.waitForTimeout(1500);
+  }
+  await t.until("the hole's card", () => !!document.querySelector('.golf-card:not([hidden])'), null, 120000);
+  const card = await t.page.evaluate(() => `${document.querySelector('[data-golf-card-score]')?.textContent} · ${document.querySelector('[data-golf-card-line]')?.textContent} · ${document.querySelector('[data-golf-card-take]')?.textContent}`);
+  await t.step(`the hole played: ${card}`);
+  await t.click('.golf-card [data-golf-done]');
+  await t.until('the round over', () => !document.querySelector('.city.is-golfing'), null, 60000);
+  await t.step('back at the door');
+});
+
+// Golf on a phone on its side (Phase 4): the touch controls, a club down, and the swing's pull-back (a real touch
+// dragged down the screen and let go)
+await scene(
+  'golf-touch',
+  '528,-497.6',
+  async (t) => {
+    await t.prompt('Play golf');
+    await t.until('the golf menu', () => !!document.querySelector('.golf-menu:not([hidden]) [data-golf-one]'), null, 120000);
+    await t.click('.golf-menu [data-golf-one]');
+    await t.until('the touch controls', () => !!document.querySelector('.golf-hud:not([hidden]) .golf-touch [data-golf-view]')?.getClientRects().length, null, 120000);
+    await t.until('the pull-back tip', () => document.querySelector('[data-golf-tip]')?.textContent === 'Pull back to swing', null, 60000);
+    await t.step('on the tee, by touch');
+    const cdp = await t.page.context().newCDPSession(t.page);
+    const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    const r = await t.page.evaluate(() => {
+      const b = document.querySelector('[data-golf-pull]').getBoundingClientRect();
+      return { x: b.left + b.width / 2, y: b.top + 10 };
+    });
+    await touch('touchStart', r.x, r.y);
+    for (let i = 1; i <= 8; i++) await touch('touchMove', r.x + i, r.y + i * 13);
+    await t.until('the pull drawn', () => !document.querySelector('[data-golf-pull-line]')?.hidden, null, 30000);
+    await t.step('pulled back');
+    await touch('touchEnd', 0, 0);
+    await t.until('the next shot', () => (document.querySelector('[data-golf-stroke]')?.textContent ?? '') === 'Stroke 2', null, 90000);
+    await t.step(`the ball played by touch: ${await t.page.evaluate(() => document.querySelector('[data-golf-to]')?.textContent ?? '')}`);
+    await t.click('[data-golf-quit]');
+    await t.until('the round left', () => !document.querySelector('.city.is-golfing'), null, 60000);
+    await t.step('quit');
+  },
+  undefined,
+  { viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true }
+);
+
 // The same on Riverside Raceway behind ?karts=new (docs/kart-harbour-plan.md Phase 3): the clubhouse's single race runs
 // there, on the new circuit (the header names it), driven a little, quit
 await scene(
@@ -421,6 +544,7 @@ await scene(
     if (await t.has('.city.is-karting')) throw new Error('the race did not end on Esc');
     await t.step('quit the race');
   },
+  undefined,
   undefined,
   '&karts=new'
 );

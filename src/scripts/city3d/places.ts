@@ -1,3 +1,4 @@
+import { LAKEHOUSE_SPAWN } from './westlake';
 /*
  * The places you can get about between (docs/growth-plan.md Phase 8;
  * DOM-free, tested in tests/travel.test.ts): every place on the map with the
@@ -23,6 +24,7 @@ import { MARKET_SPAWN } from './nightmarket';
 import { TOWER_SPAWN } from './skydeck';
 import { COURT_SPAWN, MALL_SPAWN } from './mall';
 import { SITE_SPAWNS } from './crestsites';
+import { GOLF_CLUBHOUSE } from './golflift';
 import { CORAL_SPAWNS } from './coral';
 import { HM_SPAWN } from './docksport';
 import { SUN_SPAWNS } from './sunplaces';
@@ -87,7 +89,9 @@ export const PLACES: Place[] = [
   { id: 'palmcourt', kind: 'spot', spot: 'palmcourt', at: COURT_SPAWN },
   { id: 'mall', kind: 'spot', spot: 'mall', at: MALL_SPAWN },
   // Crestmont's landmarks (crestsites.ts): where you arrive at each, facing it
-  ...(['hotel', 'civichall', 'golfclub', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SITE_SPAWNS[id] })),
+  ...(['hotel', 'civichall', 'overlook', 'reservoir', 'asterly', 'belvedere', 'glasshouse'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: SITE_SPAWNS[id] })),
+  // (Knob Hill Golf Club in the north-east corner, docs/golf-plan.md Phase 4: in its car park, facing the clubhouse)
+  { id: 'golfclub', kind: 'spot', spot: 'golfclub', at: GOLF_CLUBHOUSE.spawn },
   // Coral Drive's refitted showroom and spa (coral.ts, the premium upgrade's Phase 4): on the strip in front of each
   ...(['vellano', 'solenne'] as const).map((id): Place => ({ id, kind: 'spot', spot: id, at: CORAL_SPAWNS[id] })),
   // Southbank Docks' Harbour Master (docksport.ts): on the sidewalk, facing its door
@@ -102,6 +106,8 @@ export const PLACES: Place[] = [
   // Northgate Air Base's visitors' centre outside its main gate (airbase.ts, docs/military-plan.md): in its car park,
   // facing its door
   { id: 'northgate', kind: 'spot', spot: 'northgate', at: VISITOR_SPAWN },
+  // Westlake Park's Lakehouse Café (westlake.ts, docs/westlake-plan.md Phase 6): on the inlet walk, facing its door
+  { id: 'lakehouse', kind: 'spot', spot: 'lakehouse', at: LAKEHOUSE_SPAWN },
   // Endswood Estate's (endsplaces.ts): in front of the tenants' hall, St Aldwyn's west door and Bunker Sound's
   ...ENDS_PLACE_IDS.map((id): Place => ({ id, kind: 'spot', spot: id, at: ENDS_SPAWNS[id] })),
   // City Hall (civic.ts): on the civic square at its steps' foot, facing them

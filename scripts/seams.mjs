@@ -12,7 +12,7 @@ const dir = mkdtempSync(join(tmpdir(), 'seams-'));
 try {
   const out = join(dir, 'seams.mjs');
   await build({
-    stdin: { contents: `export * from './seams';`, resolveDir: resolve('src/scripts/city3d'), loader: 'ts' },
+    stdin: { contents: `import './golfbake';\nexport * from './seams';`, resolveDir: resolve('src/scripts/city3d'), loader: 'ts' },
     outfile: out,
     bundle: true,
     format: 'esm',

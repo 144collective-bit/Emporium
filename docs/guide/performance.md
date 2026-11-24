@@ -95,7 +95,7 @@ keep it up to date when what it describes changes.
     footpaths (`crestcover.ts`, key `crest-paths`: the slopes' and the gardens' paths, a search over every pair of mouths
     and gates) and its vineyards', groves' and meadows' places (`crestland.ts`, key `crest-land`), and Sunridge's lots
     (`sunridgelots.ts`, key `sun-lots`: about half a second as its chunk loaded), and since the south's 4e the
-    underground's south line and its stations (`southline.ts`, `southline`: its bends and stations' laying out of the boot), and since Crestmont's premium upgrade's Phase 4b the cable car's rope (`cablecar.ts`, `cable-supports`: its pylons' heights, raised till every span clears the ground and the hill houses' roofs, about 20 ms of the boot). A new module that bakes goes in `MODULES` in
+    underground's south line and its stations (`southline.ts`, `southline`: its bends and stations' laying out of the boot), and since Crestmont's premium upgrade's Phase 4b the cable car's rope (`cablecar.ts`, `cable-supports`: its pylons' heights, raised till every span clears the ground and the hill houses' roofs, about 20 ms of the boot), and since Westlake Park's redesign (`docs/westlake-plan.md` Phase 1) the lake's outline (`westlake.ts` `LAKE_POLY`, key `lake`: its field of distances traced on a fine grid), and to make room in the boot, the park's open water, rocks, lamps and benches (`lake-core`, `park-rocks`, `park-lamps`, `park-benches`), its bridges and the loop over them (`park-route`), the lake's convex pieces and the grand terrace (`lake-parts`, `grand`), and its planting (`parktrees.ts`: `park-trees`, `park-shrubs`, `park-reeds`, `park-lilies`, rounded to the centimetre; the park's trees no longer planted at the boot but with its chunk) and the garden's benches, urns, people, the Mall's beds and the planters (`gardens.ts`: `garden-benches`, `garden-urns`, `garden-people`, `mall-beds`, `park-planters`) and the picnics (`parklife.ts`, `park-picnics`: the room for the band's two crowd acts, Phase 7); the park's trees, kerbs, edges, walls and parterres stay unbaked, since baked they'd weigh more than the code they'd save. A new module that bakes goes in `MODULES` in
     `bake.mjs` and in `tests/baked.test.ts`, which holds every key to
     exactly what `make()` makes. Baked data must be plain (numbers,
     strings, arrays, objects): anything with references packs and unpacks.
@@ -138,7 +138,11 @@ keep it up to date when what it describes changes.
     when Degen comes near the park or asks at the hut; idle stand-ins until
     then; the City-view panel's records are `kart-records.ts`, at the boot,
     and the cups the boot reads are `kart-cups.ts`, so the race's rules,
-    `kart-sim.ts`, come with the race), the economy's screens
+    `kart-sim.ts`, come with the race), flying's step (`flight-step.ts`, when you're near your aircraft or climb
+    in, fly.ts `loadStep()`) and target practice's rules (`combat-sim.ts`, with combat.ts; the guns and the
+    dummies the boot reads are `weapons.ts`: both moved out of the boot on 2026-11-22 to make room for the golf
+    plan's Phase 5), the golf game (`golfgame.ts` with its rules, golfgame-sim.ts: walk.ts `loadGolf()`, the first
+    Play golf at Knob Hill's door; the boot holds its hooks only), the economy's screens
     (`tycoon-ui.ts`: the business card's views, the market hall and the
     building panels' parts, the first time one opens; `tycoon-boot.ts`
     keeps the save, its tick, the Dorras readout, the missions and the

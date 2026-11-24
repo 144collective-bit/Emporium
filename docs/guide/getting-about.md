@@ -36,7 +36,9 @@ keep it up to date when what it describes changes.
   - **Taxis** are `taxi.ts` (loaded the first time one's called): a Cruiser in taxi yellow with a lit TAXI sign
     comes from a spot on the roads a way off to the kerb nearest you, along
     `pathBetween()` (`routes.ts`: the shortest drive between two points on
-    the streets, in the right lanes, ending at the kerb nearest the place),
+    the streets, in the right lanes, ending at the kerb nearest the place;
+    Clubhouse Drive, a street of the golf club's, is the kerb of Knob Hill
+    Golf Club only: `inClub()`, `docs/guide/golf.md`),
     stopping at red lights and behind traffic; the traffic stops behind it
     (`stoppers` in `life.ts`). Walk up to it (or Get in) and it drives you
     there under a chase camera; Skip ride or Esc cuts to the end. Where the
@@ -175,5 +177,8 @@ keep it up to date when what it describes changes.
     owl (the park's layer, `VILLAGE_BIRDS`), the High Road's shoppers (the Neon
     Mile's crowd, `HIGH_ROAD_MURMUR`), and below ground (`BELOW`) hushed as
     indoors with a tube train's rumble from the timetable (`tube`,
-    `tubeRumbleAt()`, mixed with the el's in index.ts). ambience.ts is fetched
+    `tubeRumbleAt()`, mixed with the el's in index.ts). Knob Hill Golf Club
+    (docs/golf-plan.md Phase 5): the park's birds and owl (`GOLF_BIRDS`) and
+    Crestmont's sprinklers and crickets (`GOLF_LAWNS`) over its land (golflift.ts
+    `golfShare()`), the wind softened as on the lawns. ambience.ts is fetched
     after the boot (the south plan's 6a).

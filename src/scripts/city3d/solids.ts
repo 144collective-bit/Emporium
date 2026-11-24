@@ -10,7 +10,7 @@
 import { SUN_SOLIDS } from './sunridge';
 import { SUNPLACE_SOLIDS } from './sunplaces';
 import type { SpotId } from '../../lib/city';
-import { DUMMIES } from './combat-sim';
+import { DUMMIES } from './weapons';
 import { BIG_LOTS, BS, GARAGE, MARKET, UNITS, design, designBox } from './layout';
 import { ALLEYS, ALLEY_PROPS, BOLLARD_R, INFILL, SQUARE } from './downtown';
 import { SQUARE_SOLIDS } from './outer';
@@ -50,6 +50,7 @@ import { CORAL_SOLIDS } from './coral';
 import { ESTATE_SOLIDS } from './estates';
 import { MANSION_SOLIDS } from './mansions';
 import { SITE_SOLIDS } from './crestsites';
+import { golfSolids } from './golflift';
 import { PORT_SOLIDS } from './docksport';
 import { RESORT_SOLIDS } from './resorts';
 import { MARK_SOLIDS } from './stripmarks';
@@ -327,6 +328,8 @@ export const SOLIDS: Box[] = onGround([...DRAWN.map(designBox), ...DOWNTOWN_SOLI
   TERRACE_SOLIDS,
   // (St Aldwyn's: its tops over its base too, aldwyns.ts)
   CHURCH_SOLIDS,
+  // (Knob Hill Golf Club's: their tops over the course's ground already, golflift.ts)
+  golfSolids(),
   // (the High Road's buildings: theirs too, highroad.ts)
   SHOP_SOLIDS
   // (the council rows', the bungalows', the corner shops', the community centre's and the allotments' sheds join with the

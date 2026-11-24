@@ -62,8 +62,14 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       }
       // It ends at the road nearest the place (a lane's width or so from it)
       const end = r!.pts[r!.pts.length - 1];
-      // (of the streets a taxi can reach: not the hills' cul-de-sacs, which join no other street, nor the raised highway and its ramps)
-      const nearest = Math.min(...roads.filter((s) => s.kind !== 'highway' && s.kind !== 'ramp' && !HILL_ROADS.some((r) => r.id === s.id && r.deadEnd)).map((s) => distToStreet(s, [b.at.x, b.at.z])));
+      // (of the streets a taxi can reach: not the hills' cul-de-sacs, which join no other street, nor the raised highway and its
+      // ramps, nor Clubhouse Drive but for the golf club: the club's own, routes.ts `inClub()`)
+      const club = b.id === 'golfclub';
+      const nearest = Math.min(
+        ...roads
+          .filter((s) => s.kind !== 'highway' && s.kind !== 'ramp' && !HILL_ROADS.some((r) => r.id === s.id && r.deadEnd) && (club || !s.id.startsWith('golf-')))
+          .map((s) => distToStreet(s, [b.at.x, b.at.z])),
+      );
       // (to a Neon Mile resort or the Sphere a taxi may stop on the boulevard's far kerb, the planted median between, by the way it
       // comes: no U-turns; the resorts' own drives come with the limos, docs/strip-plan.md Phase 5)
       const across = RESORTS.some((r) => r.id === b.id) || b.id === 'sphere' ? STRIP_BLVD.half : 0;
@@ -117,6 +123,13 @@ test('a taxi drives from any place to any other along the streets, to the kerb n
       // long way round through town, from the stadium to the airport's metro station about 77 s)
       // (since Phase 3 by its exits, quicker up there: routes.ts rideTime, HIGHWAY_PACE)
       const time = rideTime(r!, 0, TAXI_SPEED);
+      // (Knob Hill Golf Club past the hills in the far north-east corner, docs/golf-plan.md: up Clubhouse Drive, about 500
+      // tiles from the country road, to the clubhouse's car park; the furthest place of all, from the tube's Aldwyn's
+      // Green station in the far south-west about 143 s)
+      if (a.id === 'golfclub' || b.id === 'golfclub') {
+        assert.ok(time < Math.min(148, 66 + 52 + extra(a.id === 'golfclub' ? b.id : a.id)), `${a.id} to ${b.id}: ${time.toFixed(0)} s`);
+        continue;
+      }
       assert.ok(time < Math.min(most, 66 + extra(a.id) + extra(b.id)), `${a.id} to ${b.id}: ${time.toFixed(0)} s`);
     }
 });

@@ -17,7 +17,7 @@ import { BASIN, CHANNEL, DRY_DOCK } from './docks';
 import { SHIP } from './docksport';
 import { PLAN, type Pt } from './streetplan';
 import { PLACES, placeName, type Place } from './places';
-import { PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
+import { BANDSTAND, LAKEHOUSE, PATHS, WESTLAKE_BLOCKS, lakeLine } from './westlake';
 import { TRACKS } from './metro';
 import { LINE, LINE_COLOUR } from './southline';
 import { MONO } from './monorail';
@@ -34,7 +34,8 @@ import { HIGHWAY_BOX } from './highway';
 import { ROAD_AREA as STADIUM_ROAD_AREA } from './stadiumroad';
 import { RESORTS } from './resorts';
 import { HARBOUR_MASTER, SHED, STACK_BLOCKS, WAREHOUSES } from './docksport';
-import { CIVIC, CLUB as GOLF_CLUB, HOTEL as CREST_HOTEL } from './crestsites';
+import { CIVIC, HOTEL as CREST_HOTEL } from './crestsites';
+import { GOLF_CLUBHOUSE } from './golflift';
 import { LAUNDRY as LOT9_LAUNDRY, LOT9_FENCE, OFFICE as LOT9_OFFICE } from './lot9';
 import { CLUBHOUSE as SUN_CLUBHOUSE, SCHOOL as SUN_SCHOOL } from './sunplaces';
 import { ANCHORS as MALL_ANCHORS, CINEMA as MALL_CINEMA, HALL as MALL_HALL, MSCP as MALL_MSCP, PAVILION as MALL_PAVILION, SHOPS as MALL_SHOPS } from './mall';
@@ -269,7 +270,7 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
         } else rect(p.rect, C.tower);
       }
     for (const r of [SHED.rect, HARBOUR_MASTER.rect, ...WAREHOUSES.map((w) => w.rect), ...STACK_BLOCKS]) rect(r, C.tower);
-    for (const r of [CREST_HOTEL.body, CREST_HOTEL.tower, CIVIC.hall, CIVIC.tower, GOLF_CLUB.house, SUN_CLUBHOUSE.rect, ...SUN_SCHOOL.wings, LOT9_OFFICE.rect, LOT9_LAUNDRY.rect]) rect([...r], C.tower);
+    for (const r of [CREST_HOTEL.body, CREST_HOTEL.tower, CIVIC.hall, CIVIC.tower, GOLF_CLUBHOUSE.house, SUN_CLUBHOUSE.rect, ...SUN_SCHOOL.wings, LOT9_OFFICE.rect, LOT9_LAUNDRY.rect]) rect([...r], C.tower);
     // (Lot 9's fence, wandering round the park and its camp: lot9.ts)
     poly(LOT9_FENCE);
     ctx.closePath();
@@ -308,6 +309,9 @@ export function createWorldMap(root: HTMLElement, d: WorldMapDeps) {
       if (q.loop) ctx.closePath();
       ctx.stroke();
     }
+    // (its places: the Lakehouse Café's pavilion and the bandstand, docs/westlake-plan.md Phase 6)
+    rect(LAKEHOUSE.rect, C.tower);
+    rect([BANDSTAND.c[0] - BANDSTAND.r, BANDSTAND.c[1] - BANDSTAND.r, BANDSTAND.c[0] + BANDSTAND.r, BANDSTAND.c[1] + BANDSTAND.r], C.tower);
     // The civic square, paved, and City Hall's footprint at its head (civic.ts)
     rect(CIVIC_SQUARE, C.path);
     for (const r of [FRONT_RANGE, PORTICO, CITY_HALL.back, POLICE_HQ, COURT_BODY, COURT_PORTICO]) rect(r, C.tower);

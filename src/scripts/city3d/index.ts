@@ -20,7 +20,7 @@ import type { LifeSfx } from './life';
 import { createPost } from './post';
 import { buildWall } from './wall3d';
 import { CENTER, SLAB, addLamp, addPool, addTree, buildGround, buildLamps, buildTrees, placed as everyPlaced, puddleMat, scatterOutskirts, waterMat, type Env, type Tick } from './world';
-import { PARK_LAMPS, PARK_TREES } from './westlake';
+import { LAKEHOUSE, LAKEHOUSE_SPAWN, PARK_LAMPS } from './westlake';
 import { CITYHALL_LAND, CITYHALL_PICK, CITYHALL_SPAWN, CITYHALL_TIP, COURT as COURT_LOT, COURT_PICK, COURTHOUSE_SPAWN, POLICE as POLICE_LOT, POLICE_PICK, POLICE_SPAWN, SQUARE_LAMPS, SQUARE_TREES, TOWER_C as CITYHALL_TOWER, CIVIC_IDLE, FLOOD_POOLS, civicDay, flagCeremony } from './civic';
 import { CREST_LAMPS } from './crestmont';
 import { SUN_LAMPS } from './sunridge';
@@ -49,12 +49,13 @@ import { buildTower } from './tower3d';
 import { buildMallSpots } from './mallspot';
 import { buildCrestSpots, spot as pickSpot } from './crestspots';
 import { ENDS_PLACE_IDS, ENDS_SPAWNS, ENDS_SPOTS, type EndsPlaceId } from './endsplaces';
-import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, HOUSE_GEO, homePlaces, setRooms, HOME_SPAWN, inHouse, SOFA_SEAT } from './home';
+import { HOME_LAND, HOME_PICK, HOME_PIN, HOME_PIN_H, HOME_PORTALS, HOME_SLAB, HOME_WAITS, HOME_WAKE, HOUSE_GEO, homePlaces, setRooms, HOME_SPAWN, inHouse, SOFA_SEAT, STAIR_GATE } from './home';
 import { READY_AT, READY_REACH, curtains, dueDistricts, streetReady } from './spawn';
 import { HARBOUR_MASTER, HM_SPAWN, MASTS as PORT_MASTS } from './docksport';
 import { RESORTS, SPHERE_LOT, resortOf } from './resorts';
 import { SPHERE, SPHERE_SPAWN, SPHERE_TOP, volcanoRumble } from './stripmarks';
 import { SITE_SPAWNS } from './crestsites';
+import { GOLF_CLUBHOUSE } from './golflift';
 import { CORAL_SPAWNS } from './coral';
 import { COURT_SPAWN, MALL_LAMPS, MALL_PEOPLE, MALL_TREES } from './mall';
 import { NORTH_LAMPS, NORTH_PEOPLE, NORTH_TREES } from './uptownnorth';
@@ -414,6 +415,9 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // ...and City Hall at the civic square's head (civic.ts, docs/civic-plan.md Phase 2; drawn in Westlake Park's
   // chunk): the pin over its tower, the fly-in from the square (south)
   spots.push(pickSpot(scene, 'cityhall', SLAB, CITYHALL_PICK, CITYHALL_LAND, CITYHALL_TIP - SLAB + 1.4, CITYHALL_TOWER));
+  // ...and Westlake Park's Lakehouse Café (westlake.ts, docs/westlake-plan.md Phase 6): the pavilion and its deck, the pin
+  // over its roof
+  spots.push(pickSpot(scene, 'lakehouse', SLAB, [{ rect: LAKEHOUSE.rect, h: LAKEHOUSE.top }, { rect: LAKEHOUSE.deck, h: 1.1 }], [LAKEHOUSE.deck[0], LAKEHOUSE.rect[1], LAKEHOUSE.rect[2], LAKEHOUSE.rect[3]], LAKEHOUSE.top + 1.4, [(LAKEHOUSE.rect[0] + LAKEHOUSE.rect[2]) / 2, (LAKEHOUSE.rect[1] + LAKEHOUSE.rect[3]) / 2]));
   // ...and the police headquarters and the courthouse flanking the square (Phase 3): their pins over their roofs
   {
     const mid = (r: readonly number[]): [number, number] => [(r[0] + r[2]) / 2, (r[1] + r[3]) / 2];
@@ -437,7 +441,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // Westlake Park (growth plan Phase 9b): its land is the street plan's; its trees and lamps stand with the town's
   // (from its data: phones leave out every other tree of its lawns' clumps, the trim); the rest of it is a chunk
   // of its own, loaded as you approach (districts.ts)
-  PARK_TREES.forEach((t, i) => !(tier === 'low' && t.clump && i % 2) && addTree(t.x, t.z, t.s, t.pine));
+  // (the park's trees come with its chunk: parktrees3d.ts, docs/westlake-plan.md Phase 5)
   for (const [x, z, ry] of PARK_LAMPS) addLamp(x, z, ry);
   // The civic square's (civic.ts, docs/civic-plan.md)
   for (const [x, z] of SQUARE_TREES) addTree(x, z, 1, false);
@@ -931,13 +935,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         startWalking(INSIDE_SPAWN);
       });
     // Crestmont's landmarks (crestsites.ts): Walk in where you arrive at each, facing it
-    if (id === 'hotel' || id === 'civichall' || id === 'golfclub' || id === 'overlook' || id === 'reservoir' || id === 'asterly' || id === 'belvedere' || id === 'glasshouse') {
+    if (id === 'hotel' || id === 'civichall' || id === 'overlook' || id === 'reservoir' || id === 'asterly' || id === 'belvedere' || id === 'glasshouse') {
       const at = SITE_SPAWNS[id];
       panelBody.querySelector('[data-crest-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(at);
       });
     }
+    // Knob Hill Golf Club (docs/golf-plan.md Phase 4): Walk in in its car park, facing the clubhouse
+    if (id === 'golfclub')
+      panelBody.querySelector('[data-golf-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(GOLF_CLUBHOUSE.spawn);
+      });
     // Coral Drive's showroom and spa (the premium upgrade's Phase 4): Walk in on the strip in front of each
     if (id === 'vellano' || id === 'solenne') {
       const at = CORAL_SPAWNS[id];
@@ -991,6 +1001,12 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       panelBody.querySelector('[data-civic-walkin]')?.addEventListener('click', () => {
         close();
         startWalking(id === 'police' ? POLICE_SPAWN : id === 'courthouse' ? COURTHOUSE_SPAWN : CITYHALL_SPAWN);
+      });
+    // The Lakehouse Café's panel: Walk in on the inlet walk, facing its door (westlake.ts)
+    if (id === 'lakehouse')
+      panelBody.querySelector('[data-lakehouse-walkin]')?.addEventListener('click', () => {
+        close();
+        startWalking(LAKEHOUSE_SPAWN);
       });
     // Northgate Air Base's panel: Walk in in the visitors' car park, facing the centre (airbase.ts)
     if (id === 'northgate')
@@ -1270,13 +1286,19 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   let wokeAt = 0;
   let street = { ready: false, at: 0 };
   function streetUp() {
-    if (street.ready || !wokeAt) return true;
+    if (street.ready || !wokeAt) {
+      STAIR_GATE.shut = false;
+      return true;
+    }
     const now = performance.now();
     if (now - street.at < 300) return false;
     const due = dueDistricts(LAZY_DISTRICTS, districts.loaded()).length;
     street = { ready: streetReady({ due, waiting: works.waitingNear(READY_AT[0], READY_AT[1], READY_REACH), waitedMs: now - wokeAt }), at: now };
-    // (and the curtains drawn back: home3d.ts follows it)
-    if (street.ready) curtains.open = true;
+    // (and the curtains drawn back, home3d.ts following, and the stair up opened, home.ts `STAIR_GATE`)
+    if (street.ready) {
+      curtains.open = true;
+      STAIR_GATE.shut = false;
+    }
     return street.ready;
   }
   let lifting = false;
@@ -1345,6 +1367,8 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
         return void loadStash()
           .then((ui) => ui.open())
           .catch(() => game.toast('Stash stuck · try again'));
+      // (the stair's foot while the street loads: home.ts `STAIR_GATE`)
+      if (id === 'home:stairs') return tycoon?.toast('Nearly ready · the street is loading', 2500);
       if (id.startsWith('home:')) {
         const p = HOME_PORTALS.find((q) => q.id === id);
         if (!p) return;
@@ -2557,6 +2581,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       const at = there ? undefined : inside ? HOME_WAKE : HOME_SPAWN;
       // (the curtains drawn before his house is drawn: they open once the street's ready, Phase 2)
       if (inside) curtains.open = false;
+      if (inside) STAIR_GATE.shut = true;
       if (!there) {
         await Promise.race([districts.load('south'), new Promise((r) => setTimeout(r, 10000))]);
         works.want(HOME_WAKE.x, HOME_WAKE.z, 25);

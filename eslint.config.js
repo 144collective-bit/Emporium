@@ -7,6 +7,10 @@ import tseslint from 'typescript-eslint';
 
 /** The DOM-free rules files: no `document`, `window` or `localStorage` in them (a test or the server would fail to load; three.js's maths is fine in Node) */
 const DOM_FREE = [
+  'src/scripts/city3d/parkcrowd.ts',
+  'src/scripts/city3d/parkstands.ts',
+  'src/scripts/city3d/parktrees.ts',
+  'src/scripts/city3d/gardenedges.ts',
   'src/scripts/city3d/kartpark2.ts',
   'src/scripts/city3d/kartcourse2.ts',
   'src/scripts/city3d/kart-track.ts',
@@ -40,6 +44,16 @@ const DOM_FREE = [
   'src/scripts/city3d/drawn.ts',
   'src/scripts/city3d/idle.ts',
   'src/scripts/city3d/southground.ts',
+  'src/scripts/city3d/golf.ts',
+  'src/scripts/city3d/golfground.ts',
+  'src/scripts/city3d/golflift.ts',
+  'src/scripts/city3d/flight-sim.ts',
+  'src/scripts/city3d/flight-step.ts',
+  'src/scripts/city3d/weapons.ts',
+  'src/scripts/city3d/golflife.ts',
+  'src/scripts/city3d/golfgame-sim.ts',
+  'src/scripts/city3d/golfscore.ts',
+  'src/scripts/city3d/golfbake.ts',
   'src/scripts/city3d/southblocks.ts',
   'src/scripts/city3d/southsky.ts',
   'src/scripts/city3d/southyard.ts',

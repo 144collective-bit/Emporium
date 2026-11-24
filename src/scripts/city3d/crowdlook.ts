@@ -48,7 +48,7 @@ import { KART_AREA } from './kartfacility';
 import { RIVER, SOUTH_ROW } from './layout';
 
 export type District = 'town' | 'trenches' | 'ends' | 'uptown' | 'park' | 'docks' | 'yards' | 'crest' | 'strip' | 'beach' | 'suburb' | 'lot9' | 'mall' | 'airport' | 'karts' | 'airbase';
-export type Role = 'walk' | 'idle' | 'jog' | 'kid' | 'worker' | 'guard' | 'shopper' | 'cyclist' | 'boater';
+export type Role = 'walk' | 'idle' | 'jog' | 'kid' | 'worker' | 'guard' | 'shopper' | 'cyclist' | 'boater' | 'golfer';
 
 /** The kinds the crowd's meshes carry: the desktop's, and the phones' (one more than the two they had: the owner's call) */
 export const CROWD_KINDS: readonly OutfitKind[] = ['suit', 'hoodie', 'track', 'puffer'];
@@ -116,6 +116,7 @@ export function roleOf(p: { act?: IdleAct; scale?: number; clip?: CrowdClip; id?
   if (p.clip === 'jog') return 'jog';
   if (p.clip === 'row' || p.clip === 'pedal') return 'boater';
   if (p.id?.includes('cyclist')) return 'cyclist';
+  if (p.id?.startsWith('golfer')) return 'golfer';
   if (p.shopper) return 'shopper';
   return p.act !== undefined || p.clip !== undefined ? 'idle' : 'walk';
 }
@@ -630,6 +631,16 @@ function clothed(r: () => number, where: Where): Outfit {
     out.shoeStyle = r() < 0.6 ? 'runner' : 'sneaker';
     if (r() < 0.5) out.cap = pick(r, [INK, WHITE, '#d8312f']);
     if (r() < 0.4) out.headphones = pick(r, [WHITE, '#14121f', '#ff6ad5']);
+    return out;
+  }
+  // (the golfers, docs/golf-plan.md Phase 5: a light top, pale or navy trousers, white shoes, a cap most of them; the
+  // trousers whatever their top's kind comes with: they come in a spare slot, whose kind and pieces are the boot's)
+  if (role === 'golfer') {
+    out.kind = fit('track', kinds);
+    out.top = pick(r, [WHITE, '#f2c6d4', '#bfe0f2', '#c9e6b8', '#1f2a4a', '#f2e2a8']);
+    out.bottom = pick(r, ['#e8dcc0', '#2a2f45', WHITE, '#9aa3ad']);
+    out.shoes = WHITE;
+    if (r() < 0.7) out.cap = pick(r, [WHITE, '#1f2a4a', '#d8312f']);
     return out;
   }
   if (role === 'kid') {

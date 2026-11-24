@@ -21,8 +21,9 @@ import { SLAB, type Tick } from './world';
 import { site } from './tilework';
 import { dogGeometry, leadEnds } from './dogs3d';
 import { CROWD_VIEW } from './character';
-import { BOATHOUSE, JETTY, WESTLAKE_RECT } from './westlake';
+import { BED_Y, BOATHOUSE, JETTY, WATER_Y, WESTLAKE_RECT, bridgeY } from './westlake';
 import { BOATS, BOAT_Y, DOGS, HULL, PARK_PEOPLE, PICNICS, moment } from './parklife';
+import { RAMBLE_DOGS } from './parkcrowd';
 import { TREE } from './palette';
 
 const CREAM = toon('#ece4d0');
@@ -136,8 +137,12 @@ function jetty(b: Batch) {
   const { x, half, z0, z1, y } = JETTY;
   const top = SLAB + y;
   b.box(x - half, top - 0.07, z0, half * 2, 0.07, z1 - z0, PLANK);
-  // Posts down into the water at its sides
-  for (let z = z1 - 0.2; z > z0 + 2.4; z -= 1.3) for (const sx of [-1, 1]) b.box(x + sx * (half + 0.02) - 0.07, SLAB - 0.4, z - 0.07, 0.14, top - SLAB + 0.42, 0.14, POST);
+  // Posts down through the water to the lake's bed at its sides (a pier now, the water down in its embankment: Phase 3b)
+  for (let z = z1 - 0.2; z > z0 + 2.4; z -= 1.3) for (const sx of [-1, 1]) b.box(x + sx * (half + 0.02) - 0.07, SLAB + BED_Y, z - 0.07, 0.14, top - SLAB - BED_Y + 0.02, 0.14, POST);
+  // A ladder down its west side to the boats moored at the water
+  const lz = z1 - 1.3;
+  for (const dz of [-0.22, 0.22]) b.box(x - half - 0.1, SLAB + WATER_Y - 0.3, lz + dz - 0.03, 0.06, top - SLAB - WATER_Y + 0.6, 0.06, IRON);
+  for (let yy = SLAB + WATER_Y + 0.1; yy < top; yy += 0.3) b.box(x - half - 0.1, yy, lz - 0.22, 0.05, 0.035, 0.44, IRON);
   b.detail(() => {
     // The planks' gaps, across it
     for (let z = z0 + 0.3; z < z1; z += 0.3) b.box(x - half + 0.02, top + 0.002, z, half * 2 - 0.04, 0.004, 0.025, POST);
@@ -305,7 +310,8 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
     false
   );
   // The dogs: coat coloured per dog (white here), dark nose and collar
-  const dogsShown = DOGS.filter((d) => !(low && PARK_PEOPLE[d.walker].trim));
+  // (and the woodland walk's, Phase 7: parkcrowd.ts, each with its walker)
+  const dogsShown = [...DOGS.map((d) => ({ ...d, person: PARK_PEOPLE[d.walker] })), ...RAMBLE_DOGS].filter((d) => !(low && d.person.trim));
   const dogs = inst(
     dogGeometry(),
     dogsShown.length,
@@ -365,11 +371,13 @@ export function registerParkLife(scene: THREE.Scene, tick: (f: Tick) => void, lo
       // A trot: a quick bob and a rock fore and aft
       const ph = t * 9 + k;
       e.set(0, dp.ry - Math.PI / 2, Math.sin(ph) * 0.06, 'YXZ');
-      m4.compose(v.set(dp.x, SLAB + Math.abs(Math.sin(ph)) * 0.025, dp.z), q.setFromEuler(e), sv.setScalar(d.size));
+      // (up over a bridge's deck, as their walkers are)
+      const dy = SLAB + (bridgeY(dp.x, dp.z) ?? 0);
+      m4.compose(v.set(dp.x, dy + Math.abs(Math.sin(ph)) * 0.025, dp.z), q.setFromEuler(e), sv.setScalar(d.size));
       dogs.setMatrixAt(k, m4);
       // The lead: from the walker's hand to the collar
-      PARK_PEOPLE[d.walker].at(t, wm);
-      leadEnds(leadPos, k, wm, dp, d.size, SLAB, SLAB);
+      d.person.at(t, wm);
+      leadEnds(leadPos, k, wm, dp, d.size, wm.y, dy);
     });
     for (const mesh of [rowHull, rowInside, swanMesh, oars, dogs]) mesh.instanceMatrix.needsUpdate = true;
     leadGeo.attributes.position.needsUpdate = true;

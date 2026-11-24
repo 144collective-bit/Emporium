@@ -164,7 +164,9 @@ Each phase merges on its own and leaves the city working; the new park is behind
    drawn by `kartvenue2-3d.ts` with the track's district: on a concrete apron along the south side, the tuning shed with
    three bays behind roller doors half up, benches and vices under tool walls, karts on stands and a trolley, an
    engine rack and a parts counter; the tyre store with its racks and fitting machine; loose stacks by the sheds and
-   along the pit lane; the corners' tyre walls in the club's colours, cyan, white and pink; solids for all of it); 4b the hire-kart garage;
+   along the pit lane; the corners' tyre walls in the club's colours, cyan, white and pink; solids for all of it); 4b the hire-kart garage (done, 2026-11-23: east of the tyre store, eight hire karts in
+   the club's yellow under a canopy, the helmet rack, the sign-on cabin with its desk and the briefing benches facing a
+   screen showing a circuit and flags, no words);
    4c the paddock (transporters, awnings, vans, trailers, the kart wash, weighbridge, scrutineering); 4d race control
    and safety (the tower, start gantry, marshal posts, tractor, medical cabin); 4e the visitors' side (grandstand,
    banks, café deck, kiosk, gate, toilets, banners) and the clubhouse, podium, screens and crowd moved over.

@@ -30,7 +30,6 @@ export interface BaseThing {
 
 /** A thing in the room: its footprint, how tall, and what it is (home3d.ts draws each kind) */
 export type FurnitureKind =
-  | 'stairs'
   | 'sofa'
   | 'chaise'
   | 'armchair'
@@ -52,7 +51,6 @@ export type FurnitureKind =
 
 export type UpKind =
   | 'wall'
-  | 'well'
   | 'bed'
   | 'bedside'
   | 'bench'
@@ -96,11 +94,10 @@ function layOut(g: HouseGeo) {
    * table on a rug; **the trophy wall** along the west wall past the media wall); **the kitchen** along the back wall
    * (the counter, the fridge at its end, a plant at its west end, an island with its stools on the lounge's side);
    * **the hall** from the front door to the side door, clear (a console table under the front window east of the door,
-   * a plant in its back corner), the stairs open along the east wall by the front and the wardrobe past them. The stash
-   * is the den's vault now (`BASEMENT`)
+   * a plant in its back corner); the stair hall in the front east corner is the stair's, clear (home.ts `STAIR`,
+   * docs/house-plan.md Phase 2: walked, drawn by home3d.ts `stair()`). The stash is the den's vault now (`BASEMENT`)
    */
   const FURNITURE: Furniture[] = [
-    { kind: 'stairs', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.8], h: CEIL },
     { kind: 'media', rect: [rx0, rz0 + 0.85, rx0 + 0.16, rz0 + 3.95], h: CEIL },
     // (the sofa's run facing west at the media wall, the chaise turning its south end toward it; he wakes in front of
     // the run, `HOME_WAKE`)
@@ -141,8 +138,8 @@ function layOut(g: HouseGeo) {
   const PART = 0.05;
   /**
    * Upstairs (docs/compound-plan.md Phase 3; fitted out, docs/interior-plan.md Phase 3), on the slab over the room:
-   * **the landing** along the east wall (the stairwell over the stairs, railed, with the steep steps on up to the roof's
-   * hatch over it; the bathroom's doorway at its back end, a pocket door slid away), **the dressing room** off it at
+   * **the landing** along the east wall (the stair's well at its front, home.ts `STAIR`, railed, the steep steps on up
+   * to the roof's hatch rising over its first flight; the bathroom's doorway at its back end, a pocket door slid away), **the dressing room** off it at
    * the front (walked through to the bedroom: lit rails along its back, an island of drawers before the window, his
    * shoe wall, his caps, a tall mirror; the wardrobe's prompt is here now), **the bedroom** past it at the front (the
    * bed's head on the green wall, bedside tables, a bench at its foot, the telly on the wall facing it), **the office**
@@ -174,8 +171,6 @@ function layOut(g: HouseGeo) {
     { kind: 'wall', rect: [DRESS_X - PART, BED_DOOR[1], DRESS_X + PART, SPLIT_Z - PART], h: UH },
     { kind: 'wall', rect: [LAND_X + PART, BATH_Z, BATH_DOOR[0], BATH_Z + 0.1], h: UH },
     { kind: 'wall', rect: [BATH_DOOR[1], BATH_Z, rx1, BATH_Z + 0.1], h: UH },
-    // The stairwell over the stairs, railed (the steps on up to the hatch rise in it)
-    { kind: 'well', rect: [rx1 - 0.95, rz0, rx1, rz0 + 2.8], h: 0.45 },
     // The bedroom: the bed's head on the west wall, a bedside table each side, a bench at its foot, the telly facing it
     { kind: 'bed', rect: [rx0, rz0 + 1.0, rx0 + 1.45, rz0 + 2.3], h: 0.3 },
     { kind: 'bedside', rect: [rx0, rz0 + 0.55, rx0 + 0.34, rz0 + 0.92], h: 0.24 },
