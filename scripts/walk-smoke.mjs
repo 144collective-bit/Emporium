@@ -258,10 +258,31 @@ await scene('hometerrace', '-228,387.3,0', async (t) => {
   // (how far past the stair's head he stops varies: east over the first flight's head, where the roof's steps start,
   // then north up them till the hatch's kerb stops him on their platform)
   await t.hold('d', 'over to the roof\'s steps\' foot', () => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+)/)?.[1] ?? -999) > -228.3);
-  await t.hold('w', 'up the roof\'s steps to their platform', () => {
-    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+) · up ([\d.]+)/);
-    return !!m && Number(m[3]) > 2.6 && Number(m[2]) < 384.8;
-  });
+  // (he glides on a little once a key's let go, so he may come to rest past the steps' middle, against a side rail's
+  // end: then he's walked on holding a key toward their middle too, till the rail's end slides him in and he climbs)
+  await t.page.keyboard.down('w');
+  let side = '';
+  try {
+    let last = await t.where();
+    const t0 = Date.now();
+    for (;;) {
+      await t.page.waitForTimeout(100);
+      const now = await t.where();
+      if ((await t.page.evaluate(upNowHome)) > 2.6 && now[1] < 384.8) break;
+      if (Date.now() - t0 > 30000) throw new Error(`waited for: up the roof's steps to their platform (stopped at ${now.join(', ')})`);
+      const moved = Math.abs(now[1] - last[1]) > 0.005;
+      if (!side && !moved && now[1] > 386.3) await t.page.keyboard.down((side = now[0] > -228.1 ? 'a' : 'd'));
+      else if (side && now[1] < 386.4) {
+        await t.page.keyboard.up(side);
+        side = '';
+      }
+      last = now;
+    }
+  } finally {
+    await t.page.keyboard.up('w');
+    if (side) await t.page.keyboard.up(side);
+  }
+  await t.step(`up the roof's steps to their platform, at ${(await t.where()).join(', ')}`);
   await t.go('a', 0.9, 'out of the hatch onto the terrace');
   await t.until('him up on the terrace', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · up ([\d.]+)/)?.[1] ?? 0) > 2.6, null, 60000);
   await t.step(`up on the terrace (${(await t.page.evaluate(upNowHome)).toFixed(1)}), at ${(await t.where()).join(', ')}`);
@@ -316,7 +337,16 @@ await scene('homeden', '-229,387.05,0', async (t) => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
     return !!m && Number(m[2]) < 384.7;
   });
-  await t.hold('a', 'across the turn', () => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+)/)?.[1] ?? -999) < -228.75);
+  await t.hold('a', 'across the turn', () => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+)/)?.[1] ?? -999) < -228.6);
+  // (he glides on a little once the key's let go, so he's lined up with the den's door, 0.7 wide, before going on:
+  // tapped back while he's off its middle)
+  for (let k = 0; k < 4; k++) {
+    await t.page.waitForTimeout(500);
+    const [x] = await t.where();
+    if (x < -229.15) await t.hold('d', 'lined up with the den\'s door', (lim) => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+)/)?.[1] ?? -999) > lim, -229.12);
+    else if (x > -228.85) await t.hold('a', 'lined up with the den\'s door', (lim) => Number(document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+)/)?.[1] ?? -999) < lim, -228.88);
+    else break;
+  }
   await t.hold('s', 'up under the second flight and out by the den\'s door', () => {
     const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
     return !!m && Number(m[2]) > 386.8 && !/ · down /.test(document.querySelector('.city-stats')?.textContent ?? '');
