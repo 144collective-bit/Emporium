@@ -743,8 +743,127 @@ export const PIERS: Pier[] = (() => {
   return out;
 })();
 
+/* ---------- The lobbies (docs/brutalist-plan.md Phase 6) ---------- */
+
+/**
+ * A block's ground-floor hall, walked into through a door on its gallery side (a tower's on its face to Endswood
+ * Road): its floor `poly` (a rectangle `w` along the face by `d` deep, a wall's thickness in from it), the doorway
+ * through the wall (`doorPoly`, `DOOR_W` wide, its middle `door` on the face), the face's way along (`t`) and out of
+ * the door (`n`), its floor's height (the block's base) and the lift its lift doors call (its nearest service tower's;
+ * the towers', The Core's)
+ */
+export interface Lobby {
+  id: string;
+  of: string;
+  poly: Pt[];
+  doorPoly: Pt[];
+  door: Pt;
+  t: Pt;
+  n: Pt;
+  w: number;
+  d: number;
+  base: number;
+  lift: string;
+}
+export const LOBBY = { w: 5, d: 3.6, wall: 0.3, door: 1.2 };
+/** Where along a slab's gallery-side face its lobby stands (default its middle; by the shops' east end on Teasel and
+ * Fennel, off the arch on the Rampart) */
+const LOBBY_AT: Record<string, (L: number, face: Pt[]) => number> = {
+  teasel: () => 7,
+  fennel: () => 5,
+  rampart: (_L, face) => alongToX(face, -70),
+};
+export const LOBBIES: Lobby[] = BLOCKS.filter((b) => b.id !== 'twin-core').map((b): Lobby => {
+  let mid: Pt;
+  let t: Pt;
+  let n: Pt;
+  if (b.spine) {
+    const s = SIDE[b.galleries!];
+    const face = shift(b.spine, s * (b.depth! / 2));
+    const L = lineLength(face);
+    const { p, dir } = pointAt(face, (LOBBY_AT[b.id] ?? ((l: number) => l / 2))(L, face));
+    [mid, t, n] = [p, dir, [-dir[1] * s, dir[0] * s]];
+  } else {
+    // (a tower: the face of its footprint turned most to the south, Endswood Road's way)
+    let best = { score: -Infinity, m: b.foot[0], t: [1, 0] as Pt, n: [0, 1] as Pt };
+    b.foot.forEach((a, j) => {
+      const c = b.foot[(j + 1) % b.foot.length];
+      const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+      if (l < LOBBY.w + 1) return;
+      const on = outward(b.foot, j);
+      if (on[1] > best.score) best = { score: on[1], m: [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2], t: [(c[0] - a[0]) / l, (c[1] - a[1]) / l], n: on };
+    });
+    [mid, t, n] = [best.m, best.t, best.n];
+  }
+  const { w, d, wall, door } = LOBBY;
+  const at = (u: number, o: number): Pt => [mid[0] + t[0] * u + n[0] * o, mid[1] + t[1] * u + n[1] * o];
+  const poly = [at(-w / 2, -wall), at(w / 2, -wall), at(w / 2, -wall - d), at(-w / 2, -wall - d)];
+  const doorPoly = [at(-door / 2, 0.05), at(door / 2, 0.05), at(door / 2, -wall - 0.05), at(-door / 2, -wall - 0.05)];
+  const cores = CORES.filter((c) => c.of === b.id);
+  const lift = cores.length ? cores.reduce((q, c) => (Math.hypot(c.at[0] - mid[0], c.at[1] - mid[1]) < Math.hypot(q.at[0] - mid[0], q.at[1] - mid[1]) ? c : q)).id : 'twin-core';
+  return { id: `lobby-${b.id}`, of: b.id, poly, doorPoly, door: mid, t, n, w, d, base: b.base, lift };
+});
+/** What's solid inside a lobby: its bench and the flight of stairs up in its corner (the post boxes and the
+ * noticeboard sit flat on its walls) */
+export const lobbyProps = (l: Lobby) => {
+  const at = (u: number, o: number): Pt => [l.door[0] + l.t[0] * u + l.n[0] * o, l.door[1] + l.t[1] * u + l.n[1] * o];
+  const back = -LOBBY.wall - l.d;
+  const rect = (u0: number, u1: number, o0: number, o1: number): Pt[] => [at(u0, o0), at(u1, o0), at(u1, o1), at(u0, o1)];
+  return {
+    bench: rect(-l.w / 2 + 0.4, -l.w / 2 + 1.8, back + 0.05, back + 0.5),
+    stairs: rect(l.w / 2 - 1.1, l.w / 2 - 0.05, back + 0.05, back + 2.2),
+  };
+};
+/** Is a point inside a convex outline */
+const inConvex = (poly: Pt[], p: Pt) => inside(poly, p);
+/** Is a point in a lobby's hall or its doorway, and which */
+export const lobbyAt = (x: number, z: number): Lobby | null => LOBBIES.find((l) => inConvex(l.poly, [x, z]) || inConvex(l.doorPoly, [x, z])) ?? null;
+
+/** A block's footprint covered in strips (`cover()`), its lobby's hall and doorway cut out of them (finer strips there) */
+function coverWithHall(b: Block): Box[] {
+  const l = LOBBIES.find((q) => q.of === b.id);
+  const all = cover(b.foot, topOf(b), 0.6, b.arch ? ARCH_X : undefined);
+  if (!l) return all;
+  const holes = [l.poly, l.doorPoly];
+  const hx = [...holes.flat().map((p) => p[0])];
+  const hz = [...holes.flat().map((p) => p[1])];
+  const hb = [Math.min(...hx) - 0.6, Math.min(...hz) - 0.6, Math.max(...hx) + 0.6, Math.max(...hz) + 0.6];
+  // (the strips clear of the hall as they were; over it, fine strips with the hall's span taken out of each)
+  const clear = (q: Box) => q[2] < hb[0] || q[0] > hb[2] || q[3] < hb[1] || q[1] > hb[3];
+  const keep = all.filter(clear);
+  const dropped = all.filter((q) => !clear(q));
+  // (the fine strips tile the coarse ones they replace exactly: the same start, a quarter the step)
+  const fine = cover(b.foot, topOf(b), 0.15, b.arch ? ARCH_X : undefined).filter((q) => dropped.some((d) => q[0] < d[2] - 1e-6 && q[2] > d[0] + 1e-6 && q[1] < d[3] - 1e-6 && q[3] > d[1] + 1e-6));
+  const out: Box[] = [...keep];
+  for (const q of fine) {
+    // (the strip runs along x or z, as cover() made it: cut along its long way where its middle line is in a hole)
+    const alongZ = q[3] - q[1] > q[2] - q[0];
+    const [u0, u1] = alongZ ? [q[1], q[3]] : [q[0], q[2]];
+    const mid = alongZ ? (q[0] + q[2]) / 2 : (q[1] + q[3]) / 2;
+    const cuts: [number, number][] = [];
+    for (const h of holes) {
+      let [m0, m1] = [Infinity, -Infinity];
+      for (let u = u0; u <= u1 + 1e-6; u += 0.05) {
+        const p: Pt = alongZ ? [mid, u] : [u, mid];
+        if (inside(h, p)) [m0, m1] = [Math.min(m0, u), Math.max(m1, u)];
+      }
+      if (m0 < m1) cuts.push([m0 - 0.05, m1 + 0.05]);
+    }
+    let from = u0;
+    for (const [c0, c1] of cuts.sort((p, r) => p[0] - r[0])) {
+      if (c0 > from + 0.01) out.push(alongZ ? [q[0], from, q[2], c0, q[4]] : [from, q[1], c0, q[3], q[4]]);
+      from = Math.max(from, c1);
+    }
+    if (u1 > from + 0.01) out.push(alongZ ? [q[0], from, q[2], u1, q[4]] : [from, q[1], u1, q[3], q[4]]);
+  }
+  // (and its bench and stairs, solid)
+  const props = lobbyProps(l);
+  out.push(...cover(props.bench, l.base + 0.5, 0.15), ...cover(props.stairs, l.base + GROUND_H, 0.15));
+  return out;
+}
+
 export const BLOCK_SOLIDS: Box[] = [
-  ...BLOCKS.flatMap((b) => cover(b.foot, topOf(b), 0.6, b.arch ? ARCH_X : undefined)),
+  ...BLOCKS.flatMap((b) => coverWithHall(b)),
   ...CORES.map((c) => cover(c.foot, c.top, 0.6)).flat(),
   ...CAGES.flatMap(cageSolids),
   ...PIERS.map((p): Box => [p.at[0] - PIER_HALF, p.at[1] - PIER_HALF, p.at[0] + PIER_HALF, p.at[1] + PIER_HALF, p.top]),

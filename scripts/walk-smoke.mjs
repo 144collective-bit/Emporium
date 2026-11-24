@@ -12,6 +12,7 @@
 // renderer (a few frames a second), so every step waits on what it expects, not on the clock.
 //   CHROMIUM_PATH=...   the browser (default: Playwright's own, else /opt/pw-browsers/chromium)
 //   SMOKE_SHOTS=dir     keep a picture after each step
+//   SMOKE_CLEAN=1       ... without the ?fps readout over them (it's still read, only not shown)
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { extname, join, resolve } from 'node:path';
@@ -40,10 +41,11 @@ const browser = await chromium.launch({
 const only = process.argv[2]?.split(',');
 let failed = 0;
 
-/** One scene: a fresh page at `spawn` (x,z), walking, then `play(t)`; a page error or a throw fails it */
-async function scene(name, spawn, play, init) {
+/** One scene: a fresh page at `spawn` (x,z), walking, then `play(t)`; a page error or a throw fails it. `device` is the
+ * browser's context instead of a desktop's (a phone: its size, touch); `query` is added to the page's address */
+async function scene(name, spawn, play, init, device, query = '') {
   if (only && !only.includes(name)) return;
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const ctx = await browser.newContext(device ?? { viewport: { width: 1280, height: 800 } });
   const page = await ctx.newPage();
   if (init) await page.addInitScript(init);
   const errors = [];
@@ -117,7 +119,8 @@ async function scene(name, spawn, play, init) {
   let why = '';
   try {
     // (no spot given: he wakes where everyone does, in his room at home, docs/spawn-plan.md)
-    await page.goto(`http://127.0.0.1:${server.address().port}/?fps${spawn ? `&spawn=${spawn}` : ''}`);
+    await page.goto(`http://127.0.0.1:${server.address().port}/?fps${spawn ? `&spawn=${spawn}` : ''}${query}`);
+    if (process.env.SMOKE_CLEAN) await page.addStyleTag({ content: '.city-stats { opacity: 0 !important; }' });
     await t.click('[data-start-guest]');
     // (Single player goes straight into walking)
     await t.click('[data-start-single]');
@@ -419,6 +422,132 @@ await scene('karts', '-338.8,-46.9', async (t) => {
   if (await t.has('.city.is-karting')) throw new Error('the race did not end on Esc');
   await t.step('quit the race');
 });
+
+// Golf (docs/golf-game-plan.md Phase 2): at Knob Hill's door, Play golf, the 1st tee, a swing (start, power on the
+// way up, accuracy on the way down), the ball off and the next shot to play, Esc out
+await scene('golf', '528,-497.6', async (t) => {
+  await t.prompt('Play golf');
+  await t.until('the golf menu', () => !!document.querySelector('.golf-menu:not([hidden]) [data-golf-one]'), null, 120000);
+  await t.step('the menu');
+  await t.click('.golf-menu [data-golf-front]');
+  await t.until('the round', () => !!document.querySelector('.golf-hud:not([hidden])'), null, 120000);
+  await t.step('on the 1st tee');
+  const stroke = () => t.page.evaluate(() => document.querySelector('[data-golf-stroke]')?.textContent ?? '');
+  await t.page.keyboard.press('Space');
+  await t.page.waitForTimeout(800);
+  await t.page.keyboard.press('Space');
+  await t.page.waitForTimeout(1250);
+  await t.page.keyboard.press('Space');
+  await t.step('the swing');
+  await t.until('the next shot', () => (document.querySelector('[data-golf-stroke]')?.textContent ?? '') === 'Stroke 2', null, 60000);
+  await t.step(`the ball played: ${await stroke()}, ${await t.page.evaluate(() => document.querySelector('[data-golf-to]')?.textContent ?? '')}`);
+  // (Esc closes the control card first if it's up, then quits)
+  for (let i = 0; i < 3 && (await t.has('.city.is-golfing')); i++) {
+    await t.page.keyboard.press('Escape');
+    await t.page.waitForTimeout(1500);
+  }
+  if (await t.has('.city.is-golfing')) throw new Error('the round did not end on Esc');
+  await t.step(`quit the round, ${await t.page.evaluate(() => document.querySelector('.city-stats')?.textContent?.match(/at -?[\d.]+, -?[\d.]+/)?.[0] ?? '')}`);
+  // (the round left part-way is kept: the menu offers to carry it on)
+  await t.page.waitForTimeout(1500);
+  await t.prompt('Play golf');
+  await t.until('Continue on the menu', () => !!document.querySelector('.golf-menu:not([hidden]) [data-golf-continue]:not([hidden])'), null, 120000);
+  await t.step(`the menu offers ${await t.page.evaluate(() => document.querySelector('[data-golf-continue]')?.textContent ?? '')}`);
+  // A hole played through (Phase 4): the 1st on its own, every shot the meter's three presses, till its card
+  await t.click('.golf-menu [data-golf-one]');
+  await t.until('the 1st tee', () => !!document.querySelector('.golf-hud:not([hidden])'), null, 120000);
+  for (let shot = 1; shot <= 12; shot++) {
+    await t.until(
+      'a shot to play or the card',
+      () => !!document.querySelector('.golf-card:not([hidden])') || document.querySelector('[data-golf-tip]')?.textContent === 'Space: swing',
+      null,
+      120000
+    );
+    if (await t.has('.golf-card:not([hidden])')) break;
+    await t.page.keyboard.press('Space');
+    await t.page.waitForTimeout(700);
+    await t.page.keyboard.press('Space');
+    await t.page.waitForTimeout(1250);
+    await t.page.keyboard.press('Space');
+    // (the ball off: the tip goes till the next shot's ready)
+    await t.until('the swing', () => document.querySelector('[data-golf-tip]')?.textContent !== 'Space: accuracy', null, 60000);
+    await t.page.waitForTimeout(1500);
+  }
+  await t.until("the hole's card", () => !!document.querySelector('.golf-card:not([hidden])'), null, 120000);
+  const card = await t.page.evaluate(() => `${document.querySelector('[data-golf-card-score]')?.textContent} · ${document.querySelector('[data-golf-card-line]')?.textContent} · ${document.querySelector('[data-golf-card-take]')?.textContent}`);
+  await t.step(`the hole played: ${card}`);
+  await t.click('.golf-card [data-golf-done]');
+  await t.until('the round over', () => !document.querySelector('.city.is-golfing'), null, 60000);
+  await t.step('back at the door');
+});
+
+// Golf on a phone on its side (Phase 4): the touch controls, a club down, and the swing's pull-back (a real touch
+// dragged down the screen and let go)
+await scene(
+  'golf-touch',
+  '528,-497.6',
+  async (t) => {
+    await t.prompt('Play golf');
+    await t.until('the golf menu', () => !!document.querySelector('.golf-menu:not([hidden]) [data-golf-one]'), null, 120000);
+    await t.click('.golf-menu [data-golf-one]');
+    await t.until('the touch controls', () => !!document.querySelector('.golf-hud:not([hidden]) .golf-touch [data-golf-view]')?.getClientRects().length, null, 120000);
+    await t.until('the pull-back tip', () => document.querySelector('[data-golf-tip]')?.textContent === 'Pull back to swing', null, 60000);
+    await t.step('on the tee, by touch');
+    const cdp = await t.page.context().newCDPSession(t.page);
+    const touch = (type, x, y) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    const r = await t.page.evaluate(() => {
+      const b = document.querySelector('[data-golf-pull]').getBoundingClientRect();
+      return { x: b.left + b.width / 2, y: b.top + 10 };
+    });
+    await touch('touchStart', r.x, r.y);
+    for (let i = 1; i <= 8; i++) await touch('touchMove', r.x + i, r.y + i * 13);
+    await t.until('the pull drawn', () => !document.querySelector('[data-golf-pull-line]')?.hidden, null, 30000);
+    await t.step('pulled back');
+    await touch('touchEnd', 0, 0);
+    await t.until('the next shot', () => (document.querySelector('[data-golf-stroke]')?.textContent ?? '') === 'Stroke 2', null, 90000);
+    await t.step(`the ball played by touch: ${await t.page.evaluate(() => document.querySelector('[data-golf-to]')?.textContent ?? '')}`);
+    await t.click('[data-golf-quit]');
+    await t.until('the round left', () => !document.querySelector('.city.is-golfing'), null, 60000);
+    await t.step('quit');
+  },
+  undefined,
+  { viewport: { width: 844, height: 390 }, deviceScaleFactor: 1, isMobile: true, hasTouch: true }
+);
+
+// The same on Riverside Raceway behind ?karts=new (docs/kart-harbour-plan.md Phase 3): the clubhouse's single race runs
+// there, on the new circuit (the header names it), driven a little, quit
+await scene(
+  'karts2',
+  '-338.8,-46.9',
+  async (t) => {
+    await t.prompt('Clubhouse');
+    await t.until('the clubhouse menu', () => !!document.querySelector('[data-karts]:not([hidden]) [data-kart-single]'));
+    await t.step('the clubhouse menu opened');
+    await t.click('[data-karts] [data-kart-single]');
+    await t.until('the race', () => !!document.querySelector('.city.is-karting'), null, 300000);
+    const named = await t.page.evaluate(() => document.querySelector('.city')?.dataset.kart ?? '');
+    if (!/Riverside/.test(named)) throw new Error(`racing on ${named}, not Riverside Raceway`);
+    await t.step('on the grid at Riverside Raceway');
+    await t.page.keyboard.down('w');
+    const clock = () => t.page.evaluate(() => document.querySelector('[data-kart-clock]')?.textContent ?? '');
+    const c0 = await clock();
+    await t.until('the race clock to run', (c) => (document.querySelector('[data-kart-clock]')?.textContent ?? '') !== c, c0, 240000);
+    await t.page.waitForTimeout(6000);
+    await t.page.keyboard.up('w');
+    await t.step(`racing, the clock at ${await clock()}`);
+    for (let i = 0; i < 4 && (await t.has('.city.is-karting')); i++) {
+      await t.page.keyboard.press('Escape');
+      await t.page.waitForTimeout(500);
+      await t.page.keyboard.press('Escape');
+      await t.page.waitForTimeout(3000);
+    }
+    if (await t.has('.city.is-karting')) throw new Error('the race did not end on Esc');
+    await t.step('quit the race');
+  },
+  undefined,
+  undefined,
+  '&karts=new'
+);
 
 // Flying: beside your aircraft in Hangar 1 (airfield.ts HANGAR_SPOT), in, rolling out under power
 await scene('fly', '126.8,347.4', async (t) => {

@@ -19,8 +19,13 @@ if (!files.length) {
 const out = '.test-build';
 rmSync(out, { recursive: true, force: true });
 mkdirSync(out);
+// Each test file's entry: the golf course's ground's maker first (golfbake.ts, which the city's own code never loads:
+// src/scripts/city3d/golflift.ts), for the files that work the baked data out themselves, then the file
+const entries = join(out, 'entries');
+mkdirSync(entries);
+for (const f of files) writeFileSync(join(entries, f), `import '../../src/scripts/city3d/golfbake';\nimport '../../tests/${f.replace(/\.ts$/, '')}';\n`);
 await build({
-  entryPoints: files.map((f) => join('tests', f)),
+  entryPoints: files.map((f) => join(entries, f)),
   outdir: out,
   outExtension: { '.js': '.mjs' },
   bundle: true,

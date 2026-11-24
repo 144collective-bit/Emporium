@@ -59,7 +59,9 @@ export type Sfx =
   /** The kart park: boosts, hits taken and landed, the shield, the item roulette and a throw, drifts and their sparks, the jump, the shortcut's gravel, beating your ghost */
   | 'kartBoost' | 'kartHit' | 'kartHitLanded' | 'kartShield' | 'kartItem' | 'kartUse' | 'kartDrift' | 'kartSpark' | 'kartJump' | 'kartLand' | 'kartShortcut' | 'kartGhost'
   /** The Fight Club: a swing's whoosh, a punch and a kick landing, a block, a parry, a knockdown's thud, the knock-out, the bell and the count */
-  | 'whoosh' | 'punch' | 'kick' | 'fightBlock' | 'parry' | 'thud' | 'fightKo' | 'bell' | 'count';
+  | 'whoosh' | 'punch' | 'kick' | 'fightBlock' | 'parry' | 'thud' | 'fightKo' | 'bell' | 'count'
+  /** The golf game (docs/golf-game-plan.md Phase 4): a club's strike, a putt's tap, the ball landing, off a tree, into the water, into the cup */
+  | 'golfHit' | 'golfPutt' | 'golfLand' | 'golfTree' | 'golfSplash' | 'golfCup';
 
 export interface CombatDeps {
   scene: THREE.Scene;

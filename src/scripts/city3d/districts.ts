@@ -14,6 +14,7 @@
  * Once built, it's held like the rest of the city: its tiles' near pieces go
  * when far away and the near forms held pass the budget (tilework.ts).
  */
+import { GOLF_RECT } from './golflift';
 import { SWING_RECT } from './swingbridge';
 import type * as THREE from 'three';
 import type { DistrictModule, SiteWorker } from './sitework';
@@ -23,6 +24,7 @@ import type { Tick } from './world';
 import { WESTLAKE_RECT } from './westlake';
 import { ROAD_AREA as STADIUM_ROAD_AREA } from './stadiumroad';
 import { KART_AREA } from './kartfacility';
+import { KARTS2, KART2_LAND } from './kartswitch';
 import { UPTOWN_RECT } from './uptown';
 import { SITE } from './airfield';
 import { EXT, RIVER } from './layout';
@@ -50,6 +52,8 @@ export interface LazyDistrict {
   /** Its land (x0, z0, x1, z1) */
   rect: Rect;
   load(): Promise<DistrictModule>;
+  /** Only while this says yes (a district behind a switch: Riverside Raceway's, `?karts=new`) */
+  when?: () => boolean;
 }
 
 const union = (a: Rect, b: Rect): Rect => [Math.min(a[0], b[0]), Math.min(a[1], b[1]), Math.max(a[2], b[2]), Math.max(a[3], b[3])];
@@ -58,6 +62,9 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   { id: 'westlake', rect: union(WESTLAKE_RECT, STADIUM_ROAD_AREA), load: () => import('./westlake3d') },
   // The kart park's grounds north of the highway: the circuit, trackside, the paddock, Kart Road and the car park (kartgrounds3d.ts)
   { id: 'karts', rect: KART_AREA, load: () => import('./kartgrounds3d') },
+  // Riverside Raceway's grounds and track on the south bank west of the Docks, behind `?karts=new` (kartgrounds2-3d.ts,
+  // docs/kart-harbour-plan.md Phase 3)
+  { id: 'karts2', rect: KART2_LAND, load: () => import('./kartgrounds2-3d'), when: () => KARTS2.on },
   // The airport's grounds on the world's south edge (airportgrounds3d.ts): the runway, taxiways and aprons, the
   // concourses and airbridges, the maintenance hangar, the fire station, the fuel farm, the fence and the landside roads
   { id: 'airport', rect: SITE, load: () => import('./airportgrounds3d') },
@@ -69,6 +76,8 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // Palm Court and Starlight Mall north of downtown (mall.ts, docs/mall-plan.md): the shops, the cinema, the mall, the
   // loop, the car parks (mall3d.ts)
   { id: 'mall', rect: MALL_AREA, load: () => import('./mall3d') },
+  // The golf course in the north-east corner (golf.ts, docs/golf-plan.md): its turf and its lakes' water (golf3d.ts)
+  { id: 'golf', rect: GOLF_RECT, load: () => import('./golf3d') },
   // Crestmont, the north-east town (crestmont.ts, docs/crestmont-plan.md): its streets in the Flats and up the hills (crestmont3d.ts)
   { id: 'crestmont', rect: CREST_RECT, load: () => import('./crestmont3d') },
   // The Docks, the port west of The Trenches past the highway (docks.ts, docs/docks-plan.md): its streets and quays (docks3d.ts)
@@ -141,7 +150,8 @@ export interface Districts {
 }
 
 export function createDistricts(opts: { scene: THREE.Scene; low: boolean; worker: SiteWorker | null; adopt(): void; tick?: (f: Tick) => void; list?: LazyDistrict[] }): Districts {
-  const list = opts.list ?? LAZY_DISTRICTS;
+  // (a district behind a switch that's off isn't one: not loaded, not counted)
+  const list = (opts.list ?? LAZY_DISTRICTS).filter((d) => !d.when || d.when());
   const state = new Map<string, 'loading' | 'done' | 'failed'>();
   let near = 0;
   function load(d: LazyDistrict): Promise<void> {

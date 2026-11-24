@@ -377,6 +377,21 @@ session.)
   pass stops at rule 1.
   **Owner's answer (2026-11-22): (a).** The brutalist plan's session trims its own new
   textures back under 4955 KB; the loop waits for that build to pass.
+- **Main's build fails again: the golf course's arrival (2026-11-23, pass 1 of the night).** The golf
+  branch reached `main` at 21:14 (pushed straight to main). Two things then fail on GitHub:
+  1. The texture bake stops before painting anything: its rich save now reaches the golf course's
+     ground, which needs `golfbake.ts` loaded first. A one-line fix (as the tests and the seams
+     report already do) is in draft PR "Loop (needs owner): the build: golf's texture bake and the
+     texture budget", checked here: the bake paints 204 textures.
+  2. With the bake fixed, `texFull` is 5044.1 KB of 4955 (89 KB over; `texLow` 3372.4 of 3450 is fine).
+     The one new texture is the golf turf (976 x 1428, about 126 KB); without it the set is 4918 KB.
+  Which do you want? (a) the golf session trims its turf (about 1 pixel a tile on the full tier,
+  as phones have now: about 32 KB, fits); (b) another district trims its textures by 90 KB or
+  more; (c) raise `texFull` to about 5060 KB on purpose (your call only, in `scripts/budget.mjs`).
+  Until the build passes, every loop pass stops at rule 1; the bake fix merges with your answer.
+  (Also from this pass: Riverside Raceway's Phase 4a broke the build's typecheck with an unused
+  constant: I ran plain `tsc`, not `npm run typecheck`, which adds `--noUnusedLocals`. Another
+  session fixed it at 21:14; the kart passes run `npm run typecheck` from now on.)
 
 ## The log
 
@@ -433,3 +448,7 @@ session.)
 - 2026-11-23, pass 6 (03:07): the board's next Ready card, Exits 1 (the exits plan's Phase 1, owner-signed): the
   standard as rules and tests, `exitstd.ts` (DOM-free) and `tests/exitstd.test.ts`. Nothing in the city reads it
   yet. Checks: typecheck, lint, test, test:wide, build and budget (no texture or drawing change; smoke not needed).
+- 2026-11-23, night 2 pass 1 (22:07): rule 1, main's build failing since 19:27. The texture bake failed on the golf
+  course's ground (fixed in a draft PR: the bake loads golfbake.ts first); with that, texFull is 5044.1 of 4955 KB
+  (the golf turf, 976 x 1428). Both to Waiting on the owner; only this plan edit merged. Checks on the fix:
+  typecheck, lint, build, texture bake (204 kept), budget (texLow 3372.4 of 3450 ok, texFull over).

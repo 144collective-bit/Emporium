@@ -40,6 +40,7 @@ import { inSunridge } from './sunridge';
 import { inTown } from './outer';
 import { BUILT_UP } from './bounds';
 import { AIRBASE_RECT, VISITORS, fromFence, inAirbase } from './airbase';
+import { FOOTPATH, GOLF_RECT, PATH_HALF, golfShare } from './golflift';
 
 /** A mix of covers: each cover's share, the shares summing to 1 */
 export type Mix = Partial<Record<Cover, number>>;
@@ -145,6 +146,14 @@ export const INFLUENCES: Influence[] = [
   // Northgate Air Base (airbase.ts): mown grass inside its fence, a little past it, and worn round the visitors' car park
   { id: 'airbase', cover: 'lawn', reach: 6, strength: 0.5, box: [AIRBASE_RECT[0] - 6, AIRBASE_RECT[1] - 6, AIRBASE_RECT[2] + 6, AIRBASE_RECT[3] + 6], dist: (x, z) => (inAirbase(x, z) ? 0 : fromFence(x, z)) },
   around('airbase-visitors', VISITORS, 'worn', 3, 0.5),
+  // The golf course (golflift.ts, docs/golf-plan.md Phase 2): its native grass between the holes, then its rough round
+  // them (its fairways, greens, tees and sand are drawn over it: golf3d.ts)
+  // (each by its share of the land round a point, blurred: its edge eases over a few tiles; its rough well clear of the
+  // holes, where a few trees stand, is its rough)
+  { id: 'golf-native', cover: 'courseNative', reach: 1, strength: 0.6, box: GOLF_RECT, dist: (x, z) => 1 - golfShare(x, z, 1) },
+  { id: 'golf', cover: 'courseRough', reach: 1, strength: 0.9, box: GOLF_RECT, dist: (x, z) => 1 - golfShare(x, z, 2) },
+  // Its footpath's verges, worn (Clubhouse Drive's, a street of the plan's, are every street's: above)
+  verge('golf-footpath', FOOTPATH, PATH_HALF, 'worn', 2, 0.35),
   // Lusher by the river (its banks are the river's own, river.ts; this is the grass running down to them)
   { id: 'river', cover: 'bank', reach: 10, strength: 0.6, box: [SKY[0], RIVER[0] - 10, SKY[2], RIVER[1] + 10], dist: (_x, z) => Math.max(0, RIVER[0] - z, z - RIVER[1]) },
 ];

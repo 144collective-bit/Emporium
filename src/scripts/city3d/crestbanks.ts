@@ -23,7 +23,7 @@ import { BED, nearHillRoad } from './crestmont';
 import { heightAt } from './terrain';
 import { drawnAt } from './drawn';
 import { MANSIONS, PAD_EASE, onMansion, outOf, originOf, rectToWorld, type Mansion, type MansionKind } from './mansions';
-import { CIVIC, CLUB, FAIRWAY, FRINGE, HOLES, SITE_LEVELS, onSite } from './crestsites';
+import { CIVIC, SITE_LEVELS, onSite } from './crestsites';
 import { PLAN, distToStreet } from './streetplan';
 import { WALK_W } from './layout';
 import { onGardenPath } from './crestcover';
@@ -362,21 +362,13 @@ const streetsNear = (r: readonly number[]) => {
 };
 /** On one of these streets or its sidewalk (padded `m`) */
 const onStreet = (near: typeof STREETS, x: number, z: number, m: number) => near.some((st) => distToStreet(st, [x, z]) < st.half + WALK_W + m);
-/** On the golf course: a fairway, or round a green (crestsites.ts's reach for them) */
-const onHole = (x: number, z: number) =>
-  HOLES.some((h) => {
-    const [a, b] = [h.tee, h.green];
-    const [vx, vz] = [b[0] - a[0], b[1] - a[1]];
-    const t = Math.max(0, Math.min(1, ((x - a[0]) * vx + (z - a[1]) * vz) / (vx * vx + vz * vz || 1)));
-    return Math.hypot(x - a[0] - vx * t, z - a[1] - vz * t) < FAIRWAY + 1.5 || Math.hypot(x - b[0], z - b[1]) < FRINGE + 3;
-  });
 /** In a rect, padded */
 const inRect = (r: readonly number[], x: number, z: number, m: number) => x > r[0] - m && x < r[2] + m && z > r[1] - m && z < r[3] + m;
 /**
- * The civic hall's and the country club's pads, banked as the mansions' are (the grand hotel stands on the Flats, its
- * edges planted by crestgardens.ts): stopped by the streets and their sidewalks, the hill roads, the mansions and the
- * golf course; none across the civic hall's walk in from the boulevard. The civic hall takes the summit's formal box
- * and lavender, the club a villa's lavender and rosemary
+ * The civic hall's pad, banked as the mansions' are (the grand hotel stands on the Flats, its edges planted by
+ * crestgardens.ts): stopped by the streets and their sidewalks, the hill roads and the mansions; none across its walk in
+ * from the boulevard. It takes the summit's formal box and lavender. (The country club's pad was banked here too, till
+ * the club was retired: docs/golf-plan.md Phase 4)
  */
 export function siteBanks(): Bank[] {
   return (SITE_BANKS ??= laySiteBanks());
@@ -385,11 +377,9 @@ let SITE_BANKS: Bank[] | null = null;
 /** The landmarks banked, and the ground each stands on (where their sites go, without laying the banks) */
 export const SITE_GROUNDS = [
   { id: 'civic', rect: CIVIC.pad as readonly number[] },
-  { id: 'club', rect: CLUB.pad as readonly number[] },
 ] as const;
 const laySiteBanks = (): Bank[] => [
   { id: 'civic', rect: CIVIC.pad, y: CIVIC.y, kind: 'summit' as MansionKind, walk: CIVIC.walk as readonly number[] | null },
-  { id: 'club', rect: CLUB.pad, y: CLUB.y, kind: 'villa' as MansionKind, walk: null },
 ].map(({ id, rect, y, kind, walk }, k) => {
   const near = streetsNear(rect);
   return bankOf(
@@ -398,7 +388,7 @@ const laySiteBanks = (): Bank[] => [
       rect: rect as [number, number, number, number],
       y,
       kind,
-      stop: (x, z) => nearHillRoad(x, z, ROAD_GAP) || onStreet(near, x, z, 0.4) || onMansion(x, z, 0.5) || onHole(x, z) || SITE_LEVELS.some((l) => l.rect !== rect && inRect(l.rect, x, z, l.ease)),
+      stop: (x, z) => nearHillRoad(x, z, ROAD_GAP) || onStreet(near, x, z, 0.4) || onMansion(x, z, 0.5) || SITE_LEVELS.some((l) => l.rect !== rect && inRect(l.rect, x, z, l.ease)),
       skip: (x, z) => (walk ? inRect(walk, x, z, 1.2) : false) || onGardenPath(x, z, PATH_GAP),
     },
     40 + k

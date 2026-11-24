@@ -35,7 +35,9 @@
  * siren far off, the ice-cream van's jingle on a summer's day), Bunker Sound's beat out of its garage door (`studio`)
  * and St Aldwyn's bell on the hour, heard across the estate and beyond (`bell`). On the civic square
  * (docs/civic-plan.md Phase 4) footsteps and a murmur by day and the flags in the wind (`civic`), and City Hall's bell
- * on the hour from its tower, deeper than St Aldwyn's (`hallBell`).
+ * on the hour from its tower, deeper than St Aldwyn's (`hallBell`). On the golf course (docs/golf-plan.md Phase 5)
+ * the park's birds and owl (`GOLF_BIRDS`) and Crestmont's sprinklers and crickets (`GOLF_LAWNS`), over its land
+ * (golflift.ts `golfShare()`), the wind softened as on the lawns.
  */
 import { inHouse } from './home';
 import { CITY_EXT } from './layout';
@@ -51,6 +53,7 @@ import { CIRCLE, UPTOWN_RECT, inUptown } from './uptown';
 import { NORTH_RECT } from './uptownnorth';
 import { CENTRE, POOL, WALL_RUNS, WATER_WALL } from './plaza';
 import { CREST_RECT } from './crestmont';
+import { golfShare } from './golflift';
 import { STRIP_RECT, inStrip } from './strip';
 import { RESORTS, resortOf } from './resorts';
 import { SPHERE_DOOR } from './stripmarks';
@@ -180,6 +183,9 @@ const HIGH_ROAD_FRONTS = SHOPS.filter((s) => s.name).map((s) => s.at);
 export const BELOW = -1.2;
 /** How much of the village's birdsong (and its owl) there is, as the park's */
 export const VILLAGE_BIRDS = 0.7;
+/** The golf course's birds and its sprinklers and crickets (the park's and Crestmont's layers) */
+export const GOLF_BIRDS = 0.85;
+export const GOLF_LAWNS = 0.7;
 /** How loud the High Road's shoppers' murmur is (the Neon Mile's crowd's sound, quieter) */
 export const HIGH_ROAD_MURMUR = 0.4;
 /** The village's, the bungalows' and the fields' share round x, z (a few points: no hard edge as you walk out of it) */
@@ -297,8 +303,12 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
   const fountain = Math.max(1 - smooth(1.5, 18, Math.min(pool, wall) + lift * 0.5), 0.8 * (1 - smooth(1, 14, Math.min(spring, civicJet) + lift * 0.5)));
   // Sunridge: all of it on its land, fading out over 30 past its wall
   const suburb = 1 - smooth(0, 30, inSunridge(x, z, 0) ? 0 : past(SUNRIDGE_RECT, x, z) + 2);
+  // Knob Hill Golf Club (docs/golf-plan.md Phase 5): on its land (its share, blurred over its edge), less from high
+  // over it: birdsong by day and an owl at night as the park's, the sprinklers by day and the crickets at night as
+  // Crestmont's, the wind softened as on the lawns
+  const course = golfShare(x, z, 1) * (1 - smooth(10, 60, lift));
   // (the gardened districts: their lawns and walls take the wind)
-  const lawns = Math.max(crest, suburb);
+  const lawns = Math.max(crest, suburb, course);
   // The Neon Mile: its crowd all over its land, fading over 25 past it; the casinos' chimes by their doors; the show's
   // music round the Gondolier's lake
   const strip = 1 - smooth(0, 25, inStrip(x, z) ? 0 : past(STRIP_RECT, x, z));
@@ -370,9 +380,9 @@ export function ambienceAt(x: number, z: number, lift = 0, t = Date.now() / 1000
     hood: hood * k,
     boombox,
     club,
-    park: Math.max(park, birds) * k,
+    park: Math.max(park, birds, GOLF_BIRDS * course) * k,
     fountain,
-    crest: crest * k,
+    crest: Math.max(crest, GOLF_LAWNS * course) * k,
     suburb: suburb * k,
     strip: Math.max(strip, shoppers) * k,
     casino,

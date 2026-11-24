@@ -15,7 +15,7 @@
 export type Job =
   | 'move' | 'look' | 'sprint' | 'walk' | 'jump' | 'crouch' | 'interact' | 'camera' | 'hotbar' | 'inventory' | 'map' | 'menu'
   | 'emotes' | 'punch' | 'kick' | 'block' | 'guard' | 'dodge' | 'fire' | 'aim' | 'reload' | 'peek' | 'holster' | 'steer' | 'gas'
-  | 'brake' | 'handbrake' | 'horn' | 'climb' | 'drift' | 'item' | 'snack' | 'nitro' | 'quit' | 'skip';
+  | 'brake' | 'handbrake' | 'horn' | 'climb' | 'drift' | 'item' | 'snack' | 'nitro' | 'quit' | 'skip' | 'club' | 'swing';
 
 export interface Binding {
   job: Job;
@@ -31,7 +31,7 @@ export interface Binding {
   shares?: Job[];
 }
 
-export type ModeId = 'foot' | 'fists' | 'armed' | 'car' | 'bike' | 'boat' | 'plane' | 'kart' | 'ring' | 'ride';
+export type ModeId = 'foot' | 'fists' | 'armed' | 'car' | 'bike' | 'boat' | 'plane' | 'kart' | 'ring' | 'ride' | 'golf';
 
 export interface KeyMode {
   name: string;
@@ -132,6 +132,18 @@ export const KEYMAP: Record<ModeId, KeyMode> = {
       { job: 'item', label: 'Use item', keys: ['E'], pad: ['X'], touch: 'Item' },
       camera('Camera'),
       quit('Quit the race (no prize)'),
+    ],
+  },
+  // The golf game (docs/golf-game-plan.md Phases 2 and 4): aim, the club, the swing's three presses (start, power,
+  // accuracy); on touch the pull-back (its length the power, its lean the accuracy)
+  golf: {
+    name: 'A round of golf',
+    binds: [
+      { job: 'steer', label: 'Aim', keys: ['A', 'D', '←', '→'], pad: ['Left stick', 'D-pad ← →'], touch: '◀ ▶' },
+      { job: 'club', label: 'Club', keys: ['W', 'S', '↑', '↓'], pad: ['LB', 'RB', 'D-pad ↑ ↓'], touch: 'Club' },
+      { job: 'swing', label: 'Swing: start, power, accuracy', keys: ['Space'], pad: ['A'], touch: 'Pull back, let go' },
+      camera('Camera: behind the ball or high over the hole'),
+      quit('Quit the round'),
     ],
   },
   ring: {

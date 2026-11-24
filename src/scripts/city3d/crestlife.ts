@@ -22,7 +22,7 @@ import { heightAt } from './terrain';
 import { BOUTIQUES, FOUNTAINS, KERBS, SLAB_Y, TABLES, TABLE_R, VALET_STANDS, VIA, doorOf, outOf } from './coral';
 import { COURT_HALF, ESTATES, gardenPalmsOf, inFrame, motorCourt, toWorld, wingSide } from './estates';
 import { MANSIONS, toWorld as mansionAt } from './mansions';
-import { CIVIC, CLUB, HOTEL, OVERLOOK } from './crestsites';
+import { CIVIC, HOTEL, OVERLOOK } from './crestsites';
 import type { Idle } from './landmarks';
 import type { Moment, ParkPerson } from './parklife';
 import type { CarId } from './mycar';
@@ -223,14 +223,8 @@ export const CREST_IDLE: Idle[] = (() => {
   const [ocx, ocz] = [(OVERLOOK.rect[0] + OVERLOOK.rect[2]) / 2, (OVERLOOK.rect[1] + OVERLOOK.rect[3]) / 2];
   const [lx, lz] = OVERLOOK.look;
   for (const s of [-1, 1]) out.push({ x: ocx + lx * 1.5 - lz * s * 0.7, z: ocz + lz * 1.5 + lx * s * 0.7, y: OVERLOOK.y + 0.02, ry: facing(lx, lz), act: 'look' });
-  // On the clubhouse's terrace, a group chatting; on the civic hall's walk, a pair
-  const tz = (CLUB.terrace[1] + CLUB.terrace[3]) / 2;
-  for (const [x, z, ry] of [
-    [CLUB.terrace[0] + 3, tz, facing(1, 0)],
-    [CLUB.terrace[0] + 4, tz - 0.4, facing(-1, 0.3)],
-    [CLUB.terrace[0] + 4, tz + 0.5, facing(-1, -0.4)],
-  ] as [number, number, number][])
-    out.push({ x, z, y: CLUB.y + 0.02, ry, act: 'chat' });
+  // On the civic hall's walk, a pair chatting (the country club's terrace's group went with the club: docs/golf-plan.md
+  // Phase 4)
   const wx = (CIVIC.walk[0] + CIVIC.walk[2]) / 2;
   out.push({ x: wx - 0.45, z: -74, y: CIVIC.y + 0.02, ry: facing(1, 0), act: 'chat' });
   out.push({ x: wx + 0.45, z: -74, y: CIVIC.y + 0.02, ry: facing(-1, 0), act: 'chat' });

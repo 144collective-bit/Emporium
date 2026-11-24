@@ -58,7 +58,7 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 5. **Street-level grit.** Done (2026-11-23, below). Cables strung over the estate's lanes and between the blocks, shuttered fronts under the
    podium deck, neon over the shops there (made-up names), bins, puddles that shine in the rain, the estate's
    noticeboards. The tube's trains already run under; nothing new overhead.
-6. **The lobbies.** Each block's ground-floor hall walked into from its door: post boxes, a noticeboard, a bench, the
+6. **The lobbies.** Done (2026-11-23, below). Each block's ground-floor hall walked into from its door: post boxes, a noticeboard, a bench, the
    lift doors (the lift card, as at the cores), the stairs; the towers' halls glazed and lit warm at night. A hall is
    its own inside (as the tube's halls are), near only.
 7. **A flat of your own, and shops to run.** A flat for Degen in one of the blocks (the owner's pick: his own to
@@ -162,6 +162,22 @@ orange bands along every gallery, the towers' ledge rings and flared plant rooms
 - **Puddles** in the courts that catch the sodium lamps at night (`courtPuddles()`, `PUDDLE_SHINE`), near only.
 - **The noticeboards**: a cork board in a steel frame on two posts by every core's lift door, notices pinned up, near.
 - Bins were the grit's already (Phase 2's polish).
+
+## What Phase 6 did (2026-11-23)
+
+- **A hall in every block but The Core** (the owner's pick: all nine; southblocks.ts `LOBBIES`, `LOBBY`, tested): a
+  room 5 along the face by 3.6 deep on the ground floor, a wall's thickness in from it, through a 1.2-wide doorway on
+  the block's gallery side (a tower's on its face to Endswood Road; Teasel's and Fennel's by the shops' east end, the
+  Rampart's off the arch).
+- **Walked:** cut out of the block's solids with its doorway (`coverWithHall()`: fine strips over the hall, the rest
+  as before), so walking and the camera stay inside its walls; its floor the block's base (groundheight.ts's `lobby`
+  layer, southsky.ts `lobbyFloorAt()`); the bench and the stairs solid (`lobbyProps()`).
+- **The lift doors** call the block's nearest lift (the owner's pick; southsky.ts `lobbyLiftDoor()`, in
+  `skyLiftDoors()` at the foot; The Core's for the towers): the same card, up to its landings.
+- **Drawn rough** (the owner's pick; southblocks3d.ts `drawLobby()`, a site each, out of the sun's shadow): terrazzo,
+  scuffed walls, the glass front seen from inside, the doorway's frame and mat; a bank of post boxes (one hanging
+  open, one dented), the noticeboard with a notice hanging off, a bench, the lift doors and their lit strip, the
+  stairs up in the corner; a strip light (tired or dead), tags, litter and a boarded pane. Nothing threatening.
 
 ## The owner's decisions (2026-11-21)
 

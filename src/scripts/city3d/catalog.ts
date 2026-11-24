@@ -106,9 +106,9 @@ export const SOLD_OUT = { min: 10, share: 0.1 } as const;
 /**
  * The daily soft cap on prize money (the polish plan's Phase 9, the owner's call): the first `races` cup races
  * (a cup's and single races, by place) and the first `bouts` purses won each day pay in full, then `share` of the
- * prize. A series' prize and the daily challenge aren't capped. The day is the visitor's (tycoon.ts `dayKey()`).
+ * prize; the first `rounds` rounds of golf (docs/golf-game-plan.md Phase 3) likewise. A series' prize and the daily challenge aren't capped. The day is the visitor's (tycoon.ts `dayKey()`).
  */
-export const PRIZE_CAP = { races: 6, bouts: 4, share: 0.35 } as const;
+export const PRIZE_CAP = { races: 6, bouts: 4, rounds: 4, share: 0.35 } as const;
 
 /* ---------- The Fight Club's opponents (docs/fight-plan.md) ---------- */
 
@@ -270,6 +270,9 @@ export const CHALLENGE_PRIZE = 2500;
 export const PAR_LAPS: Record<string, Record<ClassId, number>> = {
   circuit: { street: 34, sport: 29.5, neon: 27 },
   'circuit-reverse': { street: 34, sport: 29, neon: 26.5 },
+  // Riverside Raceway (docs/kart-harbour-plan.md, Phase 3)
+  riverside: { street: 78.5, sport: 64.5, neon: 56.5 },
+  'riverside-reverse': { street: 78.5, sport: 64.5, neon: 57 },
 };
 
 /* ---------- Guns (the Armoury) ---------- */

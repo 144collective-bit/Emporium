@@ -264,6 +264,8 @@ test("keymap.ts's table and the handler agree: every key a mode lists is walk mo
     kart: () => ({ karts: { active: true } }),
     ring: () => ({ fighting: () => true, fight: { snack: () => {} } }),
     ride: () => ({ ride: {} }),
+    // (the round's keys are golfgame.ts's: it takes what keymap.ts lists for golf)
+    golf: () => ({ golf: { active: true, key: (c: string) => ['KeyA', 'KeyD', 'KeyW', 'KeyS', 'ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'KeyV'].includes(c) } }),
   };
   // (jobs the keyboard does elsewhere, or with the mouse only)
   const NOT_KEYS: Job[] = ['look', 'map', 'menu', 'quit', 'skip', 'emotes', 'fire', 'aim', 'punch', 'block', 'guard'];

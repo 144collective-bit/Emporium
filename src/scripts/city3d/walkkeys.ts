@@ -29,6 +29,8 @@ export interface KeyHost {
   readonly fight: { snack(): void } | null;
   readonly boat: { active: boolean; horn(): void } | null;
   readonly karts: { active: boolean };
+  /** The golf game's round (docs/golf-game-plan.md): it takes its own keys (golfgame.ts) */
+  readonly golf?: { active: boolean; key(code: string, down: boolean, repeat: boolean): boolean } | null;
   readonly near: unknown;
   readonly sprintLock: boolean;
   // What the keys set as well as read
@@ -137,6 +139,13 @@ export function onKey(e: KeyboardEvent, down: boolean, h: KeyHost) {
       if (down) keys.add(c);
       else keys.delete(c);
     } else return false;
+    d.touched();
+    e.preventDefault();
+    return true;
+  }
+  // Golf: the round takes its keys (A / D aim, W / S the club, Space the swing's presses; keymap.ts `golf`)
+  if (h.golf?.active) {
+    if (!h.golf.key(c, down, e.repeat)) return false;
     d.touched();
     e.preventDefault();
     return true;
