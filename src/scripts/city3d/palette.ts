@@ -69,6 +69,8 @@ export const COVER = {
   /** The lakes' lily pads and their flowers (golf3d.ts `liliesOf()`, the design pass's D3) */
   lilyPad: '#3d8a4c',
   lilyFlower: '#f3b6d6',
+  /** The cart paths' warm gravel (golf3d.ts, the design pass's D4) */
+  cartPath: '#b9a27a',
   /** Its greens, mown in stripes, their fringes and its tees */
   green: '#6cc05e',
   greenStripe: '#74c866',

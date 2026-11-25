@@ -57,6 +57,7 @@ import {
   lakeAt,
   nearestOn,
   teeOf,
+  teeOutline,
   type Hole,
   type Lake,
   type Pt,
@@ -141,14 +142,11 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
     }
     poly(greenOutline(hole, FRINGE + SECOND_CUT, 96));
     ctx.fill();
-    const t = teeOf(hole);
-    const at = (u: number, v: number): Pt => [t.at[0] + t.dir[0] * u - t.dir[1] * v, t.at[1] + t.dir[1] * u + t.dir[0] * v];
-    const [u, v] = [TEE[0] + SECOND_CUT / 2, TEE[1] + SECOND_CUT / 2];
-    poly([at(-u, -v), at(u, -v), at(u, v), at(-u, v)]);
+    poly(teeOutline(hole, SECOND_CUT / 2));
     ctx.fill();
   }
   // The cart paths (and the footpath's stretch on the course), over the second cut, under the rest that's mown
-  ctx.strokeStyle = STONE.path;
+  ctx.strokeStyle = COVER.cartPath;
   ctx.lineWidth = 2 * PATH_HALF * sx;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -188,11 +186,13 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
     ctx.restore();
   }
   // The tees
+  // (rounded, D4, in a band of the first cut's darker green)
   for (const hole of HOLES) {
-    const t = teeOf(hole);
-    const at = (u: number, v: number): Pt => [t.at[0] + t.dir[0] * u - t.dir[1] * v, t.at[1] + t.dir[1] * u + t.dir[0] * v];
+    ctx.fillStyle = COVER.firstCut;
+    poly(teeOutline(hole, TEE_EDGE));
+    ctx.fill();
     ctx.fillStyle = COVER.tee;
-    poly([at(-TEE[0], -TEE[1]), at(TEE[0], -TEE[1]), at(TEE[0], TEE[1]), at(-TEE[0], TEE[1])]);
+    poly(teeOutline(hole));
     ctx.fill();
   }
   // The fringes, then the greens in fine stripes
@@ -322,14 +322,17 @@ export function mownNear(x: number, z: number, pad: number) {
   }
   return false;
 }
+/** The band of darker cut round each tee (the design pass's D4), the ink round it */
+export const TEE_EDGE = 0.6;
 /** The ink round each green's fringe and each bunker's lip (the design pass's D1, docs/golf-plan.md: the turf's paint
  * is soft at 2 pixels a tile, the city's shapes are inked): its half width and how far over the turf */
 export const EDGE_INK = { half: 0.07, lift: 0.03 };
-/** The closed lines the ink runs round: every green's fringe and every bunker's lip */
+/** The closed lines the ink runs round: every green's fringe, every tee's edge (D4) and every bunker's lip */
 export const INK_LOOPS: Pt[][] = /* @__PURE__ */ (() => {
   const out: Pt[][] = [];
   for (const h of HOLES) {
     out.push(greenOutline(h, FRINGE, 120));
+    out.push(teeOutline(h, TEE_EDGE, 8));
     for (const b of bunkersOf(h)) out.push(shapeOutline(b.at, b.dir, b.r, b.lobes, LIP, 56));
   }
   return out;
