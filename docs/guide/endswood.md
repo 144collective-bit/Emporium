@@ -267,11 +267,20 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   the den's door under the second flight, turning under the stair to the basement's floor), `ROOF_STEPS` and
   `roofStepY()` (up from the landing to a platform in the hatch, out over `HATCH_WAY`); `homeFloorY()` takes the highest
   floor he's on where they stand over one another; drawn by home3d.ts `denSteps()` and `upStair()`. The house's only
-  fades are its doors out. Phase 4 (the modern villa outside) is built: home3d.ts `house()` under "The modern villa"
+  fades are its doors out. Phase 4 (the modern villa outside) is live: home3d.ts `house()` under "The modern villa"
   (`RENDER`, `VILLA_STONE` to `BASE_TOP`, the roof's edge `EDGE_OUT` with its timber `SOFFIT` and steel coping, the
   windows' surrounds `REVEAL` and stone sills, the front door's stone portal and `CANOPY` with his mark lit on it, the
   bedroom's glass `BALCONY` (looks only: its window a door down to the floor in `houseWindows()`), downpipes, vents).
   The garage, workshop, gatehouse and wall keep the loft's brick (`LOFT_*`).
+  Phase 5 (the detail inside) is built: home3d.ts `finish()`, every floor, in paints the room's batch already has (no
+  new draw calls; near only, the phone tier without the small things): walnut architraves round the doorways (the front
+  and side doors' on the walls' faces, upstairs' round both faces of the partitions), a black steel lining and a
+  plastered head over upstairs' open doorways, skirting along every wall and round the partitions, a stepped cornice
+  round the ground floor's and upstairs' ceilings (the den's LED strips are its edge), black steel column radiators
+  under the front windows (a low slim one under the dressing room's), brass switches by the doors and sockets low on
+  the walls, a lever on the side door. The hall's console stands at the stair's foot on the east wall now
+  (`FURNITURE`), a tall brass-framed mirror over it; the counter has its black marble splashback, the island its
+  drawers' brass pulls; the stair's warm lights are in the east wall by the first flight's treads (`stair()`).
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,
