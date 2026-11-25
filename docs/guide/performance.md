@@ -153,7 +153,9 @@ keep it up to date when what it describes changes.
     city from the start; until then it answers from the save and replays
     what was set), and your car and your aircraft (`drive.ts`, `fly.ts`
     and what only they use, the boot's trim, 2026-11-22: 7.6 KB, the boot
-    from 774.9 to 767.3) behind `lazyFront()` (`lazyfront.ts`): the same
+    from 774.9 to 767.3; and the Fight Club's drawing, its own district
+    since 2026-11-25, `fightclub.ts`, its pin and lamps left at the boot:
+    2.9 KB, the boot from 774.8 to 771.9) behind `lazyFront()` (`lazyfront.ts`): the same
     shape, fetched once the first frame is drawn, answering from `idle`
     until then ("not driving, nothing near": every getter walk.ts reads has
     its stand-in there, since anything else comes back as a do-nothing

@@ -291,8 +291,13 @@ keep it up to date when what it describes changes.
   off it in `outer.ts`), drawn by `fightclub.ts` (`buildFightClub()`: the
   paved yard, the ring with the diamond canvas, posts and neon ropes (not
   solid: you step through), the open-sided shed with its rig, the counter
-  kiosk, bags, lockers, bleachers and the FIGHT CLUB cut-out; `setLive()`
-  brightens the lights for a fight; its footprints are `FIGHTCLUB_SITE` in
+  kiosk, bags, lockers, bleachers and the FIGHT CLUB cut-out; since the
+  boot's slimming of 2026-11-25 its own chunk, a district loaded as you come
+  near (`LAZY_DISTRICTS` id `fightclub`, `register()`), while its pin, pick
+  boxes, hover ring, lamps and pool of light stay at the boot in index.ts
+  (crestspots.ts `spot()`); `setLive()` brightens the lights for a fight,
+  through `FIGHT_VIEW` in fightsite.ts, which holds the state till the
+  drawing comes and hangs its `apply`; its footprints are `FIGHTCLUB_SITE` in
   `solids.ts`, and it's a place: spot `fightclub`, pin, directory entry
   and a City-view panel with your record and **Walk in**). `fight-types.ts`
   holds the parts' interfaces. `fight-ui.ts` (markup `data-fight`,

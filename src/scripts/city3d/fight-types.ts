@@ -9,7 +9,6 @@
 import type * as THREE from 'three';
 import type { BotLevel } from './catalog';
 import type { BoutPhase } from './fight-sim';
-import type { Spot } from './landmarks';
 import type { PartnerId } from './brawlsite';
 import type { StyleId } from './fight-moves';
 import type { FightResult } from './fightsave';
@@ -18,11 +17,8 @@ import type { GameDeps } from './ui';
 /* ---------- The gym (fightclub.ts) ---------- */
 
 export interface FightClub {
-  /** Everything static on the lot */
-  group: THREE.Group;
-  /** The place (`fightclub`): its pin floats over the sign, the camera flies to the ring */
-  spot: Spot;
-  /** The ring lights and the sign: brighter while a fight is on */
+  /** The ring lights and the sign: brighter while a fight is on (fightsite.ts `FIGHT_VIEW`: the drawing's in its own
+   * chunk, fightclub.ts, so this holds the state till it comes) */
   setLive(on: boolean): void;
 }
 

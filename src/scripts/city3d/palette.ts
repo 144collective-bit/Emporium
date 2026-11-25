@@ -60,6 +60,12 @@ export const COVER = {
   fairway: '#4e9a4a',
   fairwayStripe: '#57a652',
   firstCut: '#3f8443',
+  /** The second cut, a band of shorter rough past the first (the design pass's D2) */
+  secondCut: '#33764a',
+  /** Wildflowers in the glades of the native grass (golf3d.ts `flowersIn()`, D2): ox-eye white, buttercup, clover */
+  flowerWhite: '#f1eee2',
+  flowerYellow: '#e9c443',
+  flowerPurple: '#a47fd0',
   /** Its greens, mown in stripes, their fringes and its tees */
   green: '#6cc05e',
   greenStripe: '#74c866',

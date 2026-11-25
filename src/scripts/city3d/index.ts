@@ -126,7 +126,7 @@ import { KART_SPAWN } from './kartpark';
 import { KARTS2, KART2_LAND, kartsNewAsked } from './kartswitch';
 import { flattenRolls } from './rolls';
 import { AIR_SPAWN } from './airfield';
-import { FIGHT_SPAWN } from './fightsite';
+import { BLEACHERS, FIGHT_CLUB, FIGHT_SPAWN, FIGHT_VIEW, RING, RING_H, RING_HALF, SHED, SIGN } from './fightsite';
 import { HIGH_Y as LIBERTY_HIGH, LIBERTY_SPAWN, LIFTS as LIBERTY_LIFTS, LOW_Y as LIBERTY_LOW } from './liberty';
 import { buildLibertyBridge } from './libertybridge';
 import { buildHarbourBridge } from './harbour3d';
@@ -144,7 +144,6 @@ import { buildNightMarket } from './nightmarket3d';
 import { MARKET_SPAWN } from './nightmarket';
 import { BLOCK_SPAWN } from './projects';
 import { AVENUE_SPAWNS } from './avenue';
-import { buildFightClub } from './fightclub';
 import { fightRecordHtml } from './fight-records';
 import { kartRecordsHtml } from './kart-records';
 import { count, destAt } from './tycoon';
@@ -338,9 +337,20 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   // The kart park north of the ring highway in the north-east: a place like the landmarks (its pin and panel); its grounds load as you approach
   const kartPark = buildKartPark(scene, crowd, { tick, reduced, low: tier === 'low' });
   spots.push(kartPark.spot, airport.spot);
-  // The Fight Club on the south bank: a place too (its pin and panel)
-  const fightClub = buildFightClub(scene, { tick, reduced, low: tier === 'low' });
-  spots.push(fightClub.spot);
+  // The Fight Club on the south bank: a place too (its pin and panel; its drawing is its own chunk, fightclub.ts, a
+  // district loaded as you come near, and `FIGHT_VIEW` its live switch till then). Its pick boxes (the shed and the
+  // bleachers), the hover ring round the yard, the pin over the sign, the camera on the ring; its lamps at the yard's
+  // front corners and the rig's pool of light on the canvas here with the city's lamps
+  const fightClub = FIGHT_VIEW;
+  {
+    const L = FIGHT_CLUB;
+    const top = SLAB + RING_H;
+    const s = pickSpot(scene, 'fightclub', SLAB, [{ rect: [SHED.x0, SHED.z0, SHED.x1, SHED.z1], h: SHED.h }, { rect: [BLEACHERS.x0, BLEACHERS.z0, BLEACHERS.x1, BLEACHERS.z1], h: 1.6 }], [L.x0, L.z0, L.x1, L.z1], SIGN.h + 1.6, [SIGN.x, SIGN.z]);
+    spots.push({ ...s, focus: new THREE.Vector3(RING.x, SLAB + 0.8, RING.z), size: 11 });
+    addLamp(L.x0 + 0.4, L.z0 + 0.3, -Math.PI / 2);
+    addLamp(L.x1 - 0.4, L.z0 + 0.3, -Math.PI / 2);
+    addPool(RING.x, RING.z, RING_HALF * 2 * 1.3, top);
+  }
   // Liberty Bridge: the stone footbridge over the river (a place too: its pin and panel)
   const liberty = buildLibertyBridge(scene, { flame, tick, reduced, low: tier === 'low' });
   // The metro (growth plan Phase 8): the viaduct, its stations and the train

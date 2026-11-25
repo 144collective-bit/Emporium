@@ -419,8 +419,15 @@ export function golfMesh(r: Rect, far: boolean): GolfMesh {
 
 /* ---------- The course's woods ---------- */
 
-/** How likely a grid point grows a tree: its native grass (woods), its rough well away from the holes (a few) */
-export const WOODS_CHANCE = { native: 0.16, rough: 0.035 };
+/** How likely a grid point grows a tree (the design pass's D2: copses and glades, not an even spread): in the native
+ * grass from `lo` in a glade to `hi` in a copse, the same in the rough well away from the holes; in the belt of pines
+ * along the north and east edges (under the wall), `belt` */
+export const WOODS_CHANCE = { native: { lo: 0.02, hi: 0.55 }, rough: { lo: 0.006, hi: 0.22 }, belt: 0.5 };
+/** The copses' size (grid points across a cell of the clumping's noise) */
+export const COPSE_CELL = 7;
+/** The belt of pines: how deep in from the course's edge (grid points), along which sides (within `reach` tiles of the
+ * course's box's north and east edges: the wall stands past them) */
+export const PINE_BELT = { depth: 6, reach: 30 };
 /** A seeded number in [0, 1) for a grid point and a draw */
 const seeded = (i: number, j: number, k: number) => {
   let h = Math.imul(i * 73856093 ^ j * 19349663 ^ k * 83492791, 2654435761) >>> 0;
@@ -429,11 +436,56 @@ const seeded = (i: number, j: number, k: number) => {
   h ^= h >>> 13;
   return (h >>> 0) / 4294967296;
 };
+const ease = (a: number, b: number, v: number) => {
+  const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+/** How much a grid point is in a copse (0 a glade, 1 deep in the trees): seeded value noise, smoothed between cells */
+export function copseAt(i: number, j: number) {
+  const [u, v] = [i / COPSE_CELL, j / COPSE_CELL];
+  const [ci, cj] = [Math.floor(u), Math.floor(v)];
+  const [fu, fv] = [ease(0, 1, u - ci), ease(0, 1, v - cj)];
+  const n = (a: number, b: number) => seeded(a, b, 9);
+  return (n(ci, cj) * (1 - fu) + n(ci + 1, cj) * fu) * (1 - fv) + (n(ci, cj + 1) * (1 - fu) + n(ci + 1, cj + 1) * fu) * fv;
+}
+/** `copseAt()` at a point (the wildflowers grow in the glades: golf3d.ts) */
+export const copseNear = (x: number, z: number) => copseAt((x - G.x0) / G.step, (z - G.z0) / G.step);
+let edgeSteps: Uint8Array | null = null;
+/** Each grid point's distance from the course's edge in grid points (to the nearest point off it), up to 255 */
+function fromEdge() {
+  if (edgeSteps) return edgeSteps;
+  const m = M();
+  const [nx, nz] = [G.nx, G.nz];
+  const d = new Uint8Array(nx * nz).fill(255);
+  for (let k = 0; k < nx * nz; k++) if (m[k] === LAND.off) d[k] = 0;
+  // (two sweeps, each step one grid point: near enough for a belt of trees)
+  for (let j = 0; j < nz; j++)
+    for (let i = 0; i < nx; i++) {
+      const k = j * nx + i;
+      if (i > 0) d[k] = Math.min(d[k], d[k - 1] + 1);
+      if (j > 0) d[k] = Math.min(d[k], d[k - nx] + 1);
+      if (i === 0 || j === 0 || i === nx - 1 || j === nz - 1) d[k] = Math.min(d[k], 1);
+    }
+  for (let j = nz - 1; j >= 0; j--)
+    for (let i = nx - 1; i >= 0; i--) {
+      const k = j * nx + i;
+      if (i < nx - 1) d[k] = Math.min(d[k], d[k + 1] + 1);
+      if (j < nz - 1) d[k] = Math.min(d[k], d[k + nx] + 1);
+    }
+  return (edgeSteps = d);
+}
+/** Is a grid point in the belt of pines (near the course's north or east edge, the wall's side) */
+export function inPineBelt(i: number, j: number) {
+  const [x, z] = [G.x0 + i * G.step, G.z0 + j * G.step];
+  if (z > GOLF_RECT[1] + PINE_BELT.reach && x < GOLF_RECT[2] - PINE_BELT.reach) return false;
+  return fromEdge()[j * G.nx + i] <= PINE_BELT.depth;
+}
 /**
- * The course's woods (docs/golf-plan.md Phase 3): a tree now and then on its land's grid, thick in the native grass
- * between the holes and a few in the rough well away from them, never in play; the outskirts' trees keep off the
- * course's land (landuse.ts), these stand in their place (world.ts `scatterOutskirts()`, as the outskirts' are drawn).
- * The same trees every time, each a little off its grid point; `keep` under 1 leaves the rest out (phones: the trim).
+ * The course's woods (docs/golf-plan.md Phase 3, the design pass's D2): trees in copses with glades between, thick in
+ * the native grass between the holes, smaller ones in the rough well away from them, a belt of tall pines along the
+ * north and east edges, never in play; the outskirts' trees keep off the course's land (landuse.ts), these stand in
+ * their place (world.ts `scatterOutskirts()`, as the outskirts' are drawn). The same trees every time, each a little
+ * off its grid point; `keep` under 1 leaves the rest out (phones: the trim).
  */
 export function golfTrees(keep = 1): { x: number; z: number; s: number; pine: boolean }[] {
   const m = M();
@@ -448,13 +500,19 @@ export function golfTrees(keep = 1): { x: number; z: number; s: number; pine: bo
         return n === LAND.play || n === LAND.off;
       }))
         continue;
-      if (seeded(i, j, 0) >= (land === LAND.native ? WOODS_CHANCE.native : WOODS_CHANCE.rough)) continue;
+      const belt = inPineBelt(i, j);
+      const w = land === LAND.native ? WOODS_CHANCE.native : WOODS_CHANCE.rough;
+      const c = copseAt(i, j);
+      const chance = belt ? WOODS_CHANCE.belt : w.lo + (w.hi - w.lo) * ease(0.45, 0.75, c);
+      if (seeded(i, j, 0) >= chance) continue;
       if (seeded(i, j, 5) >= keep) continue;
-      const pine = seeded(i, j, 3) < (land === LAND.native ? 0.65 : 0.35);
+      const pine = belt || seeded(i, j, 3) < (land === LAND.native ? 0.6 : 0.3);
+      // (the belt's pines tall, a copse's trees bigger in its heart than at its edge)
+      const grow = belt ? 2.6 + seeded(i, j, 4) * 1.6 : (pine ? 1.4 : 1.0) + seeded(i, j, 4) * (pine ? 1.1 : 0.8) + 0.4 * ease(0.55, 0.85, c);
       out.push({
         x: G.x0 + i * G.step + (seeded(i, j, 1) - 0.5) * G.step * 0.8,
         z: G.z0 + j * G.step + (seeded(i, j, 2) - 0.5) * G.step * 0.8,
-        s: pine ? 1.5 + seeded(i, j, 4) * 1.2 : 1.1 + seeded(i, j, 4) * 0.8,
+        s: grow,
         pine,
       });
     }

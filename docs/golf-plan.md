@@ -325,6 +325,20 @@ phone tier and the boot):
 - **D2, the woods and the rough**: clumps of trees between the holes (the east arm most), a deep belt of tall pines
   along the north and east fences to hide the wall's foot, the rough in two tones (a longer band and the native
   beyond), wildflower patches in the native.
+  **Built (2026-11-24), waiting for the owner's sign-off.** The woods in copses and glades (golflift.ts `copseAt()`,
+  seeded value noise; 2467 trees, was 1393; phones keep half), bigger trees in a copse's heart; a belt of tall pines
+  six grid points deep along the north and east edges (`PINE_BELT`, `inPineBelt()`), where there's land clear of
+  play (the north edge is mostly play, so the belt's thin there); the second cut (`SECOND_CUT`, `COVER.secondCut`) a
+  lighter band past each first cut, fringe and tee, painted under the paths; wildflowers in the glades' native grass
+  (golf3d.ts `flowersIn()`, three palette colours, about 2600 heads, near only, in the edge's sites: no new draw
+  calls). The ball meets the new trees as it did the old (`inTree()`). Checks: typecheck, lint, `npm test` and
+  `npm run test:wide` (2411 each), the budget (boot 774.4 of 775 KB before the pines past the fence); the shots `docs/blend-shots/golf-d2-a/` (desktop and phone: holes 3, 4, 6, 7, 13, 14 from the
+  tee, a glade of wildflowers) and the map `docs/golf-shots/design-d2-a.png`. The pines past the fence (the owner's
+  call, 2026-11-25, on seeing the first shots: "plant pines past the fence"): outskirts.ts `wallPines()`
+  (`WALL_PINES`), 1311 tall pines (phones 665) on the open strip between the course's north and east fences and the
+  wall, clear of the fence, placed with the outskirts' trees; now the woods stand to the wall's foot on 3, 4, 13 and
+  14 (`docs/blend-shots/golf-d2-b/`). With them the boot is 774.8 of 775 KB: the boot's slimming is next after D2
+  goes to main (the owner's call, 2026-11-25).
 - **D3, the water**: reeds in clumps on the shallow shores, lily pads; Reed Water and Clubhouse Lake brought into play
   (a carry on 16, the 18th's green over its edge) where the owner wants it.
 - **D4, the paths and tees**: the cart paths a warm gravel from the palette, bent round the tees rather than past them;

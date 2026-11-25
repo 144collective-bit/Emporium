@@ -23,7 +23,7 @@ import { PLAN, insetPoly, offsetLine, riverBridges, type Pt } from './streetplan
 import { DIAGONALS, DIAGONAL_LAMPS } from './downtown';
 import { BENDS, BEND_REACH, KERB_RUNS, OUTSIDE, PADS, PROMENADE, offBridges, offFootbridge } from './outer';
 import { TILE, tileKey, tileOf, tilesIn } from './tiles';
-import { outskirtsTrees } from './outskirts';
+import { outskirtsTrees, wallPines } from './outskirts';
 import { TERRAIN_RECT, heightAt, hillLines, onCrest, onHills, slopeAt } from './terrain';
 import { DRIVE_BLOCKS } from './coral';
 import { keyRect } from './tileplan';
@@ -1360,6 +1360,8 @@ export function scatterOutskirts(count: number, sparse = 0.6, keep = 1, clear: r
   for (const t of outskirtsTrees(count, sparse, clear)) if (keep >= 1 || turnAt(t.z, t.x) / 6 < keep) addTree(t.x, t.z, t.s, t.pine, onHills(t.x, t.z) ? heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z) : rollsAt(t.x, t.z) - 0.08 * t.s * rollSlope(t.x, t.z));
   // The golf course's woods in their place there (golflift.ts, docs/golf-plan.md Phase 3)
   for (const t of golfTrees(keep)) addTree(t.x, t.z, t.s, t.pine, heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z));
+  // and the pines past its north and east fences up to the wall (D2)
+  for (const t of wallPines(keep)) addTree(t.x, t.z, t.s, t.pine, heightAt(t.x, t.z) - 0.08 * t.s * slopeAt(t.x, t.z));
 }
 
 
