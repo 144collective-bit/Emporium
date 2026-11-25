@@ -87,9 +87,14 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    house number: no numbers on signs). Downpipes with hoppers and shoes at four corners, steel vents in the render. The
    garage, workshop, gatehouse and wall keep the loft's brick. Draw calls unchanged: 313 desktop, 198 phone
    (the phone tier). Shots: `docs/house-shots/phase-4-*.webp`.
-5. **The detail inside.** What a well-built house has: doors in frames with architraves and handles, cornices,
+5. **The detail inside.** *Signed off by the owner and live (2026-11-25).* What a well-built house has: doors in frames with architraves and handles, cornices,
    skirting throughout, light switches and sockets, radiators under the windows, the kitchen's splashback and
    handles, the hall's mirror and console at the stair's foot, the stair's lights in the wall by the treads; the
    review shots by day and night, `?fps` and `?bench` on the phone tier before and after.
+   Draw calls unchanged where he wakes: 313 desktop, 198 phone (every new part reuses a paint the house
+   already had). `?bench` on the phone tier (software rendering, so the frame rates only compare like for like),
+   before and after: the house's views 6.6 / 7.6 / 8.1 fps before, 8.1 / 8.4 / 8.9 after (outside 184 to 180
+   draws, the lounge 112 to 119, the den 124 to 123); the route 4.3 to 4.5 fps, 231 to 227 draws: no cost
+   to see. Shots: `docs/house-shots/phase-5-*.webp`.
 
 Each with the owner's sign-off.

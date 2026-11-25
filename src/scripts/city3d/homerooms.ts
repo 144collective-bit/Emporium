@@ -93,8 +93,8 @@ function layOut(g: HouseGeo) {
    * back to the hall and a chaise at its south end; an armchair under the front window, an arc lamp by it, a coffee
    * table on a rug; **the trophy wall** along the west wall past the media wall); **the kitchen** along the back wall
    * (the counter, the fridge at its end, a plant at its west end, an island with its stools on the lounge's side);
-   * **the hall** from the front door to the side door, clear (a console table under the front window east of the door,
-   * a plant in its back corner); the stair hall in the front east corner is the stair's, clear (home.ts `STAIR`,
+   * **the hall** from the front door to the side door, clear (a console table and its mirror on the east wall at the
+   * stair's foot, a radiator under the front window east of the door); the stair hall in the front east corner is the stair's, clear (home.ts `STAIR`,
    * docs/house-plan.md Phase 2: walked, drawn by home3d.ts `stair()`). The stash is the den's vault now (`BASEMENT`)
    */
   const FURNITURE: Furniture[] = [
@@ -110,7 +110,9 @@ function layOut(g: HouseGeo) {
     { kind: 'plant', rect: [rx0 + 0.06, rz0 + 5.32, rx0 + 0.36, rz0 + 5.62], h: 0.75 },
     // (a tall one in the lounge's front corner, by the armchair: docs/interior-plan.md Phase 5)
     { kind: 'plant', rect: [rx0 + 0.06, rz0 + 0.14, rx0 + 0.4, rz0 + 0.48], h: 1.1 },
-    { kind: 'console', rect: [DX + 0.75, rz0, DX + 2.05, rz0 + 0.3], h: 0.36 },
+    // (the hall's console at the stair's foot, against the east wall, its mirror over it: docs/house-plan.md Phase 5;
+    // slim, clear of the way up the first flight)
+    { kind: 'console', rect: [rx1 - 0.2, rz0 + 3.12, rx1, rz0 + 3.95], h: 0.36 },
     { kind: 'island', rect: [rx0 + 1.0, rz1 - 1.85, rx0 + 3.2, rz1 - 1.25], h: 0.48 },
     { kind: 'stools', rect: [rx0 + 1.15, rz1 - 2.25, rx0 + 3.05, rz1 - 1.88], h: 0.3 },
     // The kitchen (docs/interior-plan.md Phase 2): the oven's tall unit at the back wall's west end, the run with its sink

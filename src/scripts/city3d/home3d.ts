@@ -1121,16 +1121,14 @@ function inside(into: THREE.Object3D, low: boolean) {
   for (const f of FURNITURE) furnish(b, f, low);
   b.detail(() => {
     // The lounge's and the hall's ceiling lights, flat discs (a round one hung in front of the trophy wall's top shelf
-    // and read as a trophy; the kitchen's is the pendant over the island), the rug under the coffee table, the skirting
-    // along the west wall
+    // and read as a trophy; the kitchen's is the pendant over the island), the rug under the coffee table (the
+    // skirting and the rest of the finish: `finish()`)
     for (const [lx, lz] of [[x0 + 1.9, z0 + 2.5], [dx + 1.2, cz]]) b.add(new THREE.CylinderGeometry(0.13, 0.13, 0.02, 12).translate(lx, top - 0.016, lz), glow(PAL.warm));
     // (the rug under the coffee table, a border round its field, from the media wall's foot to the sofa's front)
     const t = FURNITURE.find((f) => f.kind === 'table')!.rect;
     const so = FURNITURE.find((f) => f.kind === 'sofa')!.rect;
     iflat(b, [t[0] - 0.55, t[1] - 0.75, so[0] - 0.02, t[3] + 0.55], OVER, RUG_EDGE);
     iflat(b, [t[0] - 0.47, t[1] - 0.67, so[0] - 0.1, t[3] + 0.47], OVER + 0.004, RUG_FIELD);
-    // (skirting round the walls, dark)
-    for (const [r, a] of [[[x0, z0, x0 + 0.02, z1], 0], [[x1 - 0.02, z0, x1, z1], 0], [[x0, z1 - 0.02, x1, z1], 0]] as [Rect, number][]) icube(b, r, S, S + 0.07 + a, SKIRT);
     // Two prints of his own (made-up: blocks of his colours on paper, black frames): on the back wall in the hall, on
     // the east wall past the side door
     print(b, [dx + 1.4, z1 - 0.03, dx + 2.3, z1 - 0.006], 0.45, 0.95, 'z');
@@ -1143,8 +1141,175 @@ function inside(into: THREE.Object3D, low: boolean) {
   basement(b, low);
   // The turned stair up to the landing (docs/house-plan.md Phase 2)
   stair(b, low);
+  // What a well-built house has, every floor (docs/house-plan.md Phase 5)
+  finish(b, low);
   // (no shadows, and lit from inside: the shared neon paint takes no light from the sky)
   b.build(into, { cast: false, receive: false });
+}
+
+/**
+ * The finish (docs/house-plan.md Phase 5): what a well-built house has, on every floor. Walnut architraves round the
+ * doorways, a plastered head over upstairs' open ones with a black steel lining, skirting along every wall and
+ * partition, a stepped cornice round the ceilings (not the den's: its LED strips are its edge), black steel column
+ * radiators under the windows, brass switches by the doors and sockets low on the walls, a lever on the side door. All
+ * in paints the room's batch has already (no new draw calls); near only, the phone tier without the small things
+ */
+function finish(b: Batch, low: boolean) {
+  const G = 0.006;
+  const [x0, z0, x1, z1] = [ROOM[0] + G, ROOM[1] + G, ROOM[2] - G, ROOM[3] - G];
+  const [wx0, , , wz1] = STAIR.well;
+  const dx = HOME.door[0];
+  const sz = HOME.sideDoor[1];
+  const [gf, uf, bf] = [S, S + UP_Y, S + BASE_Y];
+  const [gTop, uTop] = [S + CEIL, S + UP_CEIL - G];
+  /** A band on a wall's inner face, `out` proud of it, from a0 to a1 along it, y0 to y1 */
+  const band = (wall: 'n' | 's' | 'e' | 'w', a0: number, a1: number, out: number, y0: number, y1: number, hex: string) => {
+    if (a1 - a0 < 0.01) return;
+    const r: Rect = wall === 'n' ? [a0, z0, a1, z0 + out] : wall === 's' ? [a0, z1 - out, a1, z1] : wall === 'w' ? [x0, a0, x0 + out, a1] : [x1 - out, a0, x1, a1];
+    icube(b, r, y0, y1, hex);
+  };
+  /** The stretches from a to c but for the gaps */
+  const spans = (a: number, c: number, gaps: [number, number][] = []) => {
+    const out: [number, number][] = [];
+    let at = a;
+    for (const [g0, g1] of [...gaps].sort((p, q) => p[0] - q[0])) {
+      if (g0 > at) out.push([at, Math.min(g0, c)]);
+      at = Math.max(at, g1);
+    }
+    if (at < c) out.push([at, c]);
+    return out;
+  };
+  /** A box's underside, for what hangs over a doorway (`icube()` draws none) */
+  const under = ([a0, b0, a1, b1]: Rect, y: number, hex: string) => sheet(b, a1 - a0, b1 - b0, Math.PI / 2, 0, (a0 + a1) / 2, y - 0.001, (b0 + b1) / 2, paint(hex, SIDE_X));
+  const SK = 0.07;
+  const skirt = (wall: 'n' | 's' | 'e' | 'w', runs: [number, number][], fy: number) => {
+    for (const [a, c] of runs) band(wall, a, c, 0.02, fy, fy + SK, SKIRT);
+  };
+  const cornice = (wall: 'n' | 's' | 'e' | 'w', runs: [number, number][], top: number) => {
+    for (const [a, c] of runs) {
+      band(wall, a, c, 0.026, top - 0.032, top, WALLS_IN);
+      if (!low) band(wall, a, c, 0.013, top - 0.058, top - 0.032, WALLS_IN);
+    }
+  };
+  // A doorway's walnut architrave round an opening in a wall `t` thick (both its faces at once, `p` proud of each): its
+  // two jambs and its head; `along` is the way the wall runs
+  const W = 0.045;
+  const architrave = (along: 'x' | 'z', at: number, t: number, o0: number, o1: number, fy: number, hy: number, p = 0.018) => {
+    const [n0, n1] = [at - t / 2 - p, at + t / 2 + p];
+    const r = (a: number, c: number): Rect => (along === 'x' ? [a, n0, c, n1] : [n0, a, n1, c]);
+    icube(b, r(o0 - W, o0), fy, hy + W, WOOD);
+    icube(b, r(o1, o1 + W), fy, hy + W, WOOD);
+    icube(b, r(o0, o1), hy, hy + W, WOOD);
+    under(r(o0, o1), hy, WOOD);
+  };
+  /** One face of an architrave on an outer wall (the front and side doors): the jambs and head, `p` proud */
+  const facing = (wall: 'n' | 'e', o0: number, o1: number, hy: number, p = 0.018) => {
+    band(wall, o0 - W, o0, p, gf, hy + W, WOOD);
+    band(wall, o1, o1 + W, p, gf, hy + W, WOOD);
+    band(wall, o0, o1, p, hy, hy + W, WOOD);
+  };
+  /** A brass switch (or a socket, wider and low) on a wall at `a` along it, its middle at y */
+  const plate = (wall: 'n' | 's' | 'e' | 'w', a: number, y: number, socket = false) => {
+    const [hw, hh] = socket ? [0.04, 0.025] : [0.025, 0.035];
+    band(wall, a - hw, a + hw, 0.008, y - hh, y + hh, BRASS);
+    if (socket) for (const d of [-0.016, 0.016]) band(wall, a + d - 0.005, a + d + 0.005, 0.011, y - 0.008, y + 0.008, INK);
+    else band(wall, a - 0.008, a + 0.008, 0.012, y - 0.014, y + 0.014, INK);
+  };
+  /** A black steel column radiator on a wall from a0 to a1, y0 to y1 (a plain panel on the phone tier) */
+  const radiator = (wall: 'n' | 's' | 'e' | 'w', a0: number, a1: number, y0: number, y1: number) => {
+    const D = 0.05;
+    for (const [ya, yc] of [[y0, y0 + 0.025], [y1 - 0.025, y1]]) band(wall, a0, a1, D, ya, yc, INK);
+    if (low) band(wall, a0 + 0.01, a1 - 0.01, D - 0.012, y0 + 0.025, y1 - 0.025, INK);
+    else for (let a = a0 + 0.008; a < a1 - 0.03; a += 0.052) band(wall, a, a + 0.03, D - 0.006, y0 + 0.025, y1 - 0.025, INK);
+    band(wall, a1 + 0.01, a1 + 0.035, D + 0.005, y0 + 0.02, y0 + 0.07, BRASS);
+  };
+
+  b.detail(() => {
+    /* ---------- The ground floor ---------- */
+    // (the front door's leaf is 0.6 wide, 1.08 high; the side door's 0.56, 1.05: inside() draws them)
+    skirt('n', spans(x0, wx0, [[dx - 0.36, dx + 0.36]]), gf);
+    skirt('w', [[z0, z1]], gf);
+    skirt('s', [[x0, x1]], gf);
+    skirt('e', spans(wz1, z1, [[sz - 0.34, sz + 0.34]]), gf);
+    cornice('n', [[x0, wx0]], gTop);
+    cornice('w', [[z0, z1]], gTop);
+    cornice('s', [[x0, x1]], gTop);
+    cornice('e', [[wz1, z1]], gTop);
+    facing('n', dx - 0.3, dx + 0.3, gf + 1.08);
+    facing('e', sz - 0.28, sz + 0.28, gf + 1.05);
+    // (the side door's brass lever, on its leaf)
+    band('e', sz - 0.22, sz - 0.2, 0.052, gf + 0.48, gf + 0.53, BRASS);
+    band('e', sz - 0.22, sz - 0.11, 0.064, gf + 0.5, gf + 0.515, BRASS);
+    // The radiators under the front windows: the bay's, clear of the armchair and its lamp, and east of the door
+    const [bay, east] = [ROOM_WINDOWS[0], ROOM_WINDOWS[1]];
+    const chair = FURNITURE.find((f) => f.kind === 'armchair')!.rect;
+    radiator('n', Math.max(bay.x0 + 0.1, chair[2] + 0.15), bay.x1 - 0.15, gf + 0.09, gf + 0.46);
+    radiator('n', east.x0 + 0.15, east.x1 - 0.2, gf + 0.09, gf + 0.46);
+    if (!low) {
+      plate('n', dx + 0.44, gf + 0.52);
+      plate('e', sz - 0.44, gf + 0.52);
+      plate('n', bay.x1 + 0.08, gf + 0.1, true);
+      plate('s', dx + 0.95, gf + 0.1, true);
+      plate('w', z1 - 1.4, gf + 0.1, true);
+    }
+
+    /* ---------- Upstairs ---------- */
+    const balcony = houseWindows().find((w) => w.face === 'n' && w.y0 < UP_Y + 0.1)!;
+    const mid = houseWindows().find((w) => w.face === 'n' && w.y0 > UP_Y + 0.1 && w.a1 < LAND_X)!;
+    skirt('n', spans(x0, wx0, [[balcony.a0 - 0.05, balcony.a1 + 0.05]]), uf + G);
+    skirt('w', [[z0, z1]], uf + G);
+    skirt('s', [[x0, LAND_X - PART]], uf + G);
+    skirt('e', [[wz1, BATH_Z]], uf + G);
+    cornice('n', [[x0, x1]], uTop);
+    cornice('w', [[z0, z1]], uTop);
+    cornice('s', [[x0, LAND_X - PART]], uTop);
+    cornice('e', [[z0, BATH_Z]], uTop);
+    // (the partitions' skirting round both their faces and their ends)
+    for (const u of UPSTAIRS.filter((t) => t.kind === 'wall')) {
+      const [a0, b0, a1, b1] = u.rect;
+      icube(b, [a0 - 0.018, b0 - 0.018, a1 + 0.018, b1 + 0.018], uf + G, uf + SK, SKIRT);
+    }
+    // The doorways: a steel lining, a plastered head over each (the partitions run to the ceiling), the walnut
+    // architrave round it on both faces
+    const HY = uf + 1.04;
+    const UH = uTop - G;
+    // (the bedroom's doorway has its lining's jambs already, the bathroom's its whole lining: upstairs())
+    for (const [X, [a, c], jambs] of [[LAND_X, UP_DOORS[0], true], [LAND_X, UP_DOORS[1], true], [DRESS_X, BED_DOOR, false]] as [number, [number, number], boolean][]) {
+      if (jambs) for (const z of [a, c]) icube(b, [X - 0.06, z - 0.02, X + 0.06, z + 0.02], uf, HY - 0.02, INK);
+      icube(b, [X - 0.06, a - 0.02, X + 0.06, c + 0.02], HY - 0.04, HY, INK);
+      under([X - 0.06, a, X + 0.06, c], HY - 0.04, INK);
+      icube(b, [X - PART, a, X + PART, c], HY, UH, WALLS_IN);
+      architrave('z', X, 2 * PART, a, c, uf, HY);
+    }
+    // (the bathroom's head: the landing's plaster on its face, the marble on the bathroom's)
+    icube(b, [BATH_DOOR[0], BATH_Z, BATH_DOOR[1], BATH_Z + 0.1], HY, UH, WALLS_IN);
+    face(b, (BATH_DOOR[0] + BATH_DOOR[1]) / 2, BATH_Z + 0.104, BATH_DOOR[1] - BATH_DOOR[0], HY, UH, 0, BATH_STONE, 0.95);
+    architrave('x', BATH_Z + 0.05, 0.1, BATH_DOOR[0], BATH_DOOR[1], uf, HY);
+    // A low radiator under the dressing room's window (its sill's low: a long slim one)
+    radiator('n', mid.a0 + 0.1, mid.a1 - 0.15, uf + 0.02, uf + 0.1);
+    if (!low) {
+      // (switches on the landing's side of its doorways; sockets by the bed, the desk and on the landing)
+      const onLanding = (z: number, y: number, socket = false) => icube(b, [LAND_X + PART, z - (socket ? 0.04 : 0.025), LAND_X + PART + 0.008, z + (socket ? 0.04 : 0.025)], y - (socket ? 0.025 : 0.035), y + (socket ? 0.025 : 0.035), BRASS);
+      for (const [a] of UP_DOORS) onLanding(a - 0.12, uf + 0.52);
+      icube(b, [DRESS_X + PART, BED_DOOR[1] + 0.095, DRESS_X + PART + 0.008, BED_DOOR[1] + 0.145], uf + 0.485, uf + 0.555, BRASS);
+      icube(b, [BATH_DOOR[1] + 0.095, BATH_Z - 0.008, BATH_DOOR[1] + 0.145, BATH_Z], uf + 0.485, uf + 0.555, BRASS);
+      for (const u of UPSTAIRS.filter((t) => t.kind === 'bedside')) plate('w', (u.rect[1] + u.rect[3]) / 2, uf + 0.33, true);
+      const desk = UPSTAIRS.find((t) => t.kind === 'desk')!.rect;
+      plate('s', desk[0] - 0.15, uf + 0.1, true);
+      plate('e', (wz1 + BATH_Z) / 2 + 0.6, uf + 0.1, true);
+    }
+
+    /* ---------- The den ---------- */
+    skirt('n', [[x0, wx0]], bf + G);
+    skirt('w', [[z0, z1]], bf + G);
+    skirt('s', [[x0, x1]], bf + G);
+    skirt('e', [[wz1, z1]], bf + G);
+    if (!low) {
+      const desk = BASEMENT.find((t) => t.kind === 'desk')!.rect;
+      plate('s', desk[0] - 0.15, bf + 0.1, true);
+      plate('w', z0 + 1.2, bf + 0.1, true);
+    }
+  });
 }
 
 /**
@@ -1315,10 +1480,19 @@ function furnish(b: Batch, { kind, rect, h }: Furniture, low: boolean) {
     b.detail(() => b.add(new THREE.SphereGeometry(0.04, 6, 4).translate(end.x, end.y - 0.12, end.z), glow(PAL.warm)));
   } else if (kind === 'plant') potted(b, rect, h >= 0.9 ? ON : y, h, low);
   else if (kind === 'console') {
-    // The hall's console table under the window east of the door: a top, two legs, a bowl for his keys
+    // The hall's console at the stair's foot (docs/house-plan.md Phase 5), slim against the east wall: a walnut top,
+    // two black steel legs, a bowl for his keys and two books; a tall mirror over it in a brass frame
     icube(b, [x0, z0, x1, z1], S + h - 0.03, S + h, WOOD);
-    for (const x of [x0 + 0.04, x1 - 0.08]) icube(b, [x, z0 + 0.04, x + 0.04, z1 - 0.04], y, S + h - 0.03, INK);
-    b.detail(() => drum(b, x0 + 0.3, (z0 + z1) / 2, 0.08, 0.05, S + h, S + h + 0.04, PAL.magenta));
+    for (const z of [z0 + 0.04, z1 - 0.08]) icube(b, [x0 + 0.04, z, x1 - 0.004, z + 0.04], y, S + h - 0.03, INK);
+    const wx = ROOM[2] - 0.006;
+    icube(b, [wx - 0.024, z0 + 0.1, wx, z1 - 0.1], S + h + 0.1, S + 1.02, BRASS);
+    icube(b, [wx - 0.03, z0 + 0.125, wx - 0.024, z1 - 0.125], S + h + 0.125, S + 0.995, WINDOW);
+    b.detail(() => {
+      drum(b, (x0 + x1) / 2 - 0.01, z0 + 0.22, 0.07, 0.045, S + h, S + h + 0.035, PAL.magenta);
+      icube(b, [x0 + 0.05, z1 - 0.32, x1 - 0.03, z1 - 0.14], S + h, S + h + 0.025, COGNAC);
+      icube(b, [x0 + 0.06, z1 - 0.3, x1 - 0.04, z1 - 0.16], S + h + 0.025, S + h + 0.045, CREAM);
+      if (!low) rod(b, V(wx - 0.032, S + h + 0.3, z1 - 0.2), V(wx - 0.032, S + h + 0.45, z1 - 0.32), 0.004, paint(PRINT_PAPER));
+    });
   } else if (kind === 'counter') {
     // The run along the back wall (docs/interior-plan.md Phase 2): walnut doors, a black marble top, the sink under the
     // window with its brass tap, a board and a bowl, the doors' brass pulls
@@ -1334,6 +1508,17 @@ function furnish(b: Batch, { kind, rect, h }: Furniture, low: boolean) {
       for (let x = x0 + 0.55; x < x1 - 0.2; x += 0.55) icube(b, [x - 0.004, z0 + 0.034, x + 0.004, z0 + 0.04], S + 0.07, S + h - 0.05, WOOD_DARK);
       icube(b, [x1 - 0.7, z0 + 0.15, x1 - 0.35, z1 - 0.12], S + h, S + h + 0.015, WOOD);
       drum(b, x0 + 0.45, z0 + 0.32, 0.1, 0.07, S + h, S + h + 0.05, CREAM, low ? 8 : 12);
+    });
+    // The splashback (docs/house-plan.md Phase 5): the black marble up the back wall from the worktop, a strip under
+    // the window and a panel past it to the run's end, pale veins across it
+    const bz = ROOM[3] - 0.006;
+    const wa = ROOM_WINDOWS[2].x0 - 0.04;
+    const wb = ROOM_WINDOWS[2].x1 + 0.04;
+    icube(b, [x0, bz - 0.014, x1, bz], S + h, S + 0.555, MARBLE);
+    if (wa > x0 + 0.02) icube(b, [x0, bz - 0.014, wa, bz], S + h, S + 0.98, MARBLE);
+    if (wb < x1 - 0.02) icube(b, [wb + 0.006, bz - 0.014, x1, bz], S + h, S + 0.98, MARBLE);
+    b.detail(() => {
+      if (!low && wb < x1 - 0.1) for (const [a, c, ya, yc] of [[0.1, 0.8, 0.6, 0.9], [0.3, 0.9, 0.75, 0.62]]) rod(b, V(wb + a * (x1 - wb), S + ya, bz - 0.016), V(wb + c * (x1 - wb), S + yc, bz - 0.016), 0.003, paint(VEIN));
     });
   } else if (kind === 'oven' || kind === 'fridge') {
     // The tall walnut units at the run's ends: the oven's (two ovens stacked, their black glass doors with brass
@@ -1365,6 +1550,9 @@ function furnish(b: Batch, { kind, rect, h }: Furniture, low: boolean) {
     icube(b, [hx - 0.33, z0 + 0.24, hx + 0.33, z1 + 0.03], S + 0.9, S + 0.92, BRASS);
     icube(b, [hx - 0.08, mz - 0.04, hx + 0.08, mz + 0.12], S + 1.0, S + CEIL - 0.006, INK);
     b.detail(() => {
+      // (its drawers on the kitchen side, their brass pulls: docs/house-plan.md Phase 5)
+      for (let x = x0 + 0.1 + 0.5; x < x1 - 0.2; x += 0.5) icube(b, [x - 0.004, z1, x + 0.004, z1 + 0.006], y + 0.06, S + h - 0.06, WOOD_DARK);
+      if (!low) for (let x = x0 + 0.35; x < x1 - 0.2; x += 0.5) icube(b, [x - 0.06, z1, x + 0.06, z1 + 0.012], S + h - 0.12, S + h - 0.11, BRASS);
       for (const [dx, dz] of [[-0.15, 0.12], [0.15, 0.12], [-0.15, 0.34], [0.15, 0.34]]) b.add(new THREE.TorusGeometry(0.06, 0.008, 4, 10).rotateX(Math.PI / 2).translate(hx + dx, S + h + 0.008, z0 + 0.3 + dz), paint('#3a3942'));
       b.add(new THREE.BoxGeometry(x1 - x0 - 0.3, 0.012, 0.012).translate(mx, S + h - 0.062, z0 + 0.175), BACKLIGHT);
       drum(b, x0 + 0.4, mz, 0.1, 0.06, S + h, S + h + 0.06, CREAM);
@@ -1647,6 +1835,16 @@ function stair(b: Batch, low: boolean) {
     }
   });
   if (!low) b.detail(() => xBand(b, a[2] - E - 0.006, a[3], a[1], S + 0.01, S + H - 0.06, S + 0.012, S + H - 0.058, BRASS));
+  // The stair's lights (docs/house-plan.md Phase 5): a small warm one in the east wall by each tread of the first
+  // flight, over its stringer, and one by the half landing; small, under the bloom's threshold but for their cores
+  b.detail(() => {
+    const lx = ROOM[2] - 0.006 - 0.004;
+    for (let k = 1; k < n; k++) {
+      const zc = a[3] - (k - 0.5) * t;
+      b.add(new THREE.BoxGeometry(0.008, 0.016, 0.06).translate(lx, lineA(zc) + STRING_UP + 0.05, zc), glow(PAL.warm));
+    }
+    b.add(new THREE.BoxGeometry(0.008, 0.016, 0.06).translate(lx, S + H + STRING_UP + 0.05, (half[1] + half[3]) / 2), glow(PAL.warm));
+  });
 }
 
 /**
