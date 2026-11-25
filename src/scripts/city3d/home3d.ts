@@ -15,9 +15,10 @@
  *   east wall up under the ceiling (the car and the bike stand inside: garage.ts's home stands), a concrete lintel
  *   over each, the fascia over them with a downlight over each door; inside a strip light, a workbench, shelves, a
  *   pegboard and tyres.
- * - **The house**: brick, its front on the yard in painted render (the one bold colour: made good, not flash), the
- *   front door under a canopy with a mat, big windows on both floors (the ground floor's tall), a side door onto the lawn; a flat roof behind
- *   a parapet with the terrace's rail, two chairs and a string of lights on it (Phase 3 climbs up to it).
+ * - **The house**: a modern villa (docs/house-plan.md Phase 4): pale render over a dark stone base, the roof's edge a
+ *   deep white band over timber soffits under a steel coping, the windows deep in white surrounds, the front door in a
+ *   stone portal under a canopy with his mark lit on it, the bedroom's glass balcony, a side door onto the lawn; a flat
+ *   roof behind the parapet with the terrace's rail, a sofa and a string of lights on it.
  * - **The workshop**: a brick lean-to against the north wall, its roller door half up, a bench and a stack of tyres
  *   seen under it.
  * - **The lawns**: a tree and a bench in the north-west corner, a washing line on the east one; a path of flags
@@ -426,7 +427,6 @@ function garage(b: Batch, low: boolean) {
  * there), its mortar lines a step lighter; the plinth darker
  */
 const LOFT_BRICK = toon('#423e4a');
-const LOFT_MORTAR = toon('#5b5664');
 const LOFT_BRICK_DARK = toon('#26232c');
 /** The soldier courses, the lintels and sills, the coping: a pale stone against the black */
 const LOFT_STONE = toon('#8a8592');
@@ -436,8 +436,34 @@ const GOLD = toon('#c9a23a');
 /** The cameras' bodies (looks only) */
 const PALE_CAM = toon('#d9d6de');
 
-/** The house's front bays: its piers' middles along x (the corners, either side of the door's bay) */
+/** The house's front bays: how wide the west and east ones are (the bedroom's over the west one) */
 const BAY = 3.05;
+
+/* ---------- The modern villa (docs/house-plan.md Phase 4, the owner's pick) ---------- */
+
+/** Pale render over a dark stone base; the shadow gap at the upper floor's line */
+const RENDER = toon('#d9d3c8');
+const RENDER_SHADOW = toon('#77726c');
+const VILLA_STONE = toon('#36333c');
+const VILLA_JOINT = toon('#24222a');
+/** The stone base's top (over the slab, to the ground floor's sills) and how far it stands proud of the render */
+const BASE_TOP = 0.25;
+const BASE_OUT = 0.03;
+/** The roof's edge: how far its white band stands out from each wall (the front deepest; the Close's side clear of the fire escape's ladder) */
+const EDGE_OUT = { n: 0.4, e: 0.2, w: 0.2, s: 0.06 };
+/** Timber soffits under the roof's edge, the canopy and the balcony */
+const SOFFIT = toon('#9a6a40');
+const SOFFIT_JOINT = toon('#6f4a2c');
+/** The windows' white surrounds: how wide their sides and how far out; their sills in a pale stone */
+const REVEAL = { side: 0.06, out: 0.12 };
+const SILL = toon('#b5afa6');
+/** The canopy over the front door: half its width, how far out */
+const CANOPY = { half: 0.85, out: 0.9 };
+/** The bedroom's balcony over the bay window: along the front (x from, to), how far out; its glass, a pale sea green with a glint */
+const BALCONY: [number, number] = [HOME.house[0] + 0.3, HOME.house[0] + BAY - 0.15];
+const BALCONY_OUT = 0.8;
+const BAL_GLASS = toon('#9fc0c8');
+const GLINT = toon('#e8f4f6');
 /**
  * The house's factory windows, each a pane of glass in its steel grid: along the front (`n`: x from a0 to a1, over the
  * slab from y0 to y1) and up the east side over the fire escape (`e`: z from a0 to a1); `houseLights()` lights them
@@ -453,7 +479,8 @@ export function houseWindows(): { face: 'n' | 'e'; a0: number; a1: number; y0: n
     { face: 'n', a0: dx + 0.5, a1: STAIR.well[0] - 0.25, y0: 0.3, y1: 1.12 },
     { face: 'n', a0: STAIR.window.x0, a1: STAIR.window.x1, y0: STAIR.window.y0, y1: STAIR.window.y1 },
     // (upstairs: three tall ones, a bay each)
-    { face: 'n', a0: x0 + 0.45, a1: x0 + BAY - 0.3, y0: 1.45, y1: 2.3 },
+    // (the bedroom's a glass door to its balcony, down to the floor: docs/house-plan.md Phase 4)
+    { face: 'n', a0: x0 + 0.45, a1: x0 + BAY - 0.3, y0: UP_Y + 0.03, y1: 2.3 },
     { face: 'n', a0: x0 + BAY + 0.3, a1: x1 - BAY - 0.3, y0: 1.45, y1: 2.3 },
     { face: 'n', a0: x1 - BAY + 0.3, a1: x1 - 0.45, y0: 1.45, y1: 2.3 },
     // (the east side, over the fire escape's landing)
@@ -490,70 +517,122 @@ function house(b: Batch, low: boolean) {
   const [x0, z0, x1, z1] = HOME.house;
   const { eaves: E, ridge: R } = HOME;
   const T = SHELL;
-  // The shell in black brick; the upper floor's slab and the roof's
-  cube(b, [x0, z0, x1, z0 + T], S, S + E, LOFT_BRICK);
-  cube(b, [x0, z1 - T, x1, z1], S, S + E, LOFT_BRICK);
-  cube(b, [x0, z0 + T, x0 + T, z1 - T], S, S + E, LOFT_BRICK);
-  cube(b, [x1 - T, z0 + T, x1, z1 - T], S, S + E, LOFT_BRICK);
+  const dx = HOME.door[0];
+  const sz = HOME.sideDoor[1];
+  // The shell in pale render (docs/house-plan.md Phase 4: the modern villa); the upper floor's slab and the roof's
+  cube(b, [x0, z0, x1, z0 + T], S, S + E, RENDER);
+  cube(b, [x0, z1 - T, x1, z1], S, S + E, RENDER);
+  cube(b, [x0, z0 + T, x0 + T, z1 - T], S, S + E, RENDER);
+  cube(b, [x1 - T, z0 + T, x1, z1 - T], S, S + E, RENDER);
   // (the upper floor's slab open over the stair's well: docs/house-plan.md Phase 2)
   for (const r of aroundWell(x0 + T, z0 + T, x1 - T, z1 - T)) cube(b, r, S + CEIL + 0.004, S + CEIL + 0.1, COPING);
   // (the roof's open over the hatch, the roof's steps up through it: docs/house-plan.md Phase 3)
   for (const r of aroundHatch(x0, z0, x1, z1)) cube(b, r, S + E, S + E + 0.06, FELT);
-  // The parapet round the roof under a stone coping; over the door's bay on the front it steps up
-  const dx = HOME.door[0];
+  // Dark stone at the base, to the ground floor's sills, a little proud of the render; open at the two doors
+  for (const [a, c] of [[x0 - BASE_OUT, dx - 0.44], [dx + 0.44, x1 + BASE_OUT]]) cube(b, [a, z0 - BASE_OUT, c, z0], S, S + BASE_TOP, VILLA_STONE);
+  for (const [a, c] of [[z0, sz - 0.34], [sz + 0.34, z1 + BASE_OUT]]) cube(b, [x1, a, x1 + BASE_OUT, c], S, S + BASE_TOP, VILLA_STONE);
+  cube(b, [x0 - BASE_OUT, z0, x0, z1 + BASE_OUT], S, S + BASE_TOP, VILLA_STONE);
+  cube(b, [x0, z1, x1, z1 + BASE_OUT], S, S + BASE_TOP, VILLA_STONE);
+  // The parapet round the roof in render; the roof's edge a deep white band standing out from the walls all round
+  // (deepest over the front: `EDGE_OUT`), timber soffits under it, a black steel coping over the band and the parapet
   for (const r of [
     [x0, z0, x1, z0 + T],
     [x0, z1 - T, x1, z1],
     [x0, z0 + T, x0 + T, z1 - T],
     [x1 - T, z0 + T, x1, z1 - T],
-  ] as Rect[]) {
-    cube(b, r, S + E + 0.06, S + R - 0.05, LOFT_BRICK);
-    cube(b, [r[0] - 0.03, r[1] - 0.03, r[2] + 0.03, r[3] + 0.03], S + R - 0.05, S + R, LOFT_STONE);
-  }
-  cube(b, [x0 + BAY, z0, x1 - BAY, z0 + T], S + R, S + R + 0.24, LOFT_BRICK);
-  cube(b, [x0 + BAY - 0.03, z0 - 0.03, x1 - BAY + 0.03, z0 + T + 0.03], S + R + 0.24, S + R + 0.29, LOFT_STONE);
-  // Piers a hair proud of the front, full height: the corners and either side of the door's bay
-  const P = 0.045;
-  for (const [a, w] of [[x0, 0.24], [x1 - 0.24, 0.24], [x0 + BAY - 0.12, 0.24], [x1 - BAY - 0.12, 0.24]] as [number, number][]) cube(b, [a, z0 - P, a + w, z0], S, S + R - 0.05, LOFT_BRICK);
-  // The soldier course between the floors, and his neon along the top under the coping (front and the Close's side)
-  cube(b, [x0 + 0.24, z0 - 0.02, x1 - 0.24, z0], S + CEIL + 0.02, S + CEIL + 0.13, LOFT_STONE);
-  cube(b, [x0 + 0.1, z0 - 0.08, x1 - 0.1, z0 - 0.044], S + R - 0.12, S + R - 0.084, HIS_NEON);
-  cube(b, [x1 + 0.044, z0 + 0.1, x1 + 0.08, z1 - 0.1], S + R - 0.12, S + R - 0.084, HIS_NEON);
-  // The door: a tall black pivot door with a gold bar, under a deep steel canopy (his neon on its lip, a downlight)
+  ] as Rect[])
+    cube(b, r, S + E + 0.06, S + R, RENDER);
+  const [ox0, oz0, ox1, oz1] = [x0 - EDGE_OUT.w, z0 - EDGE_OUT.n, x1 + EDGE_OUT.e, z1 + EDGE_OUT.s];
+  const [ey0, ey1] = [S + E - 0.12, S + R];
+  for (const r of [
+    [ox0, oz0, ox1, z0],
+    [ox0, z1, ox1, oz1],
+    [ox0, z0, x0, z1],
+    [x1, z0, ox1, z1],
+  ] as Rect[])
+    cube(b, r, ey0, ey1, RENDER);
+  for (const r of [
+    [ox0 + 0.03, oz0 + 0.03, ox1 - 0.03, z0],
+    [ox0 + 0.03, z1, ox1 - 0.03, oz1 - 0.01],
+    [ox0 + 0.03, z0, x0, z1],
+    [x1, z0, ox1 - 0.03, z1],
+  ] as Rect[])
+    cube(b, r, ey0 - 0.012, ey0, SOFFIT);
+  // (the coping: one piece a side over the band and the parapet, a lip over each edge)
+  const L = 0.015;
+  for (const r of [
+    [ox0 - L, oz0 - L, ox1 + L, z0 + T + L],
+    [ox0 - L, z1 - T - L, ox1 + L, oz1 + L],
+    [ox0 - L, z0 + T + L, x0 + T + L, z1 - T - L],
+    [x1 - T - L, z0 + T + L, ox1 + L, z1 - T - L],
+  ] as Rect[])
+    cube(b, r, ey1, ey1 + 0.03, STEEL_BLACK);
+  // His neon in a line under the soffits' outer edge, on the front and the Close's side
+  const ny = ey0 - 0.05;
+  cube(b, [ox0 + 0.1, oz0 + 0.05, ox1 - 0.1, oz0 + 0.086], ny, ny + 0.036, HIS_NEON);
+  cube(b, [ox1 - 0.086, oz0 + 0.1, ox1 - 0.05, z1 - 0.1], ny, ny + 0.036, HIS_NEON);
+  // A shadow gap in the render at the upper floor's line, on the front and the Close's side
+  cube(b, [x0, z0 - 0.012, x1, z0 - 0.006], S + 1.25, S + 1.27, RENDER_SHADOW);
+  cube(b, [x1 + 0.006, z0, x1 + 0.012, z1], S + 1.25, S + 1.27, RENDER_SHADOW);
+  // The front door: a tall black pivot door with a gold bar in a dark stone portal, under a thin white canopy out from
+  // the wall (timber under it, a downlight), his mark on a stone plaque on its lip lit in his neon, the neon either side
   const F = z0 - 0.02;
   cube(b, [dx - 0.36, F, dx + 0.36, z0 - 0.004], S, S + 1.16, STEEL_BLACK);
   cube(b, [dx + 0.2, F - 0.02, dx + 0.24, F], S + 0.3, S + 0.95, GOLD);
-  cube(b, [dx - 0.8, z0 - 0.85, dx + 0.8, z0], S + 1.22, S + 1.32, STEEL_BLACK);
-  cube(b, [dx - 0.78, z0 - 0.874, dx + 0.78, z0 - 0.85], S + 1.25, S + 1.274, HIS_NEON);
-  b.add(new THREE.SphereGeometry(0.035, 6, 4).translate(dx, S + 1.21, z0 - 0.45), glow(PAL.warm));
-  // The factory windows: slate glass in a black steel grid, a stone lintel over each and a sill under it
+  for (const [a, c] of [[dx - 0.44, dx - 0.36], [dx + 0.36, dx + 0.44]]) cube(b, [a, z0 - 0.1, c, z0], S, S + 1.2, VILLA_STONE);
+  cube(b, [dx - 0.36, z0 - 0.1, dx + 0.36, z0 - 0.004], S + 1.16, S + 1.2, VILLA_STONE);
+  const CZ = z0 - CANOPY.out;
+  cube(b, [dx - CANOPY.half, CZ, dx + CANOPY.half, z0], S + 1.22, S + 1.32, RENDER);
+  cube(b, [dx - CANOPY.half + 0.03, CZ + 0.03, dx + CANOPY.half - 0.03, z0], S + 1.208, S + 1.22, SOFFIT);
+  cube(b, [dx - 0.2, CZ - 0.02, dx + 0.2, CZ], S + 1.19, S + 1.35, VILLA_STONE);
+  mark(b, HIS_NEON, 0.12, V(dx + 0.01, S + 1.27, CZ - 0.03), V(-1, 0, 0), V(0, 1, 0), V(0, 0, -1), { tube: 0.011 });
+  for (const [a, c] of [[dx - CANOPY.half + 0.04, dx - 0.24], [dx + 0.24, dx + CANOPY.half - 0.04]]) cube(b, [a, CZ + 0.01, c, CZ + 0.034], S + 1.18, S + 1.204, HIS_NEON);
+  b.add(new THREE.SphereGeometry(0.035, 6, 4).translate(dx, S + 1.195, z0 - CANOPY.out / 2), glow(PAL.warm));
+  // The windows: slate glass in slim black steel frames, deep in a white surround standing out from the wall, a pale
+  // stone sill under each (the bedroom's a door to its balcony, below: no sill)
   for (const w of houseWindows()) {
     const n = w.face === 'n';
     const box = (a: number, c: number, out0: number, out1: number, y0: number, y1: number, m: THREE.Material) =>
       n ? cube(b, [a, z0 - out1, c, z0 - out0], y0, y1, m) : cube(b, [x1 + out0, a, x1 + out1, c], y0, y1, m);
+    const door = w.y0 < UP_Y + 0.1 && w.y0 > 1;
     box(w.a0, w.a1, 0.004, 0.02, S + w.y0, S + w.y1, LOFT_GLASS);
-    box(w.a0 - 0.06, w.a1 + 0.06, 0.004, 0.05, S + w.y1, S + w.y1 + 0.07, LOFT_STONE);
-    box(w.a0 - 0.04, w.a1 + 0.04, 0.004, 0.06, S + w.y0 - 0.05, S + w.y0, LOFT_STONE);
-    // (the grid: its frame, mullions about 0.45 apart, two transoms; phones: the frame and one transom)
+    box(w.a0 - REVEAL.side, w.a1 + REVEAL.side, 0.004, REVEAL.out, S + w.y1, S + w.y1 + 0.06, RENDER);
+    for (const [a, c] of [[w.a0 - REVEAL.side, w.a0], [w.a1, w.a1 + REVEAL.side]]) box(a, c, 0.004, REVEAL.out, S + w.y0 - (door ? 0 : 0.05), S + w.y1, RENDER);
+    if (!door) box(w.a0 - REVEAL.side - 0.03, w.a1 + REVEAL.side + 0.03, 0.004, REVEAL.out + 0.04, S + w.y0 - 0.05, S + w.y0, SILL);
+    // (the frame and its mullions about 0.9 apart; phones: the frame and the middle one)
     const fr = (a: number, c: number, y0: number, y1: number) => box(a, c, 0.004, 0.034, y0, y1, STEEL_BLACK);
     fr(w.a0 - 0.03, w.a1 + 0.03, S + w.y0, S + w.y0 + 0.03);
     fr(w.a0 - 0.03, w.a1 + 0.03, S + w.y1 - 0.03, S + w.y1);
     fr(w.a0 - 0.03, w.a0, S + w.y0, S + w.y1);
     fr(w.a1, w.a1 + 0.03, S + w.y0, S + w.y1);
     const span = w.a1 - w.a0;
-    const cols = low ? 1 : Math.max(1, Math.round(span / 0.45));
+    const cols = Math.max(low ? 2 : 1, Math.round(span / 0.9));
     for (let k = 1; k < cols; k++) {
       const a = w.a0 + (span * k) / cols;
-      fr(a - 0.012, a + 0.012, S + w.y0, S + w.y1);
+      fr(a - 0.014, a + 0.014, S + w.y0, S + w.y1);
     }
-    const rows = low ? 2 : 3;
-    for (let k = 1; k < rows; k++) {
-      const y = S + w.y0 + ((w.y1 - w.y0) * k) / rows;
-      fr(w.a0, w.a1, y - 0.012, y + 0.012);
+  }
+  // The bedroom's glass balcony over the bay below: a white slab out from the wall, timber under it, frameless glass
+  // round it in a black steel shoe under a slim steel cap (looks only: its doors are the bedroom's window)
+  {
+    const [ba0, ba1] = BALCONY;
+    const bz = z0 - BALCONY_OUT;
+    const fy = S + UP_Y;
+    cube(b, [ba0, bz, ba1, z0], fy - 0.1, fy, RENDER);
+    cube(b, [ba0 + 0.03, bz + 0.03, ba1 - 0.03, z0], fy - 0.112, fy - 0.1, SOFFIT);
+    const [g0, g1] = [fy + 0.004, fy + 0.46];
+    const glass: Rect[] = [
+      [ba0 + 0.04, bz + 0.02, ba1 - 0.04, bz + 0.04],
+      [ba0 + 0.04, bz + 0.04, ba0 + 0.06, z0 - 0.004],
+      [ba1 - 0.06, bz + 0.04, ba1 - 0.04, z0 - 0.004],
+    ];
+    for (const [a, c, d, e] of glass) {
+      cube(b, [a, c, d, e], g0, g1, BAL_GLASS);
+      cube(b, [a - 0.008, c - 0.008, d + 0.008, e + 0.008], fy, fy + 0.05, STEEL_BLACK);
+      cube(b, [a - 0.006, c - 0.006, d + 0.006, e + 0.006], g1, g1 + 0.022, STEEL_BLACK);
     }
   }
   // The side door onto the lawn
-  const sz = HOME.sideDoor[1];
   cube(b, [x1 + 0.004, sz - 0.3, x1 + 0.02, sz + 0.3], S, S + 1.08, STEEL_BLACK);
   // The fire escape up the east side, facing the gates (home.ts `FIRE_ESCAPE`): a landing at the upper floor on
   // brackets, a flight down to the ground under it, a ladder on up to the parapet; black steel
@@ -580,19 +659,65 @@ function house(b: Batch, low: boolean) {
     if (!low) for (let yy = fy + 0.12; yy < S + R + 0.25; yy += 0.12) cube(b, [fx1 - 0.06, fz0 + 0.15, fx1 - 0.03, fz0 + 0.48], yy, yy + 0.015, STEEL_BLACK);
   }
   b.detail(() => {
-    course(b, HOME.house, 0.14, LOFT_BRICK_DARK);
-    // The brick's mortar courses on the front and the Close's side (near only; phones: every other one), a hair proud
-    const step = low ? 0.3 : 0.15;
-    for (let y = S + 0.2; y < S + E; y += step) {
-      cube(b, [x0 + 0.24, z0 - 0.008, x1 - 0.24, z0 - 0.002], y, y + 0.01, LOFT_MORTAR);
-      cube(b, [x1 + 0.002, z0 + 0.05, x1 + 0.008, z1 - 0.05], y, y + 0.01, LOFT_MORTAR);
+    // The stone base's joints, a hair proud (near only; phones: the long one only): along its middle, and staggered
+    // upright ones a stone apart, on the front and the Close's side
+    const jy = S + BASE_TOP / 2;
+    const jo = BASE_OUT + 0.004;
+    cube(b, [x0 - jo, z0 - jo, dx - 0.44, z0 - BASE_OUT], jy - 0.005, jy + 0.005, VILLA_JOINT);
+    cube(b, [dx + 0.44, z0 - jo, x1 + jo, z0 - BASE_OUT], jy - 0.005, jy + 0.005, VILLA_JOINT);
+    for (const [a, c] of [[z0, sz - 0.34], [sz + 0.34, z1]]) cube(b, [x1 + BASE_OUT, a, x1 + jo, c], jy - 0.005, jy + 0.005, VILLA_JOINT);
+    if (!low) {
+      for (let x = x0 + 0.3; x < x1 - 0.1; x += 0.6)
+        for (const [xx, y0, y1] of [[x, S, jy], [x + 0.3, jy, S + BASE_TOP]])
+          if (Math.abs(xx - dx) > 0.48) cube(b, [xx - 0.005, z0 - jo, xx + 0.005, z0 - BASE_OUT], y0, y1, VILLA_JOINT);
+      for (let z = z0 + 0.3; z < z1 - 0.1; z += 0.6)
+        for (const [zz, y0, y1] of [[z, S, jy], [z + 0.3, jy, S + BASE_TOP]])
+          if (Math.abs(zz - sz) > 0.38) cube(b, [x1 + BASE_OUT, zz - 0.005, x1 + jo, zz + 0.005], y0, y1, VILLA_JOINT);
     }
-    // A mat at the front door, the canopy's two brackets, a wall light either side of the door
+    // The soffits' boards (near only, not on phones): the timber's joints across the front's and the canopy's
+    if (!low) {
+      for (let x = x0 - EDGE_OUT.w + 0.25; x < x1 + EDGE_OUT.e - 0.1; x += 0.25) cube(b, [x - 0.006, z0 - EDGE_OUT.n + 0.03, x + 0.006, z0], S + E - 0.136, S + E - 0.132, SOFFIT_JOINT);
+      for (let x = dx - CANOPY.half + 0.2; x < dx + CANOPY.half - 0.1; x += 0.2) cube(b, [x - 0.006, z0 - CANOPY.out + 0.03, x + 0.006, z0], S + 1.204, S + 1.208, SOFFIT_JOINT);
+    }
+    // A mat at the front door
     flat(b, [dx - 0.3, z0 - 0.52, dx + 0.3, z0 - 0.16], OVER + 0.004, MAT);
-    for (const x of [dx - 0.72, dx + 0.66]) cube(b, [x, z0 - 0.6, x + 0.06, z0 - 0.004], S + 1.12, S + 1.22, STEEL_BLACK);
-    for (const x of [dx - 0.43, dx + 0.43]) {
-      cube(b, [x - 0.03, z0 - 0.06, x + 0.03, z0 - 0.004], S + 0.9, S + 1.02, STEEL_BLACK);
-      b.add(new THREE.SphereGeometry(0.03, 6, 4).translate(x, S + 0.96, z0 - 0.08), glow(PAL.warm));
+    // The balcony: its deck in timber, two downlights under it over the bay, a glint across its glass
+    {
+      const [ba0, ba1] = BALCONY;
+      const bz = z0 - BALCONY_OUT;
+      const fy = S + UP_Y;
+      cube(b, [ba0 + 0.07, bz + 0.05, ba1 - 0.07, z0 - 0.004], fy, fy + 0.006, SOFFIT);
+      for (const x of [ba0 + (ba1 - ba0) / 3, ba0 + (2 * (ba1 - ba0)) / 3]) b.add(new THREE.SphereGeometry(0.03, 6, 4).translate(x, fy - 0.12, z0 - BALCONY_OUT / 2), glow(PAL.warm));
+      if (!low)
+        for (const [a, w] of [[0.18, 0.012], [0.3, 0.006], [0.62, 0.01]]) {
+          const x = ba0 + a * (ba1 - ba0);
+          rod(b, V(x, fy + 0.06, bz + 0.016), V(x + 0.22, fy + 0.4, bz + 0.016), w / 2, GLINT);
+        }
+    }
+    // Downpipes in black steel down the corners from under the roof's edge, a hopper at each head and a shoe at the foot
+    // (the front's two, the Close's side's back corner, the back's west corner)
+    for (const [px, pz, ox, oz] of [
+      [x0 + 0.12, z0 - 0.07, 0, -1],
+      [x1 - 0.12, z0 - 0.07, 0, -1],
+      [x1 + 0.07, z1 - 0.12, 1, 0],
+      [x0 - 0.07, z1 - 0.12, -1, 0],
+    ] as [number, number, number, number][]) {
+      const top = S + E - 0.13;
+      rod(b, V(px, S + 0.08, pz), V(px, top - 0.1, pz), 0.025, STEEL_BLACK);
+      cube(b, [px - 0.05, pz - 0.05, px + 0.05, pz + 0.05], top - 0.1, top, STEEL_BLACK);
+      rod(b, V(px, S + 0.09, pz), V(px + ox * 0.1, S + 0.03, pz + oz * 0.1), 0.025, STEEL_BLACK);
+    }
+    // Vents in the render, small steel grilles with their slats: two low on the Close's side, two high on the west
+    for (const [side, z, y] of [
+      [1, z1 - 0.7, 0.95],
+      [1, z1 - 2.6, 0.95],
+      [-1, z0 + 2.2, 2.05],
+      [-1, z0 + 4.6, 2.05],
+    ] as [number, number, number][]) {
+      const xw = side > 0 ? x1 : x0;
+      const out = (a: number, c: number): Rect => (side > 0 ? [xw + a, z - 0.1, xw + c, z + 0.1] : [xw - c, z - 0.1, xw - a, z + 0.1]);
+      cube(b, out(0.004, 0.02), S + y, S + y + 0.12, STEEL_BLACK);
+      if (!low) for (let k = 1; k <= 3; k++) cube(b, out(0.02, 0.026), S + y + k * 0.03 - 0.004, S + y + k * 0.03 + 0.004, COPING);
     }
     // The terrace: a rail on the parapet's inside (posts and a top rail; phones: the top rail only), two chairs and a
     // low table, a string of lights across it from the front to the back

@@ -56,7 +56,7 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    the first flight to the hatch (`ROOF_STEPS`), still a fade till Phase 3. `tests/home.test.ts` walks it up and down;
    the smoke run walks it up (`hometerrace`) and down (`homestairs`). The shell's floor slab is open over the well too.
    Draw calls unchanged: 313 desktop, 198 phone. Shots: `docs/house-shots/phase-2-*.webp`.
-3. **The den's and the roof's steps, walked.** *Built, waiting for the owner's sign-off.* The den's door under the
+3. **The den's and the roof's steps, walked.** *Signed off by the owner and live (2026-11-24).* The den's door under the
    second flight's high end stands open (its walnut leaf slid back into the wall, `DEN_STEPS.door`), and the den's
    steps go down under the stair as it turns (`DEN_STEPS`, `denY()` in `home.ts`): north under the second flight, the
    turn under the half landing, south under the first to the basement's floor at its foot, six risers a flight, walnut
@@ -73,10 +73,20 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    spine solid (`homeCamera()`). `home:cellar`, `home:cellarup`, `home:roof`, `home:roofdown` are gone: the house's only
    fades are its doors out. `tests/home.test.ts` walks both ways down and up; the smoke run walks them (`homeden`,
    `hometerrace`). Draw calls unchanged: 313 desktop, 198 phone. Shots: `docs/house-shots/phase-3-*.webp`.
-4. **The modern villa outside.** Dark stone at the base to the ground floor's sills, pale render over it; deep window
-   reveals with black steel frames and stone sills; timber soffits under the roof's edge and a steel coping on the
-   parapet; a glass balcony off the bedroom over the front door; downpipes, vents and a canopy over the front door;
-   his mark lit by the door (no house number: no numbers on signs). Measured on the phone tier.
+4. **The modern villa outside.** *Signed off by the owner and live (2026-11-25).* Dark stone at the base to the ground
+   floor's sills, a little proud, its joints staggered (`VILLA_STONE`, `BASE_TOP`), pale render over it (`RENDER`) with a
+   shadow gap at the upper floor's line; the loft's brick piers and the stepped parapet over the door are gone, for
+   clean lines. The roof's edge a deep white band standing out all round, deepest over the front (`EDGE_OUT`), timber
+   soffits under it with their boards, a black steel coping over it and the parapet, his neon in a line under the
+   soffits' edge. The windows deep in white surrounds standing out from the wall (`REVEAL`) with slim black steel frames
+   (mullions about 0.9 apart) and pale stone sills. The bedroom (the front's west bay upstairs: it isn't over the front
+   door) has the glass balcony: a white slab out over the bay window with timber under it and two downlights, frameless
+   glass in a steel shoe under a slim cap, a glint across it (`BALCONY`; looks only: its window is a glass door down to
+   the floor, `houseWindows()`). The front door in a dark stone portal under a thin white canopy (`CANOPY`), timber
+   under it and a downlight, his mark (the D) on a stone plaque on its lip lit in his neon, the neon either side (no
+   house number: no numbers on signs). Downpipes with hoppers and shoes at four corners, steel vents in the render. The
+   garage, workshop, gatehouse and wall keep the loft's brick. Draw calls unchanged: 313 desktop, 198 phone
+   (the phone tier). Shots: `docs/house-shots/phase-4-*.webp`.
 5. **The detail inside.** What a well-built house has: doors in frames with architraves and handles, cornices,
    skirting throughout, light switches and sockets, radiators under the windows, the kitchen's splashback and
    handles, the hall's mirror and console at the stair's foot, the stair's lights in the wall by the treads; the
