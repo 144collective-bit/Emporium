@@ -320,6 +320,18 @@ sets the order (rule 2).
 - [ ] **J3's night side: the twin towers' lawn and podium unlit** (part 2, `h-ends-air` at night): lit only along the
       streets, the lawn and podium go to a void. With J3's paths, low bollard lights along them (small and dim: the
       bloom rule), and the podium's edge lit.
+- [ ] **J10 (R3): Crestmont's Flats' two bare blocks** (the hunt, 2026-11-25, `c-flats-air` [330,80,110] to
+      [375,0,10]): two whole blocks of plain lilac paving with a couple of trees. Check first whether they're the game's
+      lots for sale (lots don't move or change price): if so, dress them as plots waiting to build (hoarding round,
+      worn gravel, a site board with no words); if not, R3.
+- [ ] **J11 (R1): a flat grid patch on Crestmont's hillside** (`c-hills-air` [300,110,-120] to [380,0,-260]): a
+      flat green grid (a vineyard?) lies square on the slope west of the hill road, its edges cut straight. Rows that
+      follow the ground's contours, posts and a wandering edge, or gone.
+- [ ] **J12 (R3): Sunridge's greens between the cul-de-sacs** (`s-air` [180,85,30] to [180,0,-80]): the greens the
+      cul-de-sacs back onto are open lawn with nothing on them; footpaths through (the "nowhere a dead end" rule:
+      each cul-de-sac's path to the next street), trees in groups, a bench.
+- [ ] **J13 (R1, small): Sunridge's back-yard patios** (`s-street` [150,4,-60] to [200,1,-75]): pale bare slabs; a
+      paving joint pattern or a darker border.
 - [x] **The hunt of Endswood, Aldwyn's Green and Lot 9, part 2** (2026-11-24, night 3 pass 2: Lot 9 by day, Endswood
       and Aldwyn's Green from the air at night; J9 and J3's night side logged; the Green reads well at night). The
       on-foot shots stood inside things (`h-highroad-foot`, `h-lot9-foot`): retaken with the next hunt here, on the
@@ -512,3 +524,8 @@ session.)
   by day, Endswood and Aldwyn's Green from the air at night: J9 (Lot 9's bare pitches and square lanes) and J3's night
   side (the towers' lawn and podium unlit) logged; the Green reads well at night. Two on-foot cameras stood inside
   things, to retake on the streets' own points. Nothing fixed. Plan only: typecheck, lint.
+- 2026-11-25, night 3 pass 3 (00:07): the hunt of Crestmont and Sunridge (the board's top Ready card). Day shots from
+  the air over the Flats, the hills and Sunridge, and over Sunridge's back yards: both well built; four finds logged
+  as J10 to J13 (the Flats' two bare blocks, a flat grid patch on the hillside, Sunridge's empty greens, its bare
+  patios). Night shots not taken (both districts' lamps were checked by their own plans). Nothing fixed. Plan only:
+  typecheck, lint.
