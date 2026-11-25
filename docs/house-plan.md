@@ -73,7 +73,7 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    spine solid (`homeCamera()`). `home:cellar`, `home:cellarup`, `home:roof`, `home:roofdown` are gone: the house's only
    fades are its doors out. `tests/home.test.ts` walks both ways down and up; the smoke run walks them (`homeden`,
    `hometerrace`). Draw calls unchanged: 313 desktop, 198 phone. Shots: `docs/house-shots/phase-3-*.webp`.
-4. **The modern villa outside.** *Built, waiting for the owner's sign-off.* Dark stone at the base to the ground
+4. **The modern villa outside.** *Signed off by the owner and live (2026-11-25).* Dark stone at the base to the ground
    floor's sills, a little proud, its joints staggered (`VILLA_STONE`, `BASE_TOP`), pale render over it (`RENDER`) with a
    shadow gap at the upper floor's line; the loft's brick piers and the stepped parapet over the door are gone, for
    clean lines. The roof's edge a deep white band standing out all round, deepest over the front (`EDGE_OUT`), timber
