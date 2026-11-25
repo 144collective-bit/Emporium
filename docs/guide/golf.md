@@ -97,7 +97,11 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   out as ink zig-zags across the rough; fixed in Phase 5). The
   cart paths painted in it, under what's mown. Clubhouse Drive (`driveMesh()`, `DRIVE_LIFT`, `DRIVE_LAMPS`, `LAMP_H`),
   a site a stretch; the club's edge near only (`FENCE_RUNS`, `FENCE_GAPS`, `FENCE`: a white post-and-rail fence, stone
-  pillars at the drive, posts at the footpath; `reedsOf()`), a site a tile. The lakes' water (`shoreOf()`, `golfWater()`, world.ts `waterMat`) on the main thread.
+  pillars at the drive, posts at the footpath; `reedsOf()`: the design pass's D3, two to four clumps a
+  lake, `reedClumps()` / `REED_CLUMPS`, in the shallows at the water's real edge (in from the shore where the bank stands
+  over the lake's level), each blade as much taller as the water's deep; the lily pads, `liliesOf()` / `LILIES`, a patch
+  or two a lake off its clumps, flat a hair over the water, notched, a few in flower, `COVER.lilyPad` /
+  `COVER.lilyFlower`), a site a tile. The lakes' water (`shoreOf()`, `golfWater()`, world.ts `waterMat`) on the main thread.
 - **The design map:** `npm run golfmap -- <label>` (`scripts/golfmap.mjs`) draws the course from the data (what's
   underfoot, shading, contours every tile, each hole's line and number) into `docs/golf-shots/<label>.png`. Draw one
   for each phase's sign-off.
