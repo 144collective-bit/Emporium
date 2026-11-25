@@ -281,6 +281,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   the walls, a lever on the side door. The hall's console stands at the stair's foot on the east wall now
   (`FURNITURE`), a tall brass-framed mirror over it; the counter has its black marble splashback, the island its
   drawers' brass pulls; the stair's warm lights are in the east wall by the first flight's treads (`stair()`).
+  **The garden furnished** (the owner's call, 2026-11-25) is planned in `docs/garden-plan.md`: resort luxe, the yard's
+  paving patterned with trees in planters, lit stepping-stone paths on both lawns, an outdoor kitchen on the east lawn
+  and a firepit on the north-west lawn, a phase at a time. Nothing of it is built yet.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

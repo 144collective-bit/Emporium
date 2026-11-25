@@ -1,0 +1,86 @@
+# The garden furnished: resort luxe round the house (a plan)
+
+The owner's call (2026-11-25), after the house plan (`docs/house-plan.md`) went live: "Furnish the garden", the
+compound outside the house done to the same standard as inside. Nothing is built until the owner signs off a phase;
+keep this plan up to date.
+
+What stands today (`docs/compound-plan.md`, its guide `docs/guide/endswood.md`): the plot inside its wall
+(`HOME.plot`, -244.5..-218.5 by 368..392), the yard's wide grey paving between the garage, the workshop and the house,
+the fountain and four palms on the drive (`FOUNTAIN`, `PALMS`), the lit lines along the drive's edges, nine bollards
+(`BOLLARDS`), the planters by the front door (`PLANTERS`), the pool, three loungers, an umbrella and the cabana on the
+east lawn (`POOL`, `LOUNGERS`, `CABANA`), a tree and a bench on the north-west lawn, the helipad on the garage's roof.
+All drawn by `home3d.ts` (`gardens()`, `poolside()`, `showpiece()`), the solids in `HOME_SOLIDS` (`home.ts`).
+Shots of today: the review's `garden-today` sheet (from above, the north-east, the pool lawn, the north-west lawn, the
+strip west of the house, the yard).
+
+## The owner's answers (2026-11-25)
+
+| Question | Answer |
+| --- | --- |
+| The style | Resort luxe: stone paths, clipped green, palms, warm light at night, to suit the pool, the palms and the villa |
+| What it has | Lit paths; an outdoor kitchen and a firepit |
+| The yard's grey paving | A two-tone pattern, and trees in planters along its edges; the car's way and the drive kept clear |
+| Not chosen | Planting along every wall; a gravel garden in the strip west of the house (both left as they are) |
+
+## What holds
+
+- **Nothing that exists moves**: the plot, the wall, the gates, the back gate, the garage's doors, `CAR_HOME`,
+  `BIKE_HOME`, `HOME_SPAWN`, the doors and their prompts, the pool, the loungers, the cabana, the fountain, the palms,
+  the bollards, the tree and its bench. New things fit round them, clear of the car's way from the garage to the gates
+  and of every prompt (`tests/home.test.ts`).
+- **No taller**: nothing new rises over the house's eaves; the yard's trees stay under the palms.
+- **Made-up only**: no brand on the grill or anything else, no lettering, no numbers.
+- **Minimal bloom**: the path lights are small soft caps; the firepit's glow is a small warm bed, never a lit slab.
+  **Nothing flush**: the pattern's stones sit a hair over the paving (the plot's ground is layered: paving at 6 mm,
+  its darker courses at 12, what lies on it at 24).
+- **Draw calls are the budget**: everything in the compound's existing batch, in paints it already has where it can;
+  many copies (path lights, stepping stones, the yard's planters) as one geometry each; fine detail near only; phones
+  leave out the finest. Measured before and after each phase: the draw calls where he wakes (313 desktop, 198 phone
+  today) and `?bench` (`ends-home`) on the phone tier.
+- **Motion is optional**: the fire's flicker holds a still frame under `prefers-reduced-motion`.
+
+## The design
+
+### The yard: patterned, with trees
+
+- **The pattern**: the paving laid in two tones, a border of the darker stone round the yard's edges and a band of
+  it framing the drive from the gates to the garage, wide pale panels between; his D in the paving before the garage
+  stays the one mark.
+- **Trees in planters**: four to six square black steel planters, each with a small clipped tree (a round crown, lower
+  than the palms), along the yard's edges: by the workshop's front, along the house's front either side of the
+  planters at the door, and by the garage's side. All solids (`HOME_SOLIDS`), all clear of the car's way, the
+  bollards and the doors.
+
+### The paths, lit
+
+- **Stepping stones** of pale stone set in the lawns, a hair over the grass:
+  - the north-west lawn: from the yard's edge to the bench under the tree, and on to the back gate;
+  - the east lawn: from the side door to the pool's edge, and along to the cabana and the outdoor kitchen.
+- **Path lights**: low black posts with soft warm caps beside the stepping stones (as the bollards are made, smaller),
+  lit at night, one geometry for all of them.
+
+### The outdoor kitchen and the firepit
+
+- **The outdoor kitchen** on the east lawn, along the south wall, west of the cabana (the free ground there, about
+  4.9 by 2.8): a stone counter with a black steel grill (its hood closed), a small sink, a dark worktop, three bar
+  stools on its lawn side, a pergola of black steel over it with a string of warm lights.
+- **The firepit** on the north-west lawn, in the open ground between the tree and the yard: a low round stone bowl
+  with a warm bed of embers in it (a soft glow, a slow flicker by night), a curved stone bench round half of it, two
+  low chairs on the other side; the stepping stones pass it.
+- **Looks only**: no prompt, nothing they do in the game (a later phase can add one if the owner wants).
+
+## The phases (each with the owner's sign-off)
+
+1. **The yard**: the paving's two-tone pattern and the trees in planters. `home.ts` (the planters' rects, in
+   `HOME_SOLIDS`), `home3d.ts` (`gardens()`), `tests/home.test.ts` (clear of the car's way, the gates, the bollards,
+   the doors' prompts, the spawn). Shots from above, the north-east and the yard, by day and night; draw calls and
+   `?bench` before and after.
+2. **The paths, lit**: the stepping stones on both lawns, the path lights. Tests that the stones and lights keep off
+   the pool, the loungers, the cabana and the bench, and that the way to the back gate and the side door stays clear.
+3. **The outdoor kitchen and the firepit**: the counter, grill, sink, stools and pergola on the east lawn; the
+   firepit, its bench and chairs on the north-west lawn; their solids; the fire's glow and flicker (still under reduced
+   motion). Walked with the smoke test's home scenes.
+4. **Review**: the full set of shots by day and night, on a phone too, `?fps` and `?bench` on the phone tier, the
+   guide (`docs/guide/endswood.md`) brought up to date.
+
+Each with the owner's sign-off.
