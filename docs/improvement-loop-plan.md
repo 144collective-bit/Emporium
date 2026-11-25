@@ -545,3 +545,9 @@ session.)
   the air over both and from first-floor height in each: downtown's plaza and streets read well; four finds logged as
   J14 to J17 (the big dark hall by the river, the riverside parks' bare lawns and a bare slab on the plaza, empty lots
   city-wide with J10, the elevated railway's underside). Nothing fixed. Plan only: typecheck, lint.
+- 2026-11-25, night 3 pass 5 (02:07): the hunt of Uptown, Westlake and the civic quarter (the board's top Ready card).
+  Day shots: Uptown from the air ([-60,110,110] to [-120,0,30]), Westlake Park from the air ([-60,90,-20] to
+  [-120,0,-90]), City Hall's portico close up ([-140,5,-20] to [-140,4,-45]). All three read finished (the towers and
+  plaza, the formal gardens, bandstand, lake and boathouse, the portico's columns, banners and lettering): no jobs
+  logged. Uptown's street-level camera ([-50,6,30]) stood inside a raised walkway; retaken with the next hunt here.
+  Nothing fixed. Plan only: typecheck, lint.
