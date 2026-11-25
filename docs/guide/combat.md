@@ -297,7 +297,7 @@ keep it up to date when what it describes changes.
   boxes, hover ring, lamps and pool of light stay at the boot in index.ts
   (crestspots.ts `spot()`); `setLive()` brightens the lights for a fight,
   through `FIGHT_VIEW` in fightsite.ts, which holds the state till the
-  drawing comes and hangs its `apply`); its footprints are `FIGHTCLUB_SITE` in
+  drawing comes and hangs its `apply`; its footprints are `FIGHTCLUB_SITE` in
   `solids.ts`, and it's a place: spot `fightclub`, pin, directory entry
   and a City-view panel with your record and **Walk in**). `fight-types.ts`
   holds the parts' interfaces. `fight-ui.ts` (markup `data-fight`,
