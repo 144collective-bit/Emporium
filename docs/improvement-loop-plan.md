@@ -485,6 +485,19 @@ session.)
   constant: I ran plain `tsc`, not `npm run typecheck`, which adds `--noUnusedLocals`. Another
   session fixed it at 21:14; the kart passes run `npm run typecheck` from now on.)
 
+- **The box grid's driving check, and J3 (2026-11-25, night 4 pass 2).** The check
+  (`tests/boxgrid.test.ts`, "driving: a car only given the boxes near it...") starts each car "outside every
+  building, as in the city", but checks only the city's solids: not the lake, the river or the Docks' basin, which
+  the step adds itself. J3's new solids shift its seeded starts so one lands in Westlake's lake, open water at
+  (-120.4, -67.9), where no car can be; pushed out of the water there, the car crosses the lake's strips to the shore
+  60 tiles away in one step, beyond the nearby boxes' reach, so the two runs differ. The test's own premise is that
+  starts are where a car can be. Which do you want? (a) the test also keeps its starts out of the water (`inLake`,
+  `inWater`, `inBasin`; the same checks, the same rules for the step), then J3 merges; (b) the step's push-out made
+  to cope with a car started in water (a bigger change to drive-sim.ts for a case the city never makes); (c) J3 without
+  solids for its shrubs and bollards (walkable through). The loop doesn't change a test's rules without you.
+  Found on the way, its own fix (draft PR "Loop: the lake's car walls..."): since the redesign gave the lake coves,
+  each row's single strip walled the land between its arms too (249 land samples walled, 12 after, at the shore).
+
 ## The log
 
 (One line for each run: the date, the item, the pull request, the numbers.)
@@ -576,6 +589,10 @@ session.)
   1.1, a mown concrete edge, 31 low shrubs in 9 groups along the edge and at the towers' feet, 15 bollard lights along
   the paths, all solid (southyard.ts `SHRUBS`, `BOLLARDS`; tested; southblocks3d.ts draws them). After shots on foot
   and from the air read well; the bollards' heads too dim at night (to brighten). Checks: typecheck, lint, test:wide
-  (2415 pass), build, bake, budget pass; test fails one, the box grid's driving check (logged under Level 1: a latent
-  push-out bug the new solids' shifted seeded draws expose, not J3's). J3 in a draft PR until it's fixed; this plan
-  edit only merged.
+  (2415 pass), build, bake; budget: texFull 4985.1 of 4955 locally (corrected: first logged as passing before its
+  result was read; J3 adds no textures, to compare with main measured the same way); test fails one, the box grid's
+  driving check (see Waiting on the owner). J3 in a draft PR; this plan edit only merged.
+- 2026-11-25, night 4 pass 2 (23:07): the box grid's driving check (the board's top Ready card). Found: the failing
+  start is in Westlake's lake (the test checks only the city's solids, not the water walls the step adds), and on the
+  way the lake's car walls walling the land between its coves (fixed in a draft PR). Changing the test's starts needs
+  the owner: to Waiting on the owner. Only this plan edit merged.
