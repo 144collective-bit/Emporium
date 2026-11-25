@@ -268,6 +268,29 @@ test("Phase 3's drawing: the drive on the ground, its lamps beside it, the fence
   for (const p of PATHS) for (const q of p.pts) if (insetOf(...q) > 0) assert.ok(mownNear(...q, 0), `${p.id} not mown at ${q}`);
 });
 
+test("the design pass's D3: the reeds in clumps in the shallows, gaps of open bank between; lily pads on the water off them", async () => {
+  const { reedsOf, reedClumps, liliesOf, LILIES, shoreOf } = await import('../src/scripts/city3d/golf3d');
+  for (const l of LAKES) {
+    const reeds = reedsOf(l);
+    const clumps = reedClumps(l);
+    assert.ok(clumps.length >= 2 && clumps.length <= 4, `${l.name}: ${clumps.length} clumps`);
+    // (clumps, not a ring: well under half the shore has reeds by it)
+    const shore = shoreOf(l, 72);
+    const by = shore.filter(([x, z]) => reeds.some(([rx, rz]) => Math.hypot(rx - x, rz - z) < 2)).length;
+    assert.ok(by < shore.length * 0.6, `${l.name}: reeds by ${by} of ${shore.length} shore points`);
+    // (in the shallows: just inside the shore)
+    for (const [x, z] of reeds) assert.ok(lakeAt(l, x, z) > 0.85 && lakeAt(l, x, z) <= 1.001, `${l.name}: a reed out of the shallows`);
+    // (the pads on the water, clear of the shore; the same each time; a few in flower)
+    const pads = liliesOf(l);
+    assert.ok(pads.length >= LILIES.min, `${l.name}: ${pads.length} pads`);
+    for (const p of pads) assert.ok(lakeAt(l, p.x, p.z) <= LILIES.inside + 1e-9);
+    assert.deepEqual(liliesOf(l), pads);
+  }
+  const all = LAKES.flatMap((l) => liliesOf(l));
+  const flowers = all.filter((p) => p.flower).length;
+  assert.ok(flowers > 0 && flowers < all.length / 2, `${flowers} of ${all.length} pads in flower`);
+});
+
 test('Knob Hill Golf Club (Phase 4): the clubhouse on its grounds, under the Emporium, its door clear, Walk in by it, the place moved here', async () => {
   const { GOLF_CLUBHOUSE: C, GOLF_CLUBHOUSE_H, clubLevel, golfSolids, CLUB_NAME } = await import('../src/scripts/city3d/golflift');
   const { CLUB_GROUNDS, fromPaths, fromDrive } = await import('../src/scripts/city3d/golf');
