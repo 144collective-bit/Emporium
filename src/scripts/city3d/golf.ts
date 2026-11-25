@@ -88,7 +88,13 @@ export { DRIVE, DRIVE_HALF, FOOTPATH, PATH_HALF } from './golflift';
 
 /* ---------- The holes ---------- */
 
-export type Bunker = [number, number, number, number, 'f' | 'g'];
+/** A bunker in its hole's frame: along, across to the right, radii (its own along and across), what the along is from
+ * ('f' the tee, 'g' the green's middle), and how far it's turned off the line (radians; none: lying along it) */
+export type Bunker = [number, number, number, number, 'f' | 'g', number?];
+/** A shape's wobble round its ellipse (the design pass's D1, docs/golf-plan.md): terms [k, amp, phase], the edge at
+ * 1 + the sum of amp cos(k t + phase) times the ellipse's own (t the angle in its frame: 0 along it, a quarter round to
+ * the right) */
+export type Lobes = readonly (readonly [number, number, number])[];
 export interface Hole {
   n: number;
   name: string;
@@ -99,8 +105,9 @@ export interface Hole {
   fairway: { from: number; to: number; half: number } | null;
   /** How far the tee stands over the line's ground there (an elevated tee more) */
   raise: number;
-  /** The green: its radii along and across the line's last stretch */
+  /** The green: its radii along and across the line's last stretch, and its shape round them (none: an ellipse) */
   green: [number, number];
+  shape?: Lobes;
   /** Its bunkers in the hole's frame: along the line, across to the right of it, radii along and across, and what the
    * along is from: 'f' the tee (a fairway bunker), 'g' the green's middle (negative short of it, positive past it) */
   bunkers: Bunker[];
@@ -119,36 +126,43 @@ export const NATIVE = 34;
 export const PAR_LENGTH: Record<3 | 4 | 5, [number, number]> = { 3: [80, 115], 4: [145, 185], 5: [210, 260] };
 
 const fw = (from: number, toBack: number) => ({ from, to: -toBack, half: FAIRWAY_HALF });
-/** Greenside bunkers: either side of the green, a touch short (`short` back from its middle) */
-const sides = (short = 3, off = 10.5): Bunker[] => [
-  [-short, off, 4, 2.4, 'g'],
-  [-short, -off, 4, 2.4, 'g'],
-];
+/** The greens' shapes (docs/golf-plan.md, the design pass's D1: no two holes' greens alike): wider at the back
+ * (`PEAR`) or the front (`FRONT`), waisted (`PEANUT`), bitten into on one side (`KIDNEY`, `KIDNEY_L`), near round
+ * (`ROUND`), and a long one's gentle swell (`LONG`) */
+const PEAR: Lobes = [[1, 0.17, 0], [2, 0.06, 0]];
+const FRONT: Lobes = [[1, 0.16, Math.PI], [3, 0.05, 0.6]];
+const PEANUT: Lobes = [[2, 0.19, 0], [3, 0.03, 1.1]];
+const KIDNEY: Lobes = [[2, 0.12, 0], [1, -0.18, Math.PI / 2], [3, 0.05, 0]];
+const KIDNEY_L: Lobes = [[2, 0.12, 0], [1, 0.18, Math.PI / 2], [3, 0.05, 0]];
+const ROUND: Lobes = [[3, 0.07, 0.4], [4, 0.04, 1.3]];
+const LONG: Lobes = [[2, 0.07, 0], [3, 0.06, 2.1]];
 
-/** The eighteen, as laid (the plan's routing, docs/golf-plan.md; `fairway.to` negative is back from the green's middle) */
+/** The eighteen, as laid (the plan's routing, docs/golf-plan.md; `fairway.to` negative is back from the green's middle).
+ * Each green its own shape and bunkers (the design pass's D1, 2026-11-24): one to four, sized and turned for that hole,
+ * never a mirrored pair, each clear of the fringe (`BUNKER_CLEAR`) */
 export const HOLES: Hole[] = /* @__PURE__ */ (() => [
   // The front nine: the north arm, out west from the clubhouse, up the air base side, east along the wall to the
   // Knob in the corner, and home through the middle
-  { n: 1, name: 'First Light', par: 4, line: [[485, -498], [410, -490], [340, -505]], fairway: fw(38, 12), raise: 0.5, green: [7, 5.5], bunkers: [[100, 11, 5, 2.6, 'f'], ...sides()] },
-  { n: 2, name: 'Fence Line', par: 4, line: [[346, -530], [345, -610], [343, -690]], fairway: fw(40, 12), raise: 0.4, green: [7, 5.5], bunkers: [[108, -11, 5, 2.6, 'f'], [-4, 10.5, 4, 2.4, 'g']] },
-  { n: 3, name: 'Long Wall', par: 5, line: [[368, -700], [470, -706], [578, -694]], fairway: fw(42, 12), raise: 0.9, green: [7.5, 5.5], bunkers: [[112, 11, 5, 2.6, 'f'], [165, -11, 5, 2.6, 'f'], ...sides()] },
-  { n: 4, name: 'The Climb', par: 4, line: [[598, -708], [672, -702], [746, -690]], fairway: fw(38, 12), raise: 0.4, green: [7, 6], bunkers: [[-6, -10, 4.5, 2.4, 'g'], [2, 10, 4, 2.4, 'g']] },
-  { n: 5, name: 'Knob Drop', par: 3, line: [[736, -664], [698, -590]], fairway: null, raise: 0.3, green: [7.5, 6], bunkers: [...sides(2, 10.5), [11.5, 0, 3, 5, 'g']] },
-  { n: 6, name: 'Mid Run', par: 5, line: [[672, -607], [560, -612], [445, -626]], fairway: fw(42, 12), raise: 0.5, green: [7.5, 5.5], bunkers: [[115, -11, 5, 2.6, 'f'], [175, 11, 5, 2.6, 'f'], ...sides()] },
-  { n: 7, name: 'Fen Turn', par: 4, line: [[418, -578], [500, -552], [575, -552]], fairway: fw(38, 12), raise: 0.4, green: [7, 5.5], bunkers: [[95, 11, 5, 2.6, 'f'], ...sides()] },
-  { n: 8, name: 'The Pond', par: 3, line: [[595, -556], [680, -548]], fairway: null, raise: 0.4, green: [7, 6], bunkers: [[-5, 10, 4, 2.4, 'g'], [10.5, -3, 3.5, 2.2, 'g']] },
-  { n: 9, name: 'Homeward', par: 4, line: [[735, -540], [660, -505], [592, -488]], fairway: fw(38, 12), raise: 0.5, green: [7, 5.5], bunkers: [[98, -11, 5, 2.6, 'f'], ...sides()] },
+  { n: 1, name: 'First Light', par: 4, line: [[485, -498], [410, -490], [340, -505]], fairway: fw(38, 12), raise: 0.5, green: [7.5, 5.5], shape: PEAR, bunkers: [[100, 11, 5.5, 2.6, 'f', 0.15], [-8, -8.5, 4, 2.2, 'g', 0.6], [9, 6.5, 2.2, 1.9, 'g']] },
+  { n: 2, name: 'Fence Line', par: 4, line: [[346, -530], [345, -610], [343, -690]], fairway: fw(40, 12), raise: 0.4, green: [7, 5], shape: PEAR, bunkers: [[108, -11, 5, 2.6, 'f', -0.2], [-1, 9.5, 5.5, 2, 'g', 0.12]] },
+  { n: 3, name: 'Long Wall', par: 5, line: [[368, -700], [470, -706], [578, -694]], fairway: fw(42, 12), raise: 0.9, green: [8, 6], shape: KIDNEY, bunkers: [[112, 11, 5, 2.6, 'f', 0.25], [165, -11, 6, 2.4, 'f', -0.1], [-9.5, -7.5, 3.5, 2.2, 'g', 0.7], [11, 0, 2.2, 4.5, 'g']] },
+  { n: 4, name: 'The Climb', par: 4, line: [[598, -708], [672, -702], [746, -690]], fairway: fw(38, 12), raise: 0.4, green: [6.5, 6.5], shape: ROUND, bunkers: [[-7.5, 7.5, 3.5, 2.2, 'g', -0.6], [1, -10.5, 5, 2.1, 'g', 0.05]] },
+  { n: 5, name: 'Knob Drop', par: 3, line: [[736, -664], [698, -590]], fairway: null, raise: 0.3, green: [5.5, 8.5], shape: KIDNEY_L, bunkers: [[-8, -6.5, 3, 2.2, 'g', 0.8], [-8.5, 6.5, 3, 2.2, 'g', -0.8], [9.5, 0, 2.2, 5.5, 'g']] },
+  { n: 6, name: 'Mid Run', par: 5, line: [[672, -607], [560, -612], [445, -626]], fairway: fw(42, 12), raise: 0.5, green: [9, 5.5], shape: PEANUT, bunkers: [[115, -11, 5, 2.6, 'f', -0.15], [175, 11, 5.5, 2.6, 'f', 0.2], [-2, 10, 4.5, 2.2, 'g', 0.2], [-12, -5, 2.2, 1.9, 'g']] },
+  { n: 7, name: 'Fen Turn', par: 4, line: [[418, -578], [500, -552], [575, -552]], fairway: fw(38, 12), raise: 0.4, green: [7, 6], shape: FRONT, bunkers: [[95, 11, 5, 2.6, 'f', 0.1], [-9.5, 6, 4.5, 2.4, 'g', -0.6], [2, -10, 2.2, 1.9, 'g']] },
+  { n: 8, name: 'The Pond', par: 3, line: [[595, -556], [680, -548]], fairway: null, raise: 0.4, green: [6.5, 6], shape: ROUND, bunkers: [[-3, 10, 4, 2.2, 'g', -0.3], [8.5, -5.5, 3, 2, 'g', 0.6]] },
+  { n: 9, name: 'Homeward', par: 4, line: [[735, -540], [660, -505], [592, -488]], fairway: fw(38, 12), raise: 0.5, green: [7.5, 5.5], shape: FRONT, bunkers: [[98, -11, 5, 2.6, 'f', -0.2], [-1.5, -10, 4.5, 2.2, 'g', 0.1], [-10, 5, 2.2, 1.9, 'g']] },
   // The back nine: the east arm, south from the clubhouse down the hills' side, east along the bottom, north up the
   // wall's side, and home up the middle past Clubhouse Lake
-  { n: 10, name: 'Hillside', par: 4, line: [[540, -440], [545, -360], [550, -280]], fairway: fw(38, 12), raise: 0.6, green: [7, 5.5], bunkers: [[102, 11, 5, 2.6, 'f'], ...sides()] },
-  { n: 11, name: 'Heron', par: 3, line: [[548, -258], [553, -172]], fairway: null, raise: 0.4, green: [7, 5.5], bunkers: [[-4, -10, 4, 2.4, 'g'], [8.5, 7.5, 3.5, 2.2, 'g']] },
-  { n: 12, name: 'Country Mile', par: 5, line: [[545, -150], [578, -82], [720, -70]], fairway: fw(42, 12), raise: 0.5, green: [7.5, 5.5], bunkers: [[108, 11, 5, 2.6, 'f'], [160, -11, 5, 2.6, 'f'], ...sides()] },
-  { n: 13, name: 'East Wall', par: 4, line: [[750, -88], [749, -168], [748, -248]], fairway: fw(38, 12), raise: 0.5, green: [7, 5.5], bunkers: [[100, -11, 5, 2.6, 'f'], ...sides()] },
-  { n: 14, name: 'Long Watch', par: 4, line: [[746, -270], [744, -350], [742, -432]], fairway: fw(38, 12), raise: 0.4, green: [7, 5.5], bunkers: [[105, 11, 5, 2.6, 'f'], ...sides()] },
-  { n: 15, name: 'The Spine', par: 5, line: [[702, -428], [696, -320], [690, -215]], fairway: fw(42, 12), raise: 0.5, green: [7.5, 5.5], bunkers: [[110, -11, 5, 2.6, 'f'], [165, 11, 5, 2.6, 'f'], ...sides()] },
-  { n: 16, name: 'Reed Carry', par: 3, line: [[675, -192], [625, -125]], fairway: null, raise: 0.5, green: [7, 6], bunkers: [...sides(2, 10)] },
-  { n: 17, name: 'The Hollow', par: 4, line: [[602, -140], [604, -215], [606, -290]], fairway: fw(38, 12), raise: 0.4, green: [7, 5.5], bunkers: [[98, -11, 5, 2.6, 'f'], ...sides()] },
-  { n: 18, name: 'Clubhouse', par: 4, line: [[610, -310], [616, -405], [588, -455]], fairway: fw(38, 12), raise: 0.5, green: [7.5, 6], bunkers: [[-4, 10.5, 4, 2.4, 'g'], [-2, -11, 4.5, 2.4, 'g']] },
+  { n: 10, name: 'Hillside', par: 4, line: [[540, -440], [545, -360], [550, -280]], fairway: fw(38, 12), raise: 0.6, green: [9, 5], shape: LONG, bunkers: [[102, 11, 5, 2.6, 'f', 0.2], [126, -11, 3.5, 2.2, 'f', -0.4], [-9, -7, 3.2, 2, 'g', 0.7]] },
+  { n: 11, name: 'Heron', par: 3, line: [[548, -258], [553, -172]], fairway: null, raise: 0.4, green: [6.5, 5.5], shape: PEAR, bunkers: [[-4, -9.5, 4, 2.4, 'g', 0.3], [8, 7, 3.5, 2.2, 'g', -0.5]] },
+  { n: 12, name: 'Country Mile', par: 5, line: [[545, -150], [578, -82], [720, -70]], fairway: fw(42, 12), raise: 0.5, green: [9.5, 5.5], shape: PEANUT, bunkers: [[108, 11, 5, 2.6, 'f', 0.1], [160, -11, 6, 2.4, 'f', -0.2], [-11, 6, 3, 2, 'g', -0.6], [8.5, -7, 3, 2, 'g', 0.5]] },
+  { n: 13, name: 'East Wall', par: 4, line: [[750, -88], [749, -168], [748, -248]], fairway: fw(38, 12), raise: 0.5, green: [6.5, 6.2], shape: ROUND, bunkers: [[100, -11, 5, 2.6, 'f', -0.15], [0, 10, 4, 2.2, 'g'], [-8.5, -5.5, 2.2, 1.9, 'g']] },
+  { n: 14, name: 'Long Watch', par: 4, line: [[746, -270], [744, -350], [742, -432]], fairway: fw(38, 12), raise: 0.4, green: [8, 5.5], shape: KIDNEY, bunkers: [[105, 11, 5, 2.6, 'f', 0.2], [11, 0, 2, 4.5, 'g'], [-3.5, -9.5, 3.5, 2, 'g', 0.3]] },
+  { n: 15, name: 'The Spine', par: 5, line: [[702, -428], [696, -320], [690, -215]], fairway: fw(42, 12), raise: 0.5, green: [8, 6], shape: PEAR, bunkers: [[110, -11, 5, 2.6, 'f', -0.1], [165, 11, 5.5, 2.6, 'f', 0.25], [-9.5, -6, 3.5, 2.2, 'g', 0.6], [1, 10, 4, 2.2, 'g', -0.2]] },
+  { n: 16, name: 'Reed Carry', par: 3, line: [[675, -192], [625, -125]], fairway: null, raise: 0.5, green: [5.5, 8], shape: FRONT, bunkers: [[-8.5, 0, 2, 6, 'g'], [6, -9, 2.2, 1.9, 'g']] },
+  { n: 17, name: 'The Hollow', par: 4, line: [[602, -140], [604, -215], [606, -290]], fairway: fw(38, 12), raise: 0.4, green: [7.5, 5.2], shape: LONG, bunkers: [[98, -11, 5, 2.6, 'f', -0.25], [-2, 8, 4.5, 2, 'g', 0.1], [-11, -4.5, 2.2, 1.9, 'g']] },
+  { n: 18, name: 'Clubhouse', par: 4, line: [[610, -310], [616, -405], [588, -455]], fairway: fw(38, 12), raise: 0.5, green: [8, 6.5], shape: KIDNEY_L, bunkers: [[-4, -11, 4.5, 2.4, 'g', 0.2], [-9.5, 7, 3, 2, 'g', -0.6]] },
 ] as Hole[])();
 
 /* ---------- A hole's frame ---------- */
@@ -232,15 +246,95 @@ export function ellipseAt(c: Pt, dir: Pt, r: Pt, x: number, z: number) {
   const v = (-dx * dir[1] + dz * dir[0]) / r[1];
   return Math.hypot(u, v);
 }
-/** Where a point falls on a hole's green (its ellipse: 0 middle, 1 edge) */
+/** A shape's edge at angle t in its frame (1 on its ellipse; see `Lobes`) */
+export function lobeAt(lobes: Lobes | undefined, t: number) {
+  let f = 1;
+  if (lobes) for (const [k, a, p] of lobes) f += a * Math.cos(k * t + p);
+  return f;
+}
+/** Where a point falls in a shape: an ellipse turned along `dir` with radii (along, across), wobbled by `lobes` (0 at
+ * its middle, 1 on its edge) */
+export function shapeAt(c: Pt, dir: Pt, r: Pt, lobes: Lobes | undefined, x: number, z: number) {
+  const [dx, dz] = [x - c[0], z - c[1]];
+  const u = (dx * dir[0] + dz * dir[1]) / r[0];
+  const v = (-dx * dir[1] + dz * dir[0]) / r[1];
+  const d = Math.hypot(u, v);
+  return lobes ? d / lobeAt(lobes, Math.atan2(v, u)) : d;
+}
+/** A shape's outline, `n` points round, `pad` (tiles) past its edge as `shapeAt()` reads it (1 + pad over its smaller
+ * radius: the fringe round a green, the lip round a bunker) */
+export function shapeOutline(c: Pt, dir: Pt, r: Pt, lobes: Lobes | undefined, pad = 0, n = 64): Pt[] {
+  const out: Pt[] = [];
+  const k = 1 + pad / Math.min(r[0], r[1]);
+  for (let i = 0; i < n; i++) {
+    const t = (i / n) * Math.PI * 2;
+    const f = lobeAt(lobes, t) * k;
+    const [u, v] = [Math.cos(t) * r[0] * f, Math.sin(t) * r[1] * f];
+    out.push([c[0] + dir[0] * u - dir[1] * v, c[1] + dir[1] * u + dir[0] * v]);
+  }
+  return out;
+}
+/** Where a point falls on a hole's green (its shape: 0 middle, 1 edge; the fringe to 1 + FRINGE over its smaller
+ * radius) */
 export function onGreen(h: Hole, x: number, z: number) {
   const g = greenOf(h);
-  return ellipseAt(g.at, g.dir, h.green, x, z);
+  return shapeAt(g.at, g.dir, h.green, h.shape, x, z);
 }
-/** Each bunker of a hole in the world: its middle, the way it lies, its radii */
-export function bunkersOf(h: Hole): { at: Pt; dir: Pt; r: Pt }[] {
-  return h.bunkers.map(([s, o, ra, rc, k]) => ({ at: framePt(h, s, o, k === 'g'), dir: along(h, s, k === 'g').dir, r: [ra, rc] as Pt }));
+/** A hole's green's outline (`pad` past its edge: FRINGE for the fringe's) */
+export function greenOutline(h: Hole, pad = 0, n = 64) {
+  const g = greenOf(h);
+  return shapeOutline(g.at, g.dir, h.green, h.shape, pad, n);
 }
+/** A bunker's own wobble: seeded by its hole and place, no two alike */
+function bunkerLobes(n: number, i: number): Lobes {
+  const r = (k: number) => hash(n * 131 + i * 17 + k * 7);
+  return [
+    [2, 0.04 + 0.06 * r(1), r(2) * Math.PI * 2],
+    [3, 0.03 + 0.05 * r(3), r(4) * Math.PI * 2],
+  ];
+}
+/** A bunker in the world: its middle, the way it lies, its radii, its wobble */
+export interface BunkerShape {
+  at: Pt;
+  dir: Pt;
+  r: Pt;
+  lobes: Lobes;
+}
+/** How far a bunker's lip is clear of its green's fringe (tiles, negative over it) */
+function fringeGap(h: Hole, b: BunkerShape) {
+  const m = Math.min(...h.green);
+  let gap = Infinity;
+  for (const p of shapeOutline(b.at, b.dir, b.r, b.lobes, LIP, 32)) gap = Math.min(gap, (onGreen(h, ...p) - (1 + FRINGE / m)) * m);
+  return gap;
+}
+const BUNKERS = new Map<Hole, BunkerShape[]>();
+/** Each bunker of a hole in the world: placed by its hole's frame, then a green's bunker pushed straight out from the
+ * green's middle till its lip keeps `BUNKER_CLEAR` off the fringe (each green's shape moves its edge) */
+export function bunkersOf(h: Hole): BunkerShape[] {
+  let out = BUNKERS.get(h);
+  if (out) return out;
+  out = h.bunkers.map(([s, o, ra, rc, k, turn = 0], i) => {
+    const d = along(h, s, k === 'g').dir;
+    const [c, sn] = [Math.cos(turn), Math.sin(turn)];
+    // (turned toward the right as positive: the frame's right is (-dz, dx))
+    const b: BunkerShape = { at: framePt(h, s, o, k === 'g'), dir: [d[0] * c - d[1] * sn, d[1] * c + d[0] * sn], r: [ra, rc], lobes: bunkerLobes(h.n, i) };
+    if (k === 'g') {
+      const g = greenOf(h).at;
+      const l = Math.hypot(b.at[0] - g[0], b.at[1] - g[1]) || 1;
+      const [ux, uz] = [(b.at[0] - g[0]) / l, (b.at[1] - g[1]) / l];
+      for (let n = 0; n < 80 && fringeGap(h, b) < BUNKER_CLEAR; n++) b.at = [b.at[0] + ux * 0.2, b.at[1] + uz * 0.2];
+    }
+    return b;
+  });
+  BUNKERS.set(h, out);
+  return out;
+}
+/** Where a point falls in a bunker (0 middle, 1 edge) */
+export const bunkerAt = (b: BunkerShape, x: number, z: number) => shapeAt(b.at, b.dir, b.r, b.lobes, x, z);
+/** The least a bunker's lip keeps clear of its green's fringe (tiles: so the turf's paint never bridges the two), and
+ * the lip's width round its sand */
+export const BUNKER_CLEAR = 1.2;
+export const LIP = 0.35;
 /** Whether x, z is on a hole's tee (its box along the tee's way) */
 export function onTee(h: Hole, x: number, z: number) {
   const t = teeOf(h);
@@ -308,7 +402,7 @@ function holeSurface(x: number, z: number): Surface | null {
     if (!inBox(BOXES[i], x, z)) continue;
     const n = nearestOn(h, x, z);
     near = Math.min(near, n.d);
-    for (const b of bunkersOf(h)) if (ellipseAt(b.at, b.dir, b.r, x, z) <= 1 && better('bunker')) best = 'bunker';
+    for (const b of bunkersOf(h)) if (bunkerAt(b, x, z) <= 1 && better('bunker')) best = 'bunker';
     const g = onGreen(h, x, z);
     if (g <= 1 && better('green')) best = 'green';
     else if (g <= 1 + FRINGE / Math.min(...h.green) && better('fringe')) best = 'fringe';

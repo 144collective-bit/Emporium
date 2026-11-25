@@ -68,6 +68,8 @@ export const COVER = {
   /** A bunker's sand, and its lip */
   sand: '#e3cf94',
   sandLip: '#c9b277',
+  /** The ink line round a green's fringe and a bunker's lip (golf3d.ts `edgeInk()`, the design pass's D1) */
+  courseInk: '#10201a',
 } as const;
 export type Cover = keyof typeof COVER;
 

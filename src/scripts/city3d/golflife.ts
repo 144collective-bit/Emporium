@@ -15,7 +15,7 @@
  *   down the 10th's fairway in its stripes (`MOW_LOOP`, `mowerAt()`), ducks paddling slow rounds on the lakes
  *   (`DUCKS`, `duckAt()`).
  */
-import { HOLES, LAKES, PATHS, TEE, arcOf, bunkersOf, fairwayHalf, framePt, fromPaths, greenOf, inLake, nearestOn, onGreen, onTee, surfaceAt, teeOf, type Hole, type Pt, type Surface } from './golf';
+import { HOLES, LAKES, LIP, PATHS, TEE, arcOf, bunkersOf, lobeAt, fairwayHalf, framePt, fromPaths, greenOf, inLake, nearestOn, onGreen, onTee, surfaceAt, teeOf, type Hole, type Pt, type Surface } from './golf';
 
 /* ---------- What stands on the course ---------- */
 
@@ -92,7 +92,10 @@ function furnish(h: Hole): HoleFurniture {
   const rakes = bunkersOf(h).map((b) => {
     // (on the bunker's edge across its lie, the side further from the hole's line, a little out on the grass)
     const n: Pt = [-b.dir[1], b.dir[0]];
-    const out = (s: number): Pt => [b.at[0] + n[0] * s * (b.r[1] + 0.35), b.at[1] + n[1] * s * (b.r[1] + 0.35)];
+    const out = (s: number): Pt => {
+      const r = b.r[1] * lobeAt(b.lobes, (s * Math.PI) / 2) + LIP;
+      return [b.at[0] + n[0] * s * r, b.at[1] + n[1] * s * r];
+    };
     const s = nearestOn(h, ...out(1)).d >= nearestOn(h, ...out(-1)).d ? 1 : -1;
     return { at: out(s), ry: facing(b.dir[0], b.dir[1]) };
   });

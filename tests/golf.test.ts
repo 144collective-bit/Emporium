@@ -4,6 +4,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  BUNKER_CLEAR,
+  LIP,
+  lobeAt,
+  shapeOutline,
+  PATH_HALF,
+  fromPaths,
   CLUB_CENTRE,
   CLUB_GROUNDS,
   COURSE,
@@ -177,8 +183,8 @@ test("what's underfoot: tees, greens, fringes, fairways, bunkers, the water, the
     assert.equal(surfaceAt(...h.line[0]), 'tee', `hole ${h.n}'s tee`);
     assert.equal(surfaceAt(...h.line.at(-1)!), 'green', `hole ${h.n}'s green`);
     const g = greenOf(h);
-    // (just past the green's edge, short of it: its fringe)
-    const r = h.green[0] + FRINGE / 2;
+    // (just past the green's edge, short of it: its fringe, its shape's own there)
+    const r = h.green[0] * lobeAt(h.shape, Math.PI) * (1 + FRINGE / (2 * Math.min(...h.green)));
     const p: Pt = [g.at[0] - g.dir[0] * r, g.at[1] - g.dir[1] * r];
     assert.ok(['fringe', 'bunker'].includes(surfaceAt(...p)!), `hole ${h.n}'s fringe is ${surfaceAt(...p)}`);
     for (const b of bunkersOf(h)) assert.equal(surfaceAt(...b.at), 'bunker', `hole ${h.n}'s bunker`);
@@ -197,7 +203,7 @@ test("what's underfoot: tees, greens, fringes, fairways, bunkers, the water, the
 });
 
 test('the cart paths: beside every hole, green to next tee, never over play or water, on the club\'s land', async () => {
-  const { PATHS, PATH_HALF, fromPaths } = await import('../src/scripts/city3d/golf');
+  const { PATHS } = await import('../src/scripts/city3d/golf');
   for (const h of HOLES) assert.ok(PATHS.some((p) => p.id === `hole-${h.n}`), `hole ${h.n}'s path`);
   for (let n = 1; n < 18; n++) if (n !== 9) assert.ok(PATHS.some((p) => p.id === `hole-${n}-${n + 1}`), `from ${n} to ${n + 1}`);
   for (const id of ['grounds-1', '9-grounds', 'grounds-10', '18-grounds', 'footpath']) assert.ok(PATHS.some((p) => p.id === id), id);
@@ -253,5 +259,34 @@ test('the drive: off the country road, along the hills\' foot, over the club\'s 
     let turn = Math.abs(Math.atan2(r[1] - q[1], r[0] - q[0]) - Math.atan2(q[1] - p[1], q[0] - p[0]));
     if (turn > Math.PI) turn = 2 * Math.PI - turn;
     assert.ok(turn < 0.25, `the drive kinks ${turn.toFixed(2)} at ${q}`);
+  }
+});
+
+test("the design pass's D1: each green its own shape and bunkers, every bunker clear of its fringe", () => {
+  const seen = new Set<string>();
+  for (const h of HOLES) {
+    // (no two greens alike: their size and shape together)
+    const key = `${h.green.join(',')} ${JSON.stringify(h.shape ?? null)}`;
+    assert.ok(!seen.has(key), `hole ${h.n}'s green is another's`);
+    seen.add(key);
+    const bs = bunkersOf(h);
+    const greenside = h.bunkers.filter((b) => b[4] === 'g');
+    assert.ok(greenside.length >= 1 && greenside.length <= 3, `hole ${h.n} has ${greenside.length} bunkers by its green`);
+    // (never a mirrored pair: two greenside bunkers the same size the same way short of the green, either side)
+    for (const a of greenside)
+      for (const b of greenside)
+        if (a !== b) assert.ok(!(a[0] === b[0] && a[1] === -b[1] && a[2] === b[2] && a[3] === b[3]), `hole ${h.n}'s bunkers a mirrored pair`);
+    const m = Math.min(...h.green);
+    bs.forEach((b, i) => {
+      const lip = shapeOutline(b.at, b.dir, b.r, b.lobes, LIP, 48);
+      // (its lip clear of its green's fringe: the turf's paint never bridges them)
+      const gap = Math.min(...lip.map((p) => (onGreen(h, ...p) - (1 + FRINGE / m)) * m));
+      assert.ok(gap >= BUNKER_CLEAR - 0.05, `hole ${h.n}'s bunker ${i} ${gap.toFixed(2)} off its fringe`);
+      // (and off the cart paths and out of the water)
+      for (const p of lip) {
+        assert.ok(fromPaths(...p) >= PATH_HALF + 0.5, `hole ${h.n}'s bunker ${i} on a path`);
+        assert.ok(!inLake(...p), `hole ${h.n}'s bunker ${i} in the water`);
+      }
+    });
   }
 });

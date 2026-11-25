@@ -284,6 +284,52 @@ paints the level pill at once; the kart park's and the metro's drawing, which th
 - Play a hole, nine or eighteen; rewards Dorras and XP only. Its save (`degen-city-golf-v1`) with its migration and its
   key in `BACKUP_KEYS`; in through `live.closed()`; touch controls.
 
+### The design pass (the owner's call, 2026-11-24: "do a design pass across the golf course"; D1 first, go 2026-11-24; the lakes stay where they are; D1 signed off 2026-11-24, D2 next, go 2026-11-24)
+
+The survey (2026-11-24): every hole from behind its tee and from short of its green, the lakes, the clubhouse, on the
+desktop by day (`docs/golf-shots/design-0-*.webp`: `greens-a` holes 1 to 6's greens, `greens-b` 7 to 12's, `tees-a`
+1 to 6 from the tee, `east` 13 to 18, `wide` the course from above, the clubhouse and four lakes). What it shows:
+
+1. **Every green alike**: the same oval, a matching pair of bunkers either side a touch short (golf.ts `sides()`), the
+   fairway ending the same way into it. Nothing tells one hole from the next close up.
+2. **Soft edges, no ink**: green, fringe, fairway, cut and bunker fade into each other (the turf texture's blur), where
+   the rest of the city is flat colour inside a black line; a few bunkers smear into the fringe (holes 8, 10, 11).
+3. **Flat rough and thin woods**: wide plain dark green; the trees small, single and evenly spread, few clumps; the
+   east arm's six holes side by side with almost nothing between them.
+4. **The wall looms**: on 2 to 5 and 13 to 15 the world's wall fills the sky over the north and east fences with
+   nothing in front of it.
+5. **Reeds in a ring**: each lake's reeds stand evenly round its whole shore, reading as a fence of black sticks.
+6. **Water mostly out of play**: only the Pond (8) crosses a hole; Reed Carry (16) doesn't carry over Reed Water.
+7. **Small things**: stray thin ink arcs across the turf by greens 9, 11 and 12; the cart paths a cold lilac, cutting
+   straight past the tees; the tees plain square slabs.
+
+Proposed, a phase at a time with the owner's sign-off (each keeps the game's tests and lies right, the draw budget, the
+phone tier and the boot):
+
+- **D1, the greens and bunkers**: each green its own shape (round, pear, kidney, long and narrow, tiered by the
+  ground), each hole its own bunkers (one to four, sized and placed for that hole, no mirrored pairs; a few fairway
+  bunkers where the drive lands; a waste bunker on a par 5), crisp turf edges with an ink line round greens and
+  bunkers, the smears and stray arcs fixed.
+  **Built and signed off (2026-11-24, the owner).** Seven green shapes (`Lobes` in golf.ts: pear, front-heavy,
+  peanut, kidney either way, round, long), no two greens alike in size and shape; every hole's bunkers placed by
+  hand (two to four, fairway bunkers where the drive lands on most par 4s and 5s, each with its own seeded outline and
+  turn), greenside ones pushed out to `BUNKER_CLEAR` from the fringe, which ends the smears; an ink line round every
+  green and bunker (`INK_LOOPS`, ribbons on the turf, near only, in the turf's batch: no new draw calls); the stray
+  arcs gone with the old matching pairs. The ground holds each green to its plane over its new shape; the rakes sit
+  by the new lips. Greens fitted to their ground after the reshaping: 2 and 17 smaller, 9 front-heavy (it reached the
+  clubhouse's level grounds). The waste bunker on a par 5 isn't built yet. Checks: `npm test` and `npm run test:wide` (2388 each), typecheck,
+  lint, the budget (boot 769.8 of 775 KB); the shots `docs/golf-shots/design-d1-greens.webp` (desktop, holes 1, 3, 5,
+  6, 8, 12, 16 and 18) and `docs/blend-shots/golf-d1-low/` (the phone tier, 6 and 16); the map
+  `docs/golf-shots/design-d1.png`. `?bench` headless closed the browser here (as before D1), so no draw table; the
+  ink adds none.
+- **D2, the woods and the rough**: clumps of trees between the holes (the east arm most), a deep belt of tall pines
+  along the north and east fences to hide the wall's foot, the rough in two tones (a longer band and the native
+  beyond), wildflower patches in the native.
+- **D3, the water**: reeds in clumps on the shallow shores, lily pads; Reed Water and Clubhouse Lake brought into play
+  (a carry on 16, the 18th's green over its edge) where the owner wants it.
+- **D4, the paths and tees**: the cart paths a warm gravel from the palette, bent round the tees rather than past them;
+  tees with rounded corners, a darker cut edge and the tee's markers clear.
+
 ## Open questions (for the owner, later)
 
 - How long the golf game's rounds should be on a phone (a hole, nine, or eighteen).

@@ -4,7 +4,7 @@
 // in their basins under their shores, the clubhouse's grounds level.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { CLUB_GROUNDS, COURSE, COURSE_RECT, HOLES, LAKES, TEE, along, bunkersOf, fairwayEnd, fairwayHalf, greenOf, inCourse, lakeAt, lengthOf, teeOf, type Pt } from '../src/scripts/city3d/golf';
+import { CLUB_GROUNDS, COURSE, COURSE_RECT, HOLES, LAKES, TEE, along, bunkersOf, fairwayEnd, fairwayHalf, greenOf, inCourse, lakeAt, lengthOf, lobeAt, teeOf, type Pt } from '../src/scripts/city3d/golf';
 import { BUNKER_DEPTH, FEATURES, GREEN_TILT, SHORE_OVER, golfHeightAt, greenLevel, groundsLevel, lakeWater, teeLevel } from '../src/scripts/city3d/golfground';
 
 const H = golfHeightAt;
@@ -60,7 +60,8 @@ test('the tees level, the greens a plane tilted gently up to the back', () => {
     for (let a = 0; a < 16; a++)
       for (const r of [0, 0.4, 0.8, 1]) {
         const [c, s] = [Math.cos((a / 16) * Math.PI * 2), Math.sin((a / 16) * Math.PI * 2)];
-        const [u, v] = [c * h.green[0] * r, s * h.green[1] * r];
+        const f = lobeAt(h.shape, (a / 16) * Math.PI * 2);
+        const [u, v] = [c * h.green[0] * r * f, s * h.green[1] * r * f];
         const [x, z] = [g.at[0] + g.dir[0] * u - g.dir[1] * v, g.at[1] + g.dir[1] * u + g.dir[0] * v];
         assert.ok(Math.abs(H(x, z) - (greenLevel(h) + GREEN_TILT * u)) < 0.02, `hole ${h.n}'s green off its plane at ${x.toFixed(1)}, ${z.toFixed(1)}`);
       }

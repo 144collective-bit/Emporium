@@ -19,12 +19,18 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
     `COURSE_RECT`, `inCourse()`, `insetOf()` (how far inside the edge; negative outside).
   - `HOLES`: eighteen, par 72 (four par 3s, ten par 4s, four par 5s, `PAR_LENGTH`: about half real length), each its
     `line` (tee, turns, green's middle), `fairway` (`from` the tee, `to` back from the green, `half`; none on a par 3),
-    `raise` (the tee over its ground), `green` (radii along and across its last stretch), `bunkers` (`Bunker`: along,
-    across to the right, radii, and `'f'` from the tee or `'g'` from the green's middle). The front nine loop the north
+    `raise` (the tee over its ground), `green` (radii along and across its last stretch), `shape` (the green's
+    `Lobes`: `PEAR`, `FRONT`, `PEANUT`, `KIDNEY` / `KIDNEY_L`, `ROUND`, `LONG`; no two greens the same size and shape),
+    `bunkers` (`Bunker`: along, across to the right, radii, `'f'` from the tee or `'g'` from the green's middle, and a
+    turn; one to four a hole, no mirrored pairs, the design pass's D1). The front nine loop the north
     arm, the back nine the east; each nine out from the clubhouse and home. The holes' frame: `along()`, `framePt()`,
     `nearestOn()`, `lengthOf()`, `arcOf()`, `fairwayHalf()` (wandering, narrowing to `FAIRWAY_NECK`), `fairwayEnd()`,
     `fairwayIn()` (round ends), `teeOf()` / `onTee()` (`TEE`), `greenOf()` / `onGreen()`, `ellipseAt()`, `bunkersOf()`,
-    `holesApart()`.
+    `holesApart()`. The shapes (D1): an ellipse whose radius is scaled round it by `lobeAt()` (1 + a sum of cosines);
+    `shapeAt()` (under 1 inside), `shapeOutline()`, `greenOutline()`; `bunkersOf()` (cached) gives each bunker's
+    `BunkerShape` (`at`, `dir`, `r`, its own lobes from `bunkerLobes()`, seeded) and pushes a greenside bunker out from
+    the green till its lip is `BUNKER_CLEAR` clear of the fringe (closer, the turf texture smears them together);
+    `bunkerAt()`; `LIP` (the bunker's turf lip, here so golflife.ts's rakes and golf3d.ts share it).
   - `LAKES` (Fen Pond, the Pond, Heron Lake, Reed Water, Clubhouse Lake; each an ellipse, its shore wobbled:
     `lakeAt()`), `inLake()`.
   - `CLUB_GROUNDS`, `CLUB_CENTRE` (the clubhouse's grounds, Phase 4), `DRIVE`, `DRIVE_HALF`, `FOOTPATH`, `PATH_HALF`
@@ -75,7 +81,10 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
 - **`golf3d.ts`** (the district `golf`, `LAZY_DISTRICTS`; tested in `tests/golflift.test.ts`): the turf, one texture
   (`drawTurf()`, `TURF_SCALE` pixels a tile, one on every tier: phones ask for two and paint it at half; the owner's call, 2026-11-24, to keep `texFull` in budget; the palette's golf covers, mown stripes `FAIRWAY_STRIPE` / `GREEN_STRIPE`,
   the bunkers' `LIP`, clear over the water) on a toon material, alpha-tested (`golf-turf`); laid by `turfMesh()` on
-  `golfMesh()`'s own triangles `TURF_LIFT` over the grass, only where `mownNear()`, near and far; a site a tile, in the FX layer
+  `golfMesh()`'s own triangles `TURF_LIFT` over the grass, only where `mownNear()`, near and far; a site a tile, in the FX layer.
+  The ink round the greens' fringes and the bunkers' lips (D1: the texture's two pixels a tile can't hold a crisp
+  edge): `INK_LOOPS`, cut to each tile by `inkRuns()`, laid by `inkMesh()` (roads3d.ts `ribbon()`, `EDGE_INK` wide and
+  over the turf) in `COVER.courseInk`, near only, in the turf's own batch (no draws of its own)
   (kit.ts `fx()`: the ink's pre-pass draws a mesh solid, the texture's clear parts too, so the turf's triangles came
   out as ink zig-zags across the rough; fixed in Phase 5). The
   cart paths painted in it, under what's mown. Clubhouse Drive (`driveMesh()`, `DRIVE_LIFT`, `DRIVE_LAMPS`, `LAMP_H`),

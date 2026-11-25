@@ -28,6 +28,7 @@ import { COVER, LAMP, LAMP_POST, ROAD, STONE } from './palette';
 import { waterMat } from './world';
 import { TILE } from './tiles';
 import { registerGolfLife } from './golflife3d';
+import { ribbon } from './roads3d';
 import type { Tick } from './world';
 import { CLUB_NAME, DRIVE, DRIVE_HALF, FOOTPATH, GOLF_CLUBHOUSE, GOLF_RECT, PATH_HALF, clubLevel, golfIn, golfLift, golfMesh, golfWater } from './golflift';
 import {
@@ -42,8 +43,12 @@ import {
   LAKES,
   TEE,
   along,
+  LIP,
+  bunkerAt,
   bunkersOf,
-  ellipseAt,
+  greenOutline,
+  onGreen,
+  shapeOutline,
   fairwayEnd,
   fairwayHalf,
   framePt,
@@ -71,8 +76,6 @@ const [X0, Z0, X1, Z1] = GOLF_RECT;
 /** How far apart a fairway's mown stripes are (tiles along it), and a green's */
 const FAIRWAY_STRIPE = 7;
 const GREEN_STRIPE = 1.8;
-/** A bunker's lip round its sand */
-const LIP = 0.35;
 
 /** A lake's shore, `n` points round */
 export function shoreOf(l: Lake, n = 72): Pt[] {
@@ -173,20 +176,19 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
   }
   // The fringes, then the greens in fine stripes
   for (const hole of HOLES) {
-    const g = greenOf(hole);
     ctx.fillStyle = COVER.fringe;
-    ellipse(g.at, g.dir, [hole.green[0] + FRINGE, hole.green[1] + FRINGE]);
+    poly(greenOutline(hole, FRINGE, 96));
     ctx.fill();
   }
   for (const hole of HOLES) {
     const g = greenOf(hole);
     ctx.save();
-    ellipse(g.at, g.dir, hole.green);
+    poly(greenOutline(hole, 0, 96));
     ctx.fillStyle = COVER.green;
     ctx.fill();
     ctx.clip();
     ctx.fillStyle = COVER.greenStripe;
-    const R = Math.max(...hole.green) + 1;
+    const R = Math.max(...hole.green) * 1.4 + 1;
     for (let u = -R, k = 0; u < R; u += GREEN_STRIPE, k++) {
       if (k % 2) continue;
       const at = (a: number, v: number): Pt => [g.at[0] + g.dir[0] * a - g.dir[1] * v, g.at[1] + g.dir[1] * a + g.dir[0] * v];
@@ -214,10 +216,10 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
   for (const hole of HOLES)
     for (const b of bunkersOf(hole)) {
       ctx.fillStyle = COVER.sandLip;
-      ellipse(b.at, b.dir, [b.r[0] + LIP, b.r[1] + LIP]);
+      poly(shapeOutline(b.at, b.dir, b.r, b.lobes, LIP, 48));
       ctx.fill();
       ctx.fillStyle = COVER.sand;
-      ellipse(b.at, b.dir, b.r);
+      poly(shapeOutline(b.at, b.dir, b.r, b.lobes, 0, 48));
       ctx.fill();
     }
   // Nothing mown over the water
@@ -240,21 +242,63 @@ export function mownNear(x: number, z: number, pad: number) {
   if ((Math.hypot((x - at[0]) / r[0], (z - at[1]) / r[1]) - 1) * Math.min(...r) <= FRINGE + pad) return true;
   for (const h of HOLES) {
     const n = nearestOn(h, x, z);
-    if (n.d > Math.max(h.fairway ? h.fairway.half + 4 : 0, ...h.green, TEE[0]) + FRINGE + FIRST_CUT + 16 + pad) continue;
+    if (n.d > Math.max(h.fairway ? h.fairway.half + 4 : 0, Math.max(...h.green) * 1.4, TEE[0]) + FRINGE + FIRST_CUT + 16 + pad) continue;
     if (h.fairway) {
       const s = Math.max(h.fairway.from, Math.min(fairwayEnd(h), n.s));
       const p = along(h, s).at;
       const reach = fairwayHalf(h, s) + FIRST_CUT + pad;
       if (n.s >= h.fairway.from && n.s <= fairwayEnd(h) ? n.d <= reach : Math.hypot(x - p[0], z - p[1]) <= reach) return true;
     }
-    const g = greenOf(h);
-    if ((ellipseAt(g.at, g.dir, h.green, x, z) - 1) * Math.min(...h.green) <= FRINGE + pad) return true;
+    if ((onGreen(h, x, z) - 1) * Math.min(...h.green) <= FRINGE + pad) return true;
     const t = teeOf(h);
     const [dx, dz] = [x - t.at[0], z - t.at[1]];
     if (Math.abs(dx * t.dir[0] + dz * t.dir[1]) <= TEE[0] + pad && Math.abs(-dx * t.dir[1] + dz * t.dir[0]) <= TEE[1] + pad) return true;
-    for (const b of bunkersOf(h)) if ((ellipseAt(b.at, b.dir, b.r, x, z) - 1) * Math.min(...b.r) <= LIP + pad) return true;
+    for (const b of bunkersOf(h)) if ((bunkerAt(b, x, z) - 1) * Math.min(...b.r) <= LIP + pad) return true;
   }
   return false;
+}
+/** The ink round each green's fringe and each bunker's lip (the design pass's D1, docs/golf-plan.md: the turf's paint
+ * is soft at 2 pixels a tile, the city's shapes are inked): its half width and how far over the turf */
+export const EDGE_INK = { half: 0.07, lift: 0.03 };
+/** The closed lines the ink runs round: every green's fringe and every bunker's lip */
+export const INK_LOOPS: Pt[][] = /* @__PURE__ */ (() => {
+  const out: Pt[][] = [];
+  for (const h of HOLES) {
+    out.push(greenOutline(h, FRINGE, 120));
+    for (const b of bunkersOf(h)) out.push(shapeOutline(b.at, b.dir, b.r, b.lobes, LIP, 56));
+  }
+  return out;
+})();
+/** The ink's runs over a box: each loop's stretches whose points fall in it (one past either end, so neighbouring
+ * boxes' runs meet) */
+export function inkRuns(r: Rect): Pt[][] {
+  const runs: Pt[][] = [];
+  const inBox = ([x, z]: Pt) => x >= r[0] && x < r[2] && z >= r[1] && z < r[3];
+  for (const loop of INK_LOOPS) {
+    const n = loop.length;
+    const start = loop.findIndex((p) => !inBox(p));
+    if (start < 0) {
+      runs.push([...loop, loop[0]]);
+      continue;
+    }
+    let run: Pt[] = [];
+    for (let k = 1; k <= n; k++) {
+      const i = (start + k) % n;
+      if (inBox(loop[i])) {
+        if (!run.length) run.push(loop[(i - 1 + n) % n]);
+        run.push(loop[i]);
+      } else if (run.length) {
+        run.push(loop[i]);
+        runs.push(run);
+        run = [];
+      }
+    }
+  }
+  return runs;
+}
+/** The ink along a run: a strip on the course's ground (golflift.ts `golfLift()`), facing up */
+export function inkMesh(run: Pt[]) {
+  return ribbon(run, -EDGE_INK.half, EDGE_INK.half, (x, z) => golfLift(x, z) + TURF_LIFT + EDGE_INK.lift);
 }
 /** How far the turf is laid over the grass as drawn (the same near and far: a step where a tile drawn near meets one
  * drawn far would be inked) */
@@ -562,6 +606,7 @@ export function drawClubhouse(b: Batch, low: boolean) {
 
 export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
   const mat = turfMat();
+  const ink = toon(COVER.courseInk);
   // The turf, a site a tile, over every tile the course's land comes into
   for (let tx = Math.floor(X0 / TILE) * TILE; tx < X1; tx += TILE)
     for (let tz = Math.floor(Z0 / TILE) * TILE; tz < Z1; tz += TILE) {
@@ -573,6 +618,9 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
         const far = turfMesh(r, true, TURF_LIFT);
         if (near) b.detail(() => b.add(near, mat), 'near');
         if (far) b.detail(() => b.add(far, mat), 'far');
+        // (the ink round the greens and bunkers, near only: far, the paint alone)
+        const runs = inkRuns(r);
+        if (runs.length) b.detail(() => runs.forEach((run) => b.add(inkMesh(run), ink)), 'near');
         // (out of the ink's pre-pass, kit.ts `fx()`: it draws every mesh solid, the texture's clear parts too, so the
         // turf's triangles came out as ink zig-zags across the rough; the turf is paint on the grass, with no edge of
         // its own to ink)

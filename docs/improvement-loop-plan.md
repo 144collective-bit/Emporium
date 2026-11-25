@@ -239,6 +239,22 @@ sets the order (rule 2).
         Lot 9, the air base)
   - [ ] Everything else (a search of every entrance off a street)
 
+#### R3. Empty open patch (the hunt, 2026-11-24)
+
+- **The fault:** a stretch of open ground in a built-up place (a lawn between blocks, a green behind terraces, the
+  land round bungalows) laid as one flat colour cut square into the paving or the road's verge, with nothing on it:
+  no paths where people would walk, no planting, no edging, sometimes a lone straight hedge or a stray slab standing
+  in it. From the air it reads as unfinished; on foot, as a void. It breaks "no ruler-straight edges".
+- **How to spot it:** from the air, a large single-value green or lilac patch with straight edges, or garden pieces
+  (fences, patios, sheds) scattered loose rather than closing a plot. In the code, a land rect drawn with a plain
+  cover and no `INFLUENCES` / dressing over it.
+- **The repair:** give the patch its use and its edges, in the area's own palette (`palette.ts`): worn desire paths
+  between the doors and stops round it (R2's rule for where they meet), planting along its edges (shrubs, hedges
+  closing plots, trees in groups, not lines), a kerb or mown edge where it meets paving, and its outline wandering.
+  Garden pieces close their plots (fences meet at the corners, patios against the back wall). Nothing that exists
+  moves; walking stays clear (bollards, not walls, across paths).
+- **Its sweep:** every estate green and open patch in the south first (the hunt's finds), then the rest by district.
+
 ### Jobs
 
 - [x] **J1 (R1), part 1: the galleries and balconies** (2026-11-22, pass 1; see the log). Part 2 below.
@@ -279,6 +295,72 @@ sets the order (rule 2).
       `crestgardens`, `crestbanks`, `coral`); then the owner's second ask:
       **every other driveway in the city checked to line up and not cover
       the sidewalk** (R2's sweep).
+- [ ] **J3 (R3): the twin towers' lawn in Endswood** (the hunt, 2026-11-24; camera `h-ends-air` below): the big
+      green round the twin towers is one flat patch cut square into the estate's paving, nothing on it but dashed
+      lines that need a look on foot (paths? cables' shadows?). R3 in full: desire paths from the towers' doors to the
+      stops and the Circus, planting in groups, a mown edge, its outline wandering.
+- [ ] **J4 (R1): the estate's bare concrete bits round the Circus** (`h-ends-air`, `h-circus-foot`): a long plain
+      concrete upstand standing on the paving with a cut-off end, the Circus's subway ramps as pale flat wedges, and
+      the games court's surround a bare lilac slab. R1: the concrete skin and caps (`docs/brutalist-plan.md` Phase 1's
+      material), the ramps' walls and handrails, the court's surface marked.
+- [ ] **J5 (R2/R3): paths whose edges break up over the lawn** (`h-circus-foot`): a lilac path's edges go ragged in
+      blobs where it meets the grass, and the lawn meets the paving with no kerb or edge. The paths' own edge (a clean
+      line or a kerb) and a mown edge or kerb at every lawn's meeting with paving.
+- [ ] **J6 (R3): Aldwyn's Green's back gardens** (`h-green-air`): behind the terraces the gardens are loose pale slabs
+      (patios, sheds) and short red fence pieces at odd angles that don't close any plot. R3's garden rule: fences meet
+      at the plot's corners, patios against the back wall, a shed in a corner.
+- [ ] **J7 (R1): St Aldwyn's churchyard wall and its yews** (`h-church-foot`): the wall is one plain grey slab with no
+      coping or coursing; the yews are bare cones. R1 for stone: a coping, courses, a darker plinth; the yews rounded.
+- [ ] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
+      with paths stopping short, no plots, and straight hedge pieces standing alone in the open land beyond. R3: plots
+      with low hedges or fences and front paths, the stray hedges joined into field boundaries or gone.
+- [ ] **J9 (R1/R3): Lot 9's empty pitches and lanes** (the hunt, part 2, `h-lot9-air`): the empty pitches are bare
+      grey slabs and the lanes plain grey strips meeting square, no verge or kerb. R1 for the pads (gravel, a hook-up
+      post, worn edges), R3 for the lanes' verges and corners.
+- [ ] **J3's night side: the twin towers' lawn and podium unlit** (part 2, `h-ends-air` at night): lit only along the
+      streets, the lawn and podium go to a void. With J3's paths, low bollard lights along them (small and dim: the
+      bloom rule), and the podium's edge lit.
+- [ ] **J10 (R3): Crestmont's Flats' two bare blocks** (the hunt, 2026-11-25, `c-flats-air` [330,80,110] to
+      [375,0,10]): two whole blocks of plain lilac paving with a couple of trees. Check first whether they're the game's
+      lots for sale (lots don't move or change price): if so, dress them as plots waiting to build (hoarding round,
+      worn gravel, a site board with no words); if not, R3.
+- [ ] **J11 (R1): a flat grid patch on Crestmont's hillside** (`c-hills-air` [300,110,-120] to [380,0,-260]): a
+      flat green grid (a vineyard?) lies square on the slope west of the hill road, its edges cut straight. Rows that
+      follow the ground's contours, posts and a wandering edge, or gone.
+- [ ] **J12 (R3): Sunridge's greens between the cul-de-sacs** (`s-air` [180,85,30] to [180,0,-80]): the greens the
+      cul-de-sacs back onto are open lawn with nothing on them; footpaths through (the "nowhere a dead end" rule:
+      each cul-de-sac's path to the next street), trees in groups, a bench.
+- [ ] **J13 (R1, small): Sunridge's back-yard patios** (`s-street` [150,4,-60] to [200,1,-75]): pale bare slabs; a
+      paving joint pattern or a darker border.
+- [ ] **J14 (R1): the big dark hall by The Trenches' river** (the hunt, 2026-11-25, `t-air` [-70,75,250] to
+      [-40,0,160]): a huge dark box with a flat plain roof and no detail, between the riverside road and the terraces.
+      Find what it is first (its file and plan); R1: roof plant, skylights, a parapet with coping, its walls broken up.
+- [ ] **J15 (R1/R3): The Trenches' riverside parks and the plaza by the tower** (`t-air`): the two parks' inner lawns
+      are flat raised squares with nothing on them, and the plaza east of the tower has a bare pale slab structure (a
+      skate spot?). R3 for the lawns (paths, groups of trees, a mown edge); R1 for the slab (ramps, rails, coping).
+- [ ] **J16 (R3, check first): empty lots city-wide, with J10** (`d-air` [90,90,140] to [40,0,40]): downtown's empty
+      lots read as plain green squares with a lighter inner square, as Crestmont's Flats' bare blocks do. If they're the
+      game's lots for sale (they don't move or change price), one look for every empty lot: a low fence or hoarding, worn
+      ground, a site board with no words. One job with J10.
+- [ ] **J17 (R1, small): the elevated railway's underside in The Trenches** (`t-high` [-101,5,181] to [-70,1,170]):
+      the deck's underside and beams are plain slabs seen from first-floor height; ribs or a bearing line under each pier.
+- [ ] **J18 (R1): the air base's apron and its buildings** (the hunt, 2026-11-25, `e-airbase` [-200,140,-280] to
+      [-230,0,-500]): the apron is one plain lilac slab, the buildings beside it bare boxes with flat roofs, the
+      hangars beyond faded shapes. R1: the apron's joints, stand markings and tie-downs; the buildings' doors, roof
+      plant and trim (`docs/military-plan.md`'s look).
+- [ ] **J19 (R1/R3): the mall's car park** (`e-mall` [110,90,-20] to [30,0,-100]): the planting islands are bare
+      brown soil, and a big empty dark slab lies south of the multi-storey. Planting in the islands (low shrubs, a tree
+      each), the slab given its use or its edges.
+- [ ] **J20 (R1, small): the Docks' warehouse roofs** (`e-docks` [-250,95,320] to [-320,0,210]): five plain flat dark
+      roofs; roof lights, vents, a parapet line.
+- [x] **The hunt of Endswood, Aldwyn's Green and Lot 9, part 2** (2026-11-24, night 3 pass 2: Lot 9 by day, Endswood
+      and Aldwyn's Green from the air at night; J9 and J3's night side logged; the Green reads well at night). The
+      on-foot shots stood inside things (`h-highroad-foot`, `h-lot9-foot`): retaken with the next hunt here, on the
+      streets' own points. Its cameras, as part 1 left them: Lot 9 from the air and on foot, the night shots, and
+      the on-foot shots retaken (`h-highroad-foot` stood inside a building). The cameras, for `SHOTS_EXTRA`:
+      `h-ends-air` [-40,95,300] to [-55,0,395]; `h-circus-foot` [-92,1.7,402] to [-66,5,392]; `h-green-air`
+      [-200,75,355] to [-200,0,455]; `h-church-foot` [-228,1.7,474] to [-205,5,462]; `h-council-air` [-300,60,320] to
+      [-255,0,430]; `h-lot9-air` [-70,75,445] to [-70,0,545]; `h-lot9-foot` [-82,1.7,520] to [-58,1.5,540].
 
 ## Track C: the motorway exits (signed off by the owner, 2026-11-21)
 
@@ -454,3 +536,31 @@ session.)
   course's ground (fixed in a draft PR: the bake loads golfbake.ts first); with that, texFull is 5044.1 of 4955 KB
   (the golf turf, 976 x 1428). Both to Waiting on the owner; only this plan edit merged. Checks on the fix:
   typecheck, lint, build, texture bake (204 kept), budget (texLow 3372.4 of 3450 ok, texFull over).
+- 2026-11-24, night 3 pass 1 (22:07): main green again (the owner's (a), applied with the bake fix by #269; builds
+  #396 to #399 pass; the board's build card to Live, draft #267 superseded). The board's in-progress card, the hunt of
+  Endswood, Aldwyn's Green and Lot 9 (never run: the first night's third pass took J1). Day shots from the air and on
+  foot (seven cameras, six taken in the time): six finds logged as J3 to J8, a new model repair R3 (empty open patch);
+  Lot 9, night and the on-foot retakes are its part 2. Nothing fixed (the hunt's rule). Plan only: typecheck, lint.
+- 2026-11-24, night 3 pass 2 (23:07): the hunt of the south, part 2 (the board's top Ready card). Lot 9 from the air
+  by day, Endswood and Aldwyn's Green from the air at night: J9 (Lot 9's bare pitches and square lanes) and J3's night
+  side (the towers' lawn and podium unlit) logged; the Green reads well at night. Two on-foot cameras stood inside
+  things, to retake on the streets' own points. Nothing fixed. Plan only: typecheck, lint.
+- 2026-11-25, night 3 pass 3 (00:07): the hunt of Crestmont and Sunridge (the board's top Ready card). Day shots from
+  the air over the Flats, the hills and Sunridge, and over Sunridge's back yards: both well built; four finds logged
+  as J10 to J13 (the Flats' two bare blocks, a flat grid patch on the hillside, Sunridge's empty greens, its bare
+  patios). Night shots not taken (both districts' lamps were checked by their own plans). Nothing fixed. Plan only:
+  typecheck, lint.
+- 2026-11-25, night 3 pass 4 (01:08): the hunt of The Trenches and downtown (the board's top Ready card). Day shots from
+  the air over both and from first-floor height in each: downtown's plaza and streets read well; four finds logged as
+  J14 to J17 (the big dark hall by the river, the riverside parks' bare lawns and a bare slab on the plaza, empty lots
+  city-wide with J10, the elevated railway's underside). Nothing fixed. Plan only: typecheck, lint.
+- 2026-11-25, night 3 pass 5 (02:07): the hunt of Uptown, Westlake and the civic quarter (the board's top Ready card).
+  Day shots: Uptown from the air ([-60,110,110] to [-120,0,30]), Westlake Park from the air ([-60,90,-20] to
+  [-120,0,-90]), City Hall's portico close up ([-140,5,-20] to [-140,4,-45]). All three read finished (the towers and
+  plaza, the formal gardens, bandstand, lake and boathouse, the portico's columns, banners and lettering): no jobs
+  logged. Uptown's street-level camera ([-50,6,30]) stood inside a raised walkway; retaken with the next hunt here.
+  Nothing fixed. Plan only: typecheck, lint.
+- 2026-11-25, night 3 pass 6 (03:08): the hunt of the Docks, the airport, the Neon Mile, the air base and the mall (the
+  board's last Ready card). Day shots from the air of each: the Neon Mile and the airport read finished; three finds
+  logged as J18 to J20 (the air base's bare apron and buildings, the mall car park's bare islands and empty slab, the
+  Docks' plain warehouse roofs). Every district has now had its first hunt. Nothing fixed. Plan only: typecheck, lint.
