@@ -87,7 +87,7 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    house number: no numbers on signs). Downpipes with hoppers and shoes at four corners, steel vents in the render. The
    garage, workshop, gatehouse and wall keep the loft's brick. Draw calls unchanged: 313 desktop, 198 phone
    (the phone tier). Shots: `docs/house-shots/phase-4-*.webp`.
-5. **The detail inside.** *Built, waiting for the owner's sign-off.* What a well-built house has: doors in frames with architraves and handles, cornices,
+5. **The detail inside.** *Signed off by the owner and live (2026-11-25).* What a well-built house has: doors in frames with architraves and handles, cornices,
    skirting throughout, light switches and sockets, radiators under the windows, the kitchen's splashback and
    handles, the hall's mirror and console at the stair's foot, the stair's lights in the wall by the treads; the
    review shots by day and night, `?fps` and `?bench` on the phone tier before and after.

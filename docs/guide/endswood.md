@@ -272,7 +272,7 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   windows' surrounds `REVEAL` and stone sills, the front door's stone portal and `CANOPY` with his mark lit on it, the
   bedroom's glass `BALCONY` (looks only: its window a door down to the floor in `houseWindows()`), downpipes, vents).
   The garage, workshop, gatehouse and wall keep the loft's brick (`LOFT_*`).
-  Phase 5 (the detail inside) is built: home3d.ts `finish()`, every floor, in paints the room's batch already has (no
+  Phase 5 (the detail inside) is live: home3d.ts `finish()`, every floor, in paints the room's batch already has (no
   new draw calls; near only, the phone tier without the small things): walnut architraves round the doorways (the front
   and side doors' on the walls' faces, upstairs' round both faces of the partitions), a black steel lining and a
   plastered head over upstairs' open doorways, skirting along every wall and round the partitions, a stepped cornice
