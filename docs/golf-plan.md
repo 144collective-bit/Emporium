@@ -351,6 +351,14 @@ phone tier and the boot):
   Pond close); the boot unchanged (771.9 of 775 KB: the water's all in the course's chunk).
 - **D4, the paths and tees**: the cart paths a warm gravel from the palette, bent round the tees rather than past them;
   tees with rounded corners, a darker cut edge and the tee's markers clear.
+  **Built (2026-11-25), waiting for the owner's sign-off.** Tees rounded (golf.ts `TEE_ROUND`, `teeOut()`,
+  `teeOutline()`; `onTee()` reads the rounded shape, so a ball in a square corner's off the tee now) in a band of the
+  first cut's darker green (golf3d.ts `TEE_EDGE`) with the ink round it (in `INK_LOOPS`); the second cut round them
+  rounded too. The cart paths warm gravel (palette `cartPath`, was the cold lilac stone), each hole's from behind its
+  tee bent round the tee's back corner and down its side (`besideHole()`), every path smoothed into curves
+  (`smoothLine()`, Chaikin's, its ends kept: no turn sharper than a right angle). The tee's markers, washer, bench and
+  sign find their spots clear of the moved paths as before. Shots `docs/blend-shots/golf-d4-a/` (desktop and phone);
+  the boot unchanged (771.9 of 775 KB).
 
 ## Open questions (for the owner, later)
 
