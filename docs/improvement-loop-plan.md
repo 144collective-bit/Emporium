@@ -344,6 +344,15 @@ sets the order (rule 2).
       ground, a site board with no words. One job with J10.
 - [ ] **J17 (R1, small): the elevated railway's underside in The Trenches** (`t-high` [-101,5,181] to [-70,1,170]):
       the deck's underside and beams are plain slabs seen from first-floor height; ribs or a bearing line under each pier.
+- [ ] **J18 (R1): the air base's apron and its buildings** (the hunt, 2026-11-25, `e-airbase` [-200,140,-280] to
+      [-230,0,-500]): the apron is one plain lilac slab, the buildings beside it bare boxes with flat roofs, the
+      hangars beyond faded shapes. R1: the apron's joints, stand markings and tie-downs; the buildings' doors, roof
+      plant and trim (`docs/military-plan.md`'s look).
+- [ ] **J19 (R1/R3): the mall's car park** (`e-mall` [110,90,-20] to [30,0,-100]): the planting islands are bare
+      brown soil, and a big empty dark slab lies south of the multi-storey. Planting in the islands (low shrubs, a tree
+      each), the slab given its use or its edges.
+- [ ] **J20 (R1, small): the Docks' warehouse roofs** (`e-docks` [-250,95,320] to [-320,0,210]): five plain flat dark
+      roofs; roof lights, vents, a parapet line.
 - [x] **The hunt of Endswood, Aldwyn's Green and Lot 9, part 2** (2026-11-24, night 3 pass 2: Lot 9 by day, Endswood
       and Aldwyn's Green from the air at night; J9 and J3's night side logged; the Green reads well at night). The
       on-foot shots stood inside things (`h-highroad-foot`, `h-lot9-foot`): retaken with the next hunt here, on the
@@ -551,3 +560,7 @@ session.)
   plaza, the formal gardens, bandstand, lake and boathouse, the portico's columns, banners and lettering): no jobs
   logged. Uptown's street-level camera ([-50,6,30]) stood inside a raised walkway; retaken with the next hunt here.
   Nothing fixed. Plan only: typecheck, lint.
+- 2026-11-25, night 3 pass 6 (03:08): the hunt of the Docks, the airport, the Neon Mile, the air base and the mall (the
+  board's last Ready card). Day shots from the air of each: the Neon Mile and the airport read finished; three finds
+  logged as J18 to J20 (the air base's bare apron and buildings, the mall car park's bare islands and empty slab, the
+  Docks' plain warehouse roofs). Every district has now had its first hunt. Nothing fixed. Plan only: typecheck, lint.
