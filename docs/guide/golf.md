@@ -68,7 +68,8 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
     placed with the outskirts' trees, world.ts `scatterOutskirts()`; the design pass's D2: in copses and glades by
     `copseAt()` / `copseNear()`, seeded value noise every `COPSE_CELL` grid points, bigger trees in a copse's heart;
     tall pines in a belt `PINE_BELT.depth` in from the course's edge along its north and east sides, `inPineBelt()`,
-    the wall's side; the ball meets them all, golfgame-sim.ts `inTree()`), `DRIVE` / `DRIVE_HALF` (Clubhouse Drive: `DRIVE_CORNERS` rounded, `rounded()`),
+    the wall's side, and past the fence up to the wall outskirts.ts `wallPines()` (`WALL_PINES`, off the course, so
+    out of play); the ball meets the course's own, golfgame-sim.ts `inTree()`), `DRIVE` / `DRIVE_HALF` (Clubhouse Drive: `DRIVE_CORNERS` rounded, `rounded()`),
     `FOOTPATH` / `PATH_HALF`, `CLUB_GAPS` (where they cross the country road's fence: ruralfence.ts `DRIVES`).
   - `golfStreets()` (Clubhouse Drive a street of the plan, `docs/golf-plan.md`: `golf-drive` off `ew0-e` at
     `golf-drive-gate`, the one-way turning loop `golf-drive-turn` by the car park, `DRIVE_TURN` round, at
