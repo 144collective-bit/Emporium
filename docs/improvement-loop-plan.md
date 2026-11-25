@@ -410,6 +410,14 @@ one is still open before fixing it.
       and down the escalator", 2026-11-22); passes run alone. Find why (a wait too short under load) and
       fix the scene's timing, not by loosening what it checks.
 
+- [ ] **The car's push-out off Westlake's long edge wall differs with the nearby solids from with all of them**
+      (found 2026-11-25 by J3's checks): `tests/boxgrid.test.ts` "driving: a car only given the boxes near it..."
+      fails at run 29, step 0, near (-122.35, -8.4) beside the thin wall [-123.36, -9.6, -98.09, -9.3] (25 long, 0.3
+      thick), which the grid does return: with all boxes the car's pushed to z -8.13, with the near ones it stays at
+      -8.58. Passes on main only because the test's seeded start spots fall elsewhere; J3's new solids (shrubs,
+      bollards) shift the seeded draws so this spot comes up. A latent bug in `stepCar()`'s push-out or `reachOf()`,
+      not in J3: find it and fix the code (never the test); J3 merges after.
+
 ## Level 2: speed and phones
 
 - [ ] Ticks that never check distance get gated on a shared `near()`: the
@@ -564,3 +572,10 @@ session.)
   board's last Ready card). Day shots from the air of each: the Neon Mile and the airport read finished; three finds
   logged as J18 to J20 (the air base's bare apron and buildings, the mall car park's bare islands and empty slab, the
   Docks' plain warehouse roofs). Every district has now had its first hunt. Nothing fixed. Plan only: typecheck, lint.
+- 2026-11-25, night 4 pass 1 (22:07): J3 (R3), the twin towers' lawn (the board's top Ready card): paths worn to
+  1.1, a mown concrete edge, 31 low shrubs in 9 groups along the edge and at the towers' feet, 15 bollard lights along
+  the paths, all solid (southyard.ts `SHRUBS`, `BOLLARDS`; tested; southblocks3d.ts draws them). After shots on foot
+  and from the air read well; the bollards' heads too dim at night (to brighten). Checks: typecheck, lint, test:wide
+  (2415 pass), build, bake, budget pass; test fails one, the box grid's driving check (logged under Level 1: a latent
+  push-out bug the new solids' shifted seeded draws expose, not J3's). J3 in a draft PR until it's fixed; this plan
+  edit only merged.
