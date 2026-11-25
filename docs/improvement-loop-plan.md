@@ -332,6 +332,18 @@ sets the order (rule 2).
       each cul-de-sac's path to the next street), trees in groups, a bench.
 - [ ] **J13 (R1, small): Sunridge's back-yard patios** (`s-street` [150,4,-60] to [200,1,-75]): pale bare slabs; a
       paving joint pattern or a darker border.
+- [ ] **J14 (R1): the big dark hall by The Trenches' river** (the hunt, 2026-11-25, `t-air` [-70,75,250] to
+      [-40,0,160]): a huge dark box with a flat plain roof and no detail, between the riverside road and the terraces.
+      Find what it is first (its file and plan); R1: roof plant, skylights, a parapet with coping, its walls broken up.
+- [ ] **J15 (R1/R3): The Trenches' riverside parks and the plaza by the tower** (`t-air`): the two parks' inner lawns
+      are flat raised squares with nothing on them, and the plaza east of the tower has a bare pale slab structure (a
+      skate spot?). R3 for the lawns (paths, groups of trees, a mown edge); R1 for the slab (ramps, rails, coping).
+- [ ] **J16 (R3, check first): empty lots city-wide, with J10** (`d-air` [90,90,140] to [40,0,40]): downtown's empty
+      lots read as plain green squares with a lighter inner square, as Crestmont's Flats' bare blocks do. If they're the
+      game's lots for sale (they don't move or change price), one look for every empty lot: a low fence or hoarding, worn
+      ground, a site board with no words. One job with J10.
+- [ ] **J17 (R1, small): the elevated railway's underside in The Trenches** (`t-high` [-101,5,181] to [-70,1,170]):
+      the deck's underside and beams are plain slabs seen from first-floor height; ribs or a bearing line under each pier.
 - [x] **The hunt of Endswood, Aldwyn's Green and Lot 9, part 2** (2026-11-24, night 3 pass 2: Lot 9 by day, Endswood
       and Aldwyn's Green from the air at night; J9 and J3's night side logged; the Green reads well at night). The
       on-foot shots stood inside things (`h-highroad-foot`, `h-lot9-foot`): retaken with the next hunt here, on the
@@ -529,3 +541,7 @@ session.)
   as J10 to J13 (the Flats' two bare blocks, a flat grid patch on the hillside, Sunridge's empty greens, its bare
   patios). Night shots not taken (both districts' lamps were checked by their own plans). Nothing fixed. Plan only:
   typecheck, lint.
+- 2026-11-25, night 3 pass 4 (01:08): the hunt of The Trenches and downtown (the board's top Ready card). Day shots from
+  the air over both and from first-floor height in each: downtown's plaza and streets read well; four finds logged as
+  J14 to J17 (the big dark hall by the river, the riverside parks' bare lawns and a bare slab on the plaza, empty lots
+  city-wide with J10, the elevated railway's underside). Nothing fixed. Plan only: typecheck, lint.
