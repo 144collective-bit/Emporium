@@ -11,7 +11,8 @@ import { COURSE, COURSE_RECT, HOLES, LAKES, along, bunkersOf, fairwayEnd, greenO
 import { heightAt, hillsAlong, onHills } from '../src/scripts/city3d/terrain';
 import { rollsAt } from '../src/scripts/city3d/rolls';
 import { keptOff } from '../src/scripts/city3d/landuse';
-import { outskirtsTrees } from '../src/scripts/city3d/outskirts';
+import { WALL_PINES, outskirtsTrees, treeSpot, wallPines } from '../src/scripts/city3d/outskirts';
+import { WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { colourAt } from '../src/scripts/city3d/ground';
 import { COVER } from '../src/scripts/city3d/palette';
 import { EXT } from '../src/scripts/city3d/layout';
@@ -219,6 +220,27 @@ test("the design pass's D2: the woods in copses and glades, a belt of tall pines
   const r: [number, number, number, number] = [X0 + 100, Z0 + 100, X0 + 196, Z0 + 196];
   const [L, R] = [flowersIn([r[0], r[1], X0 + 148, r[3]]), flowersIn([X0 + 148, r[1], r[2], r[3]])];
   assert.deepEqual([...L, ...R].map((f) => `${f.x},${f.z}`).sort(), flowersIn(r).map((f) => `${f.x},${f.z}`).sort());
+});
+
+test("D2's pines past the fence: off the course and clear of its fence, inside the wall, along the north and east only, the same every time", () => {
+  const pines = wallPines();
+  assert.ok(pines.length > 400, `${pines.length} pines`);
+  for (const t of pines) {
+    assert.equal(golfLand(t.x, t.z), LAND.off, `a pine on the course at ${t.x.toFixed(1)}, ${t.z.toFixed(1)}`);
+    assert.ok(!inCourse(t.x, t.z));
+    for (let a = 0; a < 8; a++) assert.equal(golfLand(t.x + Math.cos((a * Math.PI) / 4) * (WALL_PINES.gap - 0.5), t.z + Math.sin((a * Math.PI) / 4) * (WALL_PINES.gap - 0.5)), LAND.off, 'a pine by the fence');
+    assert.ok(t.x < WORLD_BOUNDS[2] - WALL_PINES.wall + 1 && t.z > WORLD_BOUNDS[1] + WALL_PINES.wall - 1, 'a pine in the wall');
+    // (north of the course or east of it, never west or south)
+    assert.ok(t.z < Z0 + 20 || t.x > X1 - 20, `a pine away from the wall's sides at ${t.x.toFixed(1)}, ${t.z.toFixed(1)}`);
+    assert.ok(t.pine && t.s >= 2.6);
+    assert.ok(treeSpot(t.x, t.z));
+  }
+  assert.ok(pines.some((t) => t.z < Z0) && pines.some((t) => t.x > X1), 'both sides planted');
+  assert.deepEqual(wallPines(), pines);
+  const few = wallPines(0.5);
+  assert.ok(few.length > pines.length * 0.4 && few.length < pines.length * 0.6);
+  const all = new Set(pines.map((t) => `${t.x},${t.z}`));
+  for (const t of few) assert.ok(all.has(`${t.x},${t.z}`));
 });
 
 test("Phase 3's drawing: the drive on the ground, its lamps beside it, the fence round the edge open at the ways in, reeds out of play", async () => {

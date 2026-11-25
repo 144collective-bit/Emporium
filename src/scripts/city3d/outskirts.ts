@@ -9,7 +9,8 @@
  * city pine woods stand in patches; all keep off what the one clearing rule
  * lists (landuse.ts) and any land kept clear.
  */
-import { CITY_EXT, EXT } from './layout';
+import { CITY_EXT, EXT, WORLD_BOUNDS } from './layout';
+import { GOLF_RECT, golfLand } from './golflift';
 import { AIRPORT_AREAS } from './airfield';
 import { TILE, tileKey, tilesIn } from './tiles';
 import { rng } from './recipes';
@@ -180,4 +181,41 @@ export function freeLand(rect: Rect, step: number, skip?: Rect) {
   for (let x = rect[0] + step / 2; x < rect[2]; x += step)
     for (let z = rect[1] + step / 2; z < rect[3]; z += step) if (!(skip && inside(skip, x, z)) && treeSpot(x, z, [], false)) n++;
   return n * step * step;
+}
+
+/**
+ * Tall pines between the golf course's north and east fences and the wall (the design pass's D2, the owner's call,
+ * 2026-11-25: "plant pines past the fence"), so the woods stand up to the wall's foot: a seeded, jittered grid every
+ * `step`, `chance` of a point a pine, `gap` clear of the course's land (its fence), `wall` in from the world's bounds,
+ * no further than `depth` past the course's box; kept where a tree may stand (`treeSpot()`); `keep` for phones
+ */
+export const WALL_PINES = { step: 3.2, chance: 0.62, gap: 3, wall: 3, depth: 24 };
+export function wallPines(keep = 1): OutskirtTree[] {
+  const { step, chance, gap, wall, depth } = WALL_PINES;
+  const [gx0, gz0, gx1, gz1] = GOLF_RECT;
+  const [, bz0, bx1] = WORLD_BOUNDS;
+  // (the north band and the east band, each clipped to the wall)
+  const bands: Rect[] = [
+    [gx0, Math.max(bz0 + wall, gz0 - depth), Math.min(bx1 - wall, gx1 + depth), gz0 + 16],
+    [gx1 - 16, gz0 + 16, Math.min(bx1 - wall, gx1 + depth), gz1],
+  ];
+  const seeded = (i: number, j: number, k: number) => {
+    let h = Math.imul(i * 73856093 ^ j * 19349663 ^ k * 83492791, 2654435761) >>> 0;
+    h ^= h >>> 15;
+    return (Math.imul(h, 2246822519) >>> 0) / 4294967296;
+  };
+  const out: OutskirtTree[] = [];
+  for (const [x0, z0, x1, z1] of bands)
+    for (let i = Math.ceil(x0 / step); i * step < x1; i++)
+      for (let j = Math.ceil(z0 / step); j * step < z1; j++) {
+        if (seeded(i, j, 1) >= chance || seeded(i, j, 2) >= keep) continue;
+        const x = (i + (seeded(i, j, 3) - 0.5) * 0.8) * step;
+        const z = (j + (seeded(i, j, 4) - 0.5) * 0.8) * step;
+        if (golfLand(x, z) > 0) continue;
+        let near = false;
+        for (let a = 0; a < 8 && !near; a++) near = golfLand(x + Math.cos((a * Math.PI) / 4) * gap, z + Math.sin((a * Math.PI) / 4) * gap) > 0;
+        if (near || !treeSpot(x, z)) continue;
+        out.push({ x, z, s: 2.6 + seeded(i, j, 5) * 1.6, pine: true });
+      }
+  return out;
 }
