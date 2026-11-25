@@ -278,12 +278,16 @@ test("the design pass's D3: the reeds in clumps in the shallows, gaps of open ba
     const shore = shoreOf(l, 72);
     const by = shore.filter(([x, z]) => reeds.some(([rx, rz]) => Math.hypot(rx - x, rz - z) < 2)).length;
     assert.ok(by < shore.length * 0.6, `${l.name}: reeds by ${by} of ${shore.length} shore points`);
-    // (in the shallows: just inside the shore)
-    for (const [x, z] of reeds) assert.ok(lakeAt(l, x, z) > 0.85 && lakeAt(l, x, z) <= 1.001, `${l.name}: a reed out of the shallows`);
+    // (in the shallows: inside the shore, in the water, near its edge)
+    const water = golfWater(LAKES.indexOf(l));
+    for (const [x, z] of reeds) {
+      assert.ok(lakeAt(l, x, z) <= 1.001 && golfLift(x, z) <= water, `${l.name}: a reed out of the water at ${x.toFixed(1)}, ${z.toFixed(1)}`);
+      assert.ok([0, Math.PI / 2, Math.PI, -Math.PI / 2].some((a) => golfLift(x + Math.cos(a) * 1.5, z + Math.sin(a) * 1.5) > water - 0.05) || water - golfLift(x, z) < 0.6, `${l.name}: a reed out in deep water`);
+    }
     // (the pads on the water, clear of the shore; the same each time; a few in flower)
     const pads = liliesOf(l);
     assert.ok(pads.length >= LILIES.min, `${l.name}: ${pads.length} pads`);
-    for (const p of pads) assert.ok(lakeAt(l, p.x, p.z) <= LILIES.inside + 1e-9);
+    for (const p of pads) assert.ok(lakeAt(l, p.x, p.z) <= LILIES.inside + 1e-9 && golfLift(p.x, p.z) <= water - LILIES.deep + 1e-9);
     assert.deepEqual(liliesOf(l), pads);
   }
   const all = LAKES.flatMap((l) => liliesOf(l));

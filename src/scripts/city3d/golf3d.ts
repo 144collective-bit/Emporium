@@ -541,15 +541,24 @@ export function reedsOf(l: Lake): Pt[] {
     const d = Math.hypot(dx, dz) || 1;
     const bank: Pt = [x + (dx / d) * 1.5, z + (dz / d) * 1.5];
     if (!['rough', 'native'].includes(surfaceAt(...bank) ?? '')) return;
-    const into = 0.2 + hash3(i, k, 74) * 0.9;
-    out.push([x - (dx / d) * into, z - (dz / d) * into]);
+    // (in from the shore to the water's edge, where the bank drops under the lake's level: a bank higher than the
+    // water stands the edge in from the shore), then a little into the shallows
+    const water = golfWater(i);
+    for (let t = 0; t < d * 0.6; t += 0.25) {
+      const [ex, ez] = [x - (dx / d) * t, z - (dz / d) * t];
+      if (golfLift(ex, ez) > water - 0.02) continue;
+      const into = 0.1 + hash3(i, k, 74) * 0.6;
+      out.push([ex - (dx / d) * into, ez - (dz / d) * into]);
+      return;
+    }
   });
   return out;
 }
 
 /** The lily pads: a patch or two a lake off its reed clumps, so many pads a patch (`min` + up to `more`), within `reach`
- * of its middle, each `r` across plus up to `grow`, `flower` of them in flower; never nearer the shore than `inside` */
-export const LILIES = { patches: 2, min: 7, more: 6, reach: 3.6, r: 0.35, grow: 0.3, flower: 0.22, inside: 0.82 };
+ * of its middle, each `r` across plus up to `grow`, `flower` of them in flower; never nearer the shore than `inside`, and
+ * only where the water's at least `deep` */
+export const LILIES = { patches: 2, min: 7, more: 6, reach: 3.6, r: 0.35, grow: 0.3, flower: 0.22, inside: 0.82, deep: 0.15 };
 /** A lake's lily pads: where, how big, their notch's turn, and whether in flower */
 export function liliesOf(l: Lake): { x: number; z: number; r: number; turn: number; flower: boolean }[] {
   const i = LAKES.indexOf(l);
@@ -567,7 +576,7 @@ export function liliesOf(l: Lake): { x: number; z: number; r: number; turn: numb
         const a = hash3(i, p * 50 + k, 82) * Math.PI * 2;
         const d = Math.sqrt(hash3(i, p * 50 + k, 83)) * LILIES.reach;
         const [x, z] = [mx + Math.cos(a) * d, mz + Math.sin(a) * d];
-        if (lakeAt(l, x, z) > LILIES.inside) continue;
+        if (lakeAt(l, x, z) > LILIES.inside || golfLift(x, z) > golfWater(i) - LILIES.deep) continue;
         out.push({ x, z, r: LILIES.r + hash3(i, p * 50 + k, 84) * LILIES.grow, turn: hash3(i, p * 50 + k, 85) * Math.PI * 2, flower: hash3(i, p * 50 + k, 86) < LILIES.flower });
       }
     });
