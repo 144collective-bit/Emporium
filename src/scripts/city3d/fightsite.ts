@@ -60,3 +60,17 @@ export const SIGN = { x: 102, z: 85.6 + D, h: 3.8, w: 6 };
 
 /** Inside the ropes */
 export const inRing = (x: number, z: number) => Math.abs(x - RING.x) < RING_HALF - 0.1 && Math.abs(z - RING.z) < RING_HALF - 0.1;
+
+/**
+ * The Fight Club's live switch at the boot (the boot's slimming, 2026-11-25: the drawing is its own chunk,
+ * fightclub.ts, a district loaded as you come near: districts.ts `LAZY_DISTRICTS` id `fightclub`): what a fight sets
+ * (fight.ts), held till the drawing comes, which then hangs its `apply` here and shows what's set
+ */
+export const FIGHT_VIEW: { live: boolean; apply: ((on: boolean) => void) | null; setLive(on: boolean): void } = {
+  live: false,
+  apply: null,
+  setLive(on) {
+    this.live = on;
+    this.apply?.(on);
+  },
+};

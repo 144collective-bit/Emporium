@@ -559,3 +559,22 @@ test('a press on a frame no tick runs waits for the next tick', () => {
   for (let i = 0; i < 6; i++) ev.push(...sim.step(T.tick / 2, {}));
   assert.ok(ev.some((e) => e.kind === 'swing' && e.move === 'jab'));
 });
+
+import { FIGHT_CLUB, FIGHT_VIEW } from '../src/scripts/city3d/fightsite';
+import { LAZY_DISTRICTS } from '../src/scripts/city3d/districts';
+test("the Fight Club's drawing out of the boot: a district over its lot, the live switch held till it comes", () => {
+  const d = LAZY_DISTRICTS.find((q) => q.id === 'fightclub');
+  assert.ok(d, 'the fightclub district');
+  const L = FIGHT_CLUB;
+  assert.ok(d!.rect[0] <= L.x0 && d!.rect[1] <= L.z0 && d!.rect[2] >= L.x1 && d!.rect[3] >= L.z1, 'its rect round the lot');
+  // (set before the drawing's in: held; once it hangs its apply, every change reaches it)
+  FIGHT_VIEW.apply = null;
+  FIGHT_VIEW.setLive(true);
+  assert.equal(FIGHT_VIEW.live, true);
+  const seen: boolean[] = [];
+  FIGHT_VIEW.apply = (on) => seen.push(on);
+  FIGHT_VIEW.setLive(false);
+  assert.deepEqual(seen, [false]);
+  assert.equal(FIGHT_VIEW.live, false);
+  FIGHT_VIEW.apply = null;
+});

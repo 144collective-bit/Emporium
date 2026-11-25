@@ -25,15 +25,15 @@
  */
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, glowMat, lit, neon, occlude, place, plane, toon } from './kit';
-import { SLAB as S, addLamp, addPool, type Tick } from './world';
-import type { Spot } from './landmarks';
-import type { FightClub } from './fight-types';
-import { BAGS, BLEACHERS, COUNTER, FIGHT_CLUB, LOCKERS, POSTS, POST_R, RING, RING_H, RING_HALF, ROPES, SHED, SIGN } from './fightsite';
+import { Batch, FONT_DISPLAY, FONT_MONO, PAL, canvasTex, fx, lit, neon, occlude, place, plane, toon } from './kit';
+import { SLAB as S, type Tick } from './world';
+import { BAGS, BLEACHERS, COUNTER, FIGHT_CLUB, FIGHT_VIEW, LOCKERS, POSTS, POST_R, RING, RING_H, RING_HALF, ROPES, SHED, SIGN } from './fightsite';
 import { FIGHTCLUB_FIX } from './solids';
 import { COVER, KERB as KERB_C } from './palette';
 
-/** The place's id (city.ts SpotId lists it once index.ts wires the pin and panel) */
+export const SELF = import.meta.url;
+
+/** The place's id (its pin, pick boxes and hover ring are the boot's: index.ts, `spot()`) */
 const ID = 'fightclub';
 /** Fixed copy only */
 const SIGN_TEXT = 'FIGHT CLUB';
@@ -57,7 +57,6 @@ const ROSE = toon(PAL.pink);
 const LOCKER = toon('#2d5f8f');
 const DOOR = toon('#3a78b0');
 const glow = (c: string) => neon(c, 0.6, 2.4);
-const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
 const unitBox = new THREE.BoxGeometry(1, 1, 1);
 
 /** The canvas: pale, a pink border, the Emporium diamond outlined in the middle (nothing else on it) */
@@ -176,7 +175,7 @@ function bench(b: Batch, x: number, z: number, ry: number, y = S) {
   for (const sx of [-0.45, 0.45]) b.add(g(0.05, 0.26, 0.28, sx, 0, 0), INK);
 }
 
-export function buildFightClub(scene: THREE.Scene, opts: { tick: (f: Tick) => void; reduced: boolean; low: boolean }): FightClub {
+function buildFightClub(scene: THREE.Scene, opts: { tick: (f: Tick) => void; reduced: boolean; low: boolean }) {
   const { low, reduced } = opts;
   const L = FIGHT_CLUB;
   /** The paving stays on the ground; everything standing on it is the spot's group (lifted on hover) */
@@ -402,17 +401,8 @@ export function buildFightClub(scene: THREE.Scene, opts: { tick: (f: Tick) => vo
 
   b.build(places);
 
-  // Lamps at the yard's front corners, leaning in; the rig's light pooled on the canvas at night (drawn with the lamps' pools)
-  addLamp(L.x0 + 0.4, L.z0 + 0.3, -Math.PI / 2);
-  addLamp(L.x1 - 0.4, L.z0 + 0.3, -Math.PI / 2);
-  addPool(RING.x, RING.z, RW * 1.3, top);
-
-  /* ----- The spot: the pin over the sign, the camera on the ring, the hover ring on the canvas ----- */
-  const ring = new THREE.Mesh(new THREE.RingGeometry(RING_HALF - 0.5, RING_HALF - 0.36, 64), glowMat(PAL.cyan, 0, null));
-  ring.rotation.x = -Math.PI / 2;
-  ring.position.set(RING.x, top + 0.014, RING.z);
-  places.add(fx(ring));
-  const spot: Spot = { id: ID, group: places, focus: V(RING.x, S + 0.8, RING.z), size: 11, pin: V(SIGN.x, signY + 1.6, SIGN.z), ring };
+  // (its lamps at the yard's front corners and the rig's pool of light on the canvas are the boot's: index.ts, with the
+  // city's lamps)
 
   // The sign breathes faintly at night (never under reduced motion)
   opts.tick(({ t, night }) => {
@@ -422,13 +412,17 @@ export function buildFightClub(scene: THREE.Scene, opts: { tick: (f: Tick) => vo
     signLive.opacity = 1 - pulse * 0.5;
   });
 
-  return {
-    group,
-    spot,
-    setLive(on) {
-      idleG.visible = !on;
-      liveG.visible = on;
-      sign.material = on ? signLive : signIdle;
-    },
+  const setLive = (on: boolean) => {
+    idleG.visible = !on;
+    liveG.visible = on;
+    sign.material = on ? signLive : signIdle;
   };
+  FIGHT_VIEW.apply = setLive;
+  setLive(FIGHT_VIEW.live);
+}
+
+/** The Fight Club as a district (districts.ts `LAZY_DISTRICTS`): drawn on the main thread when it's near, no sites */
+export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scene | null; tick?: (f: Tick) => void }) {
+  if (!scene || !tick) return;
+  buildFightClub(scene, { tick, low, reduced: matchMedia('(prefers-reduced-motion: reduce)').matches });
 }
