@@ -75,7 +75,7 @@ strip west of the house, the yard).
    `HOME_SOLIDS`), `home3d.ts` (`gardens()`), `tests/home.test.ts` (clear of the car's way, the gates, the bollards,
    the doors' prompts, the spawn). Shots from above, the north-east and the yard, by day and night; draw calls and
    `?bench` before and after.
-   *Built, waiting for the owner's sign-off.* The pattern is south3d.ts `yardBands()`: the yard's paving in the
+   *Signed off by the owner and live (2026-11-26).* The pattern is south3d.ts `yardBands()`: the yard's paving in the
    palette's pale path stone (`STONE.path`), bands of its edge stone (`STONE.edge`) 0.2 wide on a 2.4 grid (a row of
    panels centred on the drive's line), a 0.35 border inside the wall and a 0.34 band under each of the drive's lit
    lines; drawn at every distance (a few quads a site, in paints the plot's batch already has). His D before the garage

@@ -283,7 +283,7 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   drawers' brass pulls; the stair's warm lights are in the east wall by the first flight's treads (`stair()`).
   **The garden furnished** (the owner's call, 2026-11-25) is planned in `docs/garden-plan.md`: resort luxe, the yard's
   paving patterned with trees in planters, lit stepping-stone paths on both lawns, an outdoor kitchen on the east lawn
-  and a firepit on the north-west lawn, a phase at a time. Phase 1 (the yard) is built: the paving's pattern is
+  and a firepit on the north-west lawn, a phase at a time. Phase 1 (the yard) is live: the paving's pattern is
   south3d.ts `yardBands()` (pale `STONE.path` panels, `STONE.edge` bands on a 2.4 grid, a border, the drive framed),
   his D before the garage inlaid in black steel, six trees in planters (home.ts `YARD_TREES`, `YARD_TREE`, in
   `HOME_SOLIDS`; home3d.ts `gardens()`).
