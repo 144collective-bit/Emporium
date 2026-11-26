@@ -36,7 +36,7 @@ import {
   DECK_SHOPS, DECK_SHOP_DOORS, DECK_SHOP_NAMES, FLAT, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
-import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
+import { CORE_GAP, DOOR_OUT, GALLERY_DROP, GALLERY_RAIL, GALLERY_WALL, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
 import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, BOLLARD, BOLLARDS, COLUMN_R, DECK_COLUMNS, DECK_PROPS, DESIRE_W, FRAME, MOWN_EDGE, SANDPIT, SHRUB, SHRUBS, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
 import { COURTS, DECK_LOOK, DESIRE_LINES, GRASS, PLAY, landingPosts } from './southblocks';
 import { CROWD_VIEW } from './character';
@@ -486,13 +486,24 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
       const deck = [...inner, ...[...outer].reverse()];
       flat(b, deck, y, DECK_FLOOR);
       flat(b, deck, y - 0.16, CONC_DARK, false);
-      // (the front: a solid concrete upstand, its outer face on the gallery's edge; open where a core stands out from
-      // it, southsky.ts `CORE_GAP`)
+      // (the front: a low concrete wall, its outer face on the gallery's edge, an open steel rail over it (the owner's
+      // call, 2026-11-26, docs/flats-plan.md: crouched you see and shoot between them, standing over the rail; the wall
+      // stops bullets, southsky.ts `SKY_COVER`); open where a core stands out from it, southsky.ts `CORE_GAP`)
       for (const run of runs) {
-        upstand(b, run, front, 0.12, y - 0.16, y + 0.62, CONC);
-        // (R1: a coping a little wider than the upstand, in the darker concrete, and each run's ends closed)
-        pairs(run, (a, c) => along(b, a, c, 0.18, y + 0.62, y + 0.67, CONC_DARK, front - s * 0.06));
-        capEnds(b, run, front, 0.12, y - 0.16, y + 0.62, CONC);
+        upstand(b, run, front, 0.12, y - GALLERY_DROP, y + GALLERY_WALL, CONC);
+        // (R1: a coping a little wider than the wall, in the darker concrete, and each run's ends closed)
+        pairs(run, (a, c) => along(b, a, c, 0.18, y + GALLERY_WALL, y + GALLERY_WALL + 0.05, CONC_DARK, front - s * 0.06));
+        capEnds(b, run, front, 0.12, y - GALLERY_DROP, y + GALLERY_WALL, CONC);
+        // (the handrail along it, on posts every 1.2 m and at each end)
+        pairs(run, (a, c) => along(b, a, c, 0.05, y + GALLERY_RAIL - 0.04, y + GALLERY_RAIL, RAIL, front - s * 0.06));
+        const len = runLength(run);
+        const n = Math.max(1, Math.round(len / 1.2));
+        for (let j = 0; j <= n; j++) {
+          const [p, t] = pointAlong(run, Math.min(len - 0.05, Math.max(0.05, (len * j) / n)));
+          const o = front - s * 0.06;
+          const q: Pt = [p[0] - t[1] * o, p[1] + t[0] * o];
+          b.add(plain(new THREE.BoxGeometry(0.04, GALLERY_RAIL - GALLERY_WALL - 0.09, 0.04).translate(q[0], y + (GALLERY_WALL + 0.05 + GALLERY_RAIL - 0.04) / 2, q[1])), RAIL);
+        }
       }
     });
     // R1's fine trims, near only: the slab joints across the floor (about 1.2 m), a skirting where the floor meets the
@@ -861,6 +872,8 @@ const centre = (ring: Pt[]): Pt => [ring.reduce((s, p) => s + p[0], 0) / ring.le
 /* ---------- The bridges, the podium deck, Bunker Sound's door ---------- */
 
 const PUDDLE = toon('#1b2230');
+/** The bridges' glass: a light see-through tint */
+const CLEAR_GLASS = new THREE.MeshBasicMaterial({ color: '#cfe3ee', transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide });
 /** The noticeboards' cork */
 const CORK = toon('#8b6a45');
 /** The towers' door lamps: sodium orange, off by day */
@@ -876,7 +889,8 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | n
     along(b, a, c, w - 0.26, y, y + 0.006, DECK_FLOOR);
     for (const side of [-1, 1]) {
       along(b, a, c, 0.12, y, y + 0.6, CONC, side * (BRIDGE_HALF - 0.06));
-      along(b, a, c, 0.04, y + 0.6, y + 1.5, GLASS, side * (BRIDGE_HALF - 0.1));
+      // (clear glass to see the estate through: the owner's call, 2026-11-26, docs/flats-plan.md)
+      along(b, a, c, 0.04, y + 0.6, y + 1.5, CLEAR_GLASS, side * (BRIDGE_HALF - 0.1));
     }
     along(b, a, c, w + 0.12, y + 1.5, y + 1.68, CONC);
   });

@@ -256,6 +256,45 @@ export function flatDoors(y: number): { id: string; x: number; z: number; label:
 }
 
 export const SKY_SHAPES: SkyShape[] = [...galleryShapes(), ...landingShapes(), ...bridgeShapes(), ...DECKS.map((d) => level(`deck ${d.id}`, d.poly, d.y)), ...stairShapes(), ...flatShapes()];
+
+/* ---------- The galleries' fronts as cover (docs/flats-plan.md Phase 1) ---------- */
+
+/**
+ * A gallery's front (the owner's call, 2026-11-26): a low concrete wall `GALLERY_WALL` high with an open steel rail
+ * over it, its top `GALLERY_RAIL` over the floor: crouched you see and shoot between the two, standing over the rail
+ */
+export const GALLERY_WALL = 0.4;
+export const GALLERY_RAIL = 0.68;
+/** How far under the floor the front's concrete starts (the deck's edge) */
+export const GALLERY_DROP = 0.16;
+/**
+ * What stops bullets up there: each gallery's front wall in short boxes with a bottom ([x0, z0, x1, z1, top, bottom],
+ * solids.ts `rayBoxes()` reads the sixth), open where a core stands out from it (`CORE_GAP`). Bullets only: walking
+ * keeps to `skyWall()`, and the street under the galleries stays clear.
+ */
+export const SKY_COVER: [number, number, number, number, number, number][] = BLOCKS.filter((b) => b.spine).flatMap((b) => {
+  const s = sideOf(b);
+  const cores = CORES.filter((c) => c.of === b.id && b.kind === 'rampart').map((c) => nearestAlong(b.spine!, c.at));
+  return b.steps.flatMap((st) => {
+    const line = shift(section(b.spine!, st.from, st.to), s * (b.depth! / 2 + GALLERY_W - 0.06));
+    return SKY_FLOORS.filter((f) => f < st.storeys).flatMap((f) => {
+      const y = floorY(b.base, f);
+      const out: [number, number, number, number, number, number][] = [];
+      for (let i = 1; i < line.length; i++) {
+        const [a, c] = [line[i - 1], line[i]];
+        const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.6));
+        for (let k = 0; k < n; k++) {
+          const p: Pt = [a[0] + ((c[0] - a[0]) * k) / n, a[1] + ((c[1] - a[1]) * k) / n];
+          const q: Pt = [a[0] + ((c[0] - a[0]) * (k + 1)) / n, a[1] + ((c[1] - a[1]) * (k + 1)) / n];
+          const m: Pt = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+          if (cores.some((d) => Math.abs(d - nearestAlong(b.spine!, m)) < CORE_GAP / 2 + 0.2)) continue;
+          out.push([Math.min(p[0], q[0]) - 0.06, Math.min(p[1], q[1]) - 0.06, Math.max(p[0], q[0]) + 0.06, Math.max(p[1], q[1]) + 0.06, y + GALLERY_WALL, y - GALLERY_DROP]);
+        }
+      }
+      return out;
+    });
+  });
+});
 const BOX = SKY_SHAPES.map((s) => [Math.min(...s.poly.map((p) => p[0])), Math.min(...s.poly.map((p) => p[1])), Math.max(...s.poly.map((p) => p[0])), Math.max(...s.poly.map((p) => p[1]))]);
 const inRect = (x: number, z: number) => x > BLOCKS_RECT[0] && x < BLOCKS_RECT[2] && z > BLOCKS_RECT[1] && z < BLOCKS_RECT[3];
 

@@ -4,7 +4,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BoxGrid } from '../src/scripts/city3d/boxgrid';
-import { CAMERA_ONLY, SHOT_SOLIDS, SOLIDS, SOLID_GRID, TURNTABLE_BOX, rayBoxes, type Box } from '../src/scripts/city3d/solids';
+import { CAMERA_ONLY, SHOT_COVER, SHOT_SOLIDS, SOLIDS, SOLID_GRID, TURNTABLE_BOX, rayBoxes, type Box } from '../src/scripts/city3d/solids';
 import { newCar, reachOf, stepCar, tune, type DriveInput } from '../src/scripts/city3d/drive-sim';
 import { TUNES, flyReach, newFlight, type FlyInput } from '../src/scripts/city3d/flight-sim';
 import { stepFly } from '../src/scripts/city3d/flight-step';
@@ -82,9 +82,9 @@ function rayAll(from: { x: number; y: number; z: number }, dir: { x: number; y: 
   t = rollsAlong(from, dir, t, 0.1, 0.5);
   const o = [from.x, from.y, from.z];
   const v = [dir.x, dir.y, dir.z];
-  for (const b of [...SHOT_SOLIDS, ...CAMERA_ONLY]) {
+  for (const b of [...SHOT_SOLIDS, ...CAMERA_ONLY, ...SHOT_COVER]) {
     if (b[4] < 0.3) continue;
-    const lo = [b[0], 0, b[1]];
+    const lo = [b[0], (b as number[])[5] ?? 0, b[1]];
     const hi = [b[2], b[4], b[3]];
     let t0 = 0;
     let t1 = t;
