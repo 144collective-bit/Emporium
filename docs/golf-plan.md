@@ -284,7 +284,7 @@ paints the level pill at once; the kart park's and the metro's drawing, which th
 - Play a hole, nine or eighteen; rewards Dorras and XP only. Its save (`degen-city-golf-v1`) with its migration and its
   key in `BACKUP_KEYS`; in through `live.closed()`; touch controls.
 
-### The design pass (the owner's call, 2026-11-24: "do a design pass across the golf course"; D1 first, go 2026-11-24; the lakes stay where they are; D1 signed off 2026-11-24, D2 next, go 2026-11-24)
+### The design pass (the owner's call, 2026-11-24: "do a design pass across the golf course"; D1 first, go 2026-11-24; the lakes stay where they are; D1 signed off 2026-11-24, D2 next, go 2026-11-24; D2 merged with the pines past the fence, 2026-11-25; D3 signed off 2026-11-25, D4 next, go 2026-11-25)
 
 The survey (2026-11-24): every hole from behind its tee and from short of its green, the lakes, the clubhouse, on the
 desktop by day (`docs/golf-shots/design-0-*.webp`: `greens-a` holes 1 to 6's greens, `greens-b` 7 to 12's, `tees-a`
@@ -341,6 +341,14 @@ phone tier and the boot):
   goes to main (the owner's call, 2026-11-25).
 - **D3, the water**: reeds in clumps on the shallow shores, lily pads; Reed Water and Clubhouse Lake brought into play
   (a carry on 16, the 18th's green over its edge) where the owner wants it.
+  **Built and signed off (2026-11-25, the owner).** The lakes stay where they are (the owner's call); the reeds
+  in two to four clumps a lake (golf3d.ts `reedClumps()`), thick in a clump's middle and thinning to its ends, open
+  bank between, standing in the shallows at the water's real edge (a bank higher than the water stands it in from
+  the shore: the first shots had reeds on dry bank there), as tall again over the water as it's deep; lily pads in a
+  patch or two a lake off the clumps (`liliesOf()`, 12 to 19 a lake, a few in flower, palette `lilyPad`,
+  `lilyFlower`), near only, in the edge's sites: no new draw calls. Reed Water and Clubhouse Lake aren't brought into
+  play (the lakes stay where they are). Shots `docs/blend-shots/golf-d3-a/` (every lake, desktop and phone, and Fen
+  Pond close); the boot unchanged (771.9 of 775 KB: the water's all in the course's chunk).
 - **D4, the paths and tees**: the cart paths a warm gravel from the palette, bent round the tees rather than past them;
   tees with rounded corners, a darker cut edge and the tee's markers clear.
 

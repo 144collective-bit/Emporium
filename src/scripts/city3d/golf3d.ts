@@ -515,15 +515,72 @@ export const FENCE_RUNS: Pt[][] = (() => {
   return runs;
 })();
 
-/** The reeds round a lake: clumps along its shore where the bank isn't in play (a tee, a green, a fairway, a path) */
+/** The reeds (the design pass's D3: in clumps, not a ring): each lake's clumps, how many (`min` + up to `more`), each
+ * one's half arc round the shore (radians, `arc` + up to `spread`) */
+export const REED_CLUMPS = { min: 2, more: 2, arc: 0.22, spread: 0.3 };
+/** Where a lake's reed clumps stand: their angles round its shore (the shore's own, `shoreOf()`) and half arcs */
+export function reedClumps(l: Lake): { at: number; arc: number }[] {
+  const i = LAKES.indexOf(l);
+  const n = REED_CLUMPS.min + Math.floor(hash3(i, 0, 70) * (REED_CLUMPS.more + 1));
+  return Array.from({ length: n }, (_, k) => ({ at: ((k + hash3(i, k, 71) * 0.6) / n) * Math.PI * 2, arc: REED_CLUMPS.arc + hash3(i, k, 72) * REED_CLUMPS.spread }));
+}
+/** The reeds round a lake: clumps along its shore, thick in a clump's middle and thinning to its ends, standing in the
+ * shallows (a little in from the shore) where the bank isn't in play (a tee, a green, a fairway, a path) */
 export function reedsOf(l: Lake): Pt[] {
-  const shore = shoreOf(l, Math.round((Math.PI * (l.r[0] + l.r[1])) / 2.2));
-  return shore.filter(([x, z], k) => {
+  const i = LAKES.indexOf(l);
+  const n = Math.round((Math.PI * (l.r[0] + l.r[1])) / 0.9);
+  const shore = shoreOf(l, n);
+  const clumps = reedClumps(l);
+  const out: Pt[] = [];
+  shore.forEach(([x, z], k) => {
+    const a = (k / n) * Math.PI * 2;
+    // (how far out of the nearest clump, 0 its middle to 1 its end)
+    const far = Math.min(...clumps.map((c) => Math.abs(Math.atan2(Math.sin(a - c.at), Math.cos(a - c.at))) / c.arc));
+    if (far > 1 || hash3(i, k, 73) < far * 0.75) return;
     const [dx, dz] = [x - l.at[0], z - l.at[1]];
     const d = Math.hypot(dx, dz) || 1;
-    const out: Pt = [x + (dx / d) * 1.5, z + (dz / d) * 1.5];
-    return k % 3 !== 1 && ['rough', 'native'].includes(surfaceAt(...out) ?? '');
+    const bank: Pt = [x + (dx / d) * 1.5, z + (dz / d) * 1.5];
+    if (!['rough', 'native'].includes(surfaceAt(...bank) ?? '')) return;
+    // (in from the shore to the water's edge, where the bank drops under the lake's level: a bank higher than the
+    // water stands the edge in from the shore), then a little into the shallows
+    const water = golfWater(i);
+    for (let t = 0; t < d * 0.6; t += 0.25) {
+      const [ex, ez] = [x - (dx / d) * t, z - (dz / d) * t];
+      if (golfLift(ex, ez) > water - 0.02) continue;
+      const into = 0.1 + hash3(i, k, 74) * 0.6;
+      out.push([ex - (dx / d) * into, ez - (dz / d) * into]);
+      return;
+    }
   });
+  return out;
+}
+
+/** The lily pads: a patch or two a lake off its reed clumps, so many pads a patch (`min` + up to `more`), within `reach`
+ * of its middle, each `r` across plus up to `grow`, `flower` of them in flower; never nearer the shore than `inside`, and
+ * only where the water's at least `deep` */
+export const LILIES = { patches: 2, min: 7, more: 6, reach: 3.6, r: 0.35, grow: 0.3, flower: 0.22, inside: 0.82, deep: 0.15 };
+/** A lake's lily pads: where, how big, their notch's turn, and whether in flower */
+export function liliesOf(l: Lake): { x: number; z: number; r: number; turn: number; flower: boolean }[] {
+  const i = LAKES.indexOf(l);
+  const out: { x: number; z: number; r: number; turn: number; flower: boolean }[] = [];
+  const shore = shoreOf(l, 72);
+  reedClumps(l)
+    .slice(0, LILIES.patches)
+    .forEach((c, p) => {
+      // (the patch's middle part way out from the lake's middle toward the clump)
+      const s = shore[Math.round((c.at / (Math.PI * 2)) * 72) % 72];
+      const t = 0.55 + hash3(i, p, 80) * 0.15;
+      const [mx, mz] = [l.at[0] + (s[0] - l.at[0]) * t, l.at[1] + (s[1] - l.at[1]) * t];
+      const n = LILIES.min + Math.floor(hash3(i, p, 81) * (LILIES.more + 1));
+      for (let k = 0; k < n; k++) {
+        const a = hash3(i, p * 50 + k, 82) * Math.PI * 2;
+        const d = Math.sqrt(hash3(i, p * 50 + k, 83)) * LILIES.reach;
+        const [x, z] = [mx + Math.cos(a) * d, mz + Math.sin(a) * d];
+        if (lakeAt(l, x, z) > LILIES.inside || golfLift(x, z) > golfWater(i) - LILIES.deep) continue;
+        out.push({ x, z, r: LILIES.r + hash3(i, p * 50 + k, 84) * LILIES.grow, turn: hash3(i, p * 50 + k, 85) * Math.PI * 2, flower: hash3(i, p * 50 + k, 86) < LILIES.flower });
+      }
+    });
+  return out;
 }
 
 /* ---------- Knob Hill Golf Club's clubhouse (Phase 4) ---------- */
@@ -704,6 +761,8 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
   const reed = toon('#7f9a52');
   const reedTop = toon('#9c7a4a');
   const petals = FLOWER_COLOURS.map((c) => toon(c));
+  const pad = toon(COVER.lilyPad);
+  const lily = toon(COVER.lilyFlower);
   const drive = resample(DRIVE, 1);
   for (let k = 0; k < drive.length - 1; k += 40) {
     const part = drive.slice(k, Math.min(drive.length, k + 41));
@@ -771,17 +830,29 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
             const y = golfLift(f.x, f.z);
             b.add(new THREE.OctahedronGeometry(0.12 * f.s, 0).scale(1, 0.55, 1).translate(f.x, y + 0.16 * f.s, f.z), petals[f.c]);
           }
+          // The lily pads (D3): flat on the water, notched, a flower on a few
+          for (const l of lakes) {
+            const y = golfWater(LAKES.indexOf(l)) + 0.02;
+            for (const p of liliesOf(l)) {
+              b.add(new THREE.CircleGeometry(p.r, 10, p.turn + 0.3, Math.PI * 2 - 0.6).rotateX(-Math.PI / 2).translate(p.x, y, p.z), pad);
+              if (p.flower) b.add(new THREE.OctahedronGeometry(0.13, 0).scale(1, 0.7, 1).translate(p.x, y + 0.09, p.z), lily);
+            }
+          }
           // Reeds round the lakes: a clump of blades and a seed head or two
-          for (const l of lakes)
+          for (const l of lakes) {
+            const water = golfWater(LAKES.indexOf(l));
             for (const [x, z] of reedsOf(l)) {
+              // (from the bed in the shallows: as tall again over the water as the water's deep there)
               const y = golfLift(x, z);
+              const deep = Math.max(0, water - y);
               for (let j = 0; j < 3; j++) {
                 const [ox, oz] = [Math.cos(x * 3.1 + j * 2.1) * 0.35, Math.sin(z * 2.7 + j * 2.1) * 0.35];
-                const hgt = 0.9 + 0.25 * Math.sin(x + z + j);
+                const hgt = deep + 0.9 + 0.25 * Math.sin(x + z + j);
                 b.add(new THREE.ConeGeometry(0.07, hgt, 4).translate(x + ox, y + hgt / 2, z + oz), reed);
                 if (j === 0) b.add(new THREE.CylinderGeometry(0.06, 0.06, 0.25, 5).translate(x + ox, y + hgt - 0.05, z + oz), reedTop);
               }
             }
+          }
         });
         b.build(into, { cast: false, receive: true });
       });

@@ -5,6 +5,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  BOLLARD,
+  BOLLARDS,
+  DESIRE_W,
+  MOWN_EDGE,
+  SHRUB,
+  SHRUBS,
   BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, COURT_GAP, DECK_COLUMNS, DECK_PROPS, FRAME, SANDPIT, YARD_CARS, YARD_SOLIDS, YARD_TREES,
   bayCorners, courtFence, onDeckProp, thingCorners,
 } from '../src/scripts/city3d/southyard';
@@ -95,4 +101,25 @@ test("nothing solid in anyone's way: the lifts' doors, the stair's foot, the pla
   const spots: Pt[] = [...SKY_LIFTS.map((l): Pt => [l.door.x, l.door.z]), STAIR.foot, ...ENDS_DOORS.map((d): Pt => [d.x, d.z]), ...Object.values(ENDS_SPAWNS).map((s): Pt => [s.x, s.z])];
   for (const [x, z] of spots) assert.ok(!YARD_SOLIDS.some((b) => inBox(b, x, z, 0.4)), `something solid at ${x.toFixed(1)}, ${z.toFixed(1)}`);
   for (const b of YARD_SOLIDS) for (const p of [[b[0], b[1]], [b[2], b[3]]] as Pt[]) assert.ok(offStreet(p) > -0.2, `a solid on a street at ${p}`);
+});
+
+test('the grass given its use (J3): shrubs in groups on the lawn, off the paths, the trees and the play area; bollards along the paths', () => {
+  assert.ok(SHRUBS.length >= 15, `${SHRUBS.length} shrubs`);
+  for (const [i, p] of SHRUBS.entries()) {
+    assert.ok(inside(GRASS[0], p) && distTo(GRASS[0], p, true) > MOWN_EDGE + SHRUB.r, `shrub ${i} off the lawn`);
+    assert.ok(DESIRE_LINES.every((l) => distTo(l, p) > DESIRE_W / 2 + SHRUB.r), `shrub ${i} on a path`);
+    assert.ok(YARD_TREES.every(([x, z]) => Math.hypot(x - p[0], z - p[1]) > 2), `shrub ${i} under a tree`);
+    assert.ok(!inside(PLAY, p) && !inBlock(p, 1));
+    // (in a group: another shrub within reach)
+    assert.ok(SHRUBS.some((q, j) => j !== i && Math.hypot(q[0] - p[0], q[1] - p[1]) < 2.5), `shrub ${i} alone`);
+  }
+  assert.ok(BOLLARDS.length >= 8, `${BOLLARDS.length} bollards`);
+  for (const p of BOLLARDS) {
+    const d = Math.min(...DESIRE_LINES.map((l) => distTo(l, p)));
+    assert.ok(d > DESIRE_W / 2 && d < DESIRE_W / 2 + 1, 'beside a path, not on it');
+    assert.ok(inside(GRASS[0], p));
+    assert.ok(BOLLARD.h < 1, 'low');
+  }
+  // (solid, so you walk round them)
+  for (const [x, z] of [...SHRUBS, ...BOLLARDS]) assert.ok(YARD_SOLIDS.some((b) => inBox(b, x, z, 0)));
 });

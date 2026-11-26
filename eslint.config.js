@@ -58,6 +58,7 @@ const DOM_FREE = [
   'src/scripts/city3d/southsky.ts',
   'src/scripts/city3d/southyard.ts',
   'src/scripts/city3d/southterraces.ts',
+  'src/scripts/city3d/southgardens.ts',
   'src/scripts/city3d/aldwyns.ts',
   'src/scripts/city3d/highroad.ts',
   'src/scripts/city3d/council.ts',

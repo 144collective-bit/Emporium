@@ -123,12 +123,20 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `SANDPIT`, `BALL_COURT` and `courtFence()`, `YARD_TREES` (index.ts adds them at the boot, on the rolling ground),
   `DECK_PROPS` (`onDeckProp()`: southsky.ts keeps you out of them), `DECK_COLUMNS`, `YARD_SOLIDS` (solids.ts, lifted onto
   the ground). Drawn by southblocks3d.ts's `registerYard()` (sites a court, the grass, the play area, the deck's props).
+  The twin towers' lawn (the loop's J3): the `DESIRE_LINES` worn `DESIRE_W` wide, a `MOWN_EDGE` strip round the grass,
+  `SHRUBS` in groups (solid) and `BOLLARDS` along the paths (solid, a warm lamp in each head, `BOLLARD_LAMP`).
 - **Aldwyn's Green's terraces** (`southterraces.ts`, DOM-free, tested in `tests/southterraces.test.ts`, 3a): `HOUSES`
   (each its front's middle `at`, its `face`, frontage `w`, street, block, front, paint, door, dormer, chimney, `lit`,
   `endL` / `endR`, `base` / `low`), `houseFoot()`, `plotOf()`, `ALLEYS`, `GINNELS`, `frontWalls()`, the solids,
   `TERRACES_RECT`. Drawn by `village3d.ts` (lazy chunk `village`): `PIECES` (one house's shapes in its own frame,
   `frameOf()` stretches each to its frontage, right-handed) copied by `Batch.instances()`, built with `lift: false`; the
   yards, walls, alleys and ginnels in a lifted Batch. Bench view `village-terraces`.
+- **The terraces' back gardens** (`southgardens.ts`, DOM-free, drawing-only, out of the boot, tested in
+  `tests/southgardens.test.ts`; the loop's J6): `GARDENS`, one a house: its `yard`, the `fences` it draws (a shared one
+  once, by the house it's the left side of, as long as the deeper yard), the `back` wall at the yard's end, a `patio`
+  at the house's back wall, a `shed` in a back corner of about one in three (none where rows back onto each other at a
+  bend). Drawn in `village3d.ts` `drawGround()`: the patio at every distance, the rest near only, not on phones. Not
+  solid, as the alleys' back walls weren't.
 - **St Aldwyn's** (`aldwyns.ts`, DOM-free, tested in `tests/aldwyns.test.ts`, 3b): `NAVE`, `CHANCEL`, `TOWER`, `PORCH`
   (rects, the nave along x), `HEIGHTS`, `SPIRE_TIP` (22.5 over `CHURCH_BASE`), `PORCH_DOOR` / `DOOR_SPOT` (its door,
   `ENDS_DOORS`), `LYCHGATE`, `CHURCH_PATH` (southterraces.ts leaves a gap for it), `GRAVES`, `YEWS`, `YARD_WALL`,
