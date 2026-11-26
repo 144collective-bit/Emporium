@@ -103,7 +103,7 @@ export const DISTRICTS: { id: string; name: string; ox: number; oz: number }[] =
 ];
 
 /** The garage's lot on the south bank, east of the south row (S5), facing the south bank avenue */
-export const GARAGE = { ox: OUTER_HI + BS + 4, oz: SOUTH_ROW }; // 82-91 x 96.5-105.5
+export const GARAGE = { ox: OUTER_HI + BS + 4, oz: SOUTH_ROW }; // 82-91 x 141.5-150.5
 /** The market square, east of the East districts, facing the north bank avenue (across the river from the garage) */
 export const MARKET = { ox: OUTER_HI + BS + 4, oz: BLOCKS[2] }; // 82-91 x 48.25-57.25
 /** Makers' Row: four units of your own, north of the market square across the street */
