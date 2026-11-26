@@ -57,3 +57,7 @@ Each phase: tests extended, every check, shots, merged on its own.
 ## Log
 
 - 2026-11-26: the plan, from the owner's answers. Phase 1 started.
+- 2026-11-26: Phase 1 built. The galleries' fronts a 0.40 wall with its coping and a steel rail at 0.68 on posts;
+  `SKY_COVER` (1 box about every 0.6 m of front) stops bullets, `rayBoxes()` reading boxes' bottoms; the bridges'
+  glass clear. Tested: the wall under a crouched eye, the rail between the crouched and standing eyes, a low shot from
+  the gallery stopped by the wall, a crouched one over it. Shots: crouched, standing, from outside, inside a bridge.

@@ -118,6 +118,11 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   (`SKY_LIFTS`, `skyLiftDoors()`, `liftArrival()`, `floorName()`) and their floor picker (`skylift-ui.ts`: the metro's
   card, `[data-metro]`, its words put back after; index.ts `rideTo()`). A bridge to a tower ends at its door: the towers
   aren't entered. The smoke test's `sky` and `stair` scenes.
+  The galleries' fronts (docs/flats-plan.md Phase 1, the owner's call 2026-11-26): a low concrete wall `GALLERY_WALL`
+  (0.40) with its coping and an open steel rail on posts every 1.2 m, its top `GALLERY_RAIL` (0.68): crouched you see
+  and shoot between them, standing over the rail. `SKY_COVER` (southsky.ts) is the walls as boxes with a bottom, which
+  stop bullets only (solids.ts `SHOT_COVER`, in the shot grid; `rayBoxes()` reads a box's sixth number as its bottom);
+  walking still keeps to `skyWall()`. The bridges' glass is a light see-through tint (`CLEAR_GLASS`).
 - **The ground round the blocks** (`southyard.ts`, DOM-free, tested in `tests/southyard.test.ts`, 2d): `BAYS` and
   `YARD_CARS` (drawn by cars.ts `parkedCars()` on the main thread), `BIN_STORES`, `BIKE_SHEDS`, the play area's `FRAME`,
   `SANDPIT`, `BALL_COURT` and `courtFence()`, `YARD_TREES` (index.ts adds them at the boot, on the rolling ground),

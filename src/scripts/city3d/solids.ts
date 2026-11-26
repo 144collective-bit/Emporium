@@ -338,8 +338,8 @@ export const SOLIDS: Box[] = onGround([...DRAWN.map(designBox), ...DOWNTOWN_SOLI
 );
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
-// (and what stops bullets only: Endswood's galleries' front walls, boxes with a bottom, docs/flats-plan.md)
-SHOT_SOLIDS.push(...(SKY_COVER as unknown as Box[]));
+/** What stops bullets only: Endswood's galleries' front walls, boxes with a bottom (their sixth number), docs/flats-plan.md */
+export const SHOT_COVER: Box[] = SKY_COVER as unknown as Box[];
 
 /** Where you can step in, and what opens there (drawn on the landmarks' grid, moved onto today's streets) */
 export const DOORS: { id: SpotId; x: number; z: number }[] = (
@@ -375,7 +375,7 @@ export const SOLID_GRID = new BoxGrid(SOLIDS);
 // boxes with a bottom, endsdecks.ts)
 export const CAMERA_GRID = new BoxGrid([...SOLIDS, ...CAMERA_ONLY, ...(DECK_CAMERA as Box[])]);
 /** What bullets stop on */
-const SHOT_GRID = new BoxGrid([...SHOT_SOLIDS, ...CAMERA_ONLY]);
+const SHOT_GRID = new BoxGrid([...SHOT_SOLIDS, ...CAMERA_ONLY, ...SHOT_COVER]);
 /** Every grid that holds the solids (walk.ts adds the car's, which leaves out the turntable) */
 export const SOLID_GRIDS: BoxGrid[] = [SOLID_GRID, CAMERA_GRID, SHOT_GRID];
 
