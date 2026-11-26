@@ -306,12 +306,12 @@ sets the order (rule 2).
 - [ ] **J5 (R2/R3): paths whose edges break up over the lawn** (`h-circus-foot`): a lilac path's edges go ragged in
       blobs where it meets the grass, and the lawn meets the paving with no kerb or edge. The paths' own edge (a clean
       line or a kerb) and a mown edge or kerb at every lawn's meeting with paving.
-- [ ] **J6 (R3): Aldwyn's Green's back gardens** (`h-green-air`): behind the terraces the gardens are loose pale slabs
+- [x] **J6 (R3): Aldwyn's Green's back gardens** (`h-green-air`): behind the terraces the gardens are loose pale slabs
       (patios, sheds) and short red fence pieces at odd angles that don't close any plot. R3's garden rule: fences meet
       at the plot's corners, patios against the back wall, a shed in a corner.
       Built 2026-11-26 (night 5 pass 2) in a draft PR: the slabs were the alleys and the red pieces each house's own
       stub of back wall; now `southgardens.ts` closes every yard (side fences from the back corners to the back wall,
-      a shared one drawn once), a patio at the back wall, 1 in 3 with a shed. Full checks next pass, then merge.
+      a shared one drawn once), a patio at the back wall, 1 in 3 with a shed. Merged 2026-11-26, night 5 pass 3.
 - [ ] **J7 (R1): St Aldwyn's churchyard wall and its yews** (`h-church-foot`): the wall is one plain grey slab with no
       coping or coursing; the yews are bare cones. R1 for stone: a coping, courses, a darker plinth; the yews rounded.
 - [ ] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
@@ -609,3 +609,5 @@ session.)
   the owner, its driving check failing the same with the lake fix in). Built in a draft PR: `southgardens.ts` and its
   test (the test caught a shed in a neighbour's house at a bend: kept out in the code). Typecheck, lint, the gardens'
   and near tests pass; shots read as closed plots. The full checks (40 minutes) didn't fit: next pass.
+- 2026-11-26, night 5 pass 3 (02:07): J6's full checks: `npm test` and `test:wide` 2416 of 2416 each, smoke fine, bootJs
+  unchanged (771.9 KB: the gardens out of the boot); texFull the same local 4985.1 as main (CI's budget passes). Merged.
