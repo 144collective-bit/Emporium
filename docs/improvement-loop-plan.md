@@ -596,3 +596,9 @@ session.)
   start is in Westlake's lake (the test checks only the city's solids, not the water walls the step adds), and on the
   way the lake's car walls walling the land between its coves (fixed in a draft PR). Changing the test's starts needs
   the owner: to Waiting on the owner. Only this plan edit merged.
+- 2026-11-26, night 5 pass 1 (00:07): the lake's car walls (the board's top Ready card): one wall per stretch of water
+  a row, split at every stretch of land over 1.5 wide, so the land between the coves is open to the car again (land
+  walled in: 249 samples to 12). Typecheck, lint, `npm test` and `test:wide` (2414 of 2414 each), the build and the
+  bake pass; the budget's texFull reads 4985.1 of 4955 here, the same on a branch with no texture change, while CI's
+  budget on main passes: a difference in this machine's bake, not either branch (J3's reading was the same). Merged.
+  The driving check's starts in the water still wait on the owner.
