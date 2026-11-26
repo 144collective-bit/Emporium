@@ -87,7 +87,7 @@ strip west of the house, the yard).
    Shots: `docs/garden-shots/phase-1-*.webp`.
 2. **The paths, lit**: the stepping stones on both lawns, the path lights. Tests that the stones and lights keep off
    the pool, the loungers, the cabana and the bench, and that the way to the back gate and the side door stays clear.
-   *Built, waiting for the owner's sign-off.* home.ts `GARDEN_PATHS` (two lines of points: the north-west lawn's
+   *Signed off by the owner and live (2026-11-26).* home.ts `GARDEN_PATHS` (two lines of points: the north-west lawn's
    from the yard's corner past the bench and round south of the tree to the back gate; the east lawn's from the yard
    by the house's end down past the pool's west end to the side door, then along the pool's south side to the
    cabana's front), `pathStones()` (a stone every `STONE_SIZE.step` 0.55, 0.44 by 0.3, turned to the path, a little
