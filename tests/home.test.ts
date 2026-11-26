@@ -946,7 +946,7 @@ test('the outdoor kitchen and the firepit (docs/garden-plan.md Phase 3): on thei
   assert.ok(east[3] - KITCHEN[3] < 0.1, 'against the south wall');
   assert.ok(KITCHEN_H < 0.6 && PERGOLA.h < HOME.eaves - 0.5, 'low, under the house');
   // (room to sit: the stools on the lawn's side of the counter, the way between them and the pool's path open)
-  for (const [x, z] of KITCHEN_STOOLS) assert.ok(z < KITCHEN[1] && KITCHEN[1] - z < 0.6, 'at the counter');
+  for (const [, z] of KITCHEN_STOOLS) assert.ok(z < KITCHEN[1] && KITCHEN[1] - z < 0.6, 'at the counter');
   for (let x = KITCHEN[0]; x < KITCHEN[2]; x += 0.1) assert.ok(stands(x, (POOL[3] + KITCHEN_STOOLS[0][1]) / 2 - 0.1), `the way between the pool and the stools at ${x}`);
   // The firepit: on the north-west lawn, off the path, the bench, the tree; its bench and chairs round it, its north side open to the path
   const fire: [string, Rect][] = [

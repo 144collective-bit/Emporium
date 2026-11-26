@@ -907,10 +907,10 @@ function gardens(b: Batch, low: boolean) {
 
 /** The outdoor kitchen under its pergola on the east lawn, and the firepit with its bench and chairs on the north-west lawn; in the compound's paints (looks only) */
 function kitchenAndFire(b: Batch, low: boolean) {
-  // The counter: stone, a dark worktop a hair over it on every side, black steel doors' lines and handles on its lawn side
+  // The counter: pale stone (the coping's, so it reads in the wall's shade), a dark worktop a hair over it on every side, black steel doors' lines and handles on its lawn side
   const [kx0, kz0, kx1, kz1] = KITCHEN;
   const H = KITCHEN_H;
-  cube(b, KITCHEN, S, S + H - 0.04, LOFT_STONE);
+  cube(b, KITCHEN, S, S + H - 0.04, COPING);
   cube(b, [kx0 - 0.02, kz0 - 0.03, kx1 + 0.02, kz1], S + H - 0.04, S + H, DARK);
   // The grill: a black steel box set in the worktop, its hood closed, a steel handle along its front
   const gx = kx0 + 1.3;
@@ -1004,14 +1004,17 @@ export function firepitFlames(scene: THREE.Scene, tick: ((f: Tick) => void) | un
   const mesh = new THREE.Mesh(mergeGeometries(parts, false)!, glowMat('#ff9a3c', 0.85, null));
   mesh.position.set(x, S + h + 0.02, z);
   mesh.name = 'home-firepit-flames';
-  mesh.visible = false;
   scene.add(fx(mesh));
+  // (under reduced motion the city's ticks run on its first frame only, so the flames stand shown and still, culled
+  // out of view as any mesh; moving, they're shown only while the camera's outside the house and near)
   const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  mesh.visible = still;
   let t = 0;
   tick?.(({ dt }) => {
+    if (still) return;
     const e = CROWD_VIEW.eye;
     mesh.visible = Math.hypot(e.x - x, e.z - z) < 40 && !inHouse(e.x, e.z, e.y);
-    if (!mesh.visible || still) return;
+    if (!mesh.visible) return;
     t += dt;
     mesh.scale.set(1, 0.85 + Math.sin(t * 7.1) * 0.1 + Math.sin(t * 12.7) * 0.06, 1);
     mesh.rotation.y = Math.sin(t * 1.3) * 0.4;
