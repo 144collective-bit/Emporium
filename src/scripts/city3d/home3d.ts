@@ -1001,23 +1001,34 @@ export function firepitFlames(scene: THREE.Scene, tick: ((f: Tick) => void) | un
     g.deleteAttribute('uv');
     parts.push(g);
   }
-  const mesh = new THREE.Mesh(mergeGeometries(parts, false)!, glowMat('#ff9a3c', 0.85, null));
-  mesh.position.set(x, S + h + 0.02, z);
+  // (one instance, shown only while the camera's outside the house and within 40 of the pit: set as it's drawn, so it
+  // holds under reduced motion, when the city's ticks run on its first frame only; elsewhere it counts no draw call)
+  const mesh = new THREE.InstancedMesh(mergeGeometries(parts, false)!, glowMat('#ff9a3c', 0.85, null), 1);
+  const pose = new THREE.Matrix4();
+  const at = new THREE.Vector3(x, S + h + 0.02, z);
+  const turn = new THREE.Quaternion();
+  const size = new THREE.Vector3(1, 1, 1);
+  mesh.setMatrixAt(0, pose.compose(at, turn, size));
+  mesh.frustumCulled = false;
+  mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   mesh.name = 'home-firepit-flames';
+  const m = new THREE.Vector3();
+  mesh.onBeforeRender = (_r, _s, cam) => {
+    m.setFromMatrixPosition(cam.matrixWorld);
+    mesh.count = Math.hypot(m.x - x, m.z - z) < 40 && !inHouse(m.x, m.z, m.y) ? 1 : 0;
+  };
   scene.add(fx(mesh));
-  // (under reduced motion the city's ticks run on its first frame only, so the flames stand shown and still, culled
-  // out of view as any mesh; moving, they're shown only while the camera's outside the house and near)
+  // (the flames sway in height, still under reduced motion)
   const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  mesh.visible = still;
+  const up = new THREE.Vector3(0, 1, 0);
   let t = 0;
   tick?.(({ dt }) => {
-    if (still) return;
-    const e = CROWD_VIEW.eye;
-    mesh.visible = Math.hypot(e.x - x, e.z - z) < 40 && !inHouse(e.x, e.z, e.y);
-    if (!mesh.visible) return;
+    if (still || mesh.count === 0) return;
     t += dt;
-    mesh.scale.set(1, 0.85 + Math.sin(t * 7.1) * 0.1 + Math.sin(t * 12.7) * 0.06, 1);
-    mesh.rotation.y = Math.sin(t * 1.3) * 0.4;
+    size.set(1, 0.85 + Math.sin(t * 7.1) * 0.1 + Math.sin(t * 12.7) * 0.06, 1);
+    turn.setFromAxisAngle(up, Math.sin(t * 1.3) * 0.4);
+    mesh.setMatrixAt(0, pose.compose(at, turn, size));
+    mesh.instanceMatrix.needsUpdate = true;
   });
 }
 
@@ -2622,16 +2633,23 @@ export function denCharts(scene: THREE.Scene, tick: ((f: Tick) => void) | undefi
     // (a hair in front of its frame's face, toward his chair)
     return g.translate(sc.x - Math.sin(sc.ry) * 0.004, sc.y, sc.z - Math.cos(sc.ry) * 0.004);
   });
-  const mesh = new THREE.Mesh(mergeGeometries(parts, false)!, new THREE.MeshBasicMaterial({ map: tex, color: '#eeeeee' }));
+  // (one instance, shown only while the camera's down in the den: set as it's drawn, so it holds under reduced motion,
+  // when the city's ticks run on its first frame only; out of the den it draws nothing and counts no draw call)
+  const mesh = new THREE.InstancedMesh(mergeGeometries(parts, false)!, new THREE.MeshBasicMaterial({ map: tex, color: '#eeeeee' }), 1);
+  mesh.setMatrixAt(0, new THREE.Matrix4());
+  mesh.frustumCulled = false;
   mesh.name = 'home-den-charts';
-  mesh.visible = false;
+  const [hx0, hz0, hx1, hz1] = HOME.house;
+  const m = new THREE.Vector3();
+  mesh.onBeforeRender = (_r, _s, cam) => {
+    m.setFromMatrixPosition(cam.matrixWorld);
+    mesh.count = m.y < S && m.x > hx0 && m.x < hx1 && m.z > hz0 && m.z < hz1 ? 1 : 0;
+  };
   scene.add(mesh);
   const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const [hx0, hz0, hx1, hz1] = HOME.house;
   tick?.(({ dt }) => {
     const e = CROWD_VIEW.eye;
-    mesh.visible = e.y < S && e.x > hx0 && e.x < hx1 && e.z > hz0 && e.z < hz1;
-    if (mesh.visible && !still) tex.offset.x = (tex.offset.x + dt * 0.004) % 1;
+    if (!still && e.y < S && e.x > hx0 && e.x < hx1 && e.z > hz0 && e.z < hz1) tex.offset.x = (tex.offset.x + dt * 0.004) % 1;
   });
 }
 
