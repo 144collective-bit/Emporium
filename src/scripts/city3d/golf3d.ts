@@ -38,6 +38,7 @@ import {
   PATHS,
   fromPaths,
   insetOf,
+  pathShows,
   surfaceAt,
   FRINGE,
   HOLES,
@@ -57,6 +58,7 @@ import {
   lakeAt,
   nearestOn,
   teeOf,
+  teeOutline,
   type Hole,
   type Lake,
   type Pt,
@@ -141,14 +143,11 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
     }
     poly(greenOutline(hole, FRINGE + SECOND_CUT, 96));
     ctx.fill();
-    const t = teeOf(hole);
-    const at = (u: number, v: number): Pt => [t.at[0] + t.dir[0] * u - t.dir[1] * v, t.at[1] + t.dir[1] * u + t.dir[0] * v];
-    const [u, v] = [TEE[0] + SECOND_CUT / 2, TEE[1] + SECOND_CUT / 2];
-    poly([at(-u, -v), at(u, -v), at(u, v), at(-u, v)]);
+    poly(teeOutline(hole, SECOND_CUT / 2));
     ctx.fill();
   }
   // The cart paths (and the footpath's stretch on the course), over the second cut, under the rest that's mown
-  ctx.strokeStyle = STONE.path;
+  ctx.strokeStyle = COVER.cartPath;
   ctx.lineWidth = 2 * PATH_HALF * sx;
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
@@ -188,11 +187,13 @@ export function drawTurf(ctx: CanvasRenderingContext2D, w: number, h: number) {
     ctx.restore();
   }
   // The tees
+  // (rounded, D4, in a band of the first cut's darker green)
   for (const hole of HOLES) {
-    const t = teeOf(hole);
-    const at = (u: number, v: number): Pt => [t.at[0] + t.dir[0] * u - t.dir[1] * v, t.at[1] + t.dir[1] * u + t.dir[0] * v];
+    ctx.fillStyle = COVER.firstCut;
+    poly(teeOutline(hole, TEE_EDGE));
+    ctx.fill();
     ctx.fillStyle = COVER.tee;
-    poly([at(-TEE[0], -TEE[1]), at(TEE[0], -TEE[1]), at(TEE[0], TEE[1]), at(-TEE[0], TEE[1])]);
+    poly(teeOutline(hole));
     ctx.fill();
   }
   // The fringes, then the greens in fine stripes
@@ -322,20 +323,76 @@ export function mownNear(x: number, z: number, pad: number) {
   }
   return false;
 }
+/** The band of darker cut round each tee (the design pass's D4), the ink round it */
+export const TEE_EDGE = 0.6;
 /** The ink round each green's fringe and each bunker's lip (the design pass's D1, docs/golf-plan.md: the turf's paint
  * is soft at 2 pixels a tile, the city's shapes are inked): its half width and how far over the turf */
 export const EDGE_INK = { half: 0.07, lift: 0.03 };
-/** The closed lines the ink runs round: every green's fringe and every bunker's lip */
+/** The closed lines the ink runs round: every green's fringe, every tee's edge (D4) and every bunker's lip */
 export const INK_LOOPS: Pt[][] = /* @__PURE__ */ (() => {
   const out: Pt[][] = [];
   for (const h of HOLES) {
     out.push(greenOutline(h, FRINGE, 120));
+    out.push(teeOutline(h, TEE_EDGE, 8));
     for (const b of bunkersOf(h)) out.push(shapeOutline(b.at, b.dir, b.r, b.lobes, LIP, 56));
   }
   return out;
 })();
-/** The ink's runs over a box: each loop's stretches whose points fall in it (one past either end, so neighbouring
- * boxes' runs meet) */
+/** The ink along each cart path's two sides (the owner's tune of D4: Degen's style, the paths inked as the greens and
+ * tees are): sampled every `step` down each path, each side's point kept where the gravel shows just inside it (golf.ts
+ * `pathShows()`: nothing mown over it) and rough lies just outside it (`probe` either way: so it breaks where another
+ * path joins, at the grounds and the drive, and where a fairway or a tee is painted over); runs shorter than `min`
+ * points dropped */
+export const PATH_INK = { step: 0.5, probe: 0.15, min: 3 };
+/** The lines with ink along them: every cart path, and the footpath's stretch on the course */
+const PATH_LINES: Pt[][] = /* @__PURE__ */ (() => [...PATHS.map((p) => p.pts), FOOTPATH])();
+/** Each path line's box, padded past its ink */
+const PATH_BOXES: Rect[] = /* @__PURE__ */ (() =>
+  PATH_LINES.map((l) => {
+    const pad = PATH_HALF + 1;
+    const xs = l.map((p) => p[0]);
+    const zs = l.map((p) => p[1]);
+    return [Math.min(...xs) - pad, Math.min(...zs) - pad, Math.max(...xs) + pad, Math.max(...zs) + pad] as Rect;
+  }))();
+const pathInkMemo: (Pt[][] | undefined)[] = [];
+/** The ink along one path line's two sides, where they show (`PATH_INK`): worked out the first time a tile by it is
+ * built, not all at once as the chunk loads (it's a quarter of a second on a desktop) */
+export function pathInk(i: number): Pt[][] {
+  const memo = pathInkMemo[i];
+  if (memo) return memo;
+  const line = PATH_LINES[i];
+  const out: Pt[][] = [];
+  for (const side of [1, -1]) {
+    let run: Pt[] = [];
+    const end = () => {
+      if (run.length >= PATH_INK.min) out.push(run);
+      run = [];
+    };
+    for (let k0 = 0; k0 < line.length - 1; k0++) {
+      const [a, b] = [line[k0], line[k0 + 1]];
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (L < 1e-6) continue;
+      const [nx, nz] = [(-(b[1] - a[1]) / L) * side, ((b[0] - a[0]) / L) * side];
+      const n = Math.max(1, Math.round(L / PATH_INK.step));
+      for (let k = k0 ? 1 : 0; k <= n; k++) {
+        const t = k / n;
+        const [cx, cz] = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
+        const at = (d: number): Pt => [cx + nx * d, cz + nz * d];
+        const [ix, iz] = at(PATH_HALF - PATH_INK.probe);
+        const [ox, oz] = at(PATH_HALF + PATH_INK.probe);
+        const beside = surfaceAt(ox, oz);
+        if (pathShows(ix, iz) && (beside === 'rough' || beside === 'native')) run.push(at(PATH_HALF));
+        else end();
+      }
+    }
+    end();
+  }
+  return (pathInkMemo[i] = out);
+}
+/** Every path's ink (the tests') */
+export const allPathInk = () => PATH_LINES.flatMap((_, i) => pathInk(i));
+/** The ink's runs over a box: each loop's and line's stretches whose points fall in it (one past either end, so
+ * neighbouring boxes' runs meet) */
 export function inkRuns(r: Rect): Pt[][] {
   const runs: Pt[][] = [];
   const inBox = ([x, z]: Pt) => x >= r[0] && x < r[2] && z >= r[1] && z < r[3];
@@ -358,6 +415,21 @@ export function inkRuns(r: Rect): Pt[][] {
         run = [];
       }
     }
+  }
+  const lines = PATH_BOXES.flatMap((bx, i) => (bx[0] < r[2] && bx[2] > r[0] && bx[1] < r[3] && bx[3] > r[1] ? pathInk(i) : []));
+  for (const line of lines) {
+    let run: Pt[] = [];
+    line.forEach((p, i) => {
+      if (inBox(p)) {
+        if (!run.length && i) run.push(line[i - 1]);
+        run.push(p);
+      } else if (run.length) {
+        run.push(p);
+        runs.push(run);
+        run = [];
+      }
+    });
+    if (run.length >= 2) runs.push(run);
   }
   return runs;
 }
@@ -740,7 +812,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
         const far = turfMesh(r, true, TURF_LIFT);
         if (near) b.detail(() => b.add(near, mat), 'near');
         if (far) b.detail(() => b.add(far, mat), 'far');
-        // (the ink round the greens and bunkers, near only: far, the paint alone)
+        // (the ink round the greens, tees and bunkers and along the paths, near only: far, the paint alone)
         const runs = inkRuns(r);
         if (runs.length) b.detail(() => runs.forEach((run) => b.add(inkMesh(run), ink)), 'near');
         // (out of the ink's pre-pass, kit.ts `fx()`: it draws every mesh solid, the texture's clear parts too, so the

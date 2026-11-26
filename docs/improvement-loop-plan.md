@@ -331,10 +331,11 @@ sets the order (rule 2).
 - [ ] **J11 (R1): a flat grid patch on Crestmont's hillside** (`c-hills-air` [300,110,-120] to [380,0,-260]): a
       flat green grid (a vineyard?) lies square on the slope west of the hill road, its edges cut straight. Rows that
       follow the ground's contours, posts and a wandering edge, or gone.
-- [ ] **J12 (R3): Sunridge's greens between the cul-de-sacs** (`s-air` [180,85,30] to [180,0,-80]): the greens the
+- [x] **J12 (R3): Sunridge's greens between the cul-de-sacs** (`s-air` [180,85,30] to [180,0,-80]): the greens the
       cul-de-sacs back onto are open lawn with nothing on them; footpaths through (the "nowhere a dead end" rule:
-      each cul-de-sac's path to the next street), trees in groups, a bench. Waiting on the owner (2026-11-26):
-      the greens are walled in by lots all round, so a path means taking a lot.
+      each cul-de-sac's path to the next street), trees in groups, a bench. Done 2026-11-26 (`sungreens.ts`): the
+      greens open onto Mesa Drive after all; footpaths from Saguaro and Palo Verde Courts' circles to it, bollards,
+      a bench each, 11 trees in groups; no lot taken (the owner's call). Ocotillo Court's circle is boxed in by lots.
 - [ ] **J13 (R1, small): Sunridge's back-yard patios** (`s-street` [150,4,-60] to [200,1,-75]): pale bare slabs; a
       paving joint pattern or a darker border.
 - [ ] **J14 (R1): the big dark hall by The Trenches' river** (the hunt, 2026-11-25, `t-air` [-70,75,250] to
@@ -512,6 +513,8 @@ session.)
   (a, suggested) one lot at the end of each green becomes a footpath (a 3 m path with low walls, bollards at each
   end; the lot's house goes; the snapshot's lots updated on your say), then the trees in groups and a bench;
   (b) leave the greens as private common land, only trees in groups (no path, no bench); (c) drop J12.
+  **Owner's answer (2026-11-26): (a); then, told the greens do open onto Mesa Drive (this note was wrong): paths with
+  no lot taken.** Built that way (`sungreens.ts`).
 
 ## The log
 
@@ -631,3 +634,7 @@ session.)
   night look: warm points along the paths, nothing washed out). Lint, `npm test` and `test:wide` 2417 of 2417 each,
   smoke fine, bootJs 772.4 KB (J3's solids); texFull the same local 4985.1 as main. Merged. J12, rechecked: the greens
   do open onto Mesa Drive (the night 5 pass 4 note was wrong); the owner's call: footpaths with no house taken.
+- 2026-11-26, owner's session: J12, Sunridge's greens. Footpaths found across the courts' block from Saguaro and Palo
+  Verde Courts' circles to Mesa Drive (1 m, a ginnel's width between the yards' walls), bollards at each end, a bench
+  beside each, 11 trees in groups; all solid, in the chunk. The test caught the first path cutting a lot's corner by
+  Saguaro's circle: the search now starts only from spots reached straight out from the circle.
