@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {
   BIKE_HOME, BOLLARD, BOLLARDS, CAR_HOME, CEIL, HOME, homeCamera, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
   HOME_WORKSHOP_DOOR, HATCH, PIER, PLANTERS, PLANTER_H, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, BASE_CEIL, BASE_Y, homeFloorY, homeLevel, homePlaces, homeWall, inHouse, UP_CEIL, UP_Y, onHome, onRoof, roofWall,
-  HOME_WAITS, HOME_WAKE, WAITING, SOFA_SEAT, ROOM_WINDOWS, CURTAIN, curtainPanels, FIRE_ESCAPE, GATEHOUSE, GATEHOUSE_H, GATE_LEAF, GATE_LEAF_H, FOUNTAIN, PALMS, PALM_PLANTER, POOL, LOUNGERS, CABANA, CABANA_SOFA, CABANA_POSTS, HELIPAD,
+  HOME_WAITS, HOME_WAKE, WAITING, SOFA_SEAT, ROOM_WINDOWS, CURTAIN, curtainPanels, FIRE_ESCAPE, GATEHOUSE, GATEHOUSE_H, GATE_LEAF, GATE_LEAF_H, FOUNTAIN, PALMS, PALM_PLANTER, YARD_TREE, YARD_TREES, POOL, LOUNGERS, CABANA, CABANA_SOFA, CABANA_POSTS, HELIPAD,
   HOUSE_GEO, setRooms, STAIR, STAIR_FOOT, STAIR_GATE, ROOF_STEPS, stairY, stairRails, DEN_STEPS, denY, roofStepY, HATCH_WAY, HATCH_KERB,
 } from '../src/scripts/city3d/home';
 import { HALL_W, houseRooms } from '../src/scripts/city3d/homerooms';
@@ -849,6 +849,38 @@ test('the fountain and the palms (docs/compound-plan.md Phase 6c): in the yard, 
   for (const p of [HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, HOME_SPAWN, ...HOME_PORTALS.filter((q) => !inHouse(q.x, q.z) && q.level === 'room'), { x: HOME_VIEW.eye[0], z: HOME_VIEW.eye[2] }]) assert.ok(stands(p.x, p.z), `blocked at ${p.x}, ${p.z}`);
   for (let z = HOME.house[1] - 1; z < HOME.sideDoor[1]; z += 0.1) assert.ok(stands(HOME.house[2] + 0.5, z), 'the way round to the side door');
   for (const z of [CAR_HOME.z, BIKE_HOME.z]) for (let x = CAR_HOME.x; x < HOME.garage[2] + 3; x += 0.2) assert.ok(!solidAt(x, z, 0.3), 'a bay\'s way out');
+});
+
+test('the yard\'s trees (docs/garden-plan.md Phase 1): in the yard, off the drive, apart, solid, lower than the palms, every prompt and way clear', () => {
+  const T = YARD_TREE;
+  const box = ([x, z]: [number, number]): Rect => [x - T.half, z - T.half, x + T.half, z + T.half];
+  assert.ok(YARD_TREES.length >= 5);
+  const others: Rect[] = [
+    HOME.house, HOME.garage, HOME.workshop, ...HOME.lawns, ...PLANTERS, GATEHOUSE, GATE_LEAF, FIRE_ESCAPE,
+    [FOUNTAIN.x - FOUNTAIN.r, FOUNTAIN.z - FOUNTAIN.r, FOUNTAIN.x + FOUNTAIN.r, FOUNTAIN.z + FOUNTAIN.r],
+    ...PALMS.map(([x, z]): Rect => [x - PALM_PLANTER.r, z - PALM_PLANTER.r, x + PALM_PLANTER.r, z + PALM_PLANTER.r]),
+  ];
+  for (const t of YARD_TREES) {
+    const r = box(t);
+    assert.ok(within(r, HOME.inner, 1e-9), `a tree outside the wall at ${t}`);
+    for (const o of others) assert.ok(!overlap(r, o, -0.4), `a tree on something at ${t}`);
+    for (const [x, z] of BOLLARDS) assert.ok(!inRect(r, x, z, BOLLARD.r + 0.6), `a tree by a bollard at ${t}`);
+    // (off the drive: the Close's line and a car's width either side, from the gates to the garage)
+    assert.ok(r[3] < ROAD_Z - 1.6 || r[1] > ROAD_Z + 1.6, `a tree on the drive at ${t}`);
+    assert.ok(solidAt(t[0], t[1]), 'its planter solid');
+  }
+  for (let i = 0; i < YARD_TREES.length; i++)
+    for (let j = i + 1; j < YARD_TREES.length; j++) assert.ok(Math.hypot(YARD_TREES[i][0] - YARD_TREES[j][0], YARD_TREES[i][1] - YARD_TREES[j][1]) > 2, 'room between them');
+  // Low: under the house's eaves and well under the palms (whose crowns stand over 3.2)
+  assert.ok(T.top < HOME.eaves - 0.4 && T.top < 3, 'lower than the palms');
+  // Every prompt, where you arrive and the menu's camera still stand clear; the ways round; the cars' way out
+  for (const p of [HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, HOME_SPAWN, ...HOME_PORTALS.filter((q) => !inHouse(q.x, q.z) && q.level === 'room'), { x: HOME_VIEW.eye[0], z: HOME_VIEW.eye[2] }]) assert.ok(stands(p.x, p.z), `blocked at ${p.x}, ${p.z}`);
+  for (let z = HOME.house[1] - 1; z < HOME.sideDoor[1]; z += 0.1) assert.ok(stands(HOME.house[2] + 0.5, z), 'the way round to the side door');
+  for (const z of [CAR_HOME.z, BIKE_HOME.z]) for (let x = CAR_HOME.x; x < HOME.garage[2] + 3; x += 0.2) assert.ok(!solidAt(x, z, 0.3), 'a bay\'s way out');
+  for (let x = HOME.garage[2] + 0.3; x < PLOT[2]; x += 0.3) assert.ok(stands(x, ROAD_Z), `something on the drive at ${x}`);
+  // The workshop's door: its way out into the yard clear
+  const W = HOME.workshopDoor;
+  for (let x = W.x0 + 0.2; x < W.x1; x += 0.2) for (let z = W.z + 0.3; z < W.z + 2; z += 0.2) assert.ok(stands(x, z), `the workshop's way out at ${x}, ${z}`);
 });
 
 test('the pool and the cabana (docs/compound-plan.md Phase 6d): on the east lawn, apart, solid, the way round to the side door clear', () => {

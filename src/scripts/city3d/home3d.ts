@@ -43,7 +43,7 @@ import { COVER, KERB, TREE, VERGE } from './palette';
 import { glow, METAL } from './infill';
 import { SHELF, type TrophySlot } from './hometrophies';
 import {
-  BASE_CEIL, BASE_Y, BOLLARD, BOLLARDS, CEIL, CURTAIN, CABANA, CABANA_H, HELIPAD, CABANA_POSTS, CABANA_SOFA, FIRE_ESCAPE, FOUNTAIN, LOUNGERS, POOL, POOL_EDGE, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, PALM_PLANTER, PALMS, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, WALL, WALL_H, WALL_T,
+  BASE_CEIL, BASE_Y, BOLLARD, BOLLARDS, CEIL, CURTAIN, CABANA, CABANA_H, HELIPAD, CABANA_POSTS, CABANA_SOFA, FIRE_ESCAPE, FOUNTAIN, LOUNGERS, POOL, POOL_EDGE, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, PALM_PLANTER, PALMS, YARD_TREE, YARD_TREES, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, WALL, WALL_H, WALL_T,
   HOUSE_GEO, curtainPanels, STAIR, ROOF_STEPS, HATCH, HATCH_KERB, HATCH_WAY, DEN_STEPS,
 } from './home';
 import { houseRooms, type BaseThing, type Furniture, type UpThing } from './homerooms';
@@ -864,6 +864,17 @@ function gardens(b: Batch, low: boolean) {
     const n = low ? 6 : 8;
     b.add(new THREE.CylinderGeometry(BOLLARD.r, BOLLARD.r, BOLLARD.h - 0.06, n).translate(x, S + (BOLLARD.h - 0.06) / 2, z), STEEL_BLACK);
     b.add(new THREE.CylinderGeometry(BOLLARD.r * 0.9, BOLLARD.r * 0.9, 0.06, n).translate(x, S + BOLLARD.h - 0.03, z), CAP);
+  }
+  // The yard's trees (docs/garden-plan.md Phase 1): a square black steel planter, its soil, a slim trunk and a clipped
+  // round crown in the north-west tree's green (at every distance: they break up the yard seen from the terrace and high)
+  for (const [x, z] of YARD_TREES) {
+    const { half: r, h, top } = YARD_TREE;
+    cube(b, [x - r, z - r, x + r, z + r], S, S + h, PLANTER);
+    flat(b, [x - r + 0.04, z - r + 0.04, x + r - 0.04, z + r - 0.04], S + h - 0.03, LOFT_BRICK_DARK);
+    b.add(new THREE.CylinderGeometry(0.05, 0.07, top - h - 0.5, low ? 5 : 6).translate(x, S + h - 0.03 + (top - h - 0.5) / 2, z), TRUNK_M);
+    b.add(new THREE.SphereGeometry(0.5, low ? 7 : 10, low ? 5 : 7).scale(1, 1.1, 1).translate(x, S + top - 0.55, z), CROWN);
+    // (an uplight at the planter's lip, warm, near only)
+    b.detail(() => b.add(new THREE.SphereGeometry(0.03, 5, 4).translate(x + r - 0.06, S + h + 0.02, z - r + 0.06), glow(PAL.warm)));
   }
   // The tree in the north-west corner (at every distance: it shows over the wall)
   const [tx, tz] = [nw[0] + 2.2, nw[1] + 2.4];

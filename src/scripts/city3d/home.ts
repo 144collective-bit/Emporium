@@ -167,6 +167,17 @@ export const PALMS: Pt[] = [
   [WORKSHOP[0] - 0.1, WORKSHOP[3] + 1.9],
 ];
 export const PALM_PLANTER = { r: 0.35, h: 0.32 };
+/**
+ * The yard's trees (docs/garden-plan.md Phase 1, resort luxe): a clipped tree in a square black steel planter, each
+ * `half` from its middle to a side, `h` tall; three along the north strip behind the bollards, one either side of the
+ * fountain, one south of the drive by the house's east end. All off the drive, lower than the palms
+ */
+export const YARD_TREE = { half: 0.3, h: 0.45, top: 1.85 };
+export const YARD_TREES: Pt[] = [
+  ...[2.2, 6.2, 10.2].map((dx): Pt => [WORKSHOP[2] + dx, iz0 + 1.1]),
+  ...[-1, 1].map((s): Pt => [FOUNTAIN.x + s * 3.7, FOUNTAIN.z]),
+  [HOUSE[2] + 3, AXIS + 2.9],
+];
 
 /**
  * The pool and the cabana on the east lawn (docs/compound-plan.md Phase 6d; the washing line gone): the pool along the
@@ -250,6 +261,8 @@ export const HOME_SOLIDS: Box[] = (() => {
     // The fountain's basin and the palms' planters (Phase 6c)
     [FOUNTAIN.x - FOUNTAIN.r * 0.85, FOUNTAIN.z - FOUNTAIN.r * 0.85, FOUNTAIN.x + FOUNTAIN.r * 0.85, FOUNTAIN.z + FOUNTAIN.r * 0.85, SLAB_Y + FOUNTAIN.h],
     ...PALMS.map(([x, z]): Box => [x - PALM_PLANTER.r, z - PALM_PLANTER.r, x + PALM_PLANTER.r, z + PALM_PLANTER.r, SLAB_Y + PALM_PLANTER.h]),
+    // The yard's trees' planters (docs/garden-plan.md Phase 1)
+    ...YARD_TREES.map(([x, z]): Box => [x - YARD_TREE.half, z - YARD_TREE.half, x + YARD_TREE.half, z + YARD_TREE.half, SLAB_Y + YARD_TREE.h]),
     // The pool, the loungers, the cabana's sofa and posts (Phase 6d)
     [POOL[0], POOL[1], POOL[2], POOL[3], SLAB_Y + 0.3],
     ...LOUNGERS.map((r): Box => [r[0], r[1], r[2], r[3], SLAB_Y + 0.25]),

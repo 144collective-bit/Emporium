@@ -18,7 +18,7 @@ import { BRIDGES, BROOK, BROOK_HALF, BULB, CHURCHYARD, CIRCUS, FOOTPATHS, HEDGES
 import { BOLLARD, PATH_BOLLARDS } from './endswood';
 import { PLOT } from './endsfar';
 import { addCurtains, denCharts, houseLights, registerHome, trophyWall } from './home3d';
-import { HOME_POOLS, STAIR } from './home';
+import { HOME, HOME_POOLS, STAIR } from './home';
 import { registerTunnel } from './tunnel3d';
 import { registerCircus } from './circus3d';
 import { registerUnderpasses } from './underpass3d';
@@ -56,8 +56,9 @@ const HEDGE_TOP = toon(VERGE.hedgeTop);
 const SHRUB = toon(PLANT.shrub);
 const REC_GRASS = toon(COVER.lawn);
 const YARD_GRASS = toon(COVER.wornLawn);
-const PAVING = toon('#6d6672');
-const PAVING_DARK = toon('#5f5965');
+/** Degen's yard (docs/garden-plan.md Phase 1, resort luxe): pale stone panels, the bands between them darker */
+const PAVING = toon(STONE.path);
+const PAVING_DARK = toon(STONE.edge);
 
 const rectOf = (pts: Pt[], pad: number): Rect => [Math.min(...pts.map((p) => p[0])) - pad, Math.min(...pts.map((p) => p[1])) - pad, Math.max(...pts.map((p) => p[0])) + pad, Math.max(...pts.map((p) => p[1])) + pad];
 /** A flat outline at y, facing up */
@@ -272,19 +273,42 @@ function besideWell(r: Rect): Rect[] {
   ] as Rect[]).filter((q) => q[2] - q[0] > 1e-6 && q[3] - q[1] > 1e-6);
 }
 
-/** Degen's compound's plot: block paving in two tones (courses across it), open over his stair's well; its wall, gates and buildings are home3d.ts's */
+/** Where the yard's grid of bands falls (m apart) and how wide a band is (docs/garden-plan.md Phase 1) */
+const GRID = 2.4;
+const BAND = 0.2;
+/** The dark border inside the wall, and the band under each of the drive's lit lines */
+const BORDER = 0.35;
+const FRAME = 0.34;
+
+/**
+ * The yard's pattern (docs/garden-plan.md Phase 1): the pale panels framed by darker bands, a grid GRID apart (a row of
+ * panels centred on the drive's line, from the gates), a border inside the wall and a band under each of the drive's
+ * lit lines (home3d.ts `showpiece()`), so the drive reads framed from the gates to the garage
+ */
+export function yardBands(): Rect[] {
+  const [ix0, iz0, ix1, iz1] = HOME.inner;
+  const ax = (HOME.gates.z0 + HOME.gates.z1) / 2;
+  const out: Rect[] = [];
+  for (let z = ax - GRID / 2 - Math.floor((ax - iz0) / GRID) * GRID; z < iz1 - BORDER; z += GRID) if (z > iz0 + BORDER) out.push([ix0, z - BAND / 2, ix1, z + BAND / 2]);
+  for (let x = ix1 - GRID; x > ix0 + BORDER; x -= GRID) out.push([x - BAND / 2, iz0, x + BAND / 2, iz1]);
+  out.push([ix0, iz0, ix1, iz0 + BORDER], [ix0, iz1 - BORDER, ix1, iz1], [ix0, iz0, ix0 + BORDER, iz1], [ix1 - BORDER, iz0, ix1, iz1]);
+  out.push([HOME.garage[2], ax - 3.3 - FRAME / 2, ix1, ax - 3.3 + FRAME / 2], [HOME.house[0] + 0.6, ax + 3.6 - FRAME / 2, ix1 - 3, ax + 3.6 + FRAME / 2]);
+  return out;
+}
+
+/** Degen's compound's plot: pale stone paving framed by darker bands (`yardBands()`), open over his stair's well; its wall, gates and buildings are home3d.ts's */
 function registerPlot() {
   const quad = (b: Batch, [x0, z0, x1, z1]: Rect, y: number, m: THREE.Material) => flatPoly(b, [[x0, z0], [x0, z1], [x1, z1], [x1, z0]], y, m);
+  const bands = yardBands();
   cutRect(PLOT, 13).forEach((p, j) =>
     site(`south plot ${j}`, [p[0] - 0.5, p[1] - 0.5, p[2] + 0.5, p[3] + 0.5], (into) => {
       const b = new Batch();
       for (const r of besideWell(p)) quad(b, r, ON, PAVING);
-      b.detail(() => {
-        for (let z = Math.ceil(p[1] / 1.2) * 1.2; z < p[3]; z += 2.4) {
-          const z1 = Math.min(p[3], z + 1.2);
-          for (const r of besideWell([p[0], z, p[2], z1])) quad(b, r, OVER, PAVING_DARK);
-        }
-      });
+      // (at every distance: the pattern is what reads from the terrace and from high; a few quads a site)
+      for (const r of bands) {
+        const c: Rect = [Math.max(r[0], p[0]), Math.max(r[1], p[1]), Math.min(r[2], p[2]), Math.min(r[3], p[3])];
+        if (c[2] - c[0] > 1e-6 && c[3] - c[1] > 1e-6) for (const q of besideWell(c)) quad(b, q, OVER, PAVING_DARK);
+      }
       b.build(into, { cast: false, receive: true });
     })
   );
