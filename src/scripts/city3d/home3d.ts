@@ -43,7 +43,7 @@ import { COVER, KERB, TREE, VERGE } from './palette';
 import { glow, METAL } from './infill';
 import { SHELF, type TrophySlot } from './hometrophies';
 import {
-  BASE_CEIL, BASE_Y, BOLLARD, BOLLARDS, CEIL, CURTAIN, CABANA, CABANA_H, HELIPAD, CABANA_POSTS, CABANA_SOFA, FIRE_ESCAPE, FOUNTAIN, LOUNGERS, POOL, POOL_EDGE, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, PALM_PLANTER, PALMS, YARD_TREE, YARD_TREES, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, WALL, WALL_H, WALL_T,
+  BASE_CEIL, BASE_Y, BOLLARD, BOLLARDS, CEIL, CURTAIN, CABANA, CABANA_H, HELIPAD, CABANA_POSTS, CABANA_SOFA, FIRE_ESCAPE, FOUNTAIN, LOUNGERS, POOL, POOL_EDGE, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, PALM_PLANTER, PALMS, YARD_TREE, YARD_TREES, PATH_LIGHT, PATH_LIGHTS, pathStones, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, WALL, WALL_H, WALL_T,
   HOUSE_GEO, curtainPanels, STAIR, ROOF_STEPS, HATCH, HATCH_KERB, HATCH_WAY, DEN_STEPS,
 } from './home';
 import { houseRooms, type BaseThing, type Furniture, type UpThing } from './homerooms';
@@ -875,6 +875,20 @@ function gardens(b: Batch, low: boolean) {
     b.add(new THREE.SphereGeometry(0.5, low ? 7 : 10, low ? 5 : 7).scale(1, 1.1, 1).translate(x, S + top - 0.55, z), CROWN);
     // (an uplight at the planter's lip, warm, near only)
     b.detail(() => b.add(new THREE.SphereGeometry(0.03, 5, 4).translate(x + r - 0.06, S + h + 0.02, z - r + 0.06), glow(PAL.warm)));
+  }
+  // The garden's paths (docs/garden-plan.md Phase 2): stepping stones in the coping's pale stone, a hair proud of the
+  // lawn, each turned to its path; low black posts beside them with the bollards' soft caps (at every distance: the
+  // stones are what reads as a path from the terrace, the caps by night)
+  for (const st of pathStones()) {
+    const g = new THREE.BoxGeometry(st.w, 0.018, st.d).rotateY(st.turn);
+    g.deleteAttribute('uv');
+    b.add(g.translate(st.x, ON + 0.003 + 0.009, st.z), COPING);
+  }
+  for (const [x, z] of PATH_LIGHTS) {
+    const n = low ? 6 : 8;
+    const { r, h } = PATH_LIGHT;
+    b.add(new THREE.CylinderGeometry(r, r, h - 0.04, n).translate(x, S + (h - 0.04) / 2, z), STEEL_BLACK);
+    b.add(new THREE.CylinderGeometry(r * 1.15, r * 1.15, 0.04, n).translate(x, S + h - 0.02, z), CAP);
   }
   // The tree in the north-west corner (at every distance: it shows over the wall)
   const [tx, tz] = [nw[0] + 2.2, nw[1] + 2.4];
