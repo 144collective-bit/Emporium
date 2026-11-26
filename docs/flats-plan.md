@@ -61,3 +61,7 @@ Each phase: tests extended, every check, shots, merged on its own.
   `SKY_COVER` (1 box about every 0.6 m of front) stops bullets, `rayBoxes()` reading boxes' bottoms; the bridges'
   glass clear. Tested: the wall under a crouched eye, the rail between the crouched and standing eyes, a low shot from
   the gallery stopped by the wall, a crouched one over it. Shots: crouched, standing, from outside, inside a bridge.
+- 2026-11-26: Phase 1 merged (#285). Phase 2 built: the cages' flights on concrete stringers, solid steps with nosings,
+  handrails and wall rails, a caged lamp at each landing (about one in seven dead), the floors' colour bands either side
+  of each landing's way into the core, tags over some flights and litter on some landings. Drawing only: the walked
+  flights (southsky.ts) don't change. Shots: inside a cage, from outside by day and night.

@@ -791,6 +791,20 @@ function cageSlab(b: Batch, g: Cage, a0: number, a1: number, b0: number, b1: num
  * light under each (the odd one tired); anti-climb mesh round its open sides, left open at the foot by the tower: the
  * way in from the street
  */
+/** A beam from p to q (x, y, z), `h` deep under the line, `t` thick */
+function beam(b: Batch, p: [number, number, number], q: [number, number, number], h: number, t: number, m: THREE.Material) {
+  const [dx, dy, dz] = [q[0] - p[0], q[1] - p[1], q[2] - p[2]];
+  const flatL = Math.hypot(dx, dz);
+  const L = Math.hypot(flatL, dy);
+  if (L < 1e-3) return;
+  const g = new THREE.BoxGeometry(L, h, t).translate(0, -h / 2, 0).rotateZ(Math.atan2(dy, flatL)).rotateY(-Math.atan2(dz, dx));
+  g.translate((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2);
+  b.add(plain(g), m);
+}
+/** The stairwells' landing lamps: small, warm, lit at night */
+const CAGE_LAMP = neon('#ffd9a0', 0.15, 1.7);
+/** A colour a floor, painted on the core's wall at its landing (docs/flats-plan.md: no numbers on signs) */
+const FLOOR_BANDS = ['#d94f4f', '#e6a13a', '#e6d43a', '#4fb36a', '#3a8fe6', '#9a5fd9'].map((c) => toon(c));
 function drawCage(b: Batch, g: Cage, low: boolean, tired: boolean) {
   const k = kit(b, WORLD);
   const { len, half, land, gap } = CAGE;
@@ -828,23 +842,88 @@ function drawCage(b: Batch, g: Cage, low: boolean, tired: boolean) {
     const mid = (ys[i - 1] + ys[i]) / 2;
     along(b, g.at(len - land / 2, -w + 0.2), g.at(len - land / 2, w - 0.2), 0.08, mid - 0.2, mid - 0.16, tired ? STRIP_TIRED : STRIP);
   }
-  // The treads: near only, not on phones
+  // The flights made solid (docs/flats-plan.md Phase 2, the owner's picks): under each flight's open edge a concrete
+  // stringer, and up it a steel handrail on posts; on the spine wall a wall rail
+  const rot = -Math.atan2(g.out[1], g.out[0]);
+  const P = (a: number, bb: number, y: number): [number, number, number] => {
+    const p = g.at(a, bb);
+    return [p[0], y, p[1]];
+  };
+  const flights = ys.slice(0, -1).flatMap((y0, i) => {
+    const mid = (y0 + ys[i + 1]) / 2;
+    return [
+      { a0: land, a1: len - land, inner: gap, outer: w, y0, y1: mid, i, up: 0 },
+      { a0: len - land, a1: land, inner: -gap, outer: -w, y0: mid, y1: ys[i + 1], i, up: 1 },
+    ];
+  });
+  k.all(() => {
+    for (const f of flights) beam(b, P(f.a0, f.outer, f.y0 - 0.08), P(f.a1, f.outer, f.y1 - 0.08), 0.32, 0.1, CONC);
+  });
   if (!low)
     b.detail(() => {
-      for (let i = 0; i + 1 < ys.length; i++) {
-        const [y0, y1] = [ys[i], ys[i + 1]];
-        const mid = (y0 + y1) / 2;
-        const n = Math.round((len - 2 * land) / 0.27);
+      for (const f of flights) {
+        const ro = f.outer - Math.sign(f.outer) * 0.05;
+        rod(b, P(f.a0, ro, f.y0 + 0.55), P(f.a1, ro, f.y1 + 0.55), 0.022, RAIL);
+        for (const a of [f.a0, f.a1]) rod(b, P(a, ro, a === f.a0 ? f.y0 : f.y1), P(a, ro, (a === f.a0 ? f.y0 : f.y1) + 0.55), 0.02, RAIL);
+        const ri = f.inner + Math.sign(f.inner) * 0.04;
+        rod(b, P(f.a0, ri, f.y0 + 0.5), P(f.a1, ri, f.y1 + 0.5), 0.018, RAIL);
+      }
+    });
+  // The steps themselves: solid, each a block under its tread (near only, not on phones; far off the flight's slab
+  // reads alone)
+  if (!low)
+    b.detail(() => {
+      for (const f of flights) {
+        const n = Math.round(Math.abs(f.a1 - f.a0) / 0.27);
+        const run = Math.abs(f.a1 - f.a0) / n;
+        const rise = (f.y1 - f.y0) / n;
+        const [b0, b1] = [Math.min(f.inner, f.outer), Math.max(f.inner, f.outer)];
         for (let s = 0; s < n; s++) {
-          const f = (s + 0.5) / n;
-          for (const [b0, b1, ya, yb, dir] of [[gap, w, y0, mid, 1], [-w, -gap, mid, y1, -1]] as const) {
-            const a = dir > 0 ? land + (len - 2 * land) * f : len - land - (len - 2 * land) * f;
-            const y = ya + (yb - ya) * f;
-            const p = g.at(a, (b0 + b1) / 2);
-            b.add(plain(new THREE.BoxGeometry(0.06, 0.05, b1 - b0).rotateY(-Math.atan2(g.out[1], g.out[0])).translate(p[0], y + 0.03, p[1])), CONC_DARK);
-          }
+          const a = f.a0 + Math.sign(f.a1 - f.a0) * run * (s + 0.5);
+          const p = g.at(a, (b0 + b1) / 2);
+          b.add(plain(new THREE.BoxGeometry(run, rise, b1 - b0).rotateY(rot).translate(p[0], f.y0 + rise * (s + 0.5), p[1])), CONC);
+          // (the nosing: a dark edge on each tread)
+          const q = g.at(a + Math.sign(f.a1 - f.a0) * (run / 2 - 0.02), (b0 + b1) / 2);
+          b.add(plain(new THREE.BoxGeometry(0.04, 0.012, b1 - b0 - 0.02).rotateY(rot).translate(q[0], f.y0 + rise * (s + 1) + 0.006, q[1])), CONC_DARK);
         }
       }
+    });
+  // Each landing's caged lamp on the spine wall's end facing it (lit at night; the odd one dead), and at each floor the
+  // floor's colour painted in a band on the core's wall either side of the way in (a colour a floor, no numbers)
+  const h0 = hashOf(g.id);
+  for (let i = 1; i < ys.length; i++) {
+    for (const [y, a, face] of [[(ys[i - 1] + ys[i]) / 2, len - land, 1], [ys[i], land, -1]] as const) {
+      const dead = (h0 + i * 3 + face) % 7 === 0;
+      const p = g.at(a + face * 0.05, 0);
+      b.add(plain(new THREE.BoxGeometry(0.06, 0.12, 0.2).rotateY(rot).translate(p[0], y + 0.82, p[1])), dead ? CONC_DARK : CAGE_LAMP);
+      if (!low)
+        b.detail(() => {
+          const c = g.at(a + face * 0.085, 0);
+          for (const dz of [-0.07, 0, 0.07]) {
+            const q: Pt = [c[0] + g.side[0] * dz, c[1] + g.side[1] * dz];
+            b.add(plain(new THREE.BoxGeometry(0.015, 0.15, 0.015).translate(q[0], y + 0.82, q[1])), RAIL);
+          }
+        });
+    }
+    const band = FLOOR_BANDS[(i + h0) % FLOOR_BANDS.length];
+    for (const [bb0, bb1] of [[-w, -0.55], [0.55, w]]) quad(b, g.at(0.012, bb0), g.at(0.012, bb1), ys[i] + 0.5, ys[i] + 0.62, g.out, band);
+  }
+  // The grit (near only, not on phones): a tag on the spine wall over the odd flight, litter in a landing's corner
+  if (!low)
+    b.detail(() => {
+      flights.forEach((f, k2) => {
+        const hh = (h0 + k2 * 5) % 9;
+        if (hh < 3) {
+          const am = (f.a0 + f.a1) / 2;
+          const yb = (f.y0 + f.y1) / 2 + 0.6;
+          const side: Pt = [g.side[0] * Math.sign(f.inner), g.side[1] * Math.sign(f.inner)];
+          quad(b, g.at(am - 0.35, f.inner + Math.sign(f.inner) * 0.006), g.at(am + 0.35, f.inner + Math.sign(f.inner) * 0.006), yb, yb + 0.28, side, TAG_PAINT[(h0 + k2) % TAG_PAINT.length]);
+        }
+        if (hh === 4 || hh === 7) {
+          const c = g.at(len - 0.3, f.outer * 0.85);
+          b.add(plain(new THREE.BoxGeometry(0.14, 0.07, 0.1).rotateY(rot + hh).translate(c[0], f.up ? f.y1 + 0.035 : f.y1 + 0.035, c[1])), hh === 4 ? CORK : CONC_DARK);
+        }
+      });
     });
   // The mesh: the far end and both long sides, from a head's height over the street at the way in, the rest from the foot
   const meshSide = (a0: number, a1: number, bb: number, y0: number, y1: number) => {

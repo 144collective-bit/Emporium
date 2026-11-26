@@ -87,7 +87,10 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   hexagonal drum, its glass band, its name, a glass lift inside; brutalist plan Phase 3) and the top floor's bridges to
   the twins through doorways in its glass; the cores' stair slots, each core a service tower standing off its block (its
   link from the gallery at each landing drawn as a bridge, a boiler house and flue on its top: brutalist plan Phase 2;
-  its caged stair outside, `CAGES`, `drawCage()`, and its door's sodium lamp); the bridges (concrete, a glass band each
+  its caged stair outside, `CAGES`, `drawCage()`, and its door's sodium lamp; since docs/flats-plan.md Phase 2 the
+  flights solid: a concrete stringer under each open edge (`beam()`), the steps blocks with dark nosings (near only), a
+  steel handrail on posts and a wall rail (near only), a caged lamp at each landing (`CAGE_LAMP`, the odd one dead) and
+  each floor's colour (`FLOOR_BANDS`, no numbers) painted on the core's wall by the way in, a tag or litter now and then); the bridges (concrete, a glass band each
   side, inside a ceiling strip, mullions, puddles and tags near only; `drawPortal()` at each link's gallery end; piers
   under the long spans, `PIERS`, `drawPier()`; block names at their ends, `SIGN_TEX`); the grit (brutalist plan
   Phase 2's polish: the `brutalDeck` gallery band, `deckRow()`; boarded and burnt flats in `RECESS_LIFE`; bin bags,
