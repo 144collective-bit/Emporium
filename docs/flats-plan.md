@@ -69,3 +69,14 @@ Each phase: tests extended, every check, shots, merged on its own.
   deck's edge (now the galleries' low wall and rail) into `SKY_COVER`, in 0.25 pieces (0.6 ones at a slant reached
   within the shooter's own 0.6 and were skipped: the test caught it on the Rampart-Linnet bridge). Tested from each
   bridge's middle: low across, the concrete stops it; at a standing eye, out through the glass.
+- 2026-11-26, night 6 pass 1 (22:07): Phase 3 merged (#287); Phases 1-3 live (Build site 423-425 green). Phase 5 (the
+  courtyards; Phases 4 and 6 wait on the owner's answers: the entrances' names, which tower's roof) built in a draft:
+  `southsquares.ts`, five compact squares on the paving beside Linnet, Marten and Wren Courts (a planter with grass and
+  a tree, two benches facing it, a bin, a sodium lamp), clear of the blocks, cages, piers, bridges, streets, courts,
+  grass and the yard's things; solid, joined when the chunk loads. The first cut chose the verges past the slabs'
+  ends (the roomiest ground): now only beside a slab along its length, and compact (the paving there is narrow). The
+  full checks next pass.
+- 2026-11-26, night 6 pass 2 (23:07): Phase 5 finished. The night's shots found three of five squares across the avenue
+  on the field east of the estate: now a square is only beside a slab with no street between. Four squares, all on
+  the paving strips between the slabs and their avenues. Lint, typecheck, `npm test` and `test:wide` 2429 of 2429,
+  smoke fine, bootJs unchanged (773.3 KB). Merged. Phases 4 and 6 wait on the owner's answers.
