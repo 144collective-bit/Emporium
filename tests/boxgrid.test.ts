@@ -84,7 +84,7 @@ function rayAll(from: { x: number; y: number; z: number }, dir: { x: number; y: 
   const v = [dir.x, dir.y, dir.z];
   for (const b of [...SHOT_SOLIDS, ...CAMERA_ONLY]) {
     if (b[4] < 0.3) continue;
-    const lo = [b[0], 0, b[1]];
+    const lo = [b[0], (b as number[])[5] ?? 0, b[1]];
     const hi = [b[2], b[4], b[3]];
     let t0 = 0;
     let t1 = t;

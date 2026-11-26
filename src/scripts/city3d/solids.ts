@@ -60,6 +60,7 @@ import { LOT9_SOLIDS } from './lot9';
 import { AIRBASE_SOLIDS, AIRFIELD_SOLIDS, BASE_SOLIDS } from './airbase';
 import { ENDS_SOLIDS } from './endswood';
 import { BLOCK_SOLIDS as SOUTH_BLOCK_SOLIDS } from './southblocks';
+import { SKY_COVER } from './southsky';
 import { YARD_SOLIDS as ENDS_YARD_SOLIDS } from './southyard';
 import { TERRACE_GROUND_SOLIDS, TERRACE_SOLIDS } from './southterraces';
 import { CHURCH_SOLIDS, CHURCHYARD_SOLIDS } from './aldwyns';
@@ -337,6 +338,8 @@ export const SOLIDS: Box[] = onGround([...DRAWN.map(designBox), ...DOWNTOWN_SOLI
 );
 /** What bullets stop on: everything solid except the dummies' footprints (they test their own shape) */
 export const SHOT_SOLIDS = SOLIDS.filter((b) => !DUMMY_SOLIDS.includes(b));
+// (and what stops bullets only: Endswood's galleries' front walls, boxes with a bottom, docs/flats-plan.md)
+SHOT_SOLIDS.push(...(SKY_COVER as unknown as Box[]));
 
 /** Where you can step in, and what opens there (drawn on the landmarks' grid, moved onto today's streets) */
 export const DOORS: { id: SpotId; x: number; z: number }[] = (
@@ -407,7 +410,8 @@ export function rayBoxes(from: { x: number; y: number; z: number }, dir: { x: nu
   for (const list of [SHOT_GRID.alongRay(from, dir, t), extra]) {
     for (const b of list) {
       if (b[4] < 0.3) continue;
-      const lo = [b[0], 0, b[1]];
+      // (a box with a bottom, its sixth number: cover up off the ground, the galleries' fronts)
+      const lo = [b[0], (b as number[])[5] ?? 0, b[1]];
       const hi = [b[2], b[4], b[3]];
       let t0 = 0;
       let t1 = t;
