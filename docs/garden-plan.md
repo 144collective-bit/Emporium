@@ -102,7 +102,7 @@ strip west of the house, the yard).
 3. **The outdoor kitchen and the firepit**: the counter, grill, sink, stools and pergola on the east lawn; the
    firepit, its bench and chairs on the north-west lawn; their solids; the fire's glow and flicker (still under reduced
    motion). Walked with the smoke test's home scenes.
-   *Built, waiting for the owner's sign-off.* home.ts: `KITCHEN` (a counter 3.6 by 0.55, `KITCHEN_H` 0.46, against
+   *Signed off by the owner and live (2026-11-26).* home.ts: `KITCHEN` (a counter 3.6 by 0.55, `KITCHEN_H` 0.46, against
    the east lawn's south wall west of the cabana), `KITCHEN_STOOLS` and `STOOL` (three on its lawn side), `PERGOLA` and
    `PERGOLA_POSTS` (four black steel posts, 1.25 to the beams); `FIREPIT` (a bowl 0.42 across its middle, 0.24 tall,
    between the north-west lawn's path and the garage), `fireBench()` (five stone pieces on a 1.0 curve round its south
@@ -112,8 +112,11 @@ strip west of the house, the yard).
    magenta on the stools, the pergola's slats and a string of warm lights (near only, not on phones); the bowl in the
    loft's stone with a dark rim and ember bed, warm glints (near only), the bench in stone with timber seats, the
    chairs in the cabana sofa's teal. The flames are `firepitFlames()` (south3d.ts adds it, on the main thread): a few
-   small warm cones in one mesh, swaying in height, shown only while the camera's outside the house and within 40;
-   under reduced motion (when the city's ticks run on the first frame only) they stand shown and still. Tested in
+   small warm cones in one instanced mesh, swaying in height; its count is set as it's drawn (`onBeforeRender`, from
+   the camera): one while the camera's outside the house and within 40, none elsewhere (no draw call). That holds under
+   reduced motion, when the city's ticks run on the first frame only; the flames then stand still. The den's trading
+   screens (`denCharts()`) are gated the same way now, with the owner's go-ahead: shown by a tick, they never came on
+   under reduced motion. Tested in
    `tests/home.test.ts` (on their lawns, off the paths, the lights, the pool, loungers, cabana, bench and tree, solid,
    low, the way between the pool and the stools, the pit's north side open, every prompt and way clear). Draw calls
    unchanged: 313 desktop, 198 phone. Shots: `docs/garden-shots/phase-3-*.webp`.
