@@ -850,9 +850,9 @@ function gardens(b: Batch, low: boolean) {
   for (const r of HOME.lawns) flat(b, [r[0] + 0.05, r[1] + 0.05, r[2] - 0.05, r[3] - 0.05], ON, LAWN);
   // A path of flags from the front door out into the yard
   flat(b, [HOME.door[0] - 0.6, HOME.door[1] - 2.2, HOME.door[0] + 0.6, HOME.door[1] - 0.02], ON, FLAGS);
-  // His D set in the paving in front of the garage, in the coping's stone, read from the gates (at every distance: it's seen
-  // from the terrace and the Close)
-  mark(b, COPING, 1.5, V(HOME.garage[2] + 1.9, OVER, (HOME.carDoor.z1 + HOME.bikeDoor.z0) / 2), V(0, 0, -1), V(-1, 0, 0), V(0, 1, 0), { t: 0.26 });
+  // His D set in the paving in front of the garage, inlaid in black steel (the yard's pale stone, docs/garden-plan.md Phase 1:
+  // it was the coping's stone), read from the gates (at every distance: it's seen from the terrace and the Close)
+  mark(b, STEEL_BLACK, 1.5, V(HOME.garage[2] + 1.9, OVER, (HOME.carDoor.z1 + HOME.bikeDoor.z0) / 2), V(0, 0, -1), V(-1, 0, 0), V(0, 1, 0), { t: 0.26 });
   // The planters by the front door, black steel with a clipped shrub in each
   for (const r of PLANTERS) {
     cube(b, r, S, S + PLANTER_H, PLANTER);

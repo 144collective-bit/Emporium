@@ -75,6 +75,16 @@ strip west of the house, the yard).
    `HOME_SOLIDS`), `home3d.ts` (`gardens()`), `tests/home.test.ts` (clear of the car's way, the gates, the bollards,
    the doors' prompts, the spawn). Shots from above, the north-east and the yard, by day and night; draw calls and
    `?bench` before and after.
+   *Built, waiting for the owner's sign-off.* The pattern is south3d.ts `yardBands()`: the yard's paving in the
+   palette's pale path stone (`STONE.path`), bands of its edge stone (`STONE.edge`) 0.2 wide on a 2.4 grid (a row of
+   panels centred on the drive's line), a 0.35 border inside the wall and a 0.34 band under each of the drive's lit
+   lines; drawn at every distance (a few quads a site, in paints the plot's batch already has). His D before the garage
+   is inlaid in black steel now (it was the coping's stone, lost on the pale panels). The trees are home.ts
+   `YARD_TREES` and `YARD_TREE` (a 0.6 square planter 0.45 tall, the crown's top 1.85), solid in `HOME_SOLIDS`, drawn in
+   home3d.ts `gardens()` in the north-west tree's trunk and crown paints, a warm uplight at each planter's lip (near
+   only). Tested in `tests/home.test.ts` (in the yard, off the drive, clear of the bollards, the fountain, the palms
+   and every prompt, the workshop's and the bays' ways out). Draw calls unchanged: 313 desktop, 198 phone.
+   Shots: `docs/garden-shots/phase-1-*.webp`.
 2. **The paths, lit**: the stepping stones on both lawns, the path lights. Tests that the stones and lights keep off
    the pool, the loungers, the cabana and the bench, and that the way to the back gate and the side door stays clear.
 3. **The outdoor kitchen and the firepit**: the counter, grill, sink, stools and pergola on the east lawn; the
