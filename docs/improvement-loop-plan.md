@@ -295,7 +295,7 @@ sets the order (rule 2).
       `crestgardens`, `crestbanks`, `coral`); then the owner's second ask:
       **every other driveway in the city checked to line up and not cover
       the sidewalk** (R2's sweep).
-- [ ] **J3 (R3): the twin towers' lawn in Endswood** (the hunt, 2026-11-24; camera `h-ends-air` below): the big
+- [x] **J3 (R3): the twin towers' lawn in Endswood** (the hunt, 2026-11-24; camera `h-ends-air` below): the big
       green round the twin towers is one flat patch cut square into the estate's paving, nothing on it but dashed
       lines that need a look on foot (paths? cables' shadows?). R3 in full: desire paths from the towers' doors to the
       stops and the Circus, planting in groups, a mown edge, its outline wandering.
@@ -320,9 +320,10 @@ sets the order (rule 2).
 - [ ] **J9 (R1/R3): Lot 9's empty pitches and lanes** (the hunt, part 2, `h-lot9-air`): the empty pitches are bare
       grey slabs and the lanes plain grey strips meeting square, no verge or kerb. R1 for the pads (gravel, a hook-up
       post, worn edges), R3 for the lanes' verges and corners.
-- [ ] **J3's night side: the twin towers' lawn and podium unlit** (part 2, `h-ends-air` at night): lit only along the
+- [x] **J3's night side: the twin towers' lawn and podium unlit** (part 2, `h-ends-air` at night): lit only along the
       streets, the lawn and podium go to a void. With J3's paths, low bollard lights along them (small and dim: the
-      bloom rule), and the podium's edge lit.
+      bloom rule), and the podium's edge lit. The bollard lamps done with J3 (2026-11-26); the podium's edge still to
+      light, its own small job.
 - [ ] **J10 (R3): Crestmont's Flats' two bare blocks** (the hunt, 2026-11-25, `c-flats-air` [330,80,110] to
       [375,0,10]): two whole blocks of plain lilac paving with a couple of trees. Check first whether they're the game's
       lots for sale (lots don't move or change price): if so, dress them as plots waiting to build (hoarding round,
@@ -625,3 +626,8 @@ session.)
 - 2026-11-26, night 5 pass 4 (03:07): J12, Sunridge's greens (the board's top Ready card). From `s-air`: both greens
   are block insides walled in by lots all round, so the path the job asks for would take a lot: to Waiting on the
   owner. Only this plan edit merged. (J6 live: Build site 415 green.)
+- 2026-11-26, owner's session (04:10): J3 with the owner's answer (a): the box grid's driving check keeps its starts 1.4
+  clear of the lake, the river and the basin; the lawn's bollard lamps their own brighter neon in a taller head (a
+  night look: warm points along the paths, nothing washed out). Lint, `npm test` and `test:wide` 2417 of 2417 each,
+  smoke fine, bootJs 772.4 KB (J3's solids); texFull the same local 4985.1 as main. Merged. J12, rechecked: the greens
+  do open onto Mesa Drive (the night 5 pass 4 note was wrong); the owner's call: footpaths with no house taken.

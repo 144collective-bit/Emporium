@@ -123,6 +123,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `SANDPIT`, `BALL_COURT` and `courtFence()`, `YARD_TREES` (index.ts adds them at the boot, on the rolling ground),
   `DECK_PROPS` (`onDeckProp()`: southsky.ts keeps you out of them), `DECK_COLUMNS`, `YARD_SOLIDS` (solids.ts, lifted onto
   the ground). Drawn by southblocks3d.ts's `registerYard()` (sites a court, the grass, the play area, the deck's props).
+  The twin towers' lawn (the loop's J3): the `DESIRE_LINES` worn `DESIRE_W` wide, a `MOWN_EDGE` strip round the grass,
+  `SHRUBS` in groups (solid) and `BOLLARDS` along the paths (solid, a warm lamp in each head, `BOLLARD_LAMP`).
 - **Aldwyn's Green's terraces** (`southterraces.ts`, DOM-free, tested in `tests/southterraces.test.ts`, 3a): `HOUSES`
   (each its front's middle `at`, its `face`, frontage `w`, street, block, front, paint, door, dormer, chimney, `lit`,
   `endL` / `endR`, `base` / `low`), `houseFoot()`, `plotOf()`, `ALLEYS`, `GINNELS`, `frontWalls()`, the solids,
