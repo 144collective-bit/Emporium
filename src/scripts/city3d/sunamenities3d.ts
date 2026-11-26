@@ -19,6 +19,7 @@ import { ribbon } from './roads3d';
 import { GLASS, GLASS_LIT, ROOF_MATS, roofOf } from './sunhouses3d';
 import { CLUBHOUSE, CLUB_LAND, PARK_LAND, SCHOOL, SCHOOL_LAND } from './sunplaces';
 import { PARKWAY_LOOP, type Rect } from './sunridge';
+import { GREEN, GREEN_PATHS, GREEN_SOLIDS, GREEN_TREES } from './sungreens';
 import {
   AMENITY_SOLIDS,
   BAY,
@@ -537,7 +538,30 @@ function signPlane(w: number, row: number) {
   return g;
 }
 
+/** The greens between the cul-de-sacs (sungreens.ts, the loop's J12): the footpaths, bollards at their ends, a bench
+ * beside each, the trees in groups */
+function drawGreens(b: Batch, low: boolean) {
+  for (const g of GREEN_PATHS) {
+    b.add(ribbon(g.pts, -GREEN.pathW / 2, GREEN.pathW / 2, () => SLAB + 0.014), CONCRETE);
+    for (const [x, z] of g.bollards) {
+      cyl(b, x, z, GREEN.bollard.half, 0, GREEN.bollard.h, CONCRETE, 6);
+      cyl(b, x, z, GREEN.bollard.half * 1.15, GREEN.bollard.h - 0.08, GREEN.bollard.h, STEEL, 6);
+    }
+    bench(b, g.bench.x, g.bench.z, g.bench.yaw);
+  }
+  for (const t of GREEN_TREES) tree(b, t.x, t.z, t.s, low);
+}
+const GREENS_RECT: Rect = (() => {
+  const pts = [...GREEN_PATHS.flatMap((g) => g.pts), ...GREEN_TREES.map((t): [number, number] => [t.x, t.z])];
+  return [Math.min(...pts.map((p) => p[0])) - 3, Math.min(...pts.map((p) => p[1])) - 3, Math.max(...pts.map((p) => p[0])) + 3, Math.max(...pts.map((p) => p[1])) + 3];
+})();
+
 export function registerAmenities(low: boolean, scene: THREE.Scene | null) {
+  site('sunridge greens', GREENS_RECT, (into) => {
+    const b = new Batch();
+    drawGreens(b, low);
+    b.build(into, { cast: true, receive: true });
+  });
   site('sunridge club', [CLUB_LAND[0] - 2, CLUB_LAND[1] - 2, CLUB_LAND[2] + 2, CLUB_LAND[3] + 4], (into) => {
     const b = new Batch();
     drawClub(b, low);
@@ -557,5 +581,6 @@ export function registerAmenities(low: boolean, scene: THREE.Scene | null) {
   if (scene) {
     parkedCars(scene, SLAB, [...CLUB_CARS, SCHOOL_BUS].map(([id, x, z, yaw, c]) => [id as CarId, x, z, yaw, c]));
     addSolids(AMENITY_SOLIDS);
+    addSolids(GREEN_SOLIDS);
   }
 }
