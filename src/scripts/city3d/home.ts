@@ -236,6 +236,7 @@ export const PATH_LIGHTS: Pt[] = (() => {
   ];
 })();
 
+
 /**
  * The pool and the cabana on the east lawn (docs/compound-plan.md Phase 6d; the washing line gone): the pool along the
  * lawn's middle, its stone edge solid (no swimming: looks only), three loungers on its north side, the cabana in the
@@ -254,6 +255,41 @@ export const CABANA_POSTS: Pt[] = [
   [CABANA[0] + 0.06, CABANA[3] - 0.06],
   [CABANA[2] - 0.06, CABANA[3] - 0.06],
 ];
+
+/**
+ * The outdoor kitchen (docs/garden-plan.md Phase 3): on the east lawn along its south wall, west of the cabana; a stone
+ * counter (`KITCHEN`, `KITCHEN_H` tall) with a black steel grill, its hood closed, and a small sink; three stools on its
+ * lawn side; a black steel pergola over it on four posts with a string of warm lights. Looks only
+ */
+export const KITCHEN: Rect = [HOME.lawns[1][0] + 0.7, HOME.lawns[1][3] - 0.6, CABANA[0] - 0.6, HOME.lawns[1][3] - 0.05];
+export const KITCHEN_H = 0.46;
+export const STOOL = { r: 0.12, h: 0.38 };
+export const KITCHEN_STOOLS: Pt[] = [0.9, 1.8, 2.7].map((dx): Pt => [KITCHEN[0] + dx, KITCHEN[1] - 0.45]);
+/** The pergola: its posts at the corners (`PERGOLA` the rect they stand on), `h` to its beams' tops */
+export const PERGOLA = { rect: [KITCHEN[0] - 0.1, KITCHEN[1] - 0.85, KITCHEN[2] + 0.1, KITCHEN[3] - 0.02] as Rect, h: 1.25, post: 0.04 };
+export const PERGOLA_POSTS: Pt[] = [
+  [PERGOLA.rect[0], PERGOLA.rect[1]],
+  [PERGOLA.rect[2], PERGOLA.rect[1]],
+  [PERGOLA.rect[0], PERGOLA.rect[3]],
+  [PERGOLA.rect[2], PERGOLA.rect[3]],
+];
+
+/**
+ * The firepit (Phase 3): on the north-west lawn in the open ground between its path and the garage, a low round stone
+ * bowl with a bed of embers and small flames (home3d.ts `firepitFlames()`), a curved stone bench round its south half
+ * (toward the garage), a low chair either side; its north side open to the path. Looks only
+ */
+export const FIREPIT = { x: HOME.lawns[0][2] - 4.5, z: HOME.lawns[0][3] - 1.3, r: 0.42, h: 0.24 };
+/** The bench's pieces round the pit: each piece's middle, its turn (along the curve) and its length; `FIRE_BENCH_R` from the pit's middle */
+export const FIRE_BENCH_R = 1.0;
+export const FIRE_BENCH = { w: 0.3, h: 0.26 };
+export const fireBench = (): { x: number; z: number; turn: number; len: number }[] =>
+  [0, 1, 2, 3, 4].map((k) => {
+    const a = ((25 + k * 32.5) * Math.PI) / 180;
+    return { x: FIREPIT.x + Math.cos(a) * FIRE_BENCH_R, z: FIREPIT.z + Math.sin(a) * FIRE_BENCH_R, turn: -a + Math.PI / 2, len: 0.58 };
+  });
+export const FIRE_CHAIR = { half: 0.24, h: 0.42 };
+export const FIRE_CHAIRS: Pt[] = [-1, 1].map((s): Pt => [FIREPIT.x + s * 1.15, FIREPIT.z - 0.15]);
 export const CABANA_H = 1.45;
 
 /**
@@ -318,6 +354,13 @@ export const HOME_SOLIDS: Box[] = (() => {
     // The fountain's basin and the palms' planters (Phase 6c)
     [FOUNTAIN.x - FOUNTAIN.r * 0.85, FOUNTAIN.z - FOUNTAIN.r * 0.85, FOUNTAIN.x + FOUNTAIN.r * 0.85, FOUNTAIN.z + FOUNTAIN.r * 0.85, SLAB_Y + FOUNTAIN.h],
     ...PALMS.map(([x, z]): Box => [x - PALM_PLANTER.r, z - PALM_PLANTER.r, x + PALM_PLANTER.r, z + PALM_PLANTER.r, SLAB_Y + PALM_PLANTER.h]),
+    // The outdoor kitchen, its stools and the pergola's posts; the firepit, its bench and chairs (docs/garden-plan.md Phase 3)
+    [KITCHEN[0], KITCHEN[1], KITCHEN[2], KITCHEN[3], SLAB_Y + KITCHEN_H],
+    ...KITCHEN_STOOLS.map(([x, z]): Box => [x - STOOL.r, z - STOOL.r, x + STOOL.r, z + STOOL.r, SLAB_Y + STOOL.h]),
+    ...PERGOLA_POSTS.map(([x, z]): Box => [x - PERGOLA.post, z - PERGOLA.post, x + PERGOLA.post, z + PERGOLA.post, SLAB_Y + PERGOLA.h]),
+    [FIREPIT.x - FIREPIT.r, FIREPIT.z - FIREPIT.r, FIREPIT.x + FIREPIT.r, FIREPIT.z + FIREPIT.r, SLAB_Y + FIREPIT.h],
+    ...fireBench().map(({ x, z }): Box => [x - 0.17, z - 0.17, x + 0.17, z + 0.17, SLAB_Y + FIRE_BENCH.h]),
+    ...FIRE_CHAIRS.map(([x, z]): Box => [x - FIRE_CHAIR.half, z - FIRE_CHAIR.half, x + FIRE_CHAIR.half, z + FIRE_CHAIR.half, SLAB_Y + FIRE_CHAIR.h]),
     // The garden's path lights (docs/garden-plan.md Phase 2)
     ...PATH_LIGHTS.map(([x, z]): Box => [x - PATH_LIGHT.r, z - PATH_LIGHT.r, x + PATH_LIGHT.r, z + PATH_LIGHT.r, SLAB_Y + PATH_LIGHT.h]),
     // The yard's trees' planters (docs/garden-plan.md Phase 1)

@@ -32,7 +32,7 @@
  * phones leave out the finest (the shelves, the rail's bars, the string lights).
  */
 import * as THREE from 'three';
-import { Batch, PAL, canvasTex, fx, lit, moving, neon, rng, toon } from './kit';
+import { Batch, PAL, canvasTex, fx, glowMat, lit, moving, neon, rng, toon } from './kit';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { CROWD_VIEW } from './character';
 import type { Tick } from './world';
@@ -43,7 +43,7 @@ import { COVER, KERB, TREE, VERGE } from './palette';
 import { glow, METAL } from './infill';
 import { SHELF, type TrophySlot } from './hometrophies';
 import {
-  BASE_CEIL, BASE_Y, BOLLARD, BOLLARDS, CEIL, CURTAIN, CABANA, CABANA_H, HELIPAD, CABANA_POSTS, CABANA_SOFA, FIRE_ESCAPE, FOUNTAIN, LOUNGERS, POOL, POOL_EDGE, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, PALM_PLANTER, PALMS, YARD_TREE, YARD_TREES, PATH_LIGHT, PATH_LIGHTS, pathStones, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, WALL, WALL_H, WALL_T,
+  BASE_CEIL, BASE_Y, BOLLARD, BOLLARDS, CEIL, CURTAIN, CABANA, CABANA_H, HELIPAD, CABANA_POSTS, CABANA_SOFA, FIRE_ESCAPE, FOUNTAIN, LOUNGERS, POOL, POOL_EDGE, GATE_LEAF, GATE_LEAF_H, GATEHOUSE, GATEHOUSE_H, PALM_PLANTER, PALMS, YARD_TREE, YARD_TREES, PATH_LIGHT, PATH_LIGHTS, pathStones, KITCHEN, KITCHEN_H, KITCHEN_STOOLS, STOOL, PERGOLA, PERGOLA_POSTS, FIREPIT, FIRE_BENCH, fireBench, FIRE_CHAIR, FIRE_CHAIRS, inHouse, HOME, HOME_LAND, HOME_SLAB, PIER, PLANTER_H, PLANTERS, ROOF_THINGS, ROOF_Y, ROOM, ROOM_WINDOWS, SHELL, UP_CEIL, UP_Y, WALL, WALL_H, WALL_T,
   HOUSE_GEO, curtainPanels, STAIR, ROOF_STEPS, HATCH, HATCH_KERB, HATCH_WAY, DEN_STEPS,
 } from './home';
 import { houseRooms, type BaseThing, type Furniture, type UpThing } from './homerooms';
@@ -899,6 +899,122 @@ function gardens(b: Batch, low: boolean) {
     cube(b, [tx + 1.6, tz - 0.7, tx + 2.0, tz + 0.7], S + 0.22, S + 0.27, BENCH);
     cube(b, [tx + 1.6, tz - 0.7, tx + 1.65, tz + 0.7], S + 0.27, S + 0.5, BENCH);
     for (const z of [tz - 0.6, tz + 0.55]) cube(b, [tx + 1.62, z, tx + 1.98, z + 0.05], S, S + 0.22, METAL);
+  });
+  kitchenAndFire(b, low);
+}
+
+/* ---------- The outdoor kitchen and the firepit (docs/garden-plan.md Phase 3) ---------- */
+
+/** The outdoor kitchen under its pergola on the east lawn, and the firepit with its bench and chairs on the north-west lawn; in the compound's paints (looks only) */
+function kitchenAndFire(b: Batch, low: boolean) {
+  // The counter: stone, a dark worktop a hair over it on every side, black steel doors' lines and handles on its lawn side
+  const [kx0, kz0, kx1, kz1] = KITCHEN;
+  const H = KITCHEN_H;
+  cube(b, KITCHEN, S, S + H - 0.04, LOFT_STONE);
+  cube(b, [kx0 - 0.02, kz0 - 0.03, kx1 + 0.02, kz1], S + H - 0.04, S + H, DARK);
+  // The grill: a black steel box set in the worktop, its hood closed, a steel handle along its front
+  const gx = kx0 + 1.3;
+  cube(b, [gx - 0.36, kz0 + 0.05, gx + 0.36, kz1 - 0.06], S + H, S + H + 0.05, STEEL_BLACK);
+  const hood = new THREE.CylinderGeometry(0.17, 0.17, 0.7, low ? 6 : 10, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(-Math.PI / 2).scale(1, 0.6, 1);
+  hood.deleteAttribute('uv');
+  b.add(hood.translate(gx, S + H + 0.05, (kz0 + kz1) / 2 + 0.01), STEEL_BLACK);
+  // The sink at the east end: a steel basin's rim a hair over the worktop, a tall steel tap
+  const sx = kx1 - 0.55;
+  cube(b, [sx - 0.22, kz0 + 0.08, sx + 0.22, kz1 - 0.12], S + H, S + H + 0.006, METAL);
+  rod(b, V(sx, S + H, kz1 - 0.08), V(sx, S + H + 0.26, kz1 - 0.08), 0.012, METAL);
+  rod(b, V(sx, S + H + 0.26, kz1 - 0.08), V(sx, S + H + 0.26, kz1 - 0.2), 0.012, METAL);
+  b.detail(() => {
+    for (let x = kx0 + 0.6; x < kx1 - 0.2; x += 0.6) {
+      cube(b, [x - 0.006, kz0 - 0.006, x + 0.006, kz0], S + 0.04, S + H - 0.08, STEEL_BLACK);
+      if (!low) cube(b, [x - 0.2, kz0 - 0.02, x - 0.1, kz0], S + H - 0.14, S + H - 0.12, METAL);
+    }
+    if (!low) rod(b, V(gx - 0.25, S + H + 0.1, kz0 + 0.02), V(gx + 0.25, S + H + 0.1, kz0 + 0.02), 0.01, METAL);
+  });
+  // The stools: a black steel post, his magenta seat (the loungers' cushions)
+  for (const [x, z] of KITCHEN_STOOLS) {
+    b.add(new THREE.CylinderGeometry(0.025, 0.06, STOOL.h - 0.05, low ? 5 : 7).translate(x, S + (STOOL.h - 0.05) / 2, z), STEEL_BLACK);
+    b.add(new THREE.CylinderGeometry(STOOL.r, STOOL.r, 0.05, low ? 7 : 10).translate(x, S + STOOL.h - 0.025, z), toon(PAL.magenta));
+  }
+  // The pergola: four black steel posts, beams along its front and back, slats across between them; warm lights strung
+  // along its front beam (near only, not on phones)
+  const [px0, pz0, px1, pz1] = PERGOLA.rect;
+  const P = PERGOLA.post;
+  const top = S + PERGOLA.h;
+  for (const [x, z] of PERGOLA_POSTS) cube(b, [x - P, z - P, x + P, z + P], S, top, STEEL_BLACK);
+  for (const z of [pz0, pz1]) cube(b, [px0 - P, z - P, px1 + P, z + P], top - 0.08, top, STEEL_BLACK);
+  for (let x = px0 + 0.3; x < px1 - 0.1; x += 0.38) cube(b, [x - 0.02, pz0 - 0.1, x + 0.02, pz1 + 0.1], top, top + 0.05, STEEL_BLACK);
+  b.detail(() => {
+    if (!low) for (let k = 0; k <= 10; k++) b.add(new THREE.SphereGeometry(0.028, 5, 4).translate(px0 + ((px1 - px0) * k) / 10, top - 0.14 - Math.sin((k / 10) * Math.PI) * 0.12, pz0 - 0.06), glow(PAL.warm));
+  });
+
+  // The firepit: a low round stone bowl, its rim a darker ring, a bed of embers in it, warm glints (the flames are
+  // `firepitFlames()`, on the main thread: they move)
+  const { x: fx0, z: fz0, r: fr, h: fh } = FIREPIT;
+  const n = low ? 10 : 16;
+  const bowl = new THREE.CylinderGeometry(fr, fr * 0.85, fh, n);
+  bowl.deleteAttribute('uv');
+  b.add(bowl.translate(fx0, S + fh / 2, fz0), LOFT_STONE);
+  const rim = new THREE.CylinderGeometry(fr + 0.02, fr + 0.02, 0.03, n);
+  rim.deleteAttribute('uv');
+  b.add(rim.translate(fx0, S + fh + 0.012, fz0), LOFT_BRICK_DARK);
+  const bed = new THREE.CircleGeometry(fr - 0.06, n).rotateX(-Math.PI / 2);
+  bed.deleteAttribute('uv');
+  b.add(bed.translate(fx0, S + fh + 0.03, fz0), DARK);
+  b.detail(() => {
+    for (let k = 0; k < (low ? 4 : 7); k++) {
+      const a = k * 2.3;
+      const rr = 0.08 + (k % 3) * 0.08;
+      b.add(new THREE.SphereGeometry(0.035, 5, 4).translate(fx0 + Math.cos(a) * rr, S + fh + 0.04, fz0 + Math.sin(a) * rr), glow(PAL.warm));
+    }
+  });
+  // The bench: stone pieces round the pit's south half, a dark timber seat on each
+  for (const p of fireBench()) {
+    const seat = new THREE.BoxGeometry(p.len, FIRE_BENCH.h - 0.04, FIRE_BENCH.w).rotateY(p.turn);
+    seat.deleteAttribute('uv');
+    b.add(seat.translate(p.x, S + (FIRE_BENCH.h - 0.04) / 2, p.z), LOFT_STONE);
+    const top2 = new THREE.BoxGeometry(p.len + 0.02, 0.04, FIRE_BENCH.w + 0.02).rotateY(p.turn);
+    top2.deleteAttribute('uv');
+    b.add(top2.translate(p.x, S + FIRE_BENCH.h - 0.02, p.z), BENCH);
+  }
+  // The chairs: low, in the cabana sofa's teal, their backs away from the pit
+  for (const [x, z] of FIRE_CHAIRS) {
+    const C = FIRE_CHAIR.half;
+    const away = Math.sign(x - fx0);
+    cube(b, [x - C, z - C, x + C, z + C], S, S + 0.22, CHAIR);
+    cube(b, away > 0 ? [x + C - 0.1, z - C, x + C, z + C] : [x - C, z - C, x - C + 0.1, z + C], S + 0.22, S + FIRE_CHAIR.h, CHAIR);
+    b.detail(() => {
+      for (const zz of [z - C, z + C - 0.08]) cube(b, [x - C + 0.02, zz, x + C - 0.02, zz + 0.08], S + 0.22, S + 0.3, CHAIR);
+    });
+  }
+}
+
+/** The firepit's flames (docs/garden-plan.md Phase 3): a few small warm cones in one mesh on the main thread, swaying in height; shown only while the camera is outside the house and near; still under reduced motion */
+export function firepitFlames(scene: THREE.Scene, tick: ((f: Tick) => void) | undefined, low: boolean) {
+  const { x, z, h } = FIREPIT;
+  const parts: THREE.BufferGeometry[] = [];
+  const k = low ? 3 : 5;
+  for (let i = 0; i < k; i++) {
+    const a = (i / k) * Math.PI * 2;
+    const rr = i ? 0.12 : 0;
+    const tall = i ? 0.2 + (i % 2) * 0.06 : 0.32;
+    const g = new THREE.ConeGeometry(i ? 0.06 : 0.09, tall, 5, 1, true).translate(Math.cos(a) * rr, tall / 2, Math.sin(a) * rr);
+    g.deleteAttribute('uv');
+    parts.push(g);
+  }
+  const mesh = new THREE.Mesh(mergeGeometries(parts, false)!, glowMat('#ff9a3c', 0.85, null));
+  mesh.position.set(x, S + h + 0.02, z);
+  mesh.name = 'home-firepit-flames';
+  mesh.visible = false;
+  scene.add(fx(mesh));
+  const still = typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let t = 0;
+  tick?.(({ dt }) => {
+    const e = CROWD_VIEW.eye;
+    mesh.visible = Math.hypot(e.x - x, e.z - z) < 40 && !inHouse(e.x, e.z, e.y);
+    if (!mesh.visible || still) return;
+    t += dt;
+    mesh.scale.set(1, 0.85 + Math.sin(t * 7.1) * 0.1 + Math.sin(t * 12.7) * 0.06, 1);
+    mesh.rotation.y = Math.sin(t * 1.3) * 0.4;
   });
 }
 

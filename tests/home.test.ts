@@ -9,7 +9,7 @@ import assert from 'node:assert/strict';
 import {
   BIKE_HOME, BOLLARD, BOLLARDS, CAR_HOME, CEIL, HOME, homeCamera, HOME_GARAGE_DOOR, HOME_LAND, HOME_PICK, HOME_PIN, HOME_PORTALS, HOME_SOLIDS, HOME_SPAWN, HOME_USES, HOME_VIEW,
   HOME_WORKSHOP_DOOR, HATCH, PIER, PLANTERS, PLANTER_H, ROOF_THINGS, ROOF_Y, ROOM, SHELL, TERRACE, WALL, WALL_H, WALL_T, BASE_CEIL, BASE_Y, homeFloorY, homeLevel, homePlaces, homeWall, inHouse, UP_CEIL, UP_Y, onHome, onRoof, roofWall,
-  HOME_WAITS, HOME_WAKE, WAITING, SOFA_SEAT, ROOM_WINDOWS, CURTAIN, curtainPanels, FIRE_ESCAPE, GATEHOUSE, GATEHOUSE_H, GATE_LEAF, GATE_LEAF_H, FOUNTAIN, PALMS, PALM_PLANTER, YARD_TREE, YARD_TREES, GARDEN_PATHS, PATH_LIGHT, PATH_LIGHTS, pathStones, STONE_SIZE, POOL, LOUNGERS, CABANA, CABANA_SOFA, CABANA_POSTS, HELIPAD,
+  HOME_WAITS, HOME_WAKE, WAITING, SOFA_SEAT, ROOM_WINDOWS, CURTAIN, curtainPanels, FIRE_ESCAPE, GATEHOUSE, GATEHOUSE_H, GATE_LEAF, GATE_LEAF_H, FOUNTAIN, PALMS, PALM_PLANTER, YARD_TREE, YARD_TREES, GARDEN_PATHS, PATH_LIGHT, PATH_LIGHTS, pathStones, STONE_SIZE, KITCHEN, KITCHEN_H, KITCHEN_STOOLS, STOOL, PERGOLA, PERGOLA_POSTS, FIREPIT, FIRE_BENCH_R, fireBench, FIRE_CHAIR, FIRE_CHAIRS, POOL, LOUNGERS, CABANA, CABANA_SOFA, CABANA_POSTS, HELIPAD,
   HOME_POOLS, HOUSE_GEO, setRooms, STAIR, STAIR_FOOT, STAIR_GATE, ROOF_STEPS, stairY, stairRails, DEN_STEPS, denY, roofStepY, HATCH_WAY, HATCH_KERB,
 } from '../src/scripts/city3d/home';
 import { HALL_W, houseRooms } from '../src/scripts/city3d/homerooms';
@@ -923,6 +923,51 @@ test('the garden\'s paths (docs/garden-plan.md Phase 2): stepping stones across 
   for (let z = HOME.house[1] - 1; z < HOME.sideDoor[1]; z += 0.1) assert.ok(stands(HOME.house[2] + 0.5, z), 'the way round to the side door');
   for (let x = yard.to.x; x < (CABANA[0] + CABANA[2]) / 2; x += 0.1) assert.ok(stands(x, POOL[3] + 0.4) || x > CABANA[0], `the way along the pool's south side at ${x}`);
   for (let z = HOME.backGate.z0 + 0.2; z < HOME.backGate.z1 - 0.2; z += 0.1) for (let x = HOME.backGate.x + 0.6; x < HOME.backGate.x + 1.5; x += 0.1) assert.ok(stands(x, z), `the back gate's way in at ${x}, ${z}`);
+});
+
+test('the outdoor kitchen and the firepit (docs/garden-plan.md Phase 3): on their lawns, off the paths and everything, solid, low, every way clear', () => {
+  const [nw, east] = HOME.lawns;
+  const [tx, tz] = [nw[0] + 2.2, nw[1] + 2.4];
+  const bench: Rect = [tx + 1.6, tz - 0.7, tx + 2.0, tz + 0.7];
+  const sq = ([x, z]: readonly number[], h: number): Rect => [x - h, z - h, x + h, z + h];
+  const stones = pathStones();
+  const offStones = (r: Rect, what: string) => {
+    for (const st of stones) assert.ok(!inRect(r, st.x, st.z, Math.max(st.w, st.d) / 2 + 0.05), `${what} on a stepping stone at ${st.x}, ${st.z}`);
+    for (const l of PATH_LIGHTS) assert.ok(!inRect(r, l[0], l[1], PATH_LIGHT.r + 0.25), `${what} by a path light`);
+  };
+  // The kitchen: along the east lawn's south wall, west of the cabana, off the pool, the loungers and the paths
+  const kitchen: [string, Rect][] = [['the counter', KITCHEN], ...KITCHEN_STOOLS.map((p, i): [string, Rect] => [`stool ${i}`, sq(p, STOOL.r)]), ...PERGOLA_POSTS.map((p, i): [string, Rect] => [`post ${i}`, sq(p, PERGOLA.post)])];
+  for (const [what, r] of kitchen) {
+    assert.ok(within(r, east, 1e-9), `${what} off the east lawn`);
+    for (const [w2, r2] of [['the pool', POOL], ['the cabana', CABANA], ['the house', HOME.house], ['the fire escape', FIRE_ESCAPE], ...LOUNGERS.map((l, i) => [`lounger ${i}`, l])] as [string, Rect][]) assert.ok(!overlap(r, r2, -0.2), `${what} on ${w2}`);
+    offStones(r, what);
+    assert.ok(solidAt((r[0] + r[2]) / 2, (r[1] + r[3]) / 2), `${what} solid`);
+  }
+  assert.ok(east[3] - KITCHEN[3] < 0.1, 'against the south wall');
+  assert.ok(KITCHEN_H < 0.6 && PERGOLA.h < HOME.eaves - 0.5, 'low, under the house');
+  // (room to sit: the stools on the lawn's side of the counter, the way between them and the pool's path open)
+  for (const [x, z] of KITCHEN_STOOLS) assert.ok(z < KITCHEN[1] && KITCHEN[1] - z < 0.6, 'at the counter');
+  for (let x = KITCHEN[0]; x < KITCHEN[2]; x += 0.1) assert.ok(stands(x, (POOL[3] + KITCHEN_STOOLS[0][1]) / 2 - 0.1), `the way between the pool and the stools at ${x}`);
+  // The firepit: on the north-west lawn, off the path, the bench, the tree; its bench and chairs round it, its north side open to the path
+  const fire: [string, Rect][] = [
+    ['the firepit', sq([FIREPIT.x, FIREPIT.z], FIREPIT.r)],
+    ...fireBench().map((p, i): [string, Rect] => [`bench piece ${i}`, sq([p.x, p.z], 0.17)]),
+    ...FIRE_CHAIRS.map((p, i): [string, Rect] => [`chair ${i}`, sq(p, FIRE_CHAIR.half)]),
+  ];
+  for (const [what, r] of fire) {
+    assert.ok(within(r, nw, 1e-9), `${what} off the north-west lawn`);
+    for (const [w2, r2] of [['the bench', bench], ['the tree', [tx - 0.5, tz - 0.5, tx + 0.5, tz + 0.5]], ['the garage', HOME.garage], ['the workshop', HOME.workshop]] as [string, Rect][]) assert.ok(!overlap(r, r2, -0.2), `${what} on ${w2}`);
+    offStones(r, what);
+    assert.ok(solidAt((r[0] + r[2]) / 2, (r[1] + r[3]) / 2), `${what} solid`);
+  }
+  for (const p of fireBench()) assert.ok(p.z > FIREPIT.z && Math.abs(Math.hypot(p.x - FIREPIT.x, p.z - FIREPIT.z) - FIRE_BENCH_R) < 1e-9, 'the bench round its south half');
+  for (let x = FIREPIT.x - 0.5; x <= FIREPIT.x + 0.5; x += 0.1) assert.ok(stands(x, FIREPIT.z - FIREPIT.r - 0.35), `the pit's north side open at ${x}`);
+  // Every prompt and way still clear
+  for (const p of [HOME_GARAGE_DOOR, HOME_WORKSHOP_DOOR, HOME_SPAWN, ...HOME_PORTALS.filter((q) => !inHouse(q.x, q.z) && q.level === 'room'), { x: HOME_VIEW.eye[0], z: HOME_VIEW.eye[2] }]) assert.ok(stands(p.x, p.z), `blocked at ${p.x}, ${p.z}`);
+  const yard = HOME_PORTALS.find((p) => p.id === 'home:yard')!;
+  for (let z = HOME.house[1] - 1; z < HOME.sideDoor[1]; z += 0.1) assert.ok(stands(HOME.house[2] + 0.5, z), 'the way round to the side door');
+  for (let x = yard.to.x; x < (CABANA[0] + CABANA[2]) / 2; x += 0.1) assert.ok(stands(x, POOL[3] + 0.4) || x > CABANA[0], `the way along the pool's south side at ${x}`);
+  for (const st of stones) assert.ok(stands(st.x, st.z), `the path blocked at ${st.x}, ${st.z}`);
 });
 
 test('the pool and the cabana (docs/compound-plan.md Phase 6d): on the east lawn, apart, solid, the way round to the side door clear', () => {
