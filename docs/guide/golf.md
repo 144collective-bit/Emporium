@@ -96,7 +96,7 @@ the owner's answers and every phase, is `docs/golf-plan.md`; its design maps are
   (kit.ts `fx()`: the ink's pre-pass draws a mesh solid, the texture's clear parts too, so the turf's triangles came
   out as ink zig-zags across the rough; fixed in Phase 5). The
   cart paths painted in it (warm gravel, `COVER.cartPath`, D4: from behind each tee round its side, smoothed by golf.ts
-  `smoothLine()`), over the second cut, under the rest that's mown; each tee in a band of darker cut, `TEE_EDGE`, inked. Clubhouse Drive (`driveMesh()`, `DRIVE_LIFT`, `DRIVE_LAMPS`, `LAMP_H`),
+  `smoothLine()`), over the second cut, under the rest that's mown, inked along both sides (the owner's tune of D4: golf3d.ts `PATH_INK`, `pathInk()` worked out a path at a time the first time a tile by it is built, cut to tiles by `inkRuns()` with the loops; it breaks where golf.ts `pathShows()` says mown turf's painted over, and where another path, the grounds or the drive meets it); each tee in a band of darker cut, `TEE_EDGE`, inked. Clubhouse Drive (`driveMesh()`, `DRIVE_LIFT`, `DRIVE_LAMPS`, `LAMP_H`),
   a site a stretch; the club's edge near only (`FENCE_RUNS`, `FENCE_GAPS`, `FENCE`: a white post-and-rail fence, stone
   pillars at the drive, posts at the footpath; `reedsOf()`: the design pass's D3, two to four clumps a
   lake, `reedClumps()` / `REED_CLUMPS`, in the shallows at the water's real edge (in from the shore where the bank stands

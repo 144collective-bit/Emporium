@@ -351,7 +351,7 @@ phone tier and the boot):
   Pond close); the boot unchanged (771.9 of 775 KB: the water's all in the course's chunk).
 - **D4, the paths and tees**: the cart paths a warm gravel from the palette, bent round the tees rather than past them;
   tees with rounded corners, a darker cut edge and the tee's markers clear.
-  **Built (2026-11-25), waiting for the owner's sign-off.** Tees rounded (golf.ts `TEE_ROUND`, `teeOut()`,
+  **Built (2026-11-25); the owner's tune (2026-11-26, "Inked edges"): the cart paths inked along both sides as the greens and tees are, broken where a path joins or mown turf's painted over (golf3d.ts `PATH_INK`, `pathInk()`); merge after the tune, waiting for the owner's sign-off.** Tees rounded (golf.ts `TEE_ROUND`, `teeOut()`,
   `teeOutline()`; `onTee()` reads the rounded shape, so a ball in a square corner's off the tee now) in a band of the
   first cut's darker green (golf3d.ts `TEE_EDGE`) with the ink round it (in `INK_LOOPS`); the second cut round them
   rounded too. The cart paths warm gravel (palette `cartPath`, was the cold lilac stone), each hole's from behind its

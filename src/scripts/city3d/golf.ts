@@ -415,6 +415,14 @@ export function surfaceAt(x: number, z: number): Surface | null {
   if (fromPaths(x, z) <= PATH_HALF) return 'path';
   return holeSurface(x, z);
 }
+/** Whether a cart path's gravel shows at x, z as painted (golf3d.ts): on the course, with no water, grounds or drive
+ * there and nothing mown painted over it (fairway, first cut, green, fringe, tee or bunker: the paths go under them) */
+export function pathShows(x: number, z: number) {
+  const s = surfaceAt(x, z);
+  if (s !== 'path') return s === 'rough' || s === 'native';
+  const h = holeSurface(x, z);
+  return h === 'rough' || h === 'native';
+}
 /** What's underfoot of the holes' own at x, z on the course (no path, drive, water or grounds) */
 function holeSurface(x: number, z: number): Surface | null {
   let near = Infinity;
