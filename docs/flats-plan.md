@@ -76,3 +76,7 @@ Each phase: tests extended, every check, shots, merged on its own.
   grass and the yard's things; solid, joined when the chunk loads. The first cut chose the verges past the slabs'
   ends (the roomiest ground): now only beside a slab along its length, and compact (the paving there is narrow). The
   full checks next pass.
+- 2026-11-26, night 6 pass 2 (23:07): Phase 5 finished. The night's shots found three of five squares across the avenue
+  on the field east of the estate: now a square is only beside a slab with no street between. Four squares, all on
+  the paving strips between the slabs and their avenues. Lint, typecheck, `npm test` and `test:wide` 2429 of 2429,
+  smoke fine, bootJs unchanged (773.3 KB). Merged. Phases 4 and 6 wait on the owner's answers.
