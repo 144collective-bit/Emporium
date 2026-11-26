@@ -284,7 +284,7 @@ paints the level pill at once; the kart park's and the metro's drawing, which th
 - Play a hole, nine or eighteen; rewards Dorras and XP only. Its save (`degen-city-golf-v1`) with its migration and its
   key in `BACKUP_KEYS`; in through `live.closed()`; touch controls.
 
-### The design pass (the owner's call, 2026-11-24: "do a design pass across the golf course"; D1 first, go 2026-11-24; the lakes stay where they are; D1 signed off 2026-11-24, D2 next, go 2026-11-24; D2 merged with the pines past the fence, 2026-11-25; D3 signed off 2026-11-25, D4 next, go 2026-11-25)
+### The design pass (the owner's call, 2026-11-24: "do a design pass across the golf course"; D1 first, go 2026-11-24; the lakes stay where they are; D1 signed off 2026-11-24, D2 next, go 2026-11-24; D2 merged with the pines past the fence, 2026-11-25; D3 signed off 2026-11-25, D4 next, go 2026-11-25; D4 signed off with the paths inked, 2026-11-26)
 
 The survey (2026-11-24): every hole from behind its tee and from short of its green, the lakes, the clubhouse, on the
 desktop by day (`docs/golf-shots/design-0-*.webp`: `greens-a` holes 1 to 6's greens, `greens-b` 7 to 12's, `tees-a`
@@ -351,6 +351,14 @@ phone tier and the boot):
   Pond close); the boot unchanged (771.9 of 775 KB: the water's all in the course's chunk).
 - **D4, the paths and tees**: the cart paths a warm gravel from the palette, bent round the tees rather than past them;
   tees with rounded corners, a darker cut edge and the tee's markers clear.
+  **Built (2026-11-25); the owner's tune (2026-11-26, "Inked edges"): the cart paths inked along both sides as the greens and tees are, broken where a path joins or mown turf's painted over (golf3d.ts `PATH_INK`, `pathInk()`); signed off 2026-11-26.** The design pass is done. Tees rounded (golf.ts `TEE_ROUND`, `teeOut()`,
+  `teeOutline()`; `onTee()` reads the rounded shape, so a ball in a square corner's off the tee now) in a band of the
+  first cut's darker green (golf3d.ts `TEE_EDGE`) with the ink round it (in `INK_LOOPS`); the second cut round them
+  rounded too. The cart paths warm gravel (palette `cartPath`, was the cold lilac stone), each hole's from behind its
+  tee bent round the tee's back corner and down its side (`besideHole()`), every path smoothed into curves
+  (`smoothLine()`, Chaikin's, its ends kept: no turn sharper than a right angle). The tee's markers, washer, bench and
+  sign find their spots clear of the moved paths as before. Shots `docs/blend-shots/golf-d4-a/` (desktop and phone);
+  the boot unchanged (771.9 of 775 KB).
 
 ## Open questions (for the owner, later)
 

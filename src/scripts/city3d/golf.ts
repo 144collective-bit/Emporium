@@ -339,10 +339,30 @@ export const bunkerAt = (b: BunkerShape, x: number, z: number) => shapeAt(b.at, 
 export const BUNKER_CLEAR = 1.2;
 export const LIP = 0.35;
 /** Whether x, z is on a hole's tee (its box along the tee's way) */
-export function onTee(h: Hole, x: number, z: number) {
+/** A tee's corners' rounding (the design pass's D4: no square slabs) */
+export const TEE_ROUND = 1.4;
+/** How far a point is outside a hole's tee (negative inside): its box, `pad` bigger, its corners rounded */
+export function teeOut(h: Hole, x: number, z: number, pad = 0) {
   const t = teeOf(h);
   const [dx, dz] = [x - t.at[0], z - t.at[1]];
-  return Math.abs(dx * t.dir[0] + dz * t.dir[1]) <= TEE[0] && Math.abs(-dx * t.dir[1] + dz * t.dir[0]) <= TEE[1];
+  const r = TEE_ROUND + pad;
+  const [u, v] = [Math.abs(dx * t.dir[0] + dz * t.dir[1]) - (TEE[0] + pad - r), Math.abs(-dx * t.dir[1] + dz * t.dir[0]) - (TEE[1] + pad - r)];
+  return Math.hypot(Math.max(u, 0), Math.max(v, 0)) + Math.min(Math.max(u, v), 0) - r;
+}
+export const onTee = (h: Hole, x: number, z: number) => teeOut(h, x, z) <= 0;
+/** A tee's outline, `pad` out, its corners rounded, `n` points a corner */
+export function teeOutline(h: Hole, pad = 0, n = 6): Pt[] {
+  const t = teeOf(h);
+  const r = TEE_ROUND + pad;
+  const [a, b] = [TEE[0] + pad - r, TEE[1] + pad - r];
+  const out: Pt[] = [];
+  for (const [cu, cv, a0] of [[a, b, 0], [-a, b, Math.PI / 2], [-a, -b, Math.PI], [a, -b, (3 * Math.PI) / 2]] as const)
+    for (let k = 0; k <= n; k++) {
+      const ang = a0 + ((Math.PI / 2) * k) / n;
+      const [u, v] = [cu + Math.cos(ang) * r, cv + Math.sin(ang) * r];
+      out.push([t.at[0] + t.dir[0] * u - t.dir[1] * v, t.at[1] + t.dir[1] * u + t.dir[0] * v]);
+    }
+  return out;
 }
 
 /* ---------- The water ---------- */
@@ -395,6 +415,14 @@ export function surfaceAt(x: number, z: number): Surface | null {
   if (fromPaths(x, z) <= PATH_HALF) return 'path';
   return holeSurface(x, z);
 }
+/** Whether a cart path's gravel shows at x, z as painted (golf3d.ts): on the course, with no water, grounds or drive
+ * there and nothing mown painted over it (fairway, first cut, green, fringe, tee or bunker: the paths go under them) */
+export function pathShows(x: number, z: number) {
+  const s = surfaceAt(x, z);
+  if (s !== 'path') return s === 'rough' || s === 'native';
+  const h = holeSurface(x, z);
+  return h === 'rough' || h === 'native';
+}
 /** What's underfoot of the holes' own at x, z on the course (no path, drive, water or grounds) */
 function holeSurface(x: number, z: number): Surface | null {
   let near = Infinity;
@@ -439,7 +467,8 @@ const SIDES: Partial<Record<number, 1 | -1>> = { 12: 1 };
 /** The path beside a hole on one side: by its tee, along it, round behind its green */
 function besideHole(h: Hole, side: 1 | -1, round: boolean): Pt[] {
   const L = lengthOf(h);
-  const pts: Pt[] = [framePt(h, -5, side * TEE_OFF), framePt(h, 8, side * 12)];
+  // (from behind its tee, bent round the tee's back corner and down its side: the design pass's D4)
+  const pts: Pt[] = [framePt(h, -TEE[0] - 4, side * 1.5), framePt(h, -TEE[0] - 2.2, side * (TEE[1] + 2.6)), framePt(h, 0, side * TEE_OFF), framePt(h, 8, side * 12)];
   for (let s = 22; s < L - 10; s += 18) pts.push(framePt(h, s, side * PATH_OFF));
   pts.push(framePt(h, L - 4, side * PATH_OFF));
   // (and on round behind the green, or not: whichever comes to the next tee clear)
@@ -501,7 +530,7 @@ export const PATHS: Path[] = /* @__PURE__ */ (() => {
     for (const side of sides)
       for (const round of [true, false]) {
         const pts = besideHole(h, side, round);
-        const on = next && i !== 8 ? [pts.at(-1)!, framePt(next, -5, TEE_OFF * (SIDES[next.n] ?? 1))] : [];
+        const on = next && i !== 8 ? [pts.at(-1)!, framePt(next, -TEE[0] - 4, 1.5 * (SIDES[next.n] ?? 1))] : [];
         const cost = pathCost(pts) + (on.length ? pathCost(on) : 0);
         if (!best || cost < best.cost) best = { pts, cost };
       }
@@ -524,8 +553,24 @@ export const PATHS: Path[] = /* @__PURE__ */ (() => {
   for (const i of [8, 17]) out.push({ id: `${i + 1}-grounds`, pts: [beside[i].at(-1)!, toGrounds(...beside[i].at(-1)!)] });
   const join = FOOTPATH.at(-1)!;
   out.push({ id: 'footpath', pts: [join, nearestPt(beside[11], ...join)] });
-  return out;
+  // (each smoothed into curves, its ends where they were: the design pass's D4, streets follow the land)
+  return out.map((p) => ({ ...p, pts: smoothLine(p.pts, 2) }));
 })();
+/** A line's corners cut (Chaikin's), `times` over, its ends kept */
+export function smoothLine(pts: Pt[], times: number): Pt[] {
+  let line = pts;
+  for (let t = 0; t < times && line.length > 2; t++) {
+    const next: Pt[] = [line[0]];
+    for (let i = 0; i < line.length - 1; i++) {
+      const [a, b] = [line[i], line[i + 1]];
+      if (i > 0) next.push([a[0] * 0.75 + b[0] * 0.25, a[1] * 0.75 + b[1] * 0.25]);
+      if (i < line.length - 2) next.push([a[0] * 0.25 + b[0] * 0.75, a[1] * 0.25 + b[1] * 0.75]);
+    }
+    next.push(line.at(-1)!);
+    line = next;
+  }
+  return line;
+}
 
 /** The paths' stretches, filed by cell (so a point asks only the ones near it) */
 const CELL = 16;

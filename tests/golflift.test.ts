@@ -268,6 +268,25 @@ test("Phase 3's drawing: the drive on the ground, its lamps beside it, the fence
   for (const p of PATHS) for (const q of p.pts) if (insetOf(...q) > 0) assert.ok(mownNear(...q, 0), `${p.id} not mown at ${q}`);
 });
 
+test("the D4 tune: the cart paths inked along both sides where they show, broken where a path joins or mown turf's over them", async () => {
+  const { allPathInk, inkRuns, PATH_INK } = await import('../src/scripts/city3d/golf3d');
+  const { fromPaths, pathShows, PATH_HALF } = await import('../src/scripts/city3d/golf');
+  const ink = allPathInk();
+  const pts = ink.flat();
+  assert.ok(ink.length > 40 && pts.length > 5000, `${ink.length} runs, ${pts.length} points of ink`);
+  for (const run of ink) assert.ok(run.length >= PATH_INK.min, 'no specks');
+  for (const p of pts) {
+    // (on a path's edge, with rough beside it: never across a fairway, a tee, a green or another path)
+    assert.ok(Math.abs(fromPaths(...p) - PATH_HALF) < 0.05 || fromPaths(...p) < PATH_HALF, `ink off the edge at ${p}`);
+    assert.ok(pathShows(...p), `ink where the gravel's hidden at ${p}`);
+  }
+  // (the runs a tile meets come back from inkRuns)
+  const tile: [number, number, number, number] = [pts[0][0] - 10, pts[0][1] - 10, pts[0][0] + 10, pts[0][1] + 10];
+  const runs = inkRuns(tile);
+  assert.ok(runs.some((r) => r.some((q) => Math.hypot(q[0] - pts[0][0], q[1] - pts[0][1]) < 1e-9)), 'the tile by the ink has its run');
+  for (const r of runs) assert.ok(r.length >= 2);
+});
+
 test("the design pass's D3: the reeds in clumps in the shallows, gaps of open bank between; lily pads on the water off them", async () => {
   const { reedsOf, reedClumps, liliesOf, LILIES, shoreOf } = await import('../src/scripts/city3d/golf3d');
   for (const l of LAKES) {

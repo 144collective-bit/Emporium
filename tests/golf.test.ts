@@ -290,3 +290,33 @@ test("the design pass's D1: each green its own shape and bunkers, every bunker c
     });
   }
 });
+
+test("the design pass's D4: rounded tees, the cart paths from behind each tee round its side, curved, no sharp corner", async () => {
+  const { TEE_ROUND, teeOut, teeOutline, smoothLine, PATHS: paths, teeOf: tee, framePt: fp, TEE: box, onTee: on } = await import('../src/scripts/city3d/golf');
+  for (const h of HOLES) {
+    // (a square corner's off the tee now; its middle and sides on)
+    assert.ok(!on(h, ...fp(h, box[0] - 0.1, box[1] - 0.1)), `hole ${h.n}: a square corner`);
+    assert.ok(on(h, ...tee(h).at) && on(h, ...fp(h, 0, box[1] - 0.1)) && on(h, ...fp(h, box[0] - 0.1, 0)));
+    // (the outline's points on the edge)
+    for (const p of teeOutline(h)) assert.ok(Math.abs(teeOut(h, ...p)) < 1e-6);
+    // (its path starts behind it)
+    const path = paths.find((p) => p.id === `hole-${h.n}`)!;
+    const t = tee(h);
+    const [dx, dz] = [path.pts[0][0] - t.at[0], path.pts[0][1] - t.at[1]];
+    assert.ok(dx * t.dir[0] + dz * t.dir[1] < -box[0], `hole ${h.n}'s path starts beside its tee, not behind`);
+  }
+  assert.ok(TEE_ROUND > 0.5);
+  // (no turn sharper than a right angle along any path)
+  for (const p of paths)
+    for (let i = 1; i < p.pts.length - 1; i++) {
+      const [a, b, c] = [p.pts[i - 1], p.pts[i], p.pts[i + 1]];
+      const [u, v] = [[b[0] - a[0], b[1] - a[1]], [c[0] - b[0], c[1] - b[1]]];
+      const cos = (u[0] * v[0] + u[1] * v[1]) / (Math.hypot(...u) * Math.hypot(...v) || 1);
+      assert.ok(cos > -1e-6, `${p.id}: a sharp turn at ${b.map((q) => q.toFixed(1))}`);
+    }
+  // (smoothing keeps the ends)
+  const line: [number, number][] = [[0, 0], [10, 0], [10, 10]];
+  const s = smoothLine(line, 2);
+  assert.deepEqual([s[0], s.at(-1)], [line[0], line[2]]);
+  assert.ok(s.length > line.length);
+});
