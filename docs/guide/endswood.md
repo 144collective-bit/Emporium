@@ -294,7 +294,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   and a firepit on the north-west lawn, a phase at a time. Phase 1 (the yard) is live: the paving's pattern is
   south3d.ts `yardBands()` (pale `STONE.path` panels, `STONE.edge` bands on a 2.4 grid, a border, the drive framed),
   his D before the garage inlaid in black steel, six trees in planters (home.ts `YARD_TREES`, `YARD_TREE`, in
-  `HOME_SOLIDS`; home3d.ts `gardens()`).
+  `HOME_SOLIDS`; home3d.ts `gardens()`). Phase 2 (the paths, lit) is built: home.ts `GARDEN_PATHS`, `pathStones()`,
+  `STONE_SIZE`, `PATH_LIGHTS`, `PATH_LIGHT` (solid, their pools in `HOME_POOLS`), drawn in `gardens()`.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,
