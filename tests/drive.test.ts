@@ -424,3 +424,21 @@ test('the street kart has a feel of its own: light, quick to steer, rear-driven;
   // ...and the same kart on the saloon's neutral feel turns less: the feel is what does it
   assert.ok(turned(kart) > turned(tune({ speed: k.speed * 0.8, accel: k.accel, grip: k.handling }, { L: 1.2, W: 0.95, wheelbase: 0.82 })) * 1.1);
 });
+
+import { LAZY_DISTRICTS } from '../src/scripts/city3d/districts';
+import { GARAGE_SITE, TURNTABLE_BOX } from '../src/scripts/city3d/solids';
+import { FAR_LATER } from '../src/scripts/city3d/lod';
+test("the garage's building out of the boot: a district round its lot and turntable, its far form asked for once it's in", () => {
+  const d = LAZY_DISTRICTS.find((q) => q.id === 'garage');
+  assert.ok(d, 'the garage district');
+  const [x0, z0, x1, z1] = GARAGE_SITE.building;
+  const T = TURNTABLE_BOX;
+  assert.ok(d!.rect[0] <= Math.min(x0, T[0]) && d!.rect[1] <= Math.min(z0, T[1]) && d!.rect[2] >= Math.max(x1, T[2]) && d!.rect[3] >= Math.max(z1, T[3]), 'its rect round the building and the turntable');
+  // (asked for before index.ts takes the queue over: it waits there to be taken)
+  const before = FAR_LATER.add;
+  const g = { name: 'garage' } as unknown as Parameters<typeof FAR_LATER.add>[0];
+  FAR_LATER.add(g);
+  assert.ok(FAR_LATER.waiting.includes(g), 'waiting for the far forms');
+  FAR_LATER.waiting.splice(FAR_LATER.waiting.indexOf(g), 1);
+  assert.equal(FAR_LATER.add, before);
+});

@@ -57,6 +57,14 @@ export const LOD_EYE = { x: 0, y: 0, z: 0, far: Infinity };
  * drawn past `far`, and the places' kept glows not drawn while they're dark
  */
 export const FAR_PHONE = { on: false };
+/** A place drawn after the boot (a district loaded as you approach: garage3d.ts) asks for its far form here; index.ts
+ * takes over `add` once its queue of far forms is made, and takes what was waiting */
+export const FAR_LATER = {
+  waiting: [] as THREE.Object3D[],
+  add(g: THREE.Object3D) {
+    FAR_LATER.waiting.push(g);
+  },
+};
 
 /** Hidden past `far` on phones: its place (a sphere round it, worked out now and then) and whether it's near */
 interface Hide {

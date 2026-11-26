@@ -134,8 +134,12 @@ keep it up to date when what it describes changes.
   be out: "Get in" takes the nearest; `carState` / `inCar` are the car's
   own; `recallKart()` sends the kart to the pits).
 - The garage is on the south bank, east of S5, facing the south bank
-  avenue (`GARAGE` in `layout.ts`; drawn by `garage.ts` in world numbers,
-  not the landmarks' drawing grid). A flat-roofed workshop with an open bay
+  avenue (`GARAGE` in `layout.ts`; drawn in world numbers, not the
+  landmarks' drawing grid: the building, sign, tyres and the turntable's
+  disc by `garage3d.ts`, a district loaded as you approach since
+  2026-11-26 (`LAZY_DISTRICTS`, its far form asked for through lod.ts
+  `FAR_LATER`); the car's and bike's stands, the lamps and the menu's
+  views stay at the boot in `garage.ts`). A flat-roofed workshop with an open bay
   and a car lift, a roller door, an office, a neon GARAGE roof sign, and a
   showroom turntable on the forecourt with the player's own car on it. It
   has no pin and links nowhere; it's walk-mode only. Its footprints, the
