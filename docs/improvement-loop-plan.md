@@ -295,7 +295,7 @@ sets the order (rule 2).
       `crestgardens`, `crestbanks`, `coral`); then the owner's second ask:
       **every other driveway in the city checked to line up and not cover
       the sidewalk** (R2's sweep).
-- [ ] **J3 (R3): the twin towers' lawn in Endswood** (the hunt, 2026-11-24; camera `h-ends-air` below): the big
+- [x] **J3 (R3): the twin towers' lawn in Endswood** (the hunt, 2026-11-24; camera `h-ends-air` below): the big
       green round the twin towers is one flat patch cut square into the estate's paving, nothing on it but dashed
       lines that need a look on foot (paths? cables' shadows?). R3 in full: desire paths from the towers' doors to the
       stops and the Circus, planting in groups, a mown edge, its outline wandering.
@@ -306,9 +306,12 @@ sets the order (rule 2).
 - [ ] **J5 (R2/R3): paths whose edges break up over the lawn** (`h-circus-foot`): a lilac path's edges go ragged in
       blobs where it meets the grass, and the lawn meets the paving with no kerb or edge. The paths' own edge (a clean
       line or a kerb) and a mown edge or kerb at every lawn's meeting with paving.
-- [ ] **J6 (R3): Aldwyn's Green's back gardens** (`h-green-air`): behind the terraces the gardens are loose pale slabs
+- [x] **J6 (R3): Aldwyn's Green's back gardens** (`h-green-air`): behind the terraces the gardens are loose pale slabs
       (patios, sheds) and short red fence pieces at odd angles that don't close any plot. R3's garden rule: fences meet
       at the plot's corners, patios against the back wall, a shed in a corner.
+      Built 2026-11-26 (night 5 pass 2) in a draft PR: the slabs were the alleys and the red pieces each house's own
+      stub of back wall; now `southgardens.ts` closes every yard (side fences from the back corners to the back wall,
+      a shared one drawn once), a patio at the back wall, 1 in 3 with a shed. Merged 2026-11-26, night 5 pass 3.
 - [ ] **J7 (R1): St Aldwyn's churchyard wall and its yews** (`h-church-foot`): the wall is one plain grey slab with no
       coping or coursing; the yews are bare cones. R1 for stone: a coping, courses, a darker plinth; the yews rounded.
 - [ ] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
@@ -317,9 +320,10 @@ sets the order (rule 2).
 - [ ] **J9 (R1/R3): Lot 9's empty pitches and lanes** (the hunt, part 2, `h-lot9-air`): the empty pitches are bare
       grey slabs and the lanes plain grey strips meeting square, no verge or kerb. R1 for the pads (gravel, a hook-up
       post, worn edges), R3 for the lanes' verges and corners.
-- [ ] **J3's night side: the twin towers' lawn and podium unlit** (part 2, `h-ends-air` at night): lit only along the
+- [x] **J3's night side: the twin towers' lawn and podium unlit** (part 2, `h-ends-air` at night): lit only along the
       streets, the lawn and podium go to a void. With J3's paths, low bollard lights along them (small and dim: the
-      bloom rule), and the podium's edge lit.
+      bloom rule), and the podium's edge lit. The bollard lamps done with J3 (2026-11-26); the podium's edge still to
+      light, its own small job.
 - [ ] **J10 (R3): Crestmont's Flats' two bare blocks** (the hunt, 2026-11-25, `c-flats-air` [330,80,110] to
       [375,0,10]): two whole blocks of plain lilac paving with a couple of trees. Check first whether they're the game's
       lots for sale (lots don't move or change price): if so, dress them as plots waiting to build (hoarding round,
@@ -329,7 +333,8 @@ sets the order (rule 2).
       follow the ground's contours, posts and a wandering edge, or gone.
 - [ ] **J12 (R3): Sunridge's greens between the cul-de-sacs** (`s-air` [180,85,30] to [180,0,-80]): the greens the
       cul-de-sacs back onto are open lawn with nothing on them; footpaths through (the "nowhere a dead end" rule:
-      each cul-de-sac's path to the next street), trees in groups, a bench.
+      each cul-de-sac's path to the next street), trees in groups, a bench. Waiting on the owner (2026-11-26):
+      the greens are walled in by lots all round, so a path means taking a lot.
 - [ ] **J13 (R1, small): Sunridge's back-yard patios** (`s-street` [150,4,-60] to [200,1,-75]): pale bare slabs; a
       paving joint pattern or a darker border.
 - [ ] **J14 (R1): the big dark hall by The Trenches' river** (the hunt, 2026-11-25, `t-air` [-70,75,250] to
@@ -410,6 +415,15 @@ one is still open before fixing it.
       and down the escalator", 2026-11-22); passes run alone. Find why (a wait too short under load) and
       fix the scene's timing, not by loosening what it checks.
 
+- [x] **The car's push-out off Westlake's long edge wall differs with the nearby solids from with all of them**
+      (found 2026-11-25 by J3's checks): `tests/boxgrid.test.ts` "driving: a car only given the boxes near it..."
+      fails at run 29, step 0, near (-122.35, -8.4) beside the thin wall [-123.36, -9.6, -98.09, -9.3] (25 long, 0.3
+      thick), which the grid does return: with all boxes the car's pushed to z -8.13, with the near ones it stays at
+      -8.58. Passes on main only because the test's seeded start spots fall elsewhere; J3's new solids (shrubs,
+      bollards) shift the seeded draws so this spot comes up. A latent bug in `stepCar()`'s push-out or `reachOf()`,
+      not in J3: find it and fix the code (never the test); J3 merges after. Done 2026-11-26: the start was in the lake
+      (the owner's call (a): the check's starts kept out of the water), and the lake's walls fixed (#279).
+
 ## Level 2: speed and phones
 
 - [ ] Ticks that never check distance get gated on a shared `near()`: the
@@ -476,6 +490,28 @@ session.)
   (Also from this pass: Riverside Raceway's Phase 4a broke the build's typecheck with an unused
   constant: I ran plain `tsc`, not `npm run typecheck`, which adds `--noUnusedLocals`. Another
   session fixed it at 21:14; the kart passes run `npm run typecheck` from now on.)
+
+- **The box grid's driving check, and J3 (2026-11-25, night 4 pass 2).** The check
+  (`tests/boxgrid.test.ts`, "driving: a car only given the boxes near it...") starts each car "outside every
+  building, as in the city", but checks only the city's solids: not the lake, the river or the Docks' basin, which
+  the step adds itself. J3's new solids shift its seeded starts so one lands in Westlake's lake, open water at
+  (-120.4, -67.9), where no car can be; pushed out of the water there, the car crosses the lake's strips to the shore
+  60 tiles away in one step, beyond the nearby boxes' reach, so the two runs differ. The test's own premise is that
+  starts are where a car can be. Which do you want? (a) the test also keeps its starts out of the water (`inLake`,
+  `inWater`, `inBasin`; the same checks, the same rules for the step), then J3 merges; (b) the step's push-out made
+  to cope with a car started in water (a bigger change to drive-sim.ts for a case the city never makes); (c) J3 without
+  solids for its shrubs and bollards (walkable through). The loop doesn't change a test's rules without you.
+  **Owner's answer (2026-11-26): (a).** The check's starts keep 1.4 clear of the lake, the river and the basin;
+  J3 merges with it.
+  Found on the way, its own fix (draft PR "Loop: the lake's car walls..."): since the redesign gave the lake coves,
+  each row's single strip walled the land between its arms too (249 land samples walled, 12 after, at the shore).
+- **J12, Sunridge's greens: a way in means taking a lot (2026-11-26, night 5 pass 4).** The two greens
+  between Saguaro, Ocotillo and Palo Verde Courts are the insides of blocks, ringed all round by the back walls
+  of the courts', Mesa Drive's and the Parkway's lots (`s-air`): no street, path or gap reaches them. A footpath
+  through to the next street means giving a lot's width to it, which moves what exists. Which do you want?
+  (a, suggested) one lot at the end of each green becomes a footpath (a 3 m path with low walls, bollards at each
+  end; the lot's house goes; the snapshot's lots updated on your say), then the trees in groups and a bench;
+  (b) leave the greens as private common land, only trees in groups (no path, no bench); (c) drop J12.
 
 ## The log
 
@@ -564,3 +600,34 @@ session.)
   board's last Ready card). Day shots from the air of each: the Neon Mile and the airport read finished; three finds
   logged as J18 to J20 (the air base's bare apron and buildings, the mall car park's bare islands and empty slab, the
   Docks' plain warehouse roofs). Every district has now had its first hunt. Nothing fixed. Plan only: typecheck, lint.
+- 2026-11-25, night 4 pass 1 (22:07): J3 (R3), the twin towers' lawn (the board's top Ready card): paths worn to
+  1.1, a mown concrete edge, 31 low shrubs in 9 groups along the edge and at the towers' feet, 15 bollard lights along
+  the paths, all solid (southyard.ts `SHRUBS`, `BOLLARDS`; tested; southblocks3d.ts draws them). After shots on foot
+  and from the air read well; the bollards' heads too dim at night (to brighten). Checks: typecheck, lint, test:wide
+  (2415 pass), build, bake; budget: texFull 4985.1 of 4955 locally (corrected: first logged as passing before its
+  result was read; J3 adds no textures, to compare with main measured the same way); test fails one, the box grid's
+  driving check (see Waiting on the owner). J3 in a draft PR; this plan edit only merged.
+- 2026-11-25, night 4 pass 2 (23:07): the box grid's driving check (the board's top Ready card). Found: the failing
+  start is in Westlake's lake (the test checks only the city's solids, not the water walls the step adds), and on the
+  way the lake's car walls walling the land between its coves (fixed in a draft PR). Changing the test's starts needs
+  the owner: to Waiting on the owner. Only this plan edit merged.
+- 2026-11-26, night 5 pass 1 (00:07): the lake's car walls (the board's top Ready card): one wall per stretch of water
+  a row, split at every stretch of land over 1.5 wide, so the land between the coves is open to the car again (land
+  walled in: 249 samples to 12). Typecheck, lint, `npm test` and `test:wide` (2414 of 2414 each), the build and the
+  bake pass; the budget's texFull reads 4985.1 of 4955 here, the same on a branch with no texture change, while CI's
+  budget on main passes: a difference in this machine's bake, not either branch (J3's reading was the same). Merged.
+  The driving check's starts in the water still wait on the owner.
+- 2026-11-26, night 5 pass 2 (01:08): J6, Aldwyn's Green's back gardens (the board's top Ready card; J3 still waits on
+  the owner, its driving check failing the same with the lake fix in). Built in a draft PR: `southgardens.ts` and its
+  test (the test caught a shed in a neighbour's house at a bend: kept out in the code). Typecheck, lint, the gardens'
+  and near tests pass; shots read as closed plots. The full checks (40 minutes) didn't fit: next pass.
+- 2026-11-26, night 5 pass 3 (02:07): J6's full checks: `npm test` and `test:wide` 2416 of 2416 each, smoke fine, bootJs
+  unchanged (771.9 KB: the gardens out of the boot); texFull the same local 4985.1 as main (CI's budget passes). Merged.
+- 2026-11-26, night 5 pass 4 (03:07): J12, Sunridge's greens (the board's top Ready card). From `s-air`: both greens
+  are block insides walled in by lots all round, so the path the job asks for would take a lot: to Waiting on the
+  owner. Only this plan edit merged. (J6 live: Build site 415 green.)
+- 2026-11-26, owner's session (04:10): J3 with the owner's answer (a): the box grid's driving check keeps its starts 1.4
+  clear of the lake, the river and the basin; the lawn's bollard lamps their own brighter neon in a taller head (a
+  night look: warm points along the paths, nothing washed out). Lint, `npm test` and `test:wide` 2417 of 2417 each,
+  smoke fine, bootJs 772.4 KB (J3's solids); texFull the same local 4985.1 as main. Merged. J12, rechecked: the greens
+  do open onto Mesa Drive (the night 5 pass 4 note was wrong); the owner's call: footpaths with no house taken.

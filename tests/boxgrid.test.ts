@@ -13,6 +13,9 @@ import { DRIVE } from '../src/scripts/city3d/mycar';
 import { EXT, WORLD_BOUNDS } from '../src/scripts/city3d/layout';
 import { hillsAlong } from '../src/scripts/city3d/terrain';
 import { rollsAlong } from '../src/scripts/city3d/rolls';
+import { inLake } from '../src/scripts/city3d/westlake';
+import { inWater } from '../src/scripts/city3d/river';
+import { inBasin } from '../src/scripts/city3d/docks';
 
 /** A seeded generator, so a failure can be run again */
 function rng(seed: number) {
@@ -129,9 +132,11 @@ test('driving: a car only given the boxes near it ends every step exactly where 
   for (let run = 0; run < 60; run++) {
     // (a car starts outside every building, as in the city, its whole body clear: started inside a stack of a
     // tower's footprints, or with its nose in the Docks' container stacks, it's pushed out further in one step than
-    // the boxes near where it started reach)
+    // the boxes near where it started reach); and on land, as in the city (the owner's call, 2026-11-26: started in
+    // Westlake's lake, the river or the Docks' basin, the step's water walls push it further than its reach in one step)
+    const afloat = (x: number, z: number) => inLake(x, z, 1.4) || inWater(x, z, -1.4) || inBasin(x, z, -1.4);
     let [x, z] = spot();
-    while (CAR.some((q) => inBox(q, x, z, 1.4))) [x, z] = spot();
+    while (CAR.some((q) => inBox(q, x, z, 1.4)) || afloat(x, z)) [x, z] = spot();
     const yaw = r() * Math.PI * 2;
     const a = newCar(x, z, yaw);
     const b = newCar(x, z, yaw);

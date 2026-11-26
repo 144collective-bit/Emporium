@@ -1206,21 +1206,31 @@ const OVERLOOK_SOLIDS: [number, number, number, number, number][] = OVERLOOK_RAI
 });
 export const WESTLAKE_SOLIDS = [...GATE_PIERS, BOATHOUSE_SOLID, ...ROCK_SOLIDS, ...GRAND_SOLIDS, ...OVERLOOK_SOLIDS, ...STAND_SOLIDS];
 
-/** The lake as walls for cars (drive-sim.ts): strips across it, a tile deep, each its width there */
+/**
+ * The lake as walls for cars (drive-sim.ts): strips across it, a tile deep, one for each stretch of water along the
+ * row (since the redesign gave it coves, a row can cross water, land and water again: one strip across the whole row
+ * walled the land between too, and a car on it was pushed strip by strip down the rows, tens of tiles in a step)
+ */
 export const LAKE_WALLS: [number, number, number, number, number][] = (() => {
   const out: [number, number, number, number, number][] = [];
   const R = Math.ceil(LAKE_REACH) + 1;
+  const STEP = 0.25;
   for (let z = LAKE_C[1] - R; z < LAKE_C[1] + R; z += 1) {
     let lo = Infinity;
     let hi = -Infinity;
-    // (its widest across the strip: sampled at its edges and between)
-    for (let x = LAKE_C[0] - R; x <= LAKE_C[0] + R; x += 0.25)
-      for (const dz of [0, 0.25, 0.5, 0.75, 1])
-        if (inLake(x, z + dz)) {
-          lo = Math.min(lo, x);
-          hi = Math.max(hi, x);
-        }
-    if (hi > lo) out.push([lo - 0.3, z, hi + 0.3, z + 1, 2]);
+    const close = () => {
+      if (hi > lo) out.push([lo - 0.3, z, hi + 0.3, z + 1, 2]);
+      lo = Infinity;
+      hi = -Infinity;
+    };
+    // (water anywhere across the strip at this x: sampled at its edges and between)
+    for (let x = LAKE_C[0] - R; x <= LAKE_C[0] + R; x += STEP) {
+      if ([0, 0.25, 0.5, 0.75, 1].some((dz) => inLake(x, z + dz))) {
+        lo = Math.min(lo, x);
+        hi = Math.max(hi, x);
+      } else if (hi > -Infinity && x - hi > 1.5) close();
+    }
+    close();
   }
   return out;
 })();

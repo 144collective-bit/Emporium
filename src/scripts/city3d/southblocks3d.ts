@@ -37,7 +37,7 @@ import {
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
 import { CORE_GAP, DOOR_OUT, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
-import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, COLUMN_R, DECK_COLUMNS, DECK_PROPS, FRAME, SANDPIT, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
+import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, BOLLARD, BOLLARDS, COLUMN_R, DECK_COLUMNS, DECK_PROPS, DESIRE_W, FRAME, MOWN_EDGE, SANDPIT, SHRUB, SHRUBS, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
 import { COURTS, DECK_LOOK, DESIRE_LINES, GRASS, PLAY, landingPosts } from './southblocks';
 import { CROWD_VIEW } from './character';
 import { WASH } from './tycoon';
@@ -68,6 +68,8 @@ const ACCENT: Record<keyof typeof ACCENTS, THREE.Material> = { orange: toon(ACCE
 const STRIP = neon('#ffcf86', 0.1, 1.25);
 /** A tired tube: the odd link's light stuttering (still under reduced motion: kit.ts `lit()`) */
 const STRIP_TIRED = neon('#ffcf86', 0.1, 1.25, 0.55);
+/** The lawn's bollard lights (J3): small, so brighter than the strip lights to read at night */
+const BOLLARD_LAMP = neon('#ffd9a0', 0.1, 2.8);
 const GLASS = lit(toon('#3b4656', { emissive: '#ffe2b4' }), 0, 0.95);
 const SLOT = lit(toon('#323b48', { emissive: '#ffe0a6' }), 0, 0.9);
 const BEACON = neon('#ff4a3a', 0.8, 2.2);
@@ -1842,7 +1844,17 @@ function registerYard(low: boolean, scene: THREE.Scene | null) {
     site(`south-blocks grass ${i}`, rectOf(g, 1), (into) => {
       const b = new Batch();
       flat(b, g, ON + 0.002, LAWN);
-      for (const l of DESIRE_LINES) stripAlong(b, l, 0, 0.7, ON + 0.006, WORN, true);
+      // (J3, R3: the paths worn wide enough to read, the lawn's mown edge, its shrubs in groups, bollard lights)
+      for (const l of DESIRE_LINES) stripAlong(b, l, 0, DESIRE_W, ON + 0.008, WORN, true);
+      stripAlong(b, [...g, g[0]], 0, MOWN_EDGE * 2, ON + 0.014, CONC, true);
+      b.detail(() => {
+        for (const [x, z] of SHRUBS) b.add(new THREE.IcosahedronGeometry(SHRUB.r, 1).scale(1, SHRUB.h / (SHRUB.r * 2) * 1.6, 1).translate(x, ON + SHRUB.h * 0.42, z), GREEN);
+        for (const [x, z] of BOLLARDS) {
+          b.box(x - BOLLARD.half, ON, z - BOLLARD.half, BOLLARD.half * 2, BOLLARD.h - 0.18, BOLLARD.half * 2, CONC);
+          b.box(x - BOLLARD.half * 0.85, ON + BOLLARD.h - 0.18, z - BOLLARD.half * 0.85, BOLLARD.half * 1.7, 0.16, BOLLARD.half * 1.7, BOLLARD_LAMP);
+          b.box(x - BOLLARD.half * 1.1, ON + BOLLARD.h - 0.02, z - BOLLARD.half * 1.1, BOLLARD.half * 2.2, 0.03, BOLLARD.half * 2.2, CONC);
+        }
+      });
       b.build(into, { cast: false, receive: true });
     })
   );
