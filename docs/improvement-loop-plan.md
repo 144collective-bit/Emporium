@@ -414,13 +414,14 @@ one is still open before fixing it.
       and down the escalator", 2026-11-22); passes run alone. Find why (a wait too short under load) and
       fix the scene's timing, not by loosening what it checks.
 
-- [ ] **The car's push-out off Westlake's long edge wall differs with the nearby solids from with all of them**
+- [x] **The car's push-out off Westlake's long edge wall differs with the nearby solids from with all of them**
       (found 2026-11-25 by J3's checks): `tests/boxgrid.test.ts` "driving: a car only given the boxes near it..."
       fails at run 29, step 0, near (-122.35, -8.4) beside the thin wall [-123.36, -9.6, -98.09, -9.3] (25 long, 0.3
       thick), which the grid does return: with all boxes the car's pushed to z -8.13, with the near ones it stays at
       -8.58. Passes on main only because the test's seeded start spots fall elsewhere; J3's new solids (shrubs,
       bollards) shift the seeded draws so this spot comes up. A latent bug in `stepCar()`'s push-out or `reachOf()`,
-      not in J3: find it and fix the code (never the test); J3 merges after.
+      not in J3: find it and fix the code (never the test); J3 merges after. Done 2026-11-26: the start was in the lake
+      (the owner's call (a): the check's starts kept out of the water), and the lake's walls fixed (#279).
 
 ## Level 2: speed and phones
 
@@ -499,6 +500,8 @@ session.)
   `inWater`, `inBasin`; the same checks, the same rules for the step), then J3 merges; (b) the step's push-out made
   to cope with a car started in water (a bigger change to drive-sim.ts for a case the city never makes); (c) J3 without
   solids for its shrubs and bollards (walkable through). The loop doesn't change a test's rules without you.
+  **Owner's answer (2026-11-26): (a).** The check's starts keep 1.4 clear of the lake, the river and the basin;
+  J3 merges with it.
   Found on the way, its own fix (draft PR "Loop: the lake's car walls..."): since the redesign gave the lake coves,
   each row's single strip walled the land between its arms too (249 land samples walled, 12 after, at the shore).
 - **J12, Sunridge's greens: a way in means taking a lot (2026-11-26, night 5 pass 4).** The two greens

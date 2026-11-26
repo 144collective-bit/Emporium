@@ -68,6 +68,8 @@ const ACCENT: Record<keyof typeof ACCENTS, THREE.Material> = { orange: toon(ACCE
 const STRIP = neon('#ffcf86', 0.1, 1.25);
 /** A tired tube: the odd link's light stuttering (still under reduced motion: kit.ts `lit()`) */
 const STRIP_TIRED = neon('#ffcf86', 0.1, 1.25, 0.55);
+/** The lawn's bollard lights (J3): small, so brighter than the strip lights to read at night */
+const BOLLARD_LAMP = neon('#ffd9a0', 0.1, 2.8);
 const GLASS = lit(toon('#3b4656', { emissive: '#ffe2b4' }), 0, 0.95);
 const SLOT = lit(toon('#323b48', { emissive: '#ffe0a6' }), 0, 0.9);
 const BEACON = neon('#ff4a3a', 0.8, 2.2);
@@ -1848,8 +1850,8 @@ function registerYard(low: boolean, scene: THREE.Scene | null) {
       b.detail(() => {
         for (const [x, z] of SHRUBS) b.add(new THREE.IcosahedronGeometry(SHRUB.r, 1).scale(1, SHRUB.h / (SHRUB.r * 2) * 1.6, 1).translate(x, ON + SHRUB.h * 0.42, z), GREEN);
         for (const [x, z] of BOLLARDS) {
-          b.box(x - BOLLARD.half, ON, z - BOLLARD.half, BOLLARD.half * 2, BOLLARD.h - 0.12, BOLLARD.half * 2, CONC);
-          b.box(x - BOLLARD.half * 0.8, ON + BOLLARD.h - 0.12, z - BOLLARD.half * 0.8, BOLLARD.half * 1.6, 0.1, BOLLARD.half * 1.6, STRIP);
+          b.box(x - BOLLARD.half, ON, z - BOLLARD.half, BOLLARD.half * 2, BOLLARD.h - 0.18, BOLLARD.half * 2, CONC);
+          b.box(x - BOLLARD.half * 0.85, ON + BOLLARD.h - 0.18, z - BOLLARD.half * 0.85, BOLLARD.half * 1.7, 0.16, BOLLARD.half * 1.7, BOLLARD_LAMP);
           b.box(x - BOLLARD.half * 1.1, ON + BOLLARD.h - 0.02, z - BOLLARD.half * 1.1, BOLLARD.half * 2.2, 0.03, BOLLARD.half * 2.2, CONC);
         }
       });
