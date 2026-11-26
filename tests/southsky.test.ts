@@ -8,7 +8,7 @@ import { BLOCKS_RECT, BRIDGES, CAGE, CAGES, FLAT, FLAT_FLOOR, LOBBIES, PERCH, TO
 import { PLAN, distToStreet } from '../src/scripts/city3d/streetplan';
 import { SOLIDS as BOOT_SOLIDS } from '../src/scripts/city3d/solids';
 import { ALLOTMENT_SOLIDS, COUNCIL_SOLIDS } from '../src/scripts/city3d/council';
-import { inside } from '../src/scripts/city3d/streetfaces';
+import { distTo, inside } from '../src/scripts/city3d/streetfaces';
 import { createGroundHeight } from '../src/scripts/city3d/groundheight';
 /** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
 const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
@@ -280,4 +280,40 @@ test("Degen's flat (docs/brutalist-plan.md Phase 7a): shut till it's his; then i
   } finally {
     setFlatOpen(false);
   }
+});
+
+test("the galleries' fronts: a low wall that stops bullets, an open rail over it; crouched you shoot over the wall", async () => {
+  const { GALLERY_RAIL, GALLERY_WALL, SKY_COVER } = await import('../src/scripts/city3d/southsky');
+  const { rayBoxes } = await import('../src/scripts/city3d/solids');
+  const { BLOCKS: ALL } = await import('../src/scripts/city3d/southblocks');
+  const { FIGURE_SCALE } = await import('../src/scripts/city3d/figure');
+  // (the eye's height over the floor, crouched in third person and standing in first: walk.ts's camera)
+  const crouched = (1.0 - 0.26) * FIGURE_SCALE + 0.05;
+  const standing = 1.2 * FIGURE_SCALE + 0.05;
+  assert.ok(GALLERY_WALL < crouched - 0.08, 'the wall under a crouched eye');
+  assert.ok(GALLERY_RAIL < standing - 0.1 && GALLERY_RAIL > crouched + 0.08, 'the rail between the eyes: under it crouched, over it standing');
+  assert.ok(SKY_COVER.length > 300);
+  for (const [x0, z0, x1, z1, top, bottom] of SKY_COVER) assert.ok(x1 > x0 && z1 > z0 && top - bottom > GALLERY_WALL && top - bottom < 0.7);
+  // (from a spot on the gallery a metre in from a piece of its front, shooting straight out: low, the wall stops it;
+  // from a crouched eye, over it)
+  let tried = 0;
+  for (const box of SKY_COVER.filter((_, i) => i % 40 === 0)) {
+    const m: Pt = [(box[0] + box[2]) / 2, (box[1] + box[3]) / 2];
+    const blk = ALL.filter((b) => b.spine).sort((a, b) => distTo(a.spine!, m) - distTo(b.spine!, m))[0];
+    const floor = box[4] - GALLERY_WALL;
+    // (the way out: away from the spine)
+    let best: Pt = blk.spine![0];
+    for (const p of blk.spine!) if (Math.hypot(p[0] - m[0], p[1] - m[1]) < Math.hypot(best[0] - m[0], best[1] - m[1])) best = p;
+    const d = Math.hypot(m[0] - best[0], m[1] - best[1]);
+    if (d < 1) continue;
+    const out = { x: (m[0] - best[0]) / d, y: 0, z: (m[1] - best[1]) / d };
+    const at = { x: m[0] - out.x * 1.0, z: m[1] - out.z * 1.0 };
+    if (!skyFloorAt(at.x, at.z, floor) || Math.abs(skyFloorAt(at.x, at.z, floor)! - floor) > 0.05) continue;
+    tried++;
+    const low = rayBoxes({ x: at.x, y: floor + 0.25, z: at.z }, out, 30);
+    assert.ok(low < 1.3, `a low shot through the wall at ${m.map((v) => v.toFixed(1))} (${low.toFixed(2)})`);
+    const over = rayBoxes({ x: at.x, y: floor + crouched, z: at.z }, out, 30);
+    assert.ok(over > 2, `a crouched shot stopped by the wall at ${m.map((v) => v.toFixed(1))} (${over.toFixed(2)})`);
+  }
+  assert.ok(tried > 5, `only ${tried} spots tried`);
 });
