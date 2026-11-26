@@ -332,7 +332,8 @@ sets the order (rule 2).
       follow the ground's contours, posts and a wandering edge, or gone.
 - [ ] **J12 (R3): Sunridge's greens between the cul-de-sacs** (`s-air` [180,85,30] to [180,0,-80]): the greens the
       cul-de-sacs back onto are open lawn with nothing on them; footpaths through (the "nowhere a dead end" rule:
-      each cul-de-sac's path to the next street), trees in groups, a bench.
+      each cul-de-sac's path to the next street), trees in groups, a bench. Waiting on the owner (2026-11-26):
+      the greens are walled in by lots all round, so a path means taking a lot.
 - [ ] **J13 (R1, small): Sunridge's back-yard patios** (`s-street` [150,4,-60] to [200,1,-75]): pale bare slabs; a
       paving joint pattern or a darker border.
 - [ ] **J14 (R1): the big dark hall by The Trenches' river** (the hunt, 2026-11-25, `t-air` [-70,75,250] to
@@ -500,6 +501,13 @@ session.)
   solids for its shrubs and bollards (walkable through). The loop doesn't change a test's rules without you.
   Found on the way, its own fix (draft PR "Loop: the lake's car walls..."): since the redesign gave the lake coves,
   each row's single strip walled the land between its arms too (249 land samples walled, 12 after, at the shore).
+- **J12, Sunridge's greens: a way in means taking a lot (2026-11-26, night 5 pass 4).** The two greens
+  between Saguaro, Ocotillo and Palo Verde Courts are the insides of blocks, ringed all round by the back walls
+  of the courts', Mesa Drive's and the Parkway's lots (`s-air`): no street, path or gap reaches them. A footpath
+  through to the next street means giving a lot's width to it, which moves what exists. Which do you want?
+  (a, suggested) one lot at the end of each green becomes a footpath (a 3 m path with low walls, bollards at each
+  end; the lot's house goes; the snapshot's lots updated on your say), then the trees in groups and a bench;
+  (b) leave the greens as private common land, only trees in groups (no path, no bench); (c) drop J12.
 
 ## The log
 
@@ -611,3 +619,6 @@ session.)
   and near tests pass; shots read as closed plots. The full checks (40 minutes) didn't fit: next pass.
 - 2026-11-26, night 5 pass 3 (02:07): J6's full checks: `npm test` and `test:wide` 2416 of 2416 each, smoke fine, bootJs
   unchanged (771.9 KB: the gardens out of the boot); texFull the same local 4985.1 as main (CI's budget passes). Merged.
+- 2026-11-26, night 5 pass 4 (03:07): J12, Sunridge's greens (the board's top Ready card). From `s-air`: both greens
+  are block insides walled in by lots all round, so the path the job asks for would take a lot: to Waiting on the
+  owner. Only this plan edit merged. (J6 live: Build site 415 green.)
