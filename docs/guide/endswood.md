@@ -129,6 +129,12 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `TERRACES_RECT`. Drawn by `village3d.ts` (lazy chunk `village`): `PIECES` (one house's shapes in its own frame,
   `frameOf()` stretches each to its frontage, right-handed) copied by `Batch.instances()`, built with `lift: false`; the
   yards, walls, alleys and ginnels in a lifted Batch. Bench view `village-terraces`.
+- **The terraces' back gardens** (`southgardens.ts`, DOM-free, drawing-only, out of the boot, tested in
+  `tests/southgardens.test.ts`; the loop's J6): `GARDENS`, one a house: its `yard`, the `fences` it draws (a shared one
+  once, by the house it's the left side of, as long as the deeper yard), the `back` wall at the yard's end, a `patio`
+  at the house's back wall, a `shed` in a back corner of about one in three (none where rows back onto each other at a
+  bend). Drawn in `village3d.ts` `drawGround()`: the patio at every distance, the rest near only, not on phones. Not
+  solid, as the alleys' back walls weren't.
 - **St Aldwyn's** (`aldwyns.ts`, DOM-free, tested in `tests/aldwyns.test.ts`, 3b): `NAVE`, `CHANCEL`, `TOWER`, `PORCH`
   (rects, the nave along x), `HEIGHTS`, `SPIRE_TIP` (22.5 over `CHURCH_BASE`), `PORCH_DOOR` / `DOOR_SPOT` (its door,
   `ENDS_DOORS`), `LYCHGATE`, `CHURCH_PATH` (southterraces.ts leaves a gap for it), `GRAVES`, `YEWS`, `YARD_WALL`,

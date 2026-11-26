@@ -16,6 +16,7 @@ import { Batch, neon, toon } from './kit';
 import { site } from './tilework';
 import { COVER, STONE } from './palette';
 import { shift } from './streetfaces';
+import { GARDEN, GARDENS } from './southgardens';
 import { ALLEYS, DOOR_U, GINNELS, HOUSES, TERRACE, WALL_H, frontWalls, houseFoot, plotOf, type House } from './southterraces';
 import { CHANCEL, CHURCH_BASE, CHURCH_LOW, CHURCH_PATH, GRAVES, HEIGHTS, LYCHGATE, NAVE, PATH_W, PORCH, PORCH_DOOR, SPIRE_TIP, TOWER, YARD_WALL, YARD_WALL_H, YEWS } from './aldwyns';
 import { CHURCHYARD } from './south';
@@ -47,6 +48,9 @@ const YARD = toon(COVER.garden);
 const PAVING = toon(STONE.paving);
 const ALLEY = toon(STONE.path);
 const CAP = toon(STONE.cap);
+const FENCE = toon('#6b4a32');
+const SHED = toon('#4f6150');
+const GARDEN_OF = new Map(GARDENS.map((g) => [g.house, g]));
 
 /* ---------- One house, in its own frame (x along its front, z out of it, y up from its base; 2.8 wide) ---------- */
 
@@ -244,11 +248,27 @@ export function drawGround(b: Batch, list: House[], low: boolean) {
     const rear = alley?.rear ?? TERRACE.rear;
     const back = houseFoot({ ...h, at: [h.at[0] - nx * TERRACE.depth, h.at[1] - nz * TERRACE.depth] }, rear);
     flat(b, back, ON, YARD);
-    if (alley) {
-      flat(b, alley.poly, ON + 0.002, ALLEY);
-      // (its back wall along the alley, near only)
-      if (!low) b.detail(() => along(b, alley.poly[0], alley.poly[1], 0.12, 0.15, 1.15, FRONTS.red));
-    }
+    if (alley) flat(b, alley.poly, ON + 0.002, ALLEY);
+    // Its garden (southgardens.ts, the loop's J6): the patio at the back wall; the fences, the back wall along the
+    // yard's end and the shed near only
+    const gd = GARDEN_OF.get(h.id);
+    if (!gd) continue;
+    flat(b, gd.patio, ON + 0.003, PAVING);
+    if (low) continue;
+    b.detail(() => {
+      along(b, gd.back[0], gd.back[1], 0.12, 0.15, 0.15 + GARDEN.wallH, FRONTS.red);
+      for (const [a, c] of gd.fences) along(b, a, c, GARDEN.fenceT, 0.15, 0.15 + GARDEN.fenceH, FENCE);
+      if (gd.shed) {
+        const s = gd.shed;
+        const { d, h: sh } = GARDEN.shed;
+        const m0: Pt = [(s[0][0] + s[3][0]) / 2, (s[0][1] + s[3][1]) / 2];
+        const m1: Pt = [(s[1][0] + s[2][0]) / 2, (s[1][1] + s[2][1]) / 2];
+        along(b, m0, m1, d, 0.15, 0.15 + sh, SHED);
+        // (its roof: felt, over the walls by a little all round)
+        const ex = 0.08 / Math.hypot(m1[0] - m0[0], m1[1] - m0[1]);
+        along(b, [m0[0] - (m1[0] - m0[0]) * ex, m0[1] - (m1[1] - m0[1]) * ex], [m1[0] + (m1[0] - m0[0]) * ex, m1[1] + (m1[1] - m0[1]) * ex], d + 0.16, 0.15 + sh, 0.15 + sh + 0.06, SLATE);
+      }
+    });
   }
 }
 function drawGinnels(b: Batch) {

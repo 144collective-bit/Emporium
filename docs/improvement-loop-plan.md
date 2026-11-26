@@ -309,6 +309,9 @@ sets the order (rule 2).
 - [ ] **J6 (R3): Aldwyn's Green's back gardens** (`h-green-air`): behind the terraces the gardens are loose pale slabs
       (patios, sheds) and short red fence pieces at odd angles that don't close any plot. R3's garden rule: fences meet
       at the plot's corners, patios against the back wall, a shed in a corner.
+      Built 2026-11-26 (night 5 pass 2) in a draft PR: the slabs were the alleys and the red pieces each house's own
+      stub of back wall; now `southgardens.ts` closes every yard (side fences from the back corners to the back wall,
+      a shared one drawn once), a patio at the back wall, 1 in 3 with a shed. Full checks next pass, then merge.
 - [ ] **J7 (R1): St Aldwyn's churchyard wall and its yews** (`h-church-foot`): the wall is one plain grey slab with no
       coping or coursing; the yews are bare cones. R1 for stone: a coping, courses, a darker plinth; the yews rounded.
 - [ ] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
@@ -602,3 +605,7 @@ session.)
   bake pass; the budget's texFull reads 4985.1 of 4955 here, the same on a branch with no texture change, while CI's
   budget on main passes: a difference in this machine's bake, not either branch (J3's reading was the same). Merged.
   The driving check's starts in the water still wait on the owner.
+- 2026-11-26, night 5 pass 2 (01:08): J6, Aldwyn's Green's back gardens (the board's top Ready card; J3 still waits on
+  the owner, its driving check failing the same with the lake fix in). Built in a draft PR: `southgardens.ts` and its
+  test (the test caught a shed in a neighbour's house at a bend: kept out in the code). Typecheck, lint, the gardens'
+  and near tests pass; shots read as closed plots. The full checks (40 minutes) didn't fit: next pass.
