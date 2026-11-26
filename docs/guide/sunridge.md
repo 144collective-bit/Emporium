@@ -49,7 +49,14 @@ keep it up to date when what it describes changes.
   and bus, `AMENITY_SOLIDS` joined when the chunk loads); spots `sunclub`,
   `sunpark`, `sunschool` (pins, directory entries, panels with Walk in,
   `data-sun-walkin`, `PLACES` and `LIVE_PLACES` entries); drawn by
-  `sunamenities3d.ts`. Phase 5 (life, night and sound) is built: `sunlife.ts`
+  `sunamenities3d.ts`. The greens between the cul-de-sacs (the loop's J12) are
+  `sungreens.ts` (DOM-free, the chunk's, tested in `tests/sungreens.test.ts`):
+  `GREEN_PATHS`, footpaths found across block sun-3's free land from Saguaro and Palo
+  Verde Courts' turning circles to Mesa Drive's sidewalk (Ocotillo Court's circle is
+  boxed in by lots; no lot was taken, the owner's call), each with bollards at both
+  ends and a bench; `GREEN_TREES` in groups; `GREEN_SOLIDS` joined when the chunk
+  loads; drawn in `sunamenities3d.ts` (site `sunridge greens`).
+  Phase 5 (life, night and sound) is built: `sunlife.ts`
   (DOM-free, the chunk's, tested in `tests/sunlife.test.ts`): walkers and dog
   walkers along the loop's kerbs and joggers along Mesa Drive's (`LANES`, a
   lane out along one kerb and back along the other, `KERB_IN` off the asphalt,
