@@ -64,7 +64,21 @@ export const SQUARES: Square[] = (() => {
       const sp = b.spine!;
       const [e0, e1] = [sp[0], sp[sp.length - 1]];
       const d = distTo(sp, p);
-      return d < (b.depth ?? 0) / 2 + 16 && d < Math.min(Math.hypot(p[0] - e0[0], p[1] - e0[1]), Math.hypot(p[0] - e1[0], p[1] - e1[1])) - 1;
+      if (!(d < (b.depth ?? 0) / 2 + 16 && d < Math.min(Math.hypot(p[0] - e0[0], p[1] - e0[1]), Math.hypot(p[0] - e1[0], p[1] - e1[1])) - 1)) return false;
+      // (on the slab's own side of every street: no street crossed walking straight to its face)
+      let best: Pt = b.foot[0];
+      for (let i = 0; i < b.foot.length; i++) {
+        const [a, c] = [b.foot[i], b.foot[(i + 1) % b.foot.length]];
+        const [dx, dz] = [c[0] - a[0], c[1] - a[1]];
+        const f = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dz) / (dx * dx + dz * dz || 1)));
+        const q: Pt = [a[0] + dx * f, a[1] + dz * f];
+        if (Math.hypot(q[0] - p[0], q[1] - p[1]) < Math.hypot(best[0] - p[0], best[1] - p[1])) best = q;
+      }
+      for (let k = 1; k < 20; k++) {
+        const q: Pt = [p[0] + ((best[0] - p[0]) * k) / 20, p[1] + ((best[1] - p[1]) * k) / 20];
+        if (STREETS.some((st) => distToStreet(st, q) < st.half)) return false;
+      }
+      return true;
     });
   const pts = SLABS.flatMap((b) => b.foot);
   const [x0, x1] = [Math.min(...pts.map((p) => p[0])) - 16, Math.max(...pts.map((p) => p[0])) + 16];
