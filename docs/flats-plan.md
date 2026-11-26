@@ -65,3 +65,7 @@ Each phase: tests extended, every check, shots, merged on its own.
   handrails and wall rails, a caged lamp at each landing (about one in seven dead), the floors' colour bands either side
   of each landing's way into the core, tags over some flights and litter on some landings. Drawing only: the walked
   flights (southsky.ts) don't change. Shots: inside a cage, from outside by day and night.
+- 2026-11-26: Phase 2 merged (#286). Phase 3 built: the bridges' and links' concrete under the glass and the podium
+  deck's edge (now the galleries' low wall and rail) into `SKY_COVER`, in 0.25 pieces (0.6 ones at a slant reached
+  within the shooter's own 0.6 and were skipped: the test caught it on the Rampart-Linnet bridge). Tested from each
+  bridge's middle: low across, the concrete stops it; at a standing eye, out through the glass.

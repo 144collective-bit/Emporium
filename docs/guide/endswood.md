@@ -126,6 +126,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   and shoot between them, standing over the rail. `SKY_COVER` (southsky.ts) is the walls as boxes with a bottom, which
   stop bullets only (solids.ts `SHOT_COVER`, in the shot grid; `rayBoxes()` reads a box's sixth number as its bottom);
   walking still keeps to `skyWall()`. The bridges' glass is a light see-through tint (`CLEAR_GLASS`).
+  Phase 3: `SKY_COVER` also holds each bridge's and service-tower link's concrete under its glass (`BRIDGE_WALL`, 0.6)
+  and the podium deck's edge, which is drawn as the galleries' low wall and rail too (`DECK_WALL_OFF`); the boxes are
+  pieces 0.25 long (`wallBoxes()`), so a wall at a slant isn't fattened by its boxes' corners.
 - **The ground round the blocks** (`southyard.ts`, DOM-free, tested in `tests/southyard.test.ts`, 2d): `BAYS` and
   `YARD_CARS` (drawn by cars.ts `parkedCars()` on the main thread), `BIN_STORES`, `BIKE_SHEDS`, the play area's `FRAME`,
   `SANDPIT`, `BALL_COURT` and `courtFence()`, `YARD_TREES` (index.ts adds them at the boot, on the rolling ground),

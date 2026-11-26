@@ -36,7 +36,7 @@ import {
   DECK_SHOPS, DECK_SHOP_DOORS, DECK_SHOP_NAMES, FLAT, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
-import { CORE_GAP, DOOR_OUT, GALLERY_DROP, GALLERY_RAIL, GALLERY_WALL, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
+import { CORE_GAP, DECK_WALL_OFF, DOOR_OUT, GALLERY_DROP, GALLERY_RAIL, GALLERY_WALL, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
 import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, BOLLARD, BOLLARDS, COLUMN_R, DECK_COLUMNS, DECK_PROPS, DESIRE_W, FRAME, MOWN_EDGE, SANDPIT, SHRUB, SHRUBS, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
 import { COURTS, DECK_LOOK, DESIRE_LINES, GRASS, PLAY, landingPosts } from './southblocks';
 import { CROWD_VIEW } from './character';
@@ -1114,9 +1114,19 @@ function drawDeck(b: Batch, poly: Pt[], y: number, base: number) {
       quad(b, a, c, y - 0.3, y, n, CONC);
       // (a balustrade where it isn't against a gallery, its coping a little wider and darker: R1)
       const mid: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
+      // (since docs/flats-plan.md Phase 3 the galleries' low wall, which stops bullets, and an open rail over it)
       if (!inBlock(mid, 2.4)) {
-        along(b, a, c, 0.12, y, y + 0.6, CONC, -0.07);
-        along(b, a, c, 0.18, y + 0.6, y + 0.65, CONC_DARK, -0.07);
+        along(b, a, c, 0.12, y, y + GALLERY_WALL, CONC, DECK_WALL_OFF);
+        along(b, a, c, 0.18, y + GALLERY_WALL, y + GALLERY_WALL + 0.05, CONC_DARK, DECK_WALL_OFF);
+        along(b, a, c, 0.05, y + GALLERY_RAIL - 0.04, y + GALLERY_RAIL, RAIL, DECK_WALL_OFF);
+        const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+        const n = Math.max(1, Math.round(l / 1.2));
+        const [rx, rz] = [-(c[1] - a[1]) / l, (c[0] - a[0]) / l];
+        for (let q = 0; q <= n; q++) {
+          const f = Math.min(1 - 0.05 / l, Math.max(0.05 / l, q / n));
+          const p: Pt = [a[0] + (c[0] - a[0]) * f + rx * DECK_WALL_OFF, a[1] + (c[1] - a[1]) * f + rz * DECK_WALL_OFF];
+          b.add(plain(new THREE.BoxGeometry(0.04, GALLERY_RAIL - GALLERY_WALL - 0.09, 0.04).translate(p[0], y + (GALLERY_WALL + 0.05 + GALLERY_RAIL - 0.04) / 2, p[1])), RAIL);
+        }
       }
     });
     // Its columns down to the court (southyard.ts)

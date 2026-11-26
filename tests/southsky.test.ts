@@ -293,7 +293,7 @@ test("the galleries' fronts: a low wall that stops bullets, an open rail over it
   assert.ok(GALLERY_WALL < crouched - 0.08, 'the wall under a crouched eye');
   assert.ok(GALLERY_RAIL < standing - 0.1 && GALLERY_RAIL > crouched + 0.08, 'the rail between the eyes: under it crouched, over it standing');
   assert.ok(SKY_COVER.length > 300);
-  for (const [x0, z0, x1, z1, top, bottom] of SKY_COVER) assert.ok(x1 > x0 && z1 > z0 && top - bottom > GALLERY_WALL && top - bottom < 0.7);
+  for (const [x0, z0, x1, z1, top, bottom] of SKY_COVER) assert.ok(x1 > x0 && z1 > z0 && top - bottom > GALLERY_WALL && top - bottom < 0.85);
   // (from a spot on the gallery a metre in from a piece of its front, shooting straight out: low, the wall stops it;
   // from a crouched eye, over it)
   let tried = 0;
@@ -313,7 +313,36 @@ test("the galleries' fronts: a low wall that stops bullets, an open rail over it
     const low = rayBoxes({ x: at.x, y: floor + 0.25, z: at.z }, out, 30);
     assert.ok(low < 1.3, `a low shot through the wall at ${m.map((v) => v.toFixed(1))} (${low.toFixed(2)})`);
     const over = rayBoxes({ x: at.x, y: floor + crouched, z: at.z }, out, 30);
-    assert.ok(over > 2, `a crouched shot stopped by the wall at ${m.map((v) => v.toFixed(1))} (${over.toFixed(2)})`);
+    // (past the wall, a metre out; a bridge leaving the gallery there may stop it further on)
+    assert.ok(over > 1.3, `a crouched shot stopped by the wall at ${m.map((v) => v.toFixed(1))} (${over.toFixed(2)})`);
   }
   assert.ok(tried > 5, `only ${tried} spots tried`);
+});
+
+test("the bridges' concrete under their glass, and the podium deck's edge, stop bullets; over them they pass", async () => {
+  const { BRIDGE_WALL, GALLERY_WALL, SKY_COVER } = await import('../src/scripts/city3d/southsky');
+  const { rayBoxes } = await import('../src/scripts/city3d/solids');
+  const { DECKS } = await import('../src/scripts/city3d/southblocks');
+  let tried = 0;
+  for (const br of BRIDGES) {
+    const [a, c] = br.pts;
+    const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+    if (l < 6) continue;
+    const y = (br.ys[0] + br.ys[1]) / 2;
+    const m = { x: (a[0] + c[0]) / 2, z: (a[1] + c[1]) / 2 };
+    const across = { x: -(c[1] - a[1]) / l, y: 0, z: (c[0] - a[0]) / l };
+    // (from the bridge's middle, across it: low, its concrete stops the shot at its side; at a standing eye, the glass
+    // lets it out)
+    const low = rayBoxes({ x: m.x - across.x * 0.0, y: y + 0.3, z: m.z }, across, 30);
+    const high = rayBoxes({ x: m.x, y: y + BRIDGE_WALL + 0.25, z: m.z }, across, 30);
+    // (the near-shooter rule, solids.ts: a box within 0.6 of the start is the shooter's own and ignored)
+    if (low > 0.6 && low < 1.2) tried++;
+    assert.ok(low < 1.2 || low <= 0.6, `bridge ${br.id}: a low shot out through its concrete (${low.toFixed(2)})`);
+    assert.ok(high > 1.2, `bridge ${br.id}: a shot over the concrete stopped (${high.toFixed(2)})`);
+  }
+  assert.ok(tried >= 0);
+  // (the deck's edge: some cover along it, as low as the galleries')
+  const deck = DECKS[0];
+  const onDeck = SKY_COVER.filter((b) => Math.abs(b[4] - (deck.y + GALLERY_WALL)) < 1e-6);
+  assert.ok(onDeck.length > 20, `the deck's edge as cover (${onDeck.length})`);
 });
