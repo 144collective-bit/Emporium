@@ -127,6 +127,74 @@ export const YARD_TREES: [number, number, number][] = (() => {
   return out;
 })();
 
+/* ---------- The grass given its use (the improvement loop's J3, R3: "empty open patch") ---------- */
+
+/** The paths' worn width (wider than the first cut's 0.7, so they read from the air), and the lawn's mown edge's */
+export const DESIRE_W = 1.1;
+export const MOWN_EDGE = 0.35;
+/** A low shrub: its radius and height */
+export const SHRUB = { r: 0.55, h: 0.7 } as const;
+/** A bollard light: its post's half width and height */
+export const BOLLARD = { half: 0.09, h: 0.8 } as const;
+const things = () => [...BIN_STORES, ...BIKE_SHEDS];
+/**
+ * Groups of low shrubs: along the lawn's edge and at the towers' feet, seeded, clear of the paths, the trees, the
+ * play area, the bins and sheds, and each other's groups (planting in groups, not lines: R3)
+ */
+export const SHRUBS: [number, number][] = (() => {
+  const r = seeded(20261125);
+  const grass = GRASS[0];
+  const xs = grass.map((p) => p[0]);
+  const zs = grass.map((p) => p[1]);
+  const centres: Pt[] = [];
+  const ok = (p: Pt) =>
+    inside(grass, p) &&
+    distTo(grass, p, true) > MOWN_EDGE + SHRUB.r + 0.2 &&
+    !inBlock(p, 1.2) &&
+    DESIRE_LINES.every((l) => distTo(l, p) > DESIRE_W / 2 + SHRUB.r + 0.5) &&
+    !inside(PLAY, p) &&
+    distTo(PLAY, p, true) > 1.5 &&
+    YARD_TREES.every(([x, z]) => Math.hypot(x - p[0], z - p[1]) > 2.2) &&
+    things().every((t) => Math.hypot(t.at[0] - p[0], t.at[1] - p[1]) > 3);
+  // (a group where the lawn meets its edge or a tower's foot)
+  const edgy = (p: Pt) => distTo(grass, p, true) < 4.5 || inBlock(p, 5);
+  for (let k = 0; k < 6000 && centres.length < 9; k++) {
+    const p: Pt = [Math.min(...xs) + r() * (Math.max(...xs) - Math.min(...xs)), Math.min(...zs) + r() * (Math.max(...zs) - Math.min(...zs))];
+    if (ok(p) && edgy(p) && centres.every((c) => Math.hypot(c[0] - p[0], c[1] - p[1]) > 9)) centres.push(p);
+  }
+  const out: [number, number][] = [];
+  for (const c of centres) {
+    const n = 3 + Math.floor(r() * 3);
+    for (let k = 0; k < n * 6 && out.filter((q) => Math.hypot(q[0] - c[0], q[1] - c[1]) < 2).length < n; k++) {
+      const a = r() * Math.PI * 2;
+      const d = k === 0 ? 0 : 0.7 + r() * 0.8;
+      const p: Pt = [c[0] + Math.cos(a) * d, c[1] + Math.sin(a) * d];
+      if (ok(p) && out.every((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) > SHRUB.r * 1.6)) out.push(p);
+    }
+  }
+  return out;
+})();
+/** Low bollard lights along each path, one side, every few tiles (small and dim: the bloom rule), on the lawn */
+export const BOLLARDS: [number, number][] = (() => {
+  const out: [number, number][] = [];
+  DESIRE_LINES.forEach((l, li) => {
+    const side = li % 2 ? -1 : 1;
+    let run = 1.5;
+    for (let i = 1; i < l.length; i++) {
+      const [a, b] = [l[i - 1], l[i]];
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (len < 1e-6) continue;
+      const [tx, tz] = [(b[0] - a[0]) / len, (b[1] - a[1]) / len];
+      for (; run <= len; run += 5) {
+        const p: Pt = [a[0] + tx * run - tz * side * (DESIRE_W / 2 + 0.35), a[1] + tz * run + tx * side * (DESIRE_W / 2 + 0.35)];
+        if (inside(GRASS[0], p) && distTo(GRASS[0], p, true) > 0.6 && !inBlock(p, 0.8) && out.every((q) => Math.hypot(q[0] - p[0], q[1] - p[1]) > 3)) out.push(p);
+      }
+      run -= len;
+    }
+  });
+  return out;
+})();
+
 /* ---------- The podium deck: its planters and benches, its columns ---------- */
 
 /** Along the deck's open edges (its balustrade, away from the galleries): a planter, a bench, a planter... */
@@ -184,6 +252,9 @@ export const YARD_SOLIDS: Box[] = [
   ...[...BIN_STORES, ...BIKE_SHEDS, FRAME].map(boxOf),
   ...courtFence().flatMap((run) => fenceBoxes(run, BALL_COURT.h)),
   ...DECK_COLUMNS.map(([x, z]): Box => [x - COLUMN_R, z - COLUMN_R, x + COLUMN_R, z + COLUMN_R, DECKS[0].y]),
+  // (the grass's shrubs and bollards, J3)
+  ...SHRUBS.map(([x, z]): Box => [x - SHRUB.r * 0.8, z - SHRUB.r * 0.8, x + SHRUB.r * 0.8, z + SHRUB.r * 0.8, SHRUB.h]),
+  ...BOLLARDS.map(([x, z]): Box => [x - BOLLARD.half, z - BOLLARD.half, x + BOLLARD.half, z + BOLLARD.half, BOLLARD.h]),
 ];
 /** Is a point up on the deck inside one of its planters or benches (southsky.ts: they stop you up there) */
 export function onDeckProp(x: number, z: number, m = 0) {
