@@ -118,6 +118,11 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   (`SKY_LIFTS`, `skyLiftDoors()`, `liftArrival()`, `floorName()`) and their floor picker (`skylift-ui.ts`: the metro's
   card, `[data-metro]`, its words put back after; index.ts `rideTo()`). A bridge to a tower ends at its door: the towers
   aren't entered. The smoke test's `sky` and `stair` scenes.
+  The galleries' fronts (docs/flats-plan.md Phase 1, the owner's call 2026-11-26): a low concrete wall `GALLERY_WALL`
+  (0.40) with its coping and an open steel rail on posts every 1.2 m, its top `GALLERY_RAIL` (0.68): crouched you see
+  and shoot between them, standing over the rail. `SKY_COVER` (southsky.ts) is the walls as boxes with a bottom, which
+  stop bullets only (solids.ts `SHOT_COVER`, in the shot grid; `rayBoxes()` reads a box's sixth number as its bottom);
+  walking still keeps to `skyWall()`. The bridges' glass is a light see-through tint (`CLEAR_GLASS`).
 - **The ground round the blocks** (`southyard.ts`, DOM-free, tested in `tests/southyard.test.ts`, 2d): `BAYS` and
   `YARD_CARS` (drawn by cars.ts `parkedCars()` on the main thread), `BIN_STORES`, `BIKE_SHEDS`, the play area's `FRAME`,
   `SANDPIT`, `BALL_COURT` and `courtFence()`, `YARD_TREES` (index.ts adds them at the boot, on the rolling ground),
@@ -289,6 +294,18 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   the walls, a lever on the side door. The hall's console stands at the stair's foot on the east wall now
   (`FURNITURE`), a tall brass-framed mirror over it; the counter has its black marble splashback, the island its
   drawers' brass pulls; the stair's warm lights are in the east wall by the first flight's treads (`stair()`).
+  **The garden furnished** (the owner's call, 2026-11-25) is planned in `docs/garden-plan.md`: resort luxe, the yard's
+  paving patterned with trees in planters, lit stepping-stone paths on both lawns, an outdoor kitchen on the east lawn
+  and a firepit on the north-west lawn, a phase at a time. Phase 1 (the yard) is live: the paving's pattern is
+  south3d.ts `yardBands()` (pale `STONE.path` panels, `STONE.edge` bands on a 2.4 grid, a border, the drive framed),
+  his D before the garage inlaid in black steel, six trees in planters (home.ts `YARD_TREES`, `YARD_TREE`, in
+  `HOME_SOLIDS`; home3d.ts `gardens()`). Phase 2 (the paths, lit) is live: home.ts `GARDEN_PATHS`, `pathStones()`,
+  `STONE_SIZE`, `PATH_LIGHTS`, `PATH_LIGHT` (solid, their pools in `HOME_POOLS`), drawn in `gardens()`.
+  Phase 3 (the outdoor kitchen and the firepit) is live: home.ts `KITCHEN`, `KITCHEN_STOOLS`, `PERGOLA`,
+  `PERGOLA_POSTS`, `FIREPIT`, `fireBench()`, `FIRE_CHAIRS` (solid), drawn in home3d.ts `kitchenAndFire()`; the flames
+  are `firepitFlames()` on the main thread (south3d.ts), shown only near and outside the house, still under reduced motion.
+  It and the den's screens (`denCharts()`) are one-instance meshes whose count is set in `onBeforeRender` from the
+  camera, not by a tick (a still city's ticks run once): out of place they draw nothing and count no draw call.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

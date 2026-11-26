@@ -167,6 +167,75 @@ export const PALMS: Pt[] = [
   [WORKSHOP[0] - 0.1, WORKSHOP[3] + 1.9],
 ];
 export const PALM_PLANTER = { r: 0.35, h: 0.32 };
+/**
+ * The yard's trees (docs/garden-plan.md Phase 1, resort luxe): a clipped tree in a square black steel planter, each
+ * `half` from its middle to a side, `h` tall; three along the north strip behind the bollards, one either side of the
+ * fountain, one south of the drive by the house's east end. All off the drive, lower than the palms
+ */
+export const YARD_TREE = { half: 0.3, h: 0.45, top: 1.85 };
+export const YARD_TREES: Pt[] = [
+  ...[2.2, 6.2, 10.2].map((dx): Pt => [WORKSHOP[2] + dx, iz0 + 1.1]),
+  ...[-1, 1].map((s): Pt => [FOUNTAIN.x + s * 3.7, FOUNTAIN.z]),
+  [HOUSE[2] + 3, AXIS + 2.9],
+];
+
+/**
+ * The garden's paths (docs/garden-plan.md Phase 2): stepping stones of pale stone across the lawns, each path the line
+ * of points its stones follow. The north-west lawn's from the yard at its corner, past the bench under the tree and
+ * round south of the tree to the back gate; the east lawn's from the yard by the house's end, down past the pool's
+ * west end to the side door and along the pool's south side to the cabana
+ */
+export const GARDEN_PATHS: Pt[][] = (() => {
+  const [, [ex0, ez0]] = HOME.lawns;
+  const [x1, z1] = [HOME.lawns[0][2], HOME.lawns[0][3]];
+  const gate = HOME.backGate;
+  return [
+    [[x1 - 0.45, z1 - 0.35], [x1 - 1.5, z1 - 1.5], [x1 - 2.7, z1 - 2.8], [x1 - 4.2, z1 - 3.05], [x1 - 5.8, z1 - 3.2], [gate.x + 0.7, (gate.z0 + gate.z1) / 2]],
+    [[ex0 + 0.55, ez0 + 0.25], [ex0 + 0.6, ez0 + 1.85], [ex0 + 0.6, ez0 + 3.45], [ex0 + 0.7, ez0 + 5], [ex0 + 1.9, ez0 + 5.15], [ex0 + 3.4, ez0 + 5.2], [ex0 + 4.5, ez0 + 5.35], [ex0 + 5.7, ez0 + 5.35]],
+  ];
+})();
+/** A stepping stone's size (across the path, along it) and how far apart their middles are along a path */
+export const STONE_SIZE = { w: 0.44, d: 0.3, step: 0.55 };
+
+/** The stepping stones along the garden's paths: each one's middle and its turn (to the path's line), a little turned and sized in turn so they read laid by hand */
+export function pathStones(): { x: number; z: number; turn: number; w: number; d: number }[] {
+  const out: { x: number; z: number; turn: number; w: number; d: number }[] = [];
+  for (const path of GARDEN_PATHS) {
+    let k = 0;
+    for (let i = 0; i + 1 < path.length; i++) {
+      const [ax, az] = path[i];
+      const [bx, bz] = path[i + 1];
+      const len = Math.hypot(bx - ax, bz - az);
+      const n = Math.max(1, Math.round(len / STONE_SIZE.step));
+      // (the first stone of the path, then each step along; the last point's stone is the next segment's first)
+      for (let j = i === 0 ? 0 : 1; j <= n; j++, k++) {
+        const t = j / n;
+        const wob = [0, 0.12, -0.08][k % 3];
+        out.push({ x: ax + (bx - ax) * t, z: az + (bz - az) * t, turn: Math.atan2(bx - ax, bz - az) + wob, w: STONE_SIZE.w * [1, 0.9, 1.08][k % 3], d: STONE_SIZE.d * [1, 1.1, 0.92][k % 3] });
+      }
+    }
+  }
+  return out;
+}
+
+/** The paths' lights (Phase 2): low black posts with soft warm caps, beside the stones; each a pool of warm light at night (`HOME_POOLS`) */
+export const PATH_LIGHT = { r: 0.035, h: 0.24 };
+export const PATH_LIGHTS: Pt[] = (() => {
+  const [, [ex0, ez0]] = HOME.lawns;
+  const [x1, z1] = [HOME.lawns[0][2], HOME.lawns[0][3]];
+  const gate = HOME.backGate;
+  return [
+    [x1 - 0.7, z1 - 1.2],
+    [x1 - 1.8, z1 - 2.4],
+    [x1 - 5, z1 - 2.65],
+    [gate.x + 0.9, gate.z1 + 0.25],
+    [ex0 + 1.05, ez0 + 1.25],
+    [ex0 + 1.05, ez0 + 3.05],
+    [ex0 + 2.3, ez0 + 5.6],
+    [ex0 + 3.9, ez0 + 5.65],
+  ];
+})();
+
 
 /**
  * The pool and the cabana on the east lawn (docs/compound-plan.md Phase 6d; the washing line gone): the pool along the
@@ -186,6 +255,41 @@ export const CABANA_POSTS: Pt[] = [
   [CABANA[0] + 0.06, CABANA[3] - 0.06],
   [CABANA[2] - 0.06, CABANA[3] - 0.06],
 ];
+
+/**
+ * The outdoor kitchen (docs/garden-plan.md Phase 3): on the east lawn along its south wall, west of the cabana; a stone
+ * counter (`KITCHEN`, `KITCHEN_H` tall) with a black steel grill, its hood closed, and a small sink; three stools on its
+ * lawn side; a black steel pergola over it on four posts with a string of warm lights. Looks only
+ */
+export const KITCHEN: Rect = [HOME.lawns[1][0] + 0.7, HOME.lawns[1][3] - 0.6, CABANA[0] - 0.6, HOME.lawns[1][3] - 0.05];
+export const KITCHEN_H = 0.46;
+export const STOOL = { r: 0.12, h: 0.38 };
+export const KITCHEN_STOOLS: Pt[] = [0.9, 1.8, 2.7].map((dx): Pt => [KITCHEN[0] + dx, KITCHEN[1] - 0.45]);
+/** The pergola: its posts at the corners (`PERGOLA` the rect they stand on), `h` to its beams' tops */
+export const PERGOLA = { rect: [KITCHEN[0] - 0.1, KITCHEN[1] - 0.85, KITCHEN[2] + 0.1, KITCHEN[3] - 0.02] as Rect, h: 1.25, post: 0.04 };
+export const PERGOLA_POSTS: Pt[] = [
+  [PERGOLA.rect[0], PERGOLA.rect[1]],
+  [PERGOLA.rect[2], PERGOLA.rect[1]],
+  [PERGOLA.rect[0], PERGOLA.rect[3]],
+  [PERGOLA.rect[2], PERGOLA.rect[3]],
+];
+
+/**
+ * The firepit (Phase 3): on the north-west lawn in the open ground between its path and the garage, a low round stone
+ * bowl with a bed of embers and small flames (home3d.ts `firepitFlames()`), a curved stone bench round its south half
+ * (toward the garage), a low chair either side; its north side open to the path. Looks only
+ */
+export const FIREPIT = { x: HOME.lawns[0][2] - 4.5, z: HOME.lawns[0][3] - 1.3, r: 0.42, h: 0.24 };
+/** The bench's pieces round the pit: each piece's middle, its turn (along the curve) and its length; `FIRE_BENCH_R` from the pit's middle */
+export const FIRE_BENCH_R = 1.0;
+export const FIRE_BENCH = { w: 0.3, h: 0.26 };
+export const fireBench = (): { x: number; z: number; turn: number; len: number }[] =>
+  [0, 1, 2, 3, 4].map((k) => {
+    const a = ((25 + k * 32.5) * Math.PI) / 180;
+    return { x: FIREPIT.x + Math.cos(a) * FIRE_BENCH_R, z: FIREPIT.z + Math.sin(a) * FIRE_BENCH_R, turn: -a + Math.PI / 2, len: 0.58 };
+  });
+export const FIRE_CHAIR = { half: 0.24, h: 0.42 };
+export const FIRE_CHAIRS: Pt[] = [-1, 1].map((s): Pt => [FIREPIT.x + s * 1.15, FIREPIT.z - 0.15]);
 export const CABANA_H = 1.45;
 
 /**
@@ -250,6 +354,17 @@ export const HOME_SOLIDS: Box[] = (() => {
     // The fountain's basin and the palms' planters (Phase 6c)
     [FOUNTAIN.x - FOUNTAIN.r * 0.85, FOUNTAIN.z - FOUNTAIN.r * 0.85, FOUNTAIN.x + FOUNTAIN.r * 0.85, FOUNTAIN.z + FOUNTAIN.r * 0.85, SLAB_Y + FOUNTAIN.h],
     ...PALMS.map(([x, z]): Box => [x - PALM_PLANTER.r, z - PALM_PLANTER.r, x + PALM_PLANTER.r, z + PALM_PLANTER.r, SLAB_Y + PALM_PLANTER.h]),
+    // The outdoor kitchen, its stools and the pergola's posts; the firepit, its bench and chairs (docs/garden-plan.md Phase 3)
+    [KITCHEN[0], KITCHEN[1], KITCHEN[2], KITCHEN[3], SLAB_Y + KITCHEN_H],
+    ...KITCHEN_STOOLS.map(([x, z]): Box => [x - STOOL.r, z - STOOL.r, x + STOOL.r, z + STOOL.r, SLAB_Y + STOOL.h]),
+    ...PERGOLA_POSTS.map(([x, z]): Box => [x - PERGOLA.post, z - PERGOLA.post, x + PERGOLA.post, z + PERGOLA.post, SLAB_Y + PERGOLA.h]),
+    [FIREPIT.x - FIREPIT.r, FIREPIT.z - FIREPIT.r, FIREPIT.x + FIREPIT.r, FIREPIT.z + FIREPIT.r, SLAB_Y + FIREPIT.h],
+    ...fireBench().map(({ x, z }): Box => [x - 0.17, z - 0.17, x + 0.17, z + 0.17, SLAB_Y + FIRE_BENCH.h]),
+    ...FIRE_CHAIRS.map(([x, z]): Box => [x - FIRE_CHAIR.half, z - FIRE_CHAIR.half, x + FIRE_CHAIR.half, z + FIRE_CHAIR.half, SLAB_Y + FIRE_CHAIR.h]),
+    // The garden's path lights (docs/garden-plan.md Phase 2)
+    ...PATH_LIGHTS.map(([x, z]): Box => [x - PATH_LIGHT.r, z - PATH_LIGHT.r, x + PATH_LIGHT.r, z + PATH_LIGHT.r, SLAB_Y + PATH_LIGHT.h]),
+    // The yard's trees' planters (docs/garden-plan.md Phase 1)
+    ...YARD_TREES.map(([x, z]): Box => [x - YARD_TREE.half, z - YARD_TREE.half, x + YARD_TREE.half, z + YARD_TREE.half, SLAB_Y + YARD_TREE.h]),
     // The pool, the loungers, the cabana's sofa and posts (Phase 6d)
     [POOL[0], POOL[1], POOL[2], POOL[3], SLAB_Y + 0.3],
     ...LOUNGERS.map((r): Box => [r[0], r[1], r[2], r[3], SLAB_Y + 0.25]),
@@ -700,4 +815,6 @@ export const HOME_POOLS: [number, number, number][] = [
   [HOME.gates.x + 0.5, HOME.gates.z1 + PIER.w / 2, 2.2],
   [HOME.garage[2] + 0.9, (HOME.carDoor.z1 + HOME.bikeDoor.z0) / 2, 2.6],
   [HOME.door[0], HOME.door[1] - 0.6, 1.8],
+  // (the garden's path lights, small and soft: docs/garden-plan.md Phase 2)
+  ...PATH_LIGHTS.map(([x, z]): [number, number, number] => [x, z, 0.8]),
 ];
