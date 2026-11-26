@@ -1980,7 +1980,7 @@ function registerYard(low: boolean, scene: THREE.Scene | null) {
         b.add(plain(new THREE.CylinderGeometry(SQUARE.planter, SQUARE.planter, SQUARE.planterH, 18).translate(x, ON + SQUARE.planterH / 2, z)), CONC);
         flat(b, circle(x, z, SQUARE.planter - 0.12), ON + SQUARE.planterH + 0.005, LAWN);
         b.add(plain(new THREE.CylinderGeometry(0.09, 0.11, 1.5, 6).translate(x, ON + SQUARE.planterH + 0.75, z)), SQ_TRUNK);
-        b.add(new THREE.IcosahedronGeometry(1.15, low ? 0 : 1).scale(1, 0.85, 1).translate(x, ON + SQUARE.planterH + 1.9, z), SQ_CROWN);
+        b.add(new THREE.IcosahedronGeometry(0.95, low ? 0 : 1).scale(1, 0.85, 1).translate(x, ON + SQUARE.planterH + 1.8, z), SQ_CROWN);
         for (const be of q.benches) {
           const m = new THREE.Matrix4().makeRotationY(be.yaw).setPosition(be.x, ON, be.z);
           for (const [x0, y0, z0, x1, y1, z1, mat] of [

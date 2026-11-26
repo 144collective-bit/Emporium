@@ -17,14 +17,14 @@ type Box = [number, number, number, number, number];
 
 export const SQUARE = {
   /** The planter's radius and height; how far out the benches, the bin and the lamp stand from its middle */
-  planter: 1.4,
+  planter: 1.0,
   planterH: 0.45,
-  bench: 2.5,
-  bin: 2.4,
-  lamp: 2.7,
+  bench: 1.75,
+  bin: 1.7,
+  lamp: 1.9,
   /** The whole square's reach (kept clear), and how far apart two squares keep */
-  reach: 3.6,
-  apart: 14,
+  reach: 2.4,
+  apart: 12,
   lampH: 3.2,
 } as const;
 
@@ -57,7 +57,15 @@ export function clearOf(p: Pt, m: number) {
 }
 
 export const SQUARES: Square[] = (() => {
-  const near = (p: Pt) => SLABS.some((b) => b.foot.some((_, i) => distTo([b.foot[i], b.foot[(i + 1) % b.foot.length]], p) < 16));
+  // (beside a slab, along its length: nearer its spine's middle stretch than either end, within 16 of its face; not off
+  // its ends, where the paving meets the verges by the road)
+  const near = (p: Pt) =>
+    SLABS.some((b) => {
+      const sp = b.spine!;
+      const [e0, e1] = [sp[0], sp[sp.length - 1]];
+      const d = distTo(sp, p);
+      return d < (b.depth ?? 0) / 2 + 16 && d < Math.min(Math.hypot(p[0] - e0[0], p[1] - e0[1]), Math.hypot(p[0] - e1[0], p[1] - e1[1])) - 1;
+    });
   const pts = SLABS.flatMap((b) => b.foot);
   const [x0, x1] = [Math.min(...pts.map((p) => p[0])) - 16, Math.max(...pts.map((p) => p[0])) + 16];
   const [z0, z1] = [Math.min(...pts.map((p) => p[1])) - 16, Math.max(...pts.map((p) => p[1])) + 16];
