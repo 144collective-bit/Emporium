@@ -296,6 +296,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   his D before the garage inlaid in black steel, six trees in planters (home.ts `YARD_TREES`, `YARD_TREE`, in
   `HOME_SOLIDS`; home3d.ts `gardens()`). Phase 2 (the paths, lit) is live: home.ts `GARDEN_PATHS`, `pathStones()`,
   `STONE_SIZE`, `PATH_LIGHTS`, `PATH_LIGHT` (solid, their pools in `HOME_POOLS`), drawn in `gardens()`.
+  Phase 3 (the outdoor kitchen and the firepit) is built: home.ts `KITCHEN`, `KITCHEN_STOOLS`, `PERGOLA`,
+  `PERGOLA_POSTS`, `FIREPIT`, `fireBench()`, `FIRE_CHAIRS` (solid), drawn in home3d.ts `kitchenAndFire()`; the flames
+  are `firepitFlames()` on the main thread (south3d.ts), shown only near and outside the house, still under reduced motion.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,

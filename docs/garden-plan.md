@@ -102,6 +102,21 @@ strip west of the house, the yard).
 3. **The outdoor kitchen and the firepit**: the counter, grill, sink, stools and pergola on the east lawn; the
    firepit, its bench and chairs on the north-west lawn; their solids; the fire's glow and flicker (still under reduced
    motion). Walked with the smoke test's home scenes.
+   *Built, waiting for the owner's sign-off.* home.ts: `KITCHEN` (a counter 3.6 by 0.55, `KITCHEN_H` 0.46, against
+   the east lawn's south wall west of the cabana), `KITCHEN_STOOLS` and `STOOL` (three on its lawn side), `PERGOLA` and
+   `PERGOLA_POSTS` (four black steel posts, 1.25 to the beams); `FIREPIT` (a bowl 0.42 across its middle, 0.24 tall,
+   between the north-west lawn's path and the garage), `fireBench()` (five stone pieces on a 1.0 curve round its south
+   half), `FIRE_CHAIRS` and `FIRE_CHAIR` (one either side); all solid in `HOME_SOLIDS`. Drawn in home3d.ts
+   `kitchenAndFire()` (called from `gardens()`) in the compound's paints: the counter in the coping's pale stone (it
+   reads in the wall's shade), a dark worktop, the grill and its closed hood in black steel, a steel sink and tap, his
+   magenta on the stools, the pergola's slats and a string of warm lights (near only, not on phones); the bowl in the
+   loft's stone with a dark rim and ember bed, warm glints (near only), the bench in stone with timber seats, the
+   chairs in the cabana sofa's teal. The flames are `firepitFlames()` (south3d.ts adds it, on the main thread): a few
+   small warm cones in one mesh, swaying in height, shown only while the camera's outside the house and within 40;
+   under reduced motion (when the city's ticks run on the first frame only) they stand shown and still. Tested in
+   `tests/home.test.ts` (on their lawns, off the paths, the lights, the pool, loungers, cabana, bench and tree, solid,
+   low, the way between the pool and the stools, the pit's north side open, every prompt and way clear). Draw calls
+   unchanged: 313 desktop, 198 phone. Shots: `docs/garden-shots/phase-3-*.webp`.
 4. **Review**: the full set of shots by day and night, on a phone too, `?fps` and `?bench` on the phone tier, the
    guide (`docs/guide/endswood.md`) brought up to date.
 
