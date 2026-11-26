@@ -14,7 +14,7 @@
  */
 import {
   BLOCKS, BLOCKS_RECT, BRIDGES, BRIDGE_HALF, CAGE, CAGES, CORES, DECKS, GALLERY_W, SKY_FLOORS, FLAT, LOBBIES, PERCH, TOP_FLOOR, lobbyAt, TWIN_CORE_HALF, blockById, floorY,
-  lineLength, outward, pointAt, section, storeysOf, type Block, type Pt,
+  inBlock, lineLength, outward, pointAt, section, storeysOf, type Block, type Pt,
 } from './southblocks';
 import { inside, shift } from './streetfaces';
 import { onDeckProp } from './southyard';
@@ -267,34 +267,69 @@ export const GALLERY_WALL = 0.4;
 export const GALLERY_RAIL = 0.68;
 /** How far under the floor the front's concrete starts (the deck's edge) */
 export const GALLERY_DROP = 0.16;
+/** A wall along a to c, `off` to its right (as southblocks3d.ts `along()`), from `y0` up to `y1`, in short boxes with
+ * a bottom (heights along it from `ya` at a to `yc` at c added) */
+type Cover = [number, number, number, number, number, number];
+function wallBoxes(a: Pt, c: Pt, off: number, ya: number, yc: number, lo: number, hi: number, keep: (m: Pt) => boolean = () => true): Cover[] {
+  const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  if (l < 1e-3) return [];
+  const [tx, tz] = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+  const [rx, rz] = [-tz * off, tx * off];
+  // (short pieces, so a wall at a slant isn't fattened by its boxes' corners)
+  const n = Math.max(1, Math.ceil(l / 0.25));
+  const out: Cover[] = [];
+  for (let k = 0; k < n; k++) {
+    const [f0, f1] = [k / n, (k + 1) / n];
+    const p: Pt = [a[0] + (c[0] - a[0]) * f0 + rx, a[1] + (c[1] - a[1]) * f0 + rz];
+    const q: Pt = [a[0] + (c[0] - a[0]) * f1 + rx, a[1] + (c[1] - a[1]) * f1 + rz];
+    const m: Pt = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    if (!keep(m)) continue;
+    const y = ya + (yc - ya) * ((f0 + f1) / 2);
+    out.push([Math.min(p[0], q[0]) - 0.06, Math.min(p[1], q[1]) - 0.06, Math.max(p[0], q[0]) + 0.06, Math.max(p[1], q[1]) + 0.06, y + hi, y + lo]);
+  }
+  return out;
+}
+/** The podium deck's edge (Phase 3): the galleries' low wall and rail too, where it isn't against a gallery */
+export const DECK_WALL_OFF = -0.07;
+/** A bridge's concrete under its glass: its height over the floor, and how far each side's wall stands from the middle */
+export const BRIDGE_WALL = 0.6;
+const BRIDGE_WALL_AT = BRIDGE_HALF - 0.06;
 /**
- * What stops bullets up there: each gallery's front wall in short boxes with a bottom ([x0, z0, x1, z1, top, bottom],
- * solids.ts `rayBoxes()` reads the sixth), open where a core stands out from it (`CORE_GAP`). Bullets only: walking
- * keeps to `skyWall()`, and the street under the galleries stays clear.
+ * What stops bullets up there (docs/flats-plan.md Phases 1 and 3): the concrete you can crouch behind, in short boxes
+ * with a bottom ([x0, z0, x1, z1, top, bottom], solids.ts `rayBoxes()` reads the sixth): each gallery's front wall (open
+ * where a core stands out from it, `CORE_GAP`), each bridge's walls under its glass, the podium deck's edge. Bullets
+ * only: walking keeps to `skyWall()`, and the street under them stays clear.
  */
-export const SKY_COVER: [number, number, number, number, number, number][] = BLOCKS.filter((b) => b.spine).flatMap((b) => {
-  const s = sideOf(b);
-  const cores = CORES.filter((c) => c.of === b.id && b.kind === 'rampart').map((c) => nearestAlong(b.spine!, c.at));
-  return b.steps.flatMap((st) => {
-    const line = shift(section(b.spine!, st.from, st.to), s * (b.depth! / 2 + GALLERY_W - 0.06));
-    return SKY_FLOORS.filter((f) => f < st.storeys).flatMap((f) => {
-      const y = floorY(b.base, f);
-      const out: [number, number, number, number, number, number][] = [];
-      for (let i = 1; i < line.length; i++) {
-        const [a, c] = [line[i - 1], line[i]];
-        const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.6));
-        for (let k = 0; k < n; k++) {
-          const p: Pt = [a[0] + ((c[0] - a[0]) * k) / n, a[1] + ((c[1] - a[1]) * k) / n];
-          const q: Pt = [a[0] + ((c[0] - a[0]) * (k + 1)) / n, a[1] + ((c[1] - a[1]) * (k + 1)) / n];
-          const m: Pt = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
-          if (cores.some((d) => Math.abs(d - nearestAlong(b.spine!, m)) < CORE_GAP / 2 + 0.2)) continue;
-          out.push([Math.min(p[0], q[0]) - 0.06, Math.min(p[1], q[1]) - 0.06, Math.max(p[0], q[0]) + 0.06, Math.max(p[1], q[1]) + 0.06, y + GALLERY_WALL, y - GALLERY_DROP]);
-        }
-      }
-      return out;
+export const SKY_COVER: Cover[] = [
+  ...BLOCKS.filter((b) => b.spine).flatMap((b) => {
+    const s = sideOf(b);
+    const cores = CORES.filter((c) => c.of === b.id && b.kind === 'rampart').map((c) => nearestAlong(b.spine!, c.at));
+    const open = (m: Pt) => !cores.some((d) => Math.abs(d - nearestAlong(b.spine!, m)) < CORE_GAP / 2 + 0.2);
+    return b.steps.flatMap((st) => {
+      const line = shift(section(b.spine!, st.from, st.to), s * (b.depth! / 2 + GALLERY_W - 0.06));
+      return SKY_FLOORS.filter((f) => f < st.storeys).flatMap((f) => {
+        const y = floorY(b.base, f);
+        return line.slice(1).flatMap((c, i) => wallBoxes(line[i], c, 0, y, y, -GALLERY_DROP, GALLERY_WALL, open));
+      });
     });
-  });
-});
+  }),
+  ...BRIDGES.flatMap((br) => {
+    // (drawn level, at its ends' mean)
+    const y = (br.ys[0] + br.ys[1]) / 2;
+    return [-1, 1].flatMap((side) => wallBoxes(br.pts[0], br.pts[1], side * BRIDGE_WALL_AT, y, y, -0.2, BRIDGE_WALL));
+  }),
+  // (the service towers' links, drawn as bridges, at each landing)
+  ...CORES.filter((c) => c.link).flatMap((c) =>
+    coreFloors(c.id).flatMap((f) => {
+      const y = floorY(blockById(c.of).base, f);
+      return [-1, 1].flatMap((side) => wallBoxes(c.link![0], c.link![1], side * BRIDGE_WALL_AT, y, y, -0.2, BRIDGE_WALL));
+    })
+  ),
+  ...DECKS.flatMap((d) => d.poly.flatMap((a, j) => {
+    const c = d.poly[(j + 1) % d.poly.length];
+    return inBlock([(a[0] + c[0]) / 2, (a[1] + c[1]) / 2], 2.4) ? [] : wallBoxes(a, c, DECK_WALL_OFF, d.y, d.y, -0.3, GALLERY_WALL);
+  })),
+];
 const BOX = SKY_SHAPES.map((s) => [Math.min(...s.poly.map((p) => p[0])), Math.min(...s.poly.map((p) => p[1])), Math.max(...s.poly.map((p) => p[0])), Math.max(...s.poly.map((p) => p[1]))]);
 const inRect = (x: number, z: number) => x > BLOCKS_RECT[0] && x < BLOCKS_RECT[2] && z > BLOCKS_RECT[1] && z < BLOCKS_RECT[3];
 
