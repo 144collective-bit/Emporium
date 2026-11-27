@@ -112,6 +112,11 @@ async function scene(name, spawn, play, init, device, query = '') {
       }
       await step(`${what} (${dist(from, await where()).toFixed(1)} tiles)`);
     },
+    /** Wait, standing still, until the sites near him are built (the ?fps readout's "N waiting near"): this software
+     * renderer can drop to a frame a second while it builds what a jump left waiting, too slow to walk a scene in time */
+    async settle() {
+      await until('the sites near him built', () => /· 0 waiting near/.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 300000);
+    },
     /** Hold a key until the walk prompt reads `label` (a rail or wall ahead stops him if he's early) */
     async toward(key, label, what) {
       const from = await where();
@@ -665,6 +670,7 @@ await scene('station', '-158.47,389.10,-0.295', async (t) => {
   await t.go('a', 9, 'down the stairs to the ticket hall');
   await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
   await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
+  await t.settle();
   await t.go('a', 16, 'along the hall and down the escalator');
   await t.until('down on the platform', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 6, null, 60000);
   await t.step(`on the platform (${(await t.page.evaluate(downNow)).toFixed(1)})`);
