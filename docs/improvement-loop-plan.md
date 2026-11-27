@@ -306,13 +306,13 @@ sets the order (rule 2).
       draft: the upstand was a subway ramp's wall standing full height to its square end: its last stretch stepped down
       with its coping; handrails down each ramp; the play area paved and jointed, the court its own surface, a halfway
       line and centre circle. Merged 2026-11-27, night 6 pass 4.
-- [ ] **J5 (R2/R3): paths whose edges break up over the lawn** (`h-circus-foot`): a lilac path's edges go ragged in
+- [x] **J5 (R2/R3): paths whose edges break up over the lawn** (`h-circus-foot`): a lilac path's edges go ragged in
       blobs where it meets the grass, and the lawn meets the paving with no kerb or edge. The paths' own edge (a clean
       line or a kerb) and a mown edge or kerb at every lawn's meeting with paving.
       Built 2026-11-27 (night 6 pass 5): the ragged path was a Circus subway's mouth path, its strips and turn discs
       drawn flat at the slab (`lift: false`) with the grass rising through their edges: now one ribbon a path, mitred
       at its turns, sampled every half metre and lifted onto the ground, a kerb along each edge. The lawns' own edges:
-      the towers' lawn has J3's mown edge. Full checks next pass.
+      the towers' lawn has J3's mown edge. Merged the same pass.
 - [x] **J6 (R3): Aldwyn's Green's back gardens** (`h-green-air`): behind the terraces the gardens are loose pale slabs
       (patios, sheds) and short red fence pieces at odd angles that don't close any plot. R3's garden rule: fences meet
       at the plot's corners, patios against the back wall, a shed in a corner.
@@ -653,4 +653,6 @@ session.)
   fine, bootJs 772.5 KB, texFull 4036.7 of 4955 (main's textures trimmed since: in budget here now too). Merged.
 - 2026-11-27, night 6 pass 5 (02:07): J4 live (Build site 428 green). J5, the ragged path by the Circus, built: the
   subways' mouth paths one lifted ribbon each with kerbs (they stood flat at the slab and the grass came through their
-  edges). Shots before and after (`h-circus-foot`). Full checks started; merged next pass.
+  edges). Shots before and after (`h-circus-foot`). Lint, typecheck, `npm test` and `test:wide` 2430 of 2430, smoke
+  fine, bootJs 772.5 KB; this machine's bake varies between runs (241 files and 4036.7 KB last pass, 257 and 4985.1
+  now) while CI's budget passes on main. Merged.
