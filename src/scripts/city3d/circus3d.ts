@@ -291,6 +291,15 @@ function drawPlaza(b: Batch, low: boolean) {
 
 /* ---------- A subway ---------- */
 
+/** A steel rod from p to q (x, y, z) */
+function rail(b: Batch, p: [number, number, number], q: [number, number, number]) {
+  const v = new THREE.Vector3(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
+  const len = v.length();
+  if (len < 1e-3) return;
+  const g = new THREE.CylinderGeometry(0.025, 0.025, len, 5);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), v.normalize()));
+  b.add(g.translate((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2), RAIL);
+}
 function drawSubway(b: Batch, p: Passage, row: number, low: boolean) {
   const h = p.half;
   const [roof0, roof1] = p.roofs[0];
@@ -335,10 +344,27 @@ function drawSubway(b: Batch, p: Passage, row: number, low: boolean) {
   g.setAttribute('uv', new THREE.Float32BufferAttribute([0, v1, 1, v1, 0, v0, 1, v0], 2));
   g.rotateY(Math.atan2(n[0], n[1])).translate(mid[0], FLOOR + 0.2 + mh / 2, mid[1]);
   b.add(g, MURAL);
-  // The ramp: its walls up to the parapets, their coping
+  // The ramp: its walls up to the parapets, their coping; the last stretch stepped down where it meets the street, so the
+  // wall doesn't stop square at full height (the improvement loop's J4, R1); a steel handrail down each side
+  const step = Math.min(1.0, (a1 - roof1) / 4);
   for (const side of [-1, 1]) {
-    along(b, p, roof1, a1, side * h, side * (h + p.wall), FLOOR, p.rail, CONC);
-    along(b, p, roof1, a1, side * (h - 0.04), side * (h + p.wall + 0.04), p.rail, p.rail + 0.05, COPING);
+    along(b, p, roof1, a1 - step, side * h, side * (h + p.wall), FLOOR, p.rail, CONC);
+    along(b, p, roof1, a1 - step, side * (h - 0.04), side * (h + p.wall + 0.04), p.rail, p.rail + 0.05, COPING);
+    const low = SLAB + 0.42;
+    along(b, p, a1 - step, a1, side * h, side * (h + p.wall), FLOOR, low, CONC);
+    along(b, p, a1 - step - 0.02, a1, side * (h - 0.04), side * (h + p.wall + 0.04), low, low + 0.05, COPING);
+    // (the handrail: on short posts off the wall's inner face, 0.55 over the ramp's floor all the way up)
+    const r = side * (h - 0.06);
+    const ys = (s0: number) => floorOf(p, s0) + 0.55;
+    const pts = [roof1 + 0.2, (roof1 + a1) / 2, a1 - 0.15];
+    for (let k = 1; k < pts.length; k++) {
+      const [qa, qb] = [P(p, pts[k - 1], r), P(p, pts[k], r)];
+      rail(b, [qa[0], ys(pts[k - 1]), qa[1]], [qb[0], ys(pts[k]), qb[1]]);
+    }
+    for (const s0 of pts) {
+      const q = P(p, s0, r);
+      rail(b, [q[0], floorOf(p, s0), q[1]], [q[0], ys(s0), q[1]]);
+    }
   }
   // The step up from the ramp's top on to the block's slab, across its mouth
   wallQuad(b, P(p, a1, -h), P(p, a1, h), floorOf(p, a1), SLAB, floorOf(p, a1), SLAB, [-alongDir(p)[0], -alongDir(p)[1]], CONC_DARK);
