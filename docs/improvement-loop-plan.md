@@ -299,13 +299,13 @@ sets the order (rule 2).
       green round the twin towers is one flat patch cut square into the estate's paving, nothing on it but dashed
       lines that need a look on foot (paths? cables' shadows?). R3 in full: desire paths from the towers' doors to the
       stops and the Circus, planting in groups, a mown edge, its outline wandering.
-- [ ] **J4 (R1): the estate's bare concrete bits round the Circus** (`h-ends-air`, `h-circus-foot`): a long plain
+- [x] **J4 (R1): the estate's bare concrete bits round the Circus** (`h-ends-air`, `h-circus-foot`): a long plain
       concrete upstand standing on the paving with a cut-off end, the Circus's subway ramps as pale flat wedges, and
       the games court's surround a bare lilac slab. R1: the concrete skin and caps (`docs/brutalist-plan.md` Phase 1's
       material), the ramps' walls and handrails, the court's surface marked. Built 2026-11-27 (night 6 pass 3) in a
       draft: the upstand was a subway ramp's wall standing full height to its square end: its last stretch stepped down
       with its coping; handrails down each ramp; the play area paved and jointed, the court its own surface, a halfway
-      line and centre circle. Full checks next pass.
+      line and centre circle. Merged 2026-11-27, night 6 pass 4.
 - [ ] **J5 (R2/R3): paths whose edges break up over the lawn** (`h-circus-foot`): a lilac path's edges go ragged in
       blobs where it meets the grass, and the lawn meets the paving with no kerb or edge. The paths' own edge (a clean
       line or a kerb) and a mown edge or kerb at every lawn's meeting with paving.
@@ -645,3 +645,5 @@ session.)
   umbrella entry ticked (done in its parts 1 to 3); J4, the bare concrete round the Circus, built in a draft (the ramps'
   walls stepped down at the street with handrails down them, the play area jointed paving, the games court surfaced and
   marked). Shots before and after. Full checks next pass.
+- 2026-11-27, night 6 pass 4 (01:07): J4's full checks: lint, typecheck, `npm test` and `test:wide` 2430 of 2430, smoke
+  fine, bootJs 772.5 KB, texFull 4036.7 of 4955 (main's textures trimmed since: in budget here now too). Merged.

@@ -134,6 +134,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `SANDPIT`, `BALL_COURT` and `courtFence()`, `YARD_TREES` (index.ts adds them at the boot, on the rolling ground),
   `DECK_PROPS` (`onDeckProp()`: southsky.ts keeps you out of them), `DECK_COLUMNS`, `YARD_SOLIDS` (solids.ts, lifted onto
   the ground). Drawn by southblocks3d.ts's `registerYard()` (sites a court, the grass, the play area, the deck's props).
+- **The play area** (`PLAY`, drawn by `drawPlay()`): jointed concrete paving (the joints near only) round the ball
+  court, which has its own painted surface, a halfway line and a centre circle (the loop's J4).
 - **The sitting-out squares** (`southsquares.ts`, DOM-free, the chunk's, tested in `tests/southsquares.test.ts`;
   docs/flats-plan.md Phase 5): `SQUARES`, four compact squares on the paving beside Linnet, Marten and Wren Courts
   (beside a slab along its length, on its side of every street; their whole `SQUARE.reach` clear of the blocks, cages,
@@ -207,7 +209,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
 - **Below ground**: Lot 9's tunnel (groundheight.ts `UNDER`, underground.ts); the Circus's sunken plaza and its four
   subways as data (`circus.ts`, `tests/circus.test.ts`, the south plan's 4a: `PLAZA`, `SUBWAYS` north-west,
   north-east, south-east and south, `MOUTH_PATHS`, `CIRCUS_HOLE`, `CIRCUS_CUTS`, `CIRCUS_SOLIDS`), drawn by
-  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk) and walked (groundheight.ts
+  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk; each ramp's walls stepped down
+  over their last stretch where they meet the street and a steel handrail down each side, the loop's J4) and walked (groundheight.ts
   `UNDER`, the planters and lamps its `boxes`). Its holes are cut out of the blocks' slabs (world.ts `tiled()`,
   `holedPoly()`, holes.ts) and the junctions' asphalt round the Circus (south3d.ts); the grass goes from under it
   (`CIRCUS_HOLE`); the island is a planted ring round the plaza. Its trees and lamps at the boot (index.ts). The kit
