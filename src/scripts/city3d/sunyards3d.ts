@@ -24,7 +24,9 @@ const LAWN = toon(COVER.garden);
 const BLOCK_WALL = toon('#c9b799');
 const BLOCK_CAP = toon('#b19f80');
 const GATE = toon('#2f2d2b');
-const CONCRETE = toon('#c8c0b0');
+/** The patios' pavers and their border and joints (J13) */
+const PAVER = toon('#cdb89c');
+const PATIO_EDGE = toon('#8f7e6a');
 const DECK = toon('#d8cdb6');
 const COPING = toon('#e2d7c0');
 const POOL = siteMat('sun-pool', lit(toon('#4fb5d6', { emissive: '#2fd2ff' }), 0, 0.55));
@@ -182,7 +184,14 @@ function drawYard(b: Batch, h: House, y: Yard, low: boolean) {
   }
   // The back yard: its patio, the ramada over it, the grill
   const [pu0, pv0, pu1, pv1] = y.patio;
-  rect(pu0, pu1, pv0, pv1, 0.017, CONCRETE);
+  // (the improvement loop's J13, R1: pavers in a darker border; their joints near only, not on phones)
+  rect(pu0, pu1, pv0, pv1, 0.015, PATIO_EDGE);
+  rect(pu0 + 0.1, pu1 - 0.1, pv0 + 0.02, pv1 - 0.1, 0.019, PAVER);
+  if (!low)
+    b.detail(() => {
+      for (let u = pu0 + 0.1 + 0.4; u < pu1 - 0.15; u += 0.4) rect(u - 0.01, u + 0.01, pv0 + 0.02, pv1 - 0.1, 0.021, PATIO_EDGE);
+      for (let v = pv0 + 0.02 + 0.4; v < pv1 - 0.15; v += 0.4) rect(pu0 + 0.1, pu1 - 0.1, v - 0.01, v + 0.01, 0.021, PATIO_EDGE);
+    });
   if (y.ramada) {
     const trim = toon(SCHEMES[h.scheme].trim);
     const top = 1.5;
