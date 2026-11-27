@@ -1534,7 +1534,7 @@ function drawEntrance(b: Batch, l: (typeof LOBBIES)[number], low: boolean) {
   if (row >= 0) {
     // (left to right for someone facing the door: their right is -n turned a quarter, whichever way the face runs)
     const m = at(0, out + 0.012);
-    const right: Pt = [-n[1], n[0]];
+    const right: Pt = [n[1], -n[0]];
     nameQuad(b, [m[0] - right[0] * 0.8, m[1] - right[1] * 0.8], [m[0] + right[0] * 0.8, m[1] + right[1] * 0.8], y0 - 0.17, y1 - 0.01, n, row);
   }
   // (the light under it)
