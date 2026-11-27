@@ -115,5 +115,10 @@ keep it up to date when what it describes changes.
   `tests/aircraftfar.test.ts` holds the aircraft's far piece on phones and
   `tests/phonefar.test.ts` the phones' far city (one-piece far forms,
   small signs hidden far off, clear glows not drawn).
+- `tests/citymap.test.ts` holds the map file (citymap.ts: a blank level, a
+  file reading the same after a save and a load, what's unsound dropped or
+  clamped, the limits, the ground over the hills) and the cities' list
+  (cities.ts: one home city, each map city's map sound, `?city=` only ever
+  naming a map city, a test level never a destination).
 - Browser checks (the widths above, walk and drive flows) are still done by
   hand with Playwright against `npm run preview`.

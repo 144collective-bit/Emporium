@@ -1,0 +1,89 @@
+/* stage: another city on the stage (citystage.ts, docs/cities-plan.md), `data-view="stage"` on the city's root.
+   Sector 7's own screens (the title screen, the header, the hub, the walk HUD, the panels) are put away: the
+   stage has its own bar and hint, in the menus' arcade kit. */
+
+.city[data-view="stage"] > :not([data-city3d], [data-no3d], .stage-bar, .stage-hint, .mk-sprite) {
+  display: none !important;
+}
+.city[data-view="stage"] .city3d {
+  opacity: 1;
+  visibility: visible;
+}
+.city[data-view="stage"] .city-pins {
+  display: none;
+}
+
+.stage-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left));
+  border-bottom: 2px solid var(--m-edge);
+  background: var(--m-cab);
+  color: var(--m-text);
+}
+.stage-id {
+  min-width: 0;
+}
+.stage-name {
+  margin: 0;
+  font: 700 18px/1.1 var(--font-pixel);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--m-coin);
+}
+.stage-sub {
+  margin: 3px 0 0;
+  font: 500 12px/1.3 var(--font-mono);
+  color: var(--m-dim);
+}
+.stage-acts {
+  display: flex;
+  gap: 8px;
+}
+.stage-acts .mk-btn {
+  text-decoration: none;
+}
+
+.stage-hint {
+  position: absolute;
+  left: 50%;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: calc(100% - 24px);
+  padding: 8px 8px 8px 14px;
+  border: 2px solid var(--m-edge);
+  background: var(--m-cab);
+  color: var(--m-text);
+  font: 500 12.5px/1.35 var(--font-mono);
+  transform: translateX(-50%);
+}
+.stage-hint p {
+  margin: 0;
+}
+.stage-hint-x {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: var(--m-bezel);
+  color: var(--m-text);
+  font: 700 18px/1 var(--font-mono);
+  cursor: pointer;
+}
+.stage-hint-x:hover,
+.stage-hint-x:focus-visible {
+  background: var(--m-coin);
+  color: var(--m-cab);
+}

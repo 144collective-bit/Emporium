@@ -93,6 +93,7 @@ it and has been retired completely. Build only on what's here.
 | Wallet log-in, multiplayer, the game server | `docs/guide/multiplayer.md` |
 | What the tests cover and how they run | `docs/guide/tests.md` |
 | Build mode and the grand station (both retired) | `docs/guide/retired.md` |
+| Other cities: the map file, the cities' list, `?city=`, the stage, the Open Level, the map creator (`docs/cities-plan.md`) | `docs/guide/cities.md` |
 | The nightly improvement loop (its standing sign-off, rules, levels and log) | `docs/improvement-loop-plan.md` |
 
 ## Rules that hold everywhere

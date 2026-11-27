@@ -84,7 +84,7 @@ export const LIVE_PLACES = [
 ] as const satisfies readonly { id: string; name: string }[];
 export type LivePlaceId = (typeof LIVE_PLACES)[number]['id'];
 
-export type FeatureId = 'walk' | 'drive' | 'fly' | 'karts' | 'fight' | 'guns' | 'prizes' | 'taxi' | 'metro' | 'riverbus' | 'monorail' | 'cablecar' | 'boat' | 'travel' | 'golf';
+export type FeatureId = 'walk' | 'drive' | 'fly' | 'karts' | 'fight' | 'guns' | 'prizes' | 'taxi' | 'metro' | 'riverbus' | 'monorail' | 'cablecar' | 'boat' | 'travel' | 'golf' | 'cities';
 /** The features that can be closed, and what closing each one stops */
 export const LIVE_FEATURES: { id: FeatureId; name: string; stops: string }[] = [
   { id: 'walk', name: 'Walk mode', stops: 'Walking into the city (the Walk switch and every Walk in)' },
@@ -102,6 +102,7 @@ export const LIVE_FEATURES: { id: FeatureId; name: string; stops: string }[] = [
   { id: 'boat', name: 'Boat hire', stops: 'Taking the hire boat by Downtown pier' },
   { id: 'travel', name: 'Fast travel', stops: "The world map's Fast travel" },
   { id: 'golf', name: 'Golf', stops: "Knob Hill Golf Club's Play golf (docs/golf-game-plan.md)" },
+  { id: 'cities', name: 'Other cities', stops: "Opening a city other than Sector 7 (docs/cities-plan.md): the address's ?city= starts Sector 7" },
 ];
 
 /** Open or closed, and a line to say why (or when it's back) */
