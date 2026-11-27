@@ -357,3 +357,34 @@ test('the approach: the totem, the signs and the coach park off every street and
       }
   }
 });
+
+import { standSeats } from '../src/scripts/city3d/kartfacility';
+import { LAZY_DISTRICTS } from '../src/scripts/city3d/districts';
+test("the kart park's buildings out of the boot: a district round them all, the stand's seats the same whoever runs them", () => {
+  // (kartpark-draw.ts draws the stand from standSeats(); the boot runs it too, to step the generator past it to the trees)
+  const counter = () => {
+    let k = 0;
+    const r = () => ((k++ * 0.618034) % 1);
+    return { r, calls: () => k };
+  };
+  for (const low of [false, true]) {
+    const a = counter();
+    const b = counter();
+    const s = standSeats(low, a.r);
+    assert.deepEqual(standSeats(low, b.r), s, 'the same seats from the same sequence');
+    assert.ok(s.count >= 3 && s.count <= 5);
+    // two calls a seat, whether it's filled or not
+    assert.equal(a.calls() % 2, 0);
+    assert.ok(s.fans.length > 0 && s.fans.length <= a.calls() / 2);
+    const [sx0, sz0] = toWorld([SITE.stand.u0, SITE.stand.v0]);
+    const [sx1, sz1] = toWorld([SITE.stand.u1, SITE.stand.v1]);
+    for (const f of s.fans) assert.ok(f.x > sx0 && f.x < sx1 && f.z > sz0 && f.z < sz1, 'a fan off the stand');
+  }
+  assert.ok(standSeats(true, counter().r).fans.length < standSeats(false, counter().r).fans.length / 2, 'a phone seats fewer');
+  const d = LAZY_DISTRICTS.find((q) => q.id === 'kartpark');
+  assert.ok(d, 'the kart park district');
+  const inside = ([x, z]: [number, number]) => x >= d!.rect[0] && x <= d!.rect[2] && z >= d!.rect[1] && z <= d!.rect[3];
+  for (const p of [SITE.hut, SITE.garages, SITE.stand]) {
+    assert.ok(inside(toWorld([p.u0, p.v0])) && inside(toWorld([p.u1, p.v1])), 'a building outside its district');
+  }
+});

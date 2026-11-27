@@ -601,3 +601,28 @@ export const BANKS_AREA: Rect = (() => {
 })();
 /** All of it, for loading its drawing as you approach (districts.ts) */
 export const KART_AREA: Rect = [Math.min(...KART_RECTS.map((r) => r[0])), Math.min(...KART_RECTS.map((r) => r[1])), Math.max(...KART_RECTS.map((r) => r[2])), Math.max(...KART_RECTS.map((r) => r[3]))];
+
+/**
+ * The infield grandstand's tiers (as many as its depth holds, 3 to 5), each tier's depth and rise, and where its fans
+ * sit: a seat every so far along each tread (a third as many on phones), nudged a little, about one in eight empty.
+ * Drawn by kartpark-draw.ts; the boot (kartpark3d.ts) runs it too, to step the park's generator past the same calls
+ */
+export function standSeats(low: boolean, r: () => number) {
+  const [sx0, sz0] = toWorld([SITE.stand.u0, SITE.stand.v0]);
+  const [sx1, sz1] = toWorld([SITE.stand.u1, SITE.stand.v1]);
+  const count = Math.max(3, Math.min(5, Math.floor((sz1 - sz0) / 0.9)));
+  const tier = (sz1 - sz0) / count;
+  const rise = Math.min(0.85, tier * 0.75);
+  const perTier = Math.round(((sx1 - sx0) / 42) * (low ? 10 : 30));
+  const fans: { x: number; y: number; z: number }[] = [];
+  for (let k = 0; k < count; k++) {
+    const h = 0.5 + k * rise;
+    const back = sz1 - k * tier - tier;
+    for (let j = 0; j < perTier; j++) {
+      const x = sx0 + 0.6 + ((sx1 - sx0 - 1.2) * (j + 0.5)) / perTier + (r() - 0.5) * 0.25;
+      if (r() < 0.12) continue;
+      fans.push({ x, y: h + 0.58, z: back + 0.24 });
+    }
+  }
+  return { count, tier, rise, fans };
+}

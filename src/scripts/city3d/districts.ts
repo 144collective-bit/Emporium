@@ -127,6 +127,9 @@ export const LAZY_DISTRICTS: LazyDistrict[] = [
   // The Fight Club on the south bank (fightsite.ts, docs/fight-plan.md; fightclub.ts): the yard, the ring under its shed,
   // the bags, the lockers, the bleachers, the sign (out of the boot, 2026-11-25: its pin and lamps stay there)
   { id: 'fightclub', rect: [FIGHT_CLUB.x0 - 4, FIGHT_CLUB.z0 - 4, FIGHT_CLUB.x1 + 4, FIGHT_CLUB.z1 + 4], load: () => import('./fightclub') },
+  // The kart park's buildings and stands (kartpark-draw.ts, the boot's slimming, 2026-11-27): the spot, its screens'
+  // picture, its cabinet, people, trees and lamps stay with the boot (kartpark3d.ts)
+  { id: 'kartpark', rect: KART_AREA, load: () => import('./kartpark-draw') },
   // The garage's building on the south bank (garage3d.ts, the boot's slimming, 2026-11-26): your car's and bike's
   // stands stay with the boot (garage.ts)
   { id: 'garage', rect: [GARAGE.ox - 4, GARAGE.oz - 4, GARAGE.ox + 13, GARAGE.oz + 13], load: () => import('./garage3d') },

@@ -158,7 +158,11 @@ keep it up to date when what it describes changes.
     2.9 KB, the boot from 774.8 to 771.9; and the garage's building, its
     own district since 2026-11-26, `garage3d.ts`, the stands, lamps and
     menu's views left at the boot in `garage.ts`, its far form asked for
-    through lod.ts `FAR_LATER`: 0.9 KB, the boot from 772.4 to 771.5) behind `lazyFront()` (`lazyfront.ts`): the same
+    through lod.ts `FAR_LATER`: 0.9 KB, the boot from 772.4 to 771.5; and the
+    kart park's buildings and stands, their own district since 2026-11-27,
+    `kartpark-draw.ts`, drawn into the spot's group, the spot, screens'
+    picture, cabinet, people, trees and lamps left at the boot in
+    `kartpark3d.ts`: 4.7 KB, the boot from 772.5 to 767.8) behind `lazyFront()` (`lazyfront.ts`): the same
     shape, fetched once the first frame is drawn, answering from `idle`
     until then ("not driving, nothing near": every getter walk.ts reads has
     its stand-in there, since anything else comes back as a do-nothing
