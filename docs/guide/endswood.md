@@ -209,7 +209,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
 - **Below ground**: Lot 9's tunnel (groundheight.ts `UNDER`, underground.ts); the Circus's sunken plaza and its four
   subways as data (`circus.ts`, `tests/circus.test.ts`, the south plan's 4a: `PLAZA`, `SUBWAYS` north-west,
   north-east, south-east and south, `MOUTH_PATHS`, `CIRCUS_HOLE`, `CIRCUS_CUTS`, `CIRCUS_SOLIDS`), drawn by
-  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk; each ramp's walls stepped down
+  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk; the mouths' paths one ribbon each,
+  sampled every half metre and lifted onto the rolling ground, a kerb along each edge, the loop's J5; each ramp's walls stepped down
   over their last stretch where they meet the street and a steel handrail down each side, the loop's J4) and walked (groundheight.ts
   `UNDER`, the planters and lamps its `boxes`). Its holes are cut out of the blocks' slabs (world.ts `tiled()`,
   `holedPoly()`, holes.ts) and the junctions' asphalt round the Circus (south3d.ts); the grass goes from under it

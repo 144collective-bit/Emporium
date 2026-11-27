@@ -16,6 +16,7 @@ import { CONCRETE } from './southblocks';
 import { CEIL, FLOOR, MOUTH_PATHS, SUBWAY, PATH_HALF, PLANTERS, PLANTER_H, PLAZA, SUBWAYS, SUBWAY_WAYS, type SubwayId } from './circus';
 import { floorOf, openOf, pointOf, type Passage, type Pt } from './underground';
 import { ROW, sign } from './tunnel3d';
+import { ribbon } from './roads3d';
 import { BUILT_STATIONS, stationOf } from './southline';
 
 const CONC = toon(CONCRETE);
@@ -24,6 +25,8 @@ const SEAT = toon('#c2b9ac');
 const COPING = toon('#cfc8bd');
 const PAVING = toon(STONE.paving);
 const PATH = toon(STONE.path);
+/** The paths' kerbs (J5) */
+const KERB = toon(STONE.cap);
 const FLOOR_MAT = toon('#7d776f');
 const CEIL_MAT = toon('#4a4650');
 const SOIL = toon('#4a3a2e');
@@ -381,17 +384,22 @@ function drawSubway(b: Batch, p: Passage, row: number, low: boolean) {
 
 /** Each mouth's path on to the sidewalk: paved, a strip a leg, a disc at each turn */
 function drawPaths(b: Batch, low: boolean) {
-  const y = SLAB + 0.008;
+  // (the improvement loop's J5, R2/R3: one ribbon a path, mitred at its turns, sampled every half metre so the batch's
+  // lift lays it on the rolling ground (its strips and discs stood flat at the slab and the grass came up through their
+  // edges in blobs), and a kerb along each edge)
+  const y = SLAB + 0.012;
   for (const path of MOUTH_PATHS) {
+    const pts: Pt[] = [path[0]];
     for (let k = 1; k < path.length; k++) {
       const [a, c] = [path[k - 1], path[k]];
-      const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
-      if (len < 0.01) continue;
-      const yaw = Math.atan2(-(c[1] - a[1]), c[0] - a[0]);
-      b.add(new THREE.PlaneGeometry(len, PATH_HALF * 2).rotateX(-Math.PI / 2).rotateY(yaw).translate((a[0] + c[0]) / 2, y, (a[1] + c[1]) / 2), PATH);
+      const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.5));
+      for (let q = 1; q <= n; q++) pts.push([a[0] + ((c[0] - a[0]) * q) / n, a[1] + ((c[1] - a[1]) * q) / n]);
     }
-    for (const q of path.slice(1, -1)) b.add(new THREE.CircleGeometry(PATH_HALF, low ? 8 : 14).rotateX(-Math.PI / 2).translate(q[0], y + 0.001, q[1]), PATH);
+    if (pts.length < 2) continue;
+    b.add(ribbon(pts, -PATH_HALF, PATH_HALF, () => y), PATH);
+    for (const side of [-1, 1]) b.add(ribbon(pts, side * PATH_HALF, side * (PATH_HALF + 0.09), () => y + 0.012), KERB);
   }
+  void low;
 }
 
 /** The Circus's plaza and subways, a site each */
@@ -418,6 +426,6 @@ export function registerCircus(low: boolean) {
   site('circus paths', [Math.min(...xs) - 1, Math.min(...zs) - 1, Math.max(...xs) + 1, Math.max(...zs) + 1], (into) => {
     const b = new Batch();
     drawPaths(b, low);
-    b.build(into, { cast: false, receive: true, lift: false });
+    b.build(into, { cast: false, receive: true });
   });
 }
