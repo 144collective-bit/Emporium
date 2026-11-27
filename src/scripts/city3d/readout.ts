@@ -7,7 +7,6 @@ import * as THREE from 'three';
 import { texSources } from './kit';
 import { farLods, freedNear } from './lod';
 import { mb, sceneMemory, targetMemory } from './perf';
-import { READY_REACH } from './spawn';
 import { texSourceLine } from './texsource';
 import type { createDistricts } from './districts';
 import type { createTileWork } from './tilework';
@@ -75,8 +74,7 @@ export function readout(i: ReadoutIn, now: number): string {
     // the near plane, or the view gone wrong); in City view, where the free camera is (freecam.ts)
     ...(i.walking
       ? [
-          // (and how many sites still wait to be built within READY_REACH of him: the smoke run's scenes settle on it)
-          `at ${p.x.toFixed(1)}, ${p.z.toFixed(1)}${p.y > 1 ? ` · up ${p.y.toFixed(1)}` : p.y < -0.5 ? ` · down ${(-p.y).toFixed(1)}` : ''} · motion capture ${walk.mocap} · ${works.waitingNear(p.x, p.z, READY_REACH)} waiting near`,
+          `at ${p.x.toFixed(1)}, ${p.z.toFixed(1)}${p.y > 1 ? ` · up ${p.y.toFixed(1)}` : p.y < -0.5 ? ` · down ${(-p.y).toFixed(1)}` : ''} · motion capture ${walk.mocap}`,
           `height ${p.y.toFixed(2)} · camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(2)}, ${camera.position.z.toFixed(1)} · near ${camera.near.toFixed(2)} · looks ${camera.getWorldDirection(look).y.toFixed(2)} · fog ${(scene.fog as THREE.FogExp2 | null)?.density?.toFixed(4) ?? '-'}`,
         ]
       : [`camera ${camera.position.x.toFixed(1)}, ${camera.position.y.toFixed(1)}, ${camera.position.z.toFixed(1)} · near ${camera.near.toFixed(2)}`]),

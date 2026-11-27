@@ -64,10 +64,10 @@ keep it up to date when what it describes changes.
   (in at his garage, out through its door, a drive, out), on foot (walk,
   sprint, jump, crouch, the hub), the gun store's counter, the metro (the
   card, a ride, skipped), the south's underground (the Circus, an underpass,
-  down each station's stairs, the High Road's to its platform (it waits
-  in the ticket hall until the `?fps` readout's "0 waiting near": the
-  headless software renderer can fall to a frame a second while it builds
-  what the jump left waiting, too slow to walk it in time), and the tube:
+  down each station's stairs, the High Road's to its platform (lined up
+  with its escalator in the ticket hall first: the hall is wider, and at
+  the headless renderer's frame a second he could stop against the
+  escalator's side wall), and the tube:
   Aldwyn's Green's platform card, a ride to the High Road, skipped; the
   change: from Downtown's metro door to the tube's High Road, skipped to the
   end), the world map and a taxi (the tube's Trenches station found, Taxi

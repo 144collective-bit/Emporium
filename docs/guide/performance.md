@@ -525,7 +525,7 @@ keep it up to date when what it describes changes.
   shadow map's share (`post.shadowStat`), geometry and texture memory
   (`sceneMemory()` in `perf.ts`, its own chunk since 2026-11-21, loaded only
   with the readout, `?bench` and `__mem()`, which reads null until it's in), how many tile pieces were drawn and
-  tiles are near, how many far forms are showing, how long the boot took (art, build and its own work less the waits, tiles, shaders), the sites built (at the boot, after, the slowest, waiting; walking, how many still wait within `READY_REACH` of Degen: "N waiting near", which the smoke run settles on) and the near forms held against the budget, quality tier, pixel ratio and any
+  tiles are near, how many far forms are showing, how long the boot took (art, build and its own work less the waits, tiles, shaders), the sites built (at the boot, after, the slowest, waiting) and the near forms held against the budget, quality tier, pixel ratio and any
   quality stepped down. Use it on
   real devices before and after changes; it's invisible without the
   parameter.

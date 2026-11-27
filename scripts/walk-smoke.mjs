@@ -112,11 +112,6 @@ async function scene(name, spawn, play, init, device, query = '') {
       }
       await step(`${what} (${dist(from, await where()).toFixed(1)} tiles)`);
     },
-    /** Wait, standing still, until the sites near him are built (the ?fps readout's "N waiting near"): this software
-     * renderer can drop to a frame a second while it builds what a jump left waiting, too slow to walk a scene in time */
-    async settle() {
-      await until('the sites near him built', () => /· 0 waiting near/.test(document.querySelector('.city-stats')?.textContent ?? ''), null, 300000);
-    },
     /** Hold a key until the walk prompt reads `label` (a rail or wall ahead stops him if he's early) */
     async toward(key, label, what) {
       const from = await where();
@@ -670,7 +665,23 @@ await scene('station', '-158.47,389.10,-0.295', async (t) => {
   await t.go('a', 9, 'down the stairs to the ticket hall');
   await t.until('down in the ticket hall', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 1.7, null, 60000);
   await t.step(`in the ticket hall (${(await t.page.evaluate(downNow)).toFixed(1)})`);
-  await t.settle();
+  // Lined up with the escalator first: the hall (2.8 either side of the line) is wider than the escalator (1.0), and the
+  // stairs leave him about a tile off its middle, where, at this software renderer's frame a second, he could stop
+  // against its side wall at the top. Its line's way and offset (the highroad-escalator passage, southline.ts): s and w
+  // step him across it
+  const ESC = [0.2947, 415.45];
+  const across = ([a, c]) => {
+    const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+    return m ? -Math.sin(a) * Number(m[1]) + Math.cos(a) * Number(m[2]) - c : 0;
+  };
+  const off = await t.page.evaluate(across, ESC);
+  if (Math.abs(off) > 0.3) {
+    await t.hold(off < 0 ? 's' : 'w', 'lined up with the escalator', ([a, c]) => {
+      const m = document.querySelector('.city-stats')?.textContent.match(/at (-?[\d.]+), (-?[\d.]+)/);
+      return !!m && Math.abs(-Math.sin(a) * Number(m[1]) + Math.cos(a) * Number(m[2]) - c) < 0.25;
+    }, ESC);
+  }
+  await t.step(`lined up with the escalator (${(await t.page.evaluate(across, ESC)).toFixed(2)} off its middle)`);
   await t.go('a', 16, 'along the hall and down the escalator');
   await t.until('down on the platform', () => Number(document.querySelector('.city-stats')?.textContent.match(/ · down ([\d.]+)/)?.[1] ?? 0) > 6, null, 60000);
   await t.step(`on the platform (${(await t.page.evaluate(downNow)).toFixed(1)})`);
