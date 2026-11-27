@@ -319,8 +319,10 @@ sets the order (rule 2).
       Built 2026-11-26 (night 5 pass 2) in a draft PR: the slabs were the alleys and the red pieces each house's own
       stub of back wall; now `southgardens.ts` closes every yard (side fences from the back corners to the back wall,
       a shared one drawn once), a patio at the back wall, 1 in 3 with a shed. Merged 2026-11-26, night 5 pass 3.
-- [ ] **J7 (R1): St Aldwyn's churchyard wall and its yews** (`h-church-foot`): the wall is one plain grey slab with no
+- [x] **J7 (R1): St Aldwyn's churchyard wall and its yews** (`h-church-foot`): the wall is one plain grey slab with no
       coping or coursing; the yews are bare cones. R1 for stone: a coping, courses, a darker plinth; the yews rounded.
+      Done 2026-11-27 (night 6 pass 6): a darker plinth proud of the wall, a dressed coping, courses near only; the
+      yews a rounded bell with a smaller crown and a short trunk. Drawing only: the wall's height and solids unchanged.
 - [ ] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
       with paths stopping short, no plots, and straight hedge pieces standing alone in the open land beyond. R3: plots
       with low hedges or fences and front paths, the stray hedges joined into field boundaries or gone.
@@ -656,3 +658,6 @@ session.)
   edges). Shots before and after (`h-circus-foot`). Lint, typecheck, `npm test` and `test:wide` 2430 of 2430, smoke
   fine, bootJs 772.5 KB; this machine's bake varies between runs (241 files and 4036.7 KB last pass, 257 and 4985.1
   now) while CI's budget passes on main. Merged.
+- 2026-11-27, night 6 pass 6 (03:07): J5 live (Build site 429 green). J7, St Aldwyn's churchyard wall and yews: the wall
+  a plinth, courses and a coping; the yews rounded. Lint, `npm test` and `test:wide` 2430 of 2430, smoke fine, bootJs
+  772.5 KB. Shots after (`h-church-foot`, the wall close). Merged (the pass ran to about 03:50).
