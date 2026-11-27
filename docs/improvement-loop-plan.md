@@ -263,7 +263,7 @@ sets the order (rule 2).
 - [x] **J1 (R1), part 3:** the gallery-to-portal junction checked on foot (2026-11-23, pass 3): the portal
       reads; the fault was a landing post standing in every link's doorway at its tower (15 of 15), drawn
       only, walked through. Cleared (`landingPosts()`, tested). **J1 done**; R1's sweep goes on at The Trenches.
-- [ ] **J1 (R1): a gallery walkway on Endswood's flats** (the owner's
+- [x] **J1 (R1): a gallery walkway on Endswood's flats** (done in parts 1 to 3 above; the owner's
       screenshot, 2026-11-21: looking down a gallery towards the highway).
       The deck, its upstands and the slabs either side are plain `CONC`
       (`southblocks3d.ts`, `drawStep()`'s galleries: `flat(b, deck, y,
@@ -299,21 +299,30 @@ sets the order (rule 2).
       green round the twin towers is one flat patch cut square into the estate's paving, nothing on it but dashed
       lines that need a look on foot (paths? cables' shadows?). R3 in full: desire paths from the towers' doors to the
       stops and the Circus, planting in groups, a mown edge, its outline wandering.
-- [ ] **J4 (R1): the estate's bare concrete bits round the Circus** (`h-ends-air`, `h-circus-foot`): a long plain
+- [x] **J4 (R1): the estate's bare concrete bits round the Circus** (`h-ends-air`, `h-circus-foot`): a long plain
       concrete upstand standing on the paving with a cut-off end, the Circus's subway ramps as pale flat wedges, and
       the games court's surround a bare lilac slab. R1: the concrete skin and caps (`docs/brutalist-plan.md` Phase 1's
-      material), the ramps' walls and handrails, the court's surface marked.
-- [ ] **J5 (R2/R3): paths whose edges break up over the lawn** (`h-circus-foot`): a lilac path's edges go ragged in
+      material), the ramps' walls and handrails, the court's surface marked. Built 2026-11-27 (night 6 pass 3) in a
+      draft: the upstand was a subway ramp's wall standing full height to its square end: its last stretch stepped down
+      with its coping; handrails down each ramp; the play area paved and jointed, the court its own surface, a halfway
+      line and centre circle. Merged 2026-11-27, night 6 pass 4.
+- [x] **J5 (R2/R3): paths whose edges break up over the lawn** (`h-circus-foot`): a lilac path's edges go ragged in
       blobs where it meets the grass, and the lawn meets the paving with no kerb or edge. The paths' own edge (a clean
       line or a kerb) and a mown edge or kerb at every lawn's meeting with paving.
+      Built 2026-11-27 (night 6 pass 5): the ragged path was a Circus subway's mouth path, its strips and turn discs
+      drawn flat at the slab (`lift: false`) with the grass rising through their edges: now one ribbon a path, mitred
+      at its turns, sampled every half metre and lifted onto the ground, a kerb along each edge. The lawns' own edges:
+      the towers' lawn has J3's mown edge. Merged the same pass.
 - [x] **J6 (R3): Aldwyn's Green's back gardens** (`h-green-air`): behind the terraces the gardens are loose pale slabs
       (patios, sheds) and short red fence pieces at odd angles that don't close any plot. R3's garden rule: fences meet
       at the plot's corners, patios against the back wall, a shed in a corner.
       Built 2026-11-26 (night 5 pass 2) in a draft PR: the slabs were the alleys and the red pieces each house's own
       stub of back wall; now `southgardens.ts` closes every yard (side fences from the back corners to the back wall,
       a shared one drawn once), a patio at the back wall, 1 in 3 with a shed. Merged 2026-11-26, night 5 pass 3.
-- [ ] **J7 (R1): St Aldwyn's churchyard wall and its yews** (`h-church-foot`): the wall is one plain grey slab with no
+- [x] **J7 (R1): St Aldwyn's churchyard wall and its yews** (`h-church-foot`): the wall is one plain grey slab with no
       coping or coursing; the yews are bare cones. R1 for stone: a coping, courses, a darker plinth; the yews rounded.
+      Done 2026-11-27 (night 6 pass 6): a darker plinth proud of the wall, a dressed coping, courses near only; the
+      yews a rounded bell with a smaller crown and a short trunk. Drawing only: the wall's height and solids unchanged.
 - [ ] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
       with paths stopping short, no plots, and straight hedge pieces standing alone in the open land beyond. R3: plots
       with low hedges or fences and front paths, the stray hedges joined into field boundaries or gone.
@@ -638,3 +647,17 @@ session.)
   Verde Courts' circles to Mesa Drive (1 m, a ginnel's width between the yards' walls), bollards at each end, a bench
   beside each, 11 trees in groups; all solid, in the chunk. The test caught the first path cutting a lot's corner by
   Saguaro's circle: the search now starts only from spots reached straight out from the circle.
+- 2026-11-27, night 6 pass 3 (00:07): Ready empty (the flats card waits on the owner), so the plan's order: J1's
+  umbrella entry ticked (done in its parts 1 to 3); J4, the bare concrete round the Circus, built in a draft (the ramps'
+  walls stepped down at the street with handrails down them, the play area jointed paving, the games court surfaced and
+  marked). Shots before and after. Full checks next pass.
+- 2026-11-27, night 6 pass 4 (01:07): J4's full checks: lint, typecheck, `npm test` and `test:wide` 2430 of 2430, smoke
+  fine, bootJs 772.5 KB, texFull 4036.7 of 4955 (main's textures trimmed since: in budget here now too). Merged.
+- 2026-11-27, night 6 pass 5 (02:07): J4 live (Build site 428 green). J5, the ragged path by the Circus, built: the
+  subways' mouth paths one lifted ribbon each with kerbs (they stood flat at the slab and the grass came through their
+  edges). Shots before and after (`h-circus-foot`). Lint, typecheck, `npm test` and `test:wide` 2430 of 2430, smoke
+  fine, bootJs 772.5 KB; this machine's bake varies between runs (241 files and 4036.7 KB last pass, 257 and 4985.1
+  now) while CI's budget passes on main. Merged.
+- 2026-11-27, night 6 pass 6 (03:07): J5 live (Build site 429 green). J7, St Aldwyn's churchyard wall and yews: the wall
+  a plinth, courses and a coping; the yews rounded. Lint, `npm test` and `test:wide` 2430 of 2430, smoke fine, bootJs
+  772.5 KB. Shots after (`h-church-foot`, the wall close). Merged (the pass ran to about 03:50).

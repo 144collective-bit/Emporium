@@ -16,6 +16,7 @@ import { CONCRETE } from './southblocks';
 import { CEIL, FLOOR, MOUTH_PATHS, SUBWAY, PATH_HALF, PLANTERS, PLANTER_H, PLAZA, SUBWAYS, SUBWAY_WAYS, type SubwayId } from './circus';
 import { floorOf, openOf, pointOf, type Passage, type Pt } from './underground';
 import { ROW, sign } from './tunnel3d';
+import { ribbon } from './roads3d';
 import { BUILT_STATIONS, stationOf } from './southline';
 
 const CONC = toon(CONCRETE);
@@ -24,6 +25,8 @@ const SEAT = toon('#c2b9ac');
 const COPING = toon('#cfc8bd');
 const PAVING = toon(STONE.paving);
 const PATH = toon(STONE.path);
+/** The paths' kerbs (J5) */
+const KERB = toon(STONE.cap);
 const FLOOR_MAT = toon('#7d776f');
 const CEIL_MAT = toon('#4a4650');
 const SOIL = toon('#4a3a2e');
@@ -291,6 +294,15 @@ function drawPlaza(b: Batch, low: boolean) {
 
 /* ---------- A subway ---------- */
 
+/** A steel rod from p to q (x, y, z) */
+function rail(b: Batch, p: [number, number, number], q: [number, number, number]) {
+  const v = new THREE.Vector3(q[0] - p[0], q[1] - p[1], q[2] - p[2]);
+  const len = v.length();
+  if (len < 1e-3) return;
+  const g = new THREE.CylinderGeometry(0.025, 0.025, len, 5);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), v.normalize()));
+  b.add(g.translate((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2), RAIL);
+}
 function drawSubway(b: Batch, p: Passage, row: number, low: boolean) {
   const h = p.half;
   const [roof0, roof1] = p.roofs[0];
@@ -335,10 +347,27 @@ function drawSubway(b: Batch, p: Passage, row: number, low: boolean) {
   g.setAttribute('uv', new THREE.Float32BufferAttribute([0, v1, 1, v1, 0, v0, 1, v0], 2));
   g.rotateY(Math.atan2(n[0], n[1])).translate(mid[0], FLOOR + 0.2 + mh / 2, mid[1]);
   b.add(g, MURAL);
-  // The ramp: its walls up to the parapets, their coping
+  // The ramp: its walls up to the parapets, their coping; the last stretch stepped down where it meets the street, so the
+  // wall doesn't stop square at full height (the improvement loop's J4, R1); a steel handrail down each side
+  const step = Math.min(1.0, (a1 - roof1) / 4);
   for (const side of [-1, 1]) {
-    along(b, p, roof1, a1, side * h, side * (h + p.wall), FLOOR, p.rail, CONC);
-    along(b, p, roof1, a1, side * (h - 0.04), side * (h + p.wall + 0.04), p.rail, p.rail + 0.05, COPING);
+    along(b, p, roof1, a1 - step, side * h, side * (h + p.wall), FLOOR, p.rail, CONC);
+    along(b, p, roof1, a1 - step, side * (h - 0.04), side * (h + p.wall + 0.04), p.rail, p.rail + 0.05, COPING);
+    const low = SLAB + 0.42;
+    along(b, p, a1 - step, a1, side * h, side * (h + p.wall), FLOOR, low, CONC);
+    along(b, p, a1 - step - 0.02, a1, side * (h - 0.04), side * (h + p.wall + 0.04), low, low + 0.05, COPING);
+    // (the handrail: on short posts off the wall's inner face, 0.55 over the ramp's floor all the way up)
+    const r = side * (h - 0.06);
+    const ys = (s0: number) => floorOf(p, s0) + 0.55;
+    const pts = [roof1 + 0.2, (roof1 + a1) / 2, a1 - 0.15];
+    for (let k = 1; k < pts.length; k++) {
+      const [qa, qb] = [P(p, pts[k - 1], r), P(p, pts[k], r)];
+      rail(b, [qa[0], ys(pts[k - 1]), qa[1]], [qb[0], ys(pts[k]), qb[1]]);
+    }
+    for (const s0 of pts) {
+      const q = P(p, s0, r);
+      rail(b, [q[0], floorOf(p, s0), q[1]], [q[0], ys(s0), q[1]]);
+    }
   }
   // The step up from the ramp's top on to the block's slab, across its mouth
   wallQuad(b, P(p, a1, -h), P(p, a1, h), floorOf(p, a1), SLAB, floorOf(p, a1), SLAB, [-alongDir(p)[0], -alongDir(p)[1]], CONC_DARK);
@@ -355,17 +384,22 @@ function drawSubway(b: Batch, p: Passage, row: number, low: boolean) {
 
 /** Each mouth's path on to the sidewalk: paved, a strip a leg, a disc at each turn */
 function drawPaths(b: Batch, low: boolean) {
-  const y = SLAB + 0.008;
+  // (the improvement loop's J5, R2/R3: one ribbon a path, mitred at its turns, sampled every half metre so the batch's
+  // lift lays it on the rolling ground (its strips and discs stood flat at the slab and the grass came up through their
+  // edges in blobs), and a kerb along each edge)
+  const y = SLAB + 0.012;
   for (const path of MOUTH_PATHS) {
+    const pts: Pt[] = [path[0]];
     for (let k = 1; k < path.length; k++) {
       const [a, c] = [path[k - 1], path[k]];
-      const len = Math.hypot(c[0] - a[0], c[1] - a[1]);
-      if (len < 0.01) continue;
-      const yaw = Math.atan2(-(c[1] - a[1]), c[0] - a[0]);
-      b.add(new THREE.PlaneGeometry(len, PATH_HALF * 2).rotateX(-Math.PI / 2).rotateY(yaw).translate((a[0] + c[0]) / 2, y, (a[1] + c[1]) / 2), PATH);
+      const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.5));
+      for (let q = 1; q <= n; q++) pts.push([a[0] + ((c[0] - a[0]) * q) / n, a[1] + ((c[1] - a[1]) * q) / n]);
     }
-    for (const q of path.slice(1, -1)) b.add(new THREE.CircleGeometry(PATH_HALF, low ? 8 : 14).rotateX(-Math.PI / 2).translate(q[0], y + 0.001, q[1]), PATH);
+    if (pts.length < 2) continue;
+    b.add(ribbon(pts, -PATH_HALF, PATH_HALF, () => y), PATH);
+    for (const side of [-1, 1]) b.add(ribbon(pts, side * PATH_HALF, side * (PATH_HALF + 0.09), () => y + 0.012), KERB);
   }
+  void low;
 }
 
 /** The Circus's plaza and subways, a site each */
@@ -392,6 +426,6 @@ export function registerCircus(low: boolean) {
   site('circus paths', [Math.min(...xs) - 1, Math.min(...zs) - 1, Math.max(...xs) + 1, Math.max(...zs) + 1], (into) => {
     const b = new Batch();
     drawPaths(b, low);
-    b.build(into, { cast: false, receive: true, lift: false });
+    b.build(into, { cast: false, receive: true });
   });
 }

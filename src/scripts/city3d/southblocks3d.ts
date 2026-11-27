@@ -25,18 +25,20 @@
  * (`build()`'s `lift`). Their solids are solids.ts's (`BLOCK_SOLIDS`).
  */
 import * as THREE from 'three';
+import { addSolids } from './solids';
 import type { Tick } from './world';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, toon } from './kit';
 import { ATLAS, kit, type Frame } from './infill';
 import { site } from './tilework';
-import { PLANT } from './palette';
-import { shift } from './streetfaces';
+import { PLANT, TREE } from './palette';
+import { SQUARE, SQUARES, SQUARE_SOLIDS } from './southsquares';
+import { inside as insideOf, shift } from './streetfaces';
 import {
   ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
   DECK_SHOPS, DECK_SHOP_DOORS, DECK_SHOP_NAMES, FLAT, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
-import { CORE_GAP, DOOR_OUT, GALLERY_DROP, GALLERY_RAIL, GALLERY_WALL, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
+import { CORE_GAP, DECK_WALL_OFF, DOOR_OUT, GALLERY_DROP, GALLERY_RAIL, GALLERY_WALL, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
 import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, BOLLARD, BOLLARDS, COLUMN_R, DECK_COLUMNS, DECK_PROPS, DESIRE_W, FRAME, MOWN_EDGE, SANDPIT, SHRUB, SHRUBS, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
 import { COURTS, DECK_LOOK, DESIRE_LINES, GRASS, PLAY, landingPosts } from './southblocks';
 import { CROWD_VIEW } from './character';
@@ -791,6 +793,20 @@ function cageSlab(b: Batch, g: Cage, a0: number, a1: number, b0: number, b1: num
  * light under each (the odd one tired); anti-climb mesh round its open sides, left open at the foot by the tower: the
  * way in from the street
  */
+/** A beam from p to q (x, y, z), `h` deep under the line, `t` thick */
+function beam(b: Batch, p: [number, number, number], q: [number, number, number], h: number, t: number, m: THREE.Material) {
+  const [dx, dy, dz] = [q[0] - p[0], q[1] - p[1], q[2] - p[2]];
+  const flatL = Math.hypot(dx, dz);
+  const L = Math.hypot(flatL, dy);
+  if (L < 1e-3) return;
+  const g = new THREE.BoxGeometry(L, h, t).translate(0, -h / 2, 0).rotateZ(Math.atan2(dy, flatL)).rotateY(-Math.atan2(dz, dx));
+  g.translate((p[0] + q[0]) / 2, (p[1] + q[1]) / 2, (p[2] + q[2]) / 2);
+  b.add(plain(g), m);
+}
+/** The stairwells' landing lamps: small, warm, lit at night */
+const CAGE_LAMP = neon('#ffd9a0', 0.15, 1.7);
+/** A colour a floor, painted on the core's wall at its landing (docs/flats-plan.md: no numbers on signs) */
+const FLOOR_BANDS = ['#d94f4f', '#e6a13a', '#e6d43a', '#4fb36a', '#3a8fe6', '#9a5fd9'].map((c) => toon(c));
 function drawCage(b: Batch, g: Cage, low: boolean, tired: boolean) {
   const k = kit(b, WORLD);
   const { len, half, land, gap } = CAGE;
@@ -828,23 +844,88 @@ function drawCage(b: Batch, g: Cage, low: boolean, tired: boolean) {
     const mid = (ys[i - 1] + ys[i]) / 2;
     along(b, g.at(len - land / 2, -w + 0.2), g.at(len - land / 2, w - 0.2), 0.08, mid - 0.2, mid - 0.16, tired ? STRIP_TIRED : STRIP);
   }
-  // The treads: near only, not on phones
+  // The flights made solid (docs/flats-plan.md Phase 2, the owner's picks): under each flight's open edge a concrete
+  // stringer, and up it a steel handrail on posts; on the spine wall a wall rail
+  const rot = -Math.atan2(g.out[1], g.out[0]);
+  const P = (a: number, bb: number, y: number): [number, number, number] => {
+    const p = g.at(a, bb);
+    return [p[0], y, p[1]];
+  };
+  const flights = ys.slice(0, -1).flatMap((y0, i) => {
+    const mid = (y0 + ys[i + 1]) / 2;
+    return [
+      { a0: land, a1: len - land, inner: gap, outer: w, y0, y1: mid, i, up: 0 },
+      { a0: len - land, a1: land, inner: -gap, outer: -w, y0: mid, y1: ys[i + 1], i, up: 1 },
+    ];
+  });
+  k.all(() => {
+    for (const f of flights) beam(b, P(f.a0, f.outer, f.y0 - 0.08), P(f.a1, f.outer, f.y1 - 0.08), 0.32, 0.1, CONC);
+  });
   if (!low)
     b.detail(() => {
-      for (let i = 0; i + 1 < ys.length; i++) {
-        const [y0, y1] = [ys[i], ys[i + 1]];
-        const mid = (y0 + y1) / 2;
-        const n = Math.round((len - 2 * land) / 0.27);
+      for (const f of flights) {
+        const ro = f.outer - Math.sign(f.outer) * 0.05;
+        rod(b, P(f.a0, ro, f.y0 + 0.55), P(f.a1, ro, f.y1 + 0.55), 0.022, RAIL);
+        for (const a of [f.a0, f.a1]) rod(b, P(a, ro, a === f.a0 ? f.y0 : f.y1), P(a, ro, (a === f.a0 ? f.y0 : f.y1) + 0.55), 0.02, RAIL);
+        const ri = f.inner + Math.sign(f.inner) * 0.04;
+        rod(b, P(f.a0, ri, f.y0 + 0.5), P(f.a1, ri, f.y1 + 0.5), 0.018, RAIL);
+      }
+    });
+  // The steps themselves: solid, each a block under its tread (near only, not on phones; far off the flight's slab
+  // reads alone)
+  if (!low)
+    b.detail(() => {
+      for (const f of flights) {
+        const n = Math.round(Math.abs(f.a1 - f.a0) / 0.27);
+        const run = Math.abs(f.a1 - f.a0) / n;
+        const rise = (f.y1 - f.y0) / n;
+        const [b0, b1] = [Math.min(f.inner, f.outer), Math.max(f.inner, f.outer)];
         for (let s = 0; s < n; s++) {
-          const f = (s + 0.5) / n;
-          for (const [b0, b1, ya, yb, dir] of [[gap, w, y0, mid, 1], [-w, -gap, mid, y1, -1]] as const) {
-            const a = dir > 0 ? land + (len - 2 * land) * f : len - land - (len - 2 * land) * f;
-            const y = ya + (yb - ya) * f;
-            const p = g.at(a, (b0 + b1) / 2);
-            b.add(plain(new THREE.BoxGeometry(0.06, 0.05, b1 - b0).rotateY(-Math.atan2(g.out[1], g.out[0])).translate(p[0], y + 0.03, p[1])), CONC_DARK);
-          }
+          const a = f.a0 + Math.sign(f.a1 - f.a0) * run * (s + 0.5);
+          const p = g.at(a, (b0 + b1) / 2);
+          b.add(plain(new THREE.BoxGeometry(run, rise, b1 - b0).rotateY(rot).translate(p[0], f.y0 + rise * (s + 0.5), p[1])), CONC);
+          // (the nosing: a dark edge on each tread)
+          const q = g.at(a + Math.sign(f.a1 - f.a0) * (run / 2 - 0.02), (b0 + b1) / 2);
+          b.add(plain(new THREE.BoxGeometry(0.04, 0.012, b1 - b0 - 0.02).rotateY(rot).translate(q[0], f.y0 + rise * (s + 1) + 0.006, q[1])), CONC_DARK);
         }
       }
+    });
+  // Each landing's caged lamp on the spine wall's end facing it (lit at night; the odd one dead), and at each floor the
+  // floor's colour painted in a band on the core's wall either side of the way in (a colour a floor, no numbers)
+  const h0 = hashOf(g.id);
+  for (let i = 1; i < ys.length; i++) {
+    for (const [y, a, face] of [[(ys[i - 1] + ys[i]) / 2, len - land, 1], [ys[i], land, -1]] as const) {
+      const dead = (h0 + i * 3 + face) % 7 === 0;
+      const p = g.at(a + face * 0.05, 0);
+      b.add(plain(new THREE.BoxGeometry(0.06, 0.12, 0.2).rotateY(rot).translate(p[0], y + 0.82, p[1])), dead ? CONC_DARK : CAGE_LAMP);
+      if (!low)
+        b.detail(() => {
+          const c = g.at(a + face * 0.085, 0);
+          for (const dz of [-0.07, 0, 0.07]) {
+            const q: Pt = [c[0] + g.side[0] * dz, c[1] + g.side[1] * dz];
+            b.add(plain(new THREE.BoxGeometry(0.015, 0.15, 0.015).translate(q[0], y + 0.82, q[1])), RAIL);
+          }
+        });
+    }
+    const band = FLOOR_BANDS[(i + h0) % FLOOR_BANDS.length];
+    for (const [bb0, bb1] of [[-w, -0.55], [0.55, w]]) quad(b, g.at(0.012, bb0), g.at(0.012, bb1), ys[i] + 0.5, ys[i] + 0.62, g.out, band);
+  }
+  // The grit (near only, not on phones): a tag on the spine wall over the odd flight, litter in a landing's corner
+  if (!low)
+    b.detail(() => {
+      flights.forEach((f, k2) => {
+        const hh = (h0 + k2 * 5) % 9;
+        if (hh < 3) {
+          const am = (f.a0 + f.a1) / 2;
+          const yb = (f.y0 + f.y1) / 2 + 0.6;
+          const side: Pt = [g.side[0] * Math.sign(f.inner), g.side[1] * Math.sign(f.inner)];
+          quad(b, g.at(am - 0.35, f.inner + Math.sign(f.inner) * 0.006), g.at(am + 0.35, f.inner + Math.sign(f.inner) * 0.006), yb, yb + 0.28, side, TAG_PAINT[(h0 + k2) % TAG_PAINT.length]);
+        }
+        if (hh === 4 || hh === 7) {
+          const c = g.at(len - 0.3, f.outer * 0.85);
+          b.add(plain(new THREE.BoxGeometry(0.14, 0.07, 0.1).rotateY(rot + hh).translate(c[0], f.up ? f.y1 + 0.035 : f.y1 + 0.035, c[1])), hh === 4 ? CORK : CONC_DARK);
+        }
+      });
     });
   // The mesh: the far end and both long sides, from a head's height over the street at the way in, the rest from the foot
   const meshSide = (a0: number, a1: number, bb: number, y0: number, y1: number) => {
@@ -1035,9 +1116,19 @@ function drawDeck(b: Batch, poly: Pt[], y: number, base: number) {
       quad(b, a, c, y - 0.3, y, n, CONC);
       // (a balustrade where it isn't against a gallery, its coping a little wider and darker: R1)
       const mid: Pt = [(a[0] + c[0]) / 2, (a[1] + c[1]) / 2];
+      // (since docs/flats-plan.md Phase 3 the galleries' low wall, which stops bullets, and an open rail over it)
       if (!inBlock(mid, 2.4)) {
-        along(b, a, c, 0.12, y, y + 0.6, CONC, -0.07);
-        along(b, a, c, 0.18, y + 0.6, y + 0.65, CONC_DARK, -0.07);
+        along(b, a, c, 0.12, y, y + GALLERY_WALL, CONC, DECK_WALL_OFF);
+        along(b, a, c, 0.18, y + GALLERY_WALL, y + GALLERY_WALL + 0.05, CONC_DARK, DECK_WALL_OFF);
+        along(b, a, c, 0.05, y + GALLERY_RAIL - 0.04, y + GALLERY_RAIL, RAIL, DECK_WALL_OFF);
+        const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+        const n = Math.max(1, Math.round(l / 1.2));
+        const [rx, rz] = [-(c[1] - a[1]) / l, (c[0] - a[0]) / l];
+        for (let q = 0; q <= n; q++) {
+          const f = Math.min(1 - 0.05 / l, Math.max(0.05 / l, q / n));
+          const p: Pt = [a[0] + (c[0] - a[0]) * f + rx * DECK_WALL_OFF, a[1] + (c[1] - a[1]) * f + rz * DECK_WALL_OFF];
+          b.add(plain(new THREE.BoxGeometry(0.04, GALLERY_RAIL - GALLERY_WALL - 0.09, 0.04).translate(p[0], y + (GALLERY_WALL + 0.05 + GALLERY_RAIL - 0.04) / 2, p[1])), RAIL);
+        }
       }
     });
     // Its columns down to the court (southyard.ts)
@@ -1693,8 +1784,16 @@ const ON = 0.15 + 0.006;
 const ASPHALT = toon(ROAD.asphalt);
 const BAY_LINE = toon(ROAD.line);
 const LAWN = toon(COVER.lawn);
+const SQ_TRUNK = toon(TREE.trunk);
+const SQ_CROWN = toon(TREE.crowns[1]);
+const SQ_WOOD = toon('#a3804f');
+const SQ_BIN = toon('#2e4a3a');
+/** A ring of points round x, z */
+const circle = (x: number, z: number, r: number, n = 20): Pt[] => Array.from({ length: n }, (_, i): Pt => [x + Math.cos((i / n) * Math.PI * 2) * r, z + Math.sin((i / n) * Math.PI * 2) * r]);
 const WORN = toon(COVER.dry);
-const PLAY_FLOOR = toon(STONE.edge);
+const PLAY_FLOOR = toon(STONE.paving);
+/** The ball court's own surface: a games court's painted tarmac (J4) */
+const COURT_FLOOR = toon('#3d6b5a');
 const SAND = toon(BANK.sand);
 const BIN_COLOURS = ['#2f6a3c', '#2b2d3a', '#55697f', '#8b5a2b'].map((c) => toon(c));
 const RAIL = toon('#3b3846');
@@ -1785,6 +1884,30 @@ function drawShed(b: Batch, t: Thing) {
 }
 function drawPlay(b: Batch, low: boolean) {
   flat(b, PLAY, ON + 0.003, PLAY_FLOOR);
+  // (J4, R1: the play area's surround jointed like the estate's paving, about every 1.2, near only; the court's own
+  // surface, its halfway line and centre circle)
+  if (!low)
+    b.detail(() => {
+      const xs = PLAY.map((q) => q[0]);
+      const zs = PLAY.map((q) => q[1]);
+      // (not across the court's own surface)
+      const court = thingCorners({ ...BALL_COURT, w: BALL_COURT.w - 0.2, d: BALL_COURT.d - 0.2 });
+      const inside = (poly: Pt[], q: Pt) => insideOf(poly, q) && !insideOf(court, q);
+      for (let x = Math.ceil(Math.min(...xs) / 1.2) * 1.2; x < Math.max(...xs); x += 1.2)
+        for (let z = Math.min(...zs); z < Math.max(...zs); z += 0.6) if (inside(PLAY, [x, z]) && inside(PLAY, [x, z + 0.6])) along(b, [x, z], [x, z + 0.6], 0.025, ON + 0.003, ON + 0.007, CONC_DARK);
+      for (let z = Math.ceil(Math.min(...zs) / 1.2) * 1.2; z < Math.max(...zs); z += 1.2)
+        for (let x = Math.min(...xs); x < Math.max(...xs); x += 0.6) if (inside(PLAY, [x, z]) && inside(PLAY, [x + 0.6, z])) along(b, [x, z], [x + 0.6, z], 0.025, ON + 0.003, ON + 0.007, CONC_DARK);
+    });
+  {
+    const bc0 = BALL_COURT;
+    flat(b, thingCorners({ ...bc0, w: bc0.w - 0.3, d: bc0.d - 0.3 }), ON + 0.005, COURT_FLOOR);
+    const [m0, m1] = [inThing(bc0, -(bc0.w - 0.6) / 2, 0), inThing(bc0, (bc0.w - 0.6) / 2, 0)];
+    along(b, m0, m1, 0.1, ON + 0.008, ON + 0.0085, BAY_LINE);
+    const c = inThing(bc0, 0, 0);
+    const ring = (r: number): Pt[] => Array.from({ length: 24 }, (_, i): Pt => [c[0] + Math.cos((i / 24) * Math.PI * 2) * r, c[1] + Math.sin((i / 24) * Math.PI * 2) * r]);
+    const [o, n] = [ring(1.25), ring(1.15)];
+    for (let i = 0; i < 24; i++) flat(b, [o[i], o[(i + 1) % 24], n[(i + 1) % 24], n[i]], ON + 0.0085, BAY_LINE);
+  }
   // The climbing frame: a box of bars, a deck half way up, a slide off one end
   const f = FRAME;
   const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => inThing(f, (u * f.w) / 2, (v * f.d) / 2));
@@ -1872,6 +1995,35 @@ function registerYard(low: boolean, scene: THREE.Scene | null) {
       b.build(into, { cast: false, receive: true });
     })
   );
+  // The sitting-out squares on the paving round the slabs (docs/flats-plan.md Phase 5, southsquares.ts): a raised round
+  // planter with grass and a tree, the grass round its foot worn, two benches facing it, a bin, a sodium lamp
+  if (SQUARES.length)
+    site('south-blocks squares', rectOf(SQUARES.map((q) => q.at), SQUARE.reach + 1), (into) => {
+      const b = new Batch();
+      for (const q of SQUARES) {
+        const [x, z] = q.at;
+        flat(b, circle(x, z, SQUARE.planter + 0.5), ON + 0.004, WORN);
+        b.add(plain(new THREE.CylinderGeometry(SQUARE.planter, SQUARE.planter, SQUARE.planterH, 18).translate(x, ON + SQUARE.planterH / 2, z)), CONC);
+        flat(b, circle(x, z, SQUARE.planter - 0.12), ON + SQUARE.planterH + 0.005, LAWN);
+        b.add(plain(new THREE.CylinderGeometry(0.09, 0.11, 1.5, 6).translate(x, ON + SQUARE.planterH + 0.75, z)), SQ_TRUNK);
+        b.add(new THREE.IcosahedronGeometry(0.95, low ? 0 : 1).scale(1, 0.85, 1).translate(x, ON + SQUARE.planterH + 1.8, z), SQ_CROWN);
+        for (const be of q.benches) {
+          const m = new THREE.Matrix4().makeRotationY(be.yaw).setPosition(be.x, ON, be.z);
+          for (const [x0, y0, z0, x1, y1, z1, mat] of [
+            [-0.7, 0.36, -0.2, 0.7, 0.42, 0.2, SQ_WOOD],
+            [-0.7, 0.42, -0.22, 0.7, 0.8, -0.17, SQ_WOOD],
+            [-0.62, 0, -0.18, -0.55, 0.36, 0.18, CONC_DARK],
+            [0.55, 0, -0.18, 0.62, 0.36, 0.18, CONC_DARK],
+          ] as const)
+            b.add(plain(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0).translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2).applyMatrix4(m)), mat);
+        }
+        b.add(plain(new THREE.CylinderGeometry(0.22, 0.2, 0.85, 10).translate(q.bin[0], ON + 0.425, q.bin[1])), SQ_BIN);
+        b.add(plain(new THREE.CylinderGeometry(0.06, 0.08, SQUARE.lampH, 6).translate(q.lamp[0], ON + SQUARE.lampH / 2, q.lamp[1])), CONC_DARK);
+        b.add(plain(new THREE.BoxGeometry(0.3, 0.12, 0.3).translate(q.lamp[0], ON + SQUARE.lampH + 0.02, q.lamp[1])), SODIUM);
+      }
+      b.build(into, { cast: true, receive: true });
+    });
+  if (scene) addSolids(SQUARE_SOLIDS);
   site('south-blocks play', rectOf(PLAY, 1), (into) => {
     const b = new Batch();
     drawPlay(b, low);

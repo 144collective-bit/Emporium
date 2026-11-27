@@ -164,7 +164,7 @@ import { addSolids } from './solids';
 import { buildTrenches } from './trenches3d';
 import { buildUptownStreets } from './streets3d';
 import { tilesInView, type Plane } from './tiles';
-import { FAR_PHONE, farForm, freedNear, primeAverages, updateLods } from './lod';
+import { FAR_LATER, FAR_PHONE, farForm, freedNear, primeAverages, updateLods } from './lod';
 import { live } from './live-client';
 import { closedLine } from './live';
 import { createQuality, type QualityStep } from './quality';
@@ -697,10 +697,20 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
   bootAt.tiled = performance.now();
   // Each place's far form (growth plan Phase 2): a couple of draws far away instead of one per material.
   // Made after the boot, a place at a time in spare moments (each stays near until it has one)
-  const farQueue = [...spots.map((sp) => sp.group), ...['garage', 'market'].flatMap((n) => scene.getObjectByName(n) ?? [])];
+  // (and the places drawn after the boot, as their districts come in: the garage's building, lod.ts `FAR_LATER`)
+  const farQueue = [...spots.map((sp) => sp.group), ...['market'].flatMap((n) => scene.getObjectByName(n) ?? []), ...FAR_LATER.waiting.splice(0)];
   const idle = (f: () => void) => ('requestIdleCallback' in window ? requestIdleCallback(() => f(), { timeout: 400 }) : setTimeout(f, 60));
+  let farBusy = false;
+  FAR_LATER.add = (g) => {
+    farQueue.push(g);
+    if (!farBusy && bootAt.first) {
+      farBusy = true;
+      idle(nextFar);
+    }
+  };
   const nextFar = () => {
     const g = farQueue.shift();
+    farBusy = !!g;
     if (!g) return;
     // (its painted textures' averages read back from the GPU first, without the page waiting on it: lod.ts)
     void primeAverages(renderer, g).then(() => {
@@ -2461,6 +2471,7 @@ export async function bootCity(root: HTMLElement, wallet?: { account: Account; h
       dirty = false;
       if (!bootAt.first) {
         bootAt.first = performance.now();
+        farBusy = true;
         idle(nextFar);
       }
       if (statsEl) {

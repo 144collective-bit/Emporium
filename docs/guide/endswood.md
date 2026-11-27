@@ -87,7 +87,10 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   hexagonal drum, its glass band, its name, a glass lift inside; brutalist plan Phase 3) and the top floor's bridges to
   the twins through doorways in its glass; the cores' stair slots, each core a service tower standing off its block (its
   link from the gallery at each landing drawn as a bridge, a boiler house and flue on its top: brutalist plan Phase 2;
-  its caged stair outside, `CAGES`, `drawCage()`, and its door's sodium lamp); the bridges (concrete, a glass band each
+  its caged stair outside, `CAGES`, `drawCage()`, and its door's sodium lamp; since docs/flats-plan.md Phase 2 the
+  flights solid: a concrete stringer under each open edge (`beam()`), the steps blocks with dark nosings (near only), a
+  steel handrail on posts and a wall rail (near only), a caged lamp at each landing (`CAGE_LAMP`, the odd one dead) and
+  each floor's colour (`FLOOR_BANDS`, no numbers) painted on the core's wall by the way in, a tag or litter now and then); the bridges (concrete, a glass band each
   side, inside a ceiling strip, mullions, puddles and tags near only; `drawPortal()` at each link's gallery end; piers
   under the long spans, `PIERS`, `drawPier()`; block names at their ends, `SIGN_TEX`); the grit (brutalist plan
   Phase 2's polish: the `brutalDeck` gallery band, `deckRow()`; boarded and burnt flats in `RECESS_LIFE`; bin bags,
@@ -123,11 +126,22 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   and shoot between them, standing over the rail. `SKY_COVER` (southsky.ts) is the walls as boxes with a bottom, which
   stop bullets only (solids.ts `SHOT_COVER`, in the shot grid; `rayBoxes()` reads a box's sixth number as its bottom);
   walking still keeps to `skyWall()`. The bridges' glass is a light see-through tint (`CLEAR_GLASS`).
+  Phase 3: `SKY_COVER` also holds each bridge's and service-tower link's concrete under its glass (`BRIDGE_WALL`, 0.6)
+  and the podium deck's edge, which is drawn as the galleries' low wall and rail too (`DECK_WALL_OFF`); the boxes are
+  pieces 0.25 long (`wallBoxes()`), so a wall at a slant isn't fattened by its boxes' corners.
 - **The ground round the blocks** (`southyard.ts`, DOM-free, tested in `tests/southyard.test.ts`, 2d): `BAYS` and
   `YARD_CARS` (drawn by cars.ts `parkedCars()` on the main thread), `BIN_STORES`, `BIKE_SHEDS`, the play area's `FRAME`,
   `SANDPIT`, `BALL_COURT` and `courtFence()`, `YARD_TREES` (index.ts adds them at the boot, on the rolling ground),
   `DECK_PROPS` (`onDeckProp()`: southsky.ts keeps you out of them), `DECK_COLUMNS`, `YARD_SOLIDS` (solids.ts, lifted onto
   the ground). Drawn by southblocks3d.ts's `registerYard()` (sites a court, the grass, the play area, the deck's props).
+- **The play area** (`PLAY`, drawn by `drawPlay()`): jointed concrete paving (the joints near only) round the ball
+  court, which has its own painted surface, a halfway line and a centre circle (the loop's J4).
+- **The sitting-out squares** (`southsquares.ts`, DOM-free, the chunk's, tested in `tests/southsquares.test.ts`;
+  docs/flats-plan.md Phase 5): `SQUARES`, four compact squares on the paving beside Linnet, Marten and Wren Courts
+  (beside a slab along its length, on its side of every street; their whole `SQUARE.reach` clear of the blocks, cages,
+  piers, bridges, streets, courts, grass, play area and the yard's things: `clearOf()`), each a planter with grass and a
+  tree, two benches facing it, a bin and a sodium lamp; `SQUARE_SOLIDS` joined when the chunk loads; drawn in
+  `registerYard()` (site `south-blocks squares`).
   The twin towers' lawn (the loop's J3): the `DESIRE_LINES` worn `DESIRE_W` wide, a `MOWN_EDGE` strip round the grass,
   `SHRUBS` in groups (solid) and `BOLLARDS` along the paths (solid, a warm lamp in each head, `BOLLARD_LAMP`).
 - **Aldwyn's Green's terraces** (`southterraces.ts`, DOM-free, tested in `tests/southterraces.test.ts`, 3a): `HOUSES`
@@ -144,7 +158,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   solid, as the alleys' back walls weren't.
 - **St Aldwyn's** (`aldwyns.ts`, DOM-free, tested in `tests/aldwyns.test.ts`, 3b): `NAVE`, `CHANCEL`, `TOWER`, `PORCH`
   (rects, the nave along x), `HEIGHTS`, `SPIRE_TIP` (22.5 over `CHURCH_BASE`), `PORCH_DOOR` / `DOOR_SPOT` (its door,
-  `ENDS_DOORS`), `LYCHGATE`, `CHURCH_PATH` (southterraces.ts leaves a gap for it), `GRAVES`, `YEWS`, `YARD_WALL`,
+  `ENDS_DOORS`), `LYCHGATE`, `CHURCH_PATH` (southterraces.ts leaves a gap for it), `GRAVES`, `YEWS` (drawn rounded: a bell and a crown,
+  the loop's J7), `YARD_WALL` (drawn on a darker plinth with a coping, its courses near only: J7),
   `CHURCH_SOLIDS` (unlifted) / `CHURCHYARD_SOLIDS` (lifted). Drawn by village3d.ts (`drawChurch()`, `drawChurchyard()`).
   Bench view `village-church`.
 - **The High Road's places** (`highroad.ts`, DOM-free, tested in `tests/highroad.test.ts`, 3c): `SHOPS` (each its
@@ -195,7 +210,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
 - **Below ground**: Lot 9's tunnel (groundheight.ts `UNDER`, underground.ts); the Circus's sunken plaza and its four
   subways as data (`circus.ts`, `tests/circus.test.ts`, the south plan's 4a: `PLAZA`, `SUBWAYS` north-west,
   north-east, south-east and south, `MOUTH_PATHS`, `CIRCUS_HOLE`, `CIRCUS_CUTS`, `CIRCUS_SOLIDS`), drawn by
-  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk) and walked (groundheight.ts
+  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk; the mouths' paths one ribbon each,
+  sampled every half metre and lifted onto the rolling ground, a kerb along each edge, the loop's J5; each ramp's walls stepped down
+  over their last stretch where they meet the street and a steel handrail down each side, the loop's J4) and walked (groundheight.ts
   `UNDER`, the planters and lamps its `boxes`). Its holes are cut out of the blocks' slabs (world.ts `tiled()`,
   `holedPoly()`, holes.ts) and the junctions' asphalt round the Circus (south3d.ts); the grass goes from under it
   (`CIRCUS_HOLE`); the island is a planted ring round the plaza. Its trees and lamps at the boot (index.ts). The kit
