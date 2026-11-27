@@ -290,6 +290,9 @@ const rectOf = (pts: Pt[], pad: number): Rect => [Math.min(...pts.map((p) => p[0
 
 const KIRK = toon('#8e8a85');
 const DRESSING = toon('#b9b3a8');
+/** The churchyard wall's plinth and its courses (J7) */
+const PLINTH = toon('#6f6b66');
+const COURSE = toon('#76726c');
 const SPIRE = toon('#4a4f5c');
 const GLASS_LIT = neon('#ffc46b', 0.1, 1.15);
 const GLASS_DARK = toon('#2a2f45');
@@ -372,7 +375,17 @@ function drawChurchyard(b: Batch, low: boolean) {
   const [l, r] = [shift(CHURCH_PATH, -PATH_W / 2), shift(CHURCH_PATH, PATH_W / 2)];
   flat(b, [l[0], l[1], r[1], r[0]], ON + 0.004, GRAVEL);
   // The low stone wall round the churchyard, and the lychgate (posts, a small gabled roof)
-  for (const [p, q] of YARD_WALL) along(b, p, q, 0.24, 0.15, 0.15 + YARD_WALL_H, KIRK);
+  // (the improvement loop's J7, R1 for stone: a darker plinth a little proud of the wall, the wall itself, a dressed coping
+  // overhanging it a little; near only, not on phones, its courses as thin dark lines on both faces)
+  for (const [p, q] of YARD_WALL) {
+    along(b, p, q, 0.3, 0.15, 0.27, PLINTH);
+    along(b, p, q, 0.24, 0.27, 0.15 + YARD_WALL_H - 0.07, KIRK);
+    along(b, p, q, 0.32, 0.15 + YARD_WALL_H - 0.07, 0.15 + YARD_WALL_H, DRESSING);
+  }
+  if (!low)
+    b.detail(() => {
+      for (const [p, q] of YARD_WALL) for (let y = 0.27 + 0.11; y < 0.15 + YARD_WALL_H - 0.1; y += 0.11) along(b, p, q, 0.25, y, y + 0.012, COURSE);
+    });
   const g = LYCHGATE;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) along(b, [g.at[0] + sx * (g.w / 2 - 0.15), g.at[1] + sz * (g.d / 2 - 0.15) - 0.01], [g.at[0] + sx * (g.w / 2 - 0.15), g.at[1] + sz * (g.d / 2 - 0.15) + 0.01], 0.22, 0.15, 0.15 + g.h - 0.6, OAK);
   gabled(b, [g.at[0] - g.w / 2, g.at[1] - g.d / 2, g.at[0] + g.w / 2, g.at[1] + g.d / 2], 0.15 + g.h - 0.6, 0.7, true, SPIRE, OAK, 0.25);
@@ -385,11 +398,16 @@ function drawChurchyard(b: Batch, low: boolean) {
   b.instances(HEAD, GRAVE, GRAVES.filter((q) => q[3] === 0).map(([x, z, ry]) => at(x, z, ry)));
   b.instances(CROSS, GRAVE, GRAVES.filter((q) => q[3] === 1).map(([x, z, ry]) => at(x, z, ry)));
   b.instances(TOMB, GRAVE, GRAVES.filter((q) => q[3] === 2).map(([x, z, ry]) => at(x, z, ry)));
-  // The yews: dark, close-clipped cones
+  // The yews: dark, old and rounded (J7): a broad bell of a body, a smaller crown over it, a short trunk under
   for (const [x, z, sc] of YEWS) {
-    const cone = new THREE.ConeGeometry(1.1 * sc, 3.2 * sc, low ? 7 : 10).translate(x, 0.15 + 0.3 + 1.6 * sc, z);
-    cone.deleteAttribute('uv');
-    b.add(cone, YEW);
+    const d = low ? 0 : 1;
+    const body = new THREE.IcosahedronGeometry(1.05 * sc, d).scale(1, 1.15, 1).translate(x, 0.15 + 0.35 + 1.15 * sc, z);
+    const crown = new THREE.IcosahedronGeometry(0.7 * sc, d).scale(1, 1.1, 1).translate(x + 0.12 * sc, 0.15 + 0.35 + 2.3 * sc, z - 0.08 * sc);
+    for (const g of [body, crown]) {
+      g.deleteAttribute('uv');
+      b.add(g, YEW);
+    }
+    b.add(new THREE.CylinderGeometry(0.12 * sc, 0.16 * sc, 0.5, 6).translate(x, 0.15 + 0.25, z), OAK);
   }
 }
 
