@@ -25,11 +25,13 @@
  * (`build()`'s `lift`). Their solids are solids.ts's (`BLOCK_SOLIDS`).
  */
 import * as THREE from 'three';
+import { addSolids } from './solids';
 import type { Tick } from './world';
 import { Batch, FONT_DISPLAY, canvasTex, lit, neon, toon } from './kit';
 import { ATLAS, kit, type Frame } from './infill';
 import { site } from './tilework';
-import { PLANT } from './palette';
+import { PLANT, TREE } from './palette';
+import { SQUARE, SQUARES, SQUARE_SOLIDS } from './southsquares';
 import { shift } from './streetfaces';
 import {
   ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
@@ -1782,6 +1784,12 @@ const ON = 0.15 + 0.006;
 const ASPHALT = toon(ROAD.asphalt);
 const BAY_LINE = toon(ROAD.line);
 const LAWN = toon(COVER.lawn);
+const SQ_TRUNK = toon(TREE.trunk);
+const SQ_CROWN = toon(TREE.crowns[1]);
+const SQ_WOOD = toon('#a3804f');
+const SQ_BIN = toon('#2e4a3a');
+/** A ring of points round x, z */
+const circle = (x: number, z: number, r: number, n = 20): Pt[] => Array.from({ length: n }, (_, i): Pt => [x + Math.cos((i / n) * Math.PI * 2) * r, z + Math.sin((i / n) * Math.PI * 2) * r]);
 const WORN = toon(COVER.dry);
 const PLAY_FLOOR = toon(STONE.edge);
 const SAND = toon(BANK.sand);
@@ -1961,6 +1969,35 @@ function registerYard(low: boolean, scene: THREE.Scene | null) {
       b.build(into, { cast: false, receive: true });
     })
   );
+  // The sitting-out squares on the paving round the slabs (docs/flats-plan.md Phase 5, southsquares.ts): a raised round
+  // planter with grass and a tree, the grass round its foot worn, two benches facing it, a bin, a sodium lamp
+  if (SQUARES.length)
+    site('south-blocks squares', rectOf(SQUARES.map((q) => q.at), SQUARE.reach + 1), (into) => {
+      const b = new Batch();
+      for (const q of SQUARES) {
+        const [x, z] = q.at;
+        flat(b, circle(x, z, SQUARE.planter + 0.5), ON + 0.004, WORN);
+        b.add(plain(new THREE.CylinderGeometry(SQUARE.planter, SQUARE.planter, SQUARE.planterH, 18).translate(x, ON + SQUARE.planterH / 2, z)), CONC);
+        flat(b, circle(x, z, SQUARE.planter - 0.12), ON + SQUARE.planterH + 0.005, LAWN);
+        b.add(plain(new THREE.CylinderGeometry(0.09, 0.11, 1.5, 6).translate(x, ON + SQUARE.planterH + 0.75, z)), SQ_TRUNK);
+        b.add(new THREE.IcosahedronGeometry(0.95, low ? 0 : 1).scale(1, 0.85, 1).translate(x, ON + SQUARE.planterH + 1.8, z), SQ_CROWN);
+        for (const be of q.benches) {
+          const m = new THREE.Matrix4().makeRotationY(be.yaw).setPosition(be.x, ON, be.z);
+          for (const [x0, y0, z0, x1, y1, z1, mat] of [
+            [-0.7, 0.36, -0.2, 0.7, 0.42, 0.2, SQ_WOOD],
+            [-0.7, 0.42, -0.22, 0.7, 0.8, -0.17, SQ_WOOD],
+            [-0.62, 0, -0.18, -0.55, 0.36, 0.18, CONC_DARK],
+            [0.55, 0, -0.18, 0.62, 0.36, 0.18, CONC_DARK],
+          ] as const)
+            b.add(plain(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0).translate((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2).applyMatrix4(m)), mat);
+        }
+        b.add(plain(new THREE.CylinderGeometry(0.22, 0.2, 0.85, 10).translate(q.bin[0], ON + 0.425, q.bin[1])), SQ_BIN);
+        b.add(plain(new THREE.CylinderGeometry(0.06, 0.08, SQUARE.lampH, 6).translate(q.lamp[0], ON + SQUARE.lampH / 2, q.lamp[1])), CONC_DARK);
+        b.add(plain(new THREE.BoxGeometry(0.3, 0.12, 0.3).translate(q.lamp[0], ON + SQUARE.lampH + 0.02, q.lamp[1])), SODIUM);
+      }
+      b.build(into, { cast: true, receive: true });
+    });
+  if (scene) addSolids(SQUARE_SOLIDS);
   site('south-blocks play', rectOf(PLAY, 1), (into) => {
     const b = new Batch();
     drawPlay(b, low);
