@@ -95,6 +95,7 @@ compound. Nothing outside the compound's wall moves (`tests/snapshot.test.ts` do
    already had). `?bench` on the phone tier (software rendering, so the frame rates only compare like for like),
    before and after: the house's views 6.6 / 7.6 / 8.1 fps before, 8.1 / 8.4 / 8.9 after (outside 184 to 180
    draws, the lounge 112 to 119, the den 124 to 123); the route 4.3 to 4.5 fps, 231 to 227 draws: no cost
-   to see. Shots: `docs/house-shots/phase-5-*.webp`.
+   to see. Shots: `docs/house-shots/phase-5-*.webp` (its "night" shots are the day: the shot tool's night setting
+   didn't take, found in the garden's review, `docs/garden-plan.md` Phase 4, whose night shots are true).
 
 Each with the owner's sign-off.

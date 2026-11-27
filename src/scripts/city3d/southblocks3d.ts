@@ -32,7 +32,7 @@ import { ATLAS, kit, type Frame } from './infill';
 import { site } from './tilework';
 import { PLANT, TREE } from './palette';
 import { SQUARE, SQUARES, SQUARE_SOLIDS } from './southsquares';
-import { shift } from './streetfaces';
+import { inside as insideOf, shift } from './streetfaces';
 import {
   ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
   DECK_SHOPS, DECK_SHOP_DOORS, DECK_SHOP_NAMES, FLAT, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
@@ -1791,7 +1791,9 @@ const SQ_BIN = toon('#2e4a3a');
 /** A ring of points round x, z */
 const circle = (x: number, z: number, r: number, n = 20): Pt[] => Array.from({ length: n }, (_, i): Pt => [x + Math.cos((i / n) * Math.PI * 2) * r, z + Math.sin((i / n) * Math.PI * 2) * r]);
 const WORN = toon(COVER.dry);
-const PLAY_FLOOR = toon(STONE.edge);
+const PLAY_FLOOR = toon(STONE.paving);
+/** The ball court's own surface: a games court's painted tarmac (J4) */
+const COURT_FLOOR = toon('#3d6b5a');
 const SAND = toon(BANK.sand);
 const BIN_COLOURS = ['#2f6a3c', '#2b2d3a', '#55697f', '#8b5a2b'].map((c) => toon(c));
 const RAIL = toon('#3b3846');
@@ -1882,6 +1884,30 @@ function drawShed(b: Batch, t: Thing) {
 }
 function drawPlay(b: Batch, low: boolean) {
   flat(b, PLAY, ON + 0.003, PLAY_FLOOR);
+  // (J4, R1: the play area's surround jointed like the estate's paving, about every 1.2, near only; the court's own
+  // surface, its halfway line and centre circle)
+  if (!low)
+    b.detail(() => {
+      const xs = PLAY.map((q) => q[0]);
+      const zs = PLAY.map((q) => q[1]);
+      // (not across the court's own surface)
+      const court = thingCorners({ ...BALL_COURT, w: BALL_COURT.w - 0.2, d: BALL_COURT.d - 0.2 });
+      const inside = (poly: Pt[], q: Pt) => insideOf(poly, q) && !insideOf(court, q);
+      for (let x = Math.ceil(Math.min(...xs) / 1.2) * 1.2; x < Math.max(...xs); x += 1.2)
+        for (let z = Math.min(...zs); z < Math.max(...zs); z += 0.6) if (inside(PLAY, [x, z]) && inside(PLAY, [x, z + 0.6])) along(b, [x, z], [x, z + 0.6], 0.025, ON + 0.003, ON + 0.007, CONC_DARK);
+      for (let z = Math.ceil(Math.min(...zs) / 1.2) * 1.2; z < Math.max(...zs); z += 1.2)
+        for (let x = Math.min(...xs); x < Math.max(...xs); x += 0.6) if (inside(PLAY, [x, z]) && inside(PLAY, [x + 0.6, z])) along(b, [x, z], [x + 0.6, z], 0.025, ON + 0.003, ON + 0.007, CONC_DARK);
+    });
+  {
+    const bc0 = BALL_COURT;
+    flat(b, thingCorners({ ...bc0, w: bc0.w - 0.3, d: bc0.d - 0.3 }), ON + 0.005, COURT_FLOOR);
+    const [m0, m1] = [inThing(bc0, -(bc0.w - 0.6) / 2, 0), inThing(bc0, (bc0.w - 0.6) / 2, 0)];
+    along(b, m0, m1, 0.1, ON + 0.008, ON + 0.0085, BAY_LINE);
+    const c = inThing(bc0, 0, 0);
+    const ring = (r: number): Pt[] => Array.from({ length: 24 }, (_, i): Pt => [c[0] + Math.cos((i / 24) * Math.PI * 2) * r, c[1] + Math.sin((i / 24) * Math.PI * 2) * r]);
+    const [o, n] = [ring(1.25), ring(1.15)];
+    for (let i = 0; i < 24; i++) flat(b, [o[i], o[(i + 1) % 24], n[(i + 1) % 24], n[i]], ON + 0.0085, BAY_LINE);
+  }
   // The climbing frame: a box of bars, a deck half way up, a slide off one end
   const f = FRAME;
   const corners = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([u, v]) => inThing(f, (u * f.w) / 2, (v * f.d) / 2));

@@ -134,6 +134,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `SANDPIT`, `BALL_COURT` and `courtFence()`, `YARD_TREES` (index.ts adds them at the boot, on the rolling ground),
   `DECK_PROPS` (`onDeckProp()`: southsky.ts keeps you out of them), `DECK_COLUMNS`, `YARD_SOLIDS` (solids.ts, lifted onto
   the ground). Drawn by southblocks3d.ts's `registerYard()` (sites a court, the grass, the play area, the deck's props).
+- **The play area** (`PLAY`, drawn by `drawPlay()`): jointed concrete paving (the joints near only) round the ball
+  court, which has its own painted surface, a halfway line and a centre circle (the loop's J4).
 - **The sitting-out squares** (`southsquares.ts`, DOM-free, the chunk's, tested in `tests/southsquares.test.ts`;
   docs/flats-plan.md Phase 5): `SQUARES`, four compact squares on the paving beside Linnet, Marten and Wren Courts
   (beside a slab along its length, on its side of every street; their whole `SQUARE.reach` clear of the blocks, cages,
@@ -156,7 +158,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   solid, as the alleys' back walls weren't.
 - **St Aldwyn's** (`aldwyns.ts`, DOM-free, tested in `tests/aldwyns.test.ts`, 3b): `NAVE`, `CHANCEL`, `TOWER`, `PORCH`
   (rects, the nave along x), `HEIGHTS`, `SPIRE_TIP` (22.5 over `CHURCH_BASE`), `PORCH_DOOR` / `DOOR_SPOT` (its door,
-  `ENDS_DOORS`), `LYCHGATE`, `CHURCH_PATH` (southterraces.ts leaves a gap for it), `GRAVES`, `YEWS`, `YARD_WALL`,
+  `ENDS_DOORS`), `LYCHGATE`, `CHURCH_PATH` (southterraces.ts leaves a gap for it), `GRAVES`, `YEWS` (drawn rounded: a bell and a crown,
+  the loop's J7), `YARD_WALL` (drawn on a darker plinth with a coping, its courses near only: J7),
   `CHURCH_SOLIDS` (unlifted) / `CHURCHYARD_SOLIDS` (lifted). Drawn by village3d.ts (`drawChurch()`, `drawChurchyard()`).
   Bench view `village-church`.
 - **The High Road's places** (`highroad.ts`, DOM-free, tested in `tests/highroad.test.ts`, 3c): `SHOPS` (each its
@@ -207,7 +210,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
 - **Below ground**: Lot 9's tunnel (groundheight.ts `UNDER`, underground.ts); the Circus's sunken plaza and its four
   subways as data (`circus.ts`, `tests/circus.test.ts`, the south plan's 4a: `PLAZA`, `SUBWAYS` north-west,
   north-east, south-east and south, `MOUTH_PATHS`, `CIRCUS_HOLE`, `CIRCUS_CUTS`, `CIRCUS_SOLIDS`), drawn by
-  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk) and walked (groundheight.ts
+  `circus3d.ts` (a site for the plaza, each subway and the paths, in the south's chunk; the mouths' paths one ribbon each,
+  sampled every half metre and lifted onto the rolling ground, a kerb along each edge, the loop's J5; each ramp's walls stepped down
+  over their last stretch where they meet the street and a steel handrail down each side, the loop's J4) and walked (groundheight.ts
   `UNDER`, the planters and lamps its `boxes`). Its holes are cut out of the blocks' slabs (world.ts `tiled()`,
   `holedPoly()`, holes.ts) and the junctions' asphalt round the Circus (south3d.ts); the grass goes from under it
   (`CIRCUS_HOLE`); the island is a planted ring round the plaza. Its trees and lamps at the boot (index.ts). The kit
@@ -318,6 +323,8 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   are `firepitFlames()` on the main thread (south3d.ts), shown only near and outside the house, still under reduced motion.
   It and the den's screens (`denCharts()`) are one-instance meshes whose count is set in `onBeforeRender` from the
   camera, not by a tick (a still city's ticks run once): out of place they draw nothing and count no draw call.
+  Phase 4 (the review) is signed off, and the plan complete: shots by day and true night on desktop and a phone, and the garden measured alone on
+  the phone tier (no measurable cost); the plan has the numbers.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for
   the re-laying, the owner's call: its plans (`docs/estate-plan.md`, `docs/ends-west-plan.md`,
