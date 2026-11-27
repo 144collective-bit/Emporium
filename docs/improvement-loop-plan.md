@@ -345,7 +345,7 @@ sets the order (rule 2).
       each cul-de-sac's path to the next street), trees in groups, a bench. Done 2026-11-26 (`sungreens.ts`): the
       greens open onto Mesa Drive after all; footpaths from Saguaro and Palo Verde Courts' circles to it, bollards,
       a bench each, 11 trees in groups; no lot taken (the owner's call). Ocotillo Court's circle is boxed in by lots.
-- [ ] **J13 (R1, small): Sunridge's back-yard patios** (`s-street` [150,4,-60] to [200,1,-75]): pale bare slabs; a
+- [x] **J13 (R1, small): Sunridge's back-yard patios** (`s-street` [150,4,-60] to [200,1,-75]): pale bare slabs; a
       paving joint pattern or a darker border.
 - [ ] **J14 (R1): the big dark hall by The Trenches' river** (the hunt, 2026-11-25, `t-air` [-70,75,250] to
       [-40,0,160]): a huge dark box with a flat plain roof and no detail, between the riverside road and the terraces.
@@ -663,3 +663,6 @@ session.)
   772.5 KB. Shots after (`h-church-foot`, the wall close). Merged (the pass ran to about 03:50).
 - 2026-11-27, the owner (after night 6): J13 to Ready; the flats' Phases 4 (entrances, the existing block names) and 6
   (Kite Point's roof) to Ready; with Ready empty, carry on in the plan's order (J8, then J9).
+- 2026-11-27, night 7 pass 1 (22:07): J13 (the board's top Ready card), Sunridge's back-yard patios: pavers in a darker
+  border, their joints near only (sunyards3d.ts). Lint, `npm test` and `test:wide` 2430 of 2430, smoke fine, bootJs 772.5
+  KB. Shot of an open patio close. Merged.
