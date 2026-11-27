@@ -263,7 +263,7 @@ sets the order (rule 2).
 - [x] **J1 (R1), part 3:** the gallery-to-portal junction checked on foot (2026-11-23, pass 3): the portal
       reads; the fault was a landing post standing in every link's doorway at its tower (15 of 15), drawn
       only, walked through. Cleared (`landingPosts()`, tested). **J1 done**; R1's sweep goes on at The Trenches.
-- [ ] **J1 (R1): a gallery walkway on Endswood's flats** (the owner's
+- [x] **J1 (R1): a gallery walkway on Endswood's flats** (done in parts 1 to 3 above; the owner's
       screenshot, 2026-11-21: looking down a gallery towards the highway).
       The deck, its upstands and the slabs either side are plain `CONC`
       (`southblocks3d.ts`, `drawStep()`'s galleries: `flat(b, deck, y,
@@ -302,7 +302,10 @@ sets the order (rule 2).
 - [ ] **J4 (R1): the estate's bare concrete bits round the Circus** (`h-ends-air`, `h-circus-foot`): a long plain
       concrete upstand standing on the paving with a cut-off end, the Circus's subway ramps as pale flat wedges, and
       the games court's surround a bare lilac slab. R1: the concrete skin and caps (`docs/brutalist-plan.md` Phase 1's
-      material), the ramps' walls and handrails, the court's surface marked.
+      material), the ramps' walls and handrails, the court's surface marked. Built 2026-11-27 (night 6 pass 3) in a
+      draft: the upstand was a subway ramp's wall standing full height to its square end: its last stretch stepped down
+      with its coping; handrails down each ramp; the play area paved and jointed, the court its own surface, a halfway
+      line and centre circle. Full checks next pass.
 - [ ] **J5 (R2/R3): paths whose edges break up over the lawn** (`h-circus-foot`): a lilac path's edges go ragged in
       blobs where it meets the grass, and the lawn meets the paving with no kerb or edge. The paths' own edge (a clean
       line or a kerb) and a mown edge or kerb at every lawn's meeting with paving.
@@ -638,3 +641,7 @@ session.)
   Verde Courts' circles to Mesa Drive (1 m, a ginnel's width between the yards' walls), bollards at each end, a bench
   beside each, 11 trees in groups; all solid, in the chunk. The test caught the first path cutting a lot's corner by
   Saguaro's circle: the search now starts only from spots reached straight out from the circle.
+- 2026-11-27, night 6 pass 3 (00:07): Ready empty (the flats card waits on the owner), so the plan's order: J1's
+  umbrella entry ticked (done in its parts 1 to 3); J4, the bare concrete round the Circus, built in a draft (the ramps'
+  walls stepped down at the street with handrails down them, the play area jointed paving, the games court surfaced and
+  marked). Shots before and after. Full checks next pass.

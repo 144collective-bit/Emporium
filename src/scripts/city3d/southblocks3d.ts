@@ -32,7 +32,7 @@ import { ATLAS, kit, type Frame } from './infill';
 import { site } from './tilework';
 import { PLANT, TREE } from './palette';
 import { SQUARE, SQUARES, SQUARE_SOLIDS } from './southsquares';
-import { inside, shift } from './streetfaces';
+import { inside as insideOf, shift } from './streetfaces';
 import {
   ACCENTS, BLOCKS, BRIDGES, BRIDGE_HALF, BUNKER, CAGE, CAGES, CONCRETE, CORES, PIERS, PIER_HALF, DECKS, GALLERY_W, GROUND_H, PARAPET, PLANT_H, BEACON_H,
   DECK_SHOPS, DECK_SHOP_DOORS, DECK_SHOP_NAMES, FLAT, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
@@ -1890,6 +1890,9 @@ function drawPlay(b: Batch, low: boolean) {
     b.detail(() => {
       const xs = PLAY.map((q) => q[0]);
       const zs = PLAY.map((q) => q[1]);
+      // (not across the court's own surface)
+      const court = thingCorners({ ...BALL_COURT, w: BALL_COURT.w - 0.2, d: BALL_COURT.d - 0.2 });
+      const inside = (poly: Pt[], q: Pt) => insideOf(poly, q) && !insideOf(court, q);
       for (let x = Math.ceil(Math.min(...xs) / 1.2) * 1.2; x < Math.max(...xs); x += 1.2)
         for (let z = Math.min(...zs); z < Math.max(...zs); z += 0.6) if (inside(PLAY, [x, z]) && inside(PLAY, [x, z + 0.6])) along(b, [x, z], [x, z + 0.6], 0.025, ON + 0.003, ON + 0.007, CONC_DARK);
       for (let z = Math.ceil(Math.min(...zs) / 1.2) * 1.2; z < Math.max(...zs); z += 1.2)
