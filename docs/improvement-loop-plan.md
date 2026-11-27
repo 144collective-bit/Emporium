@@ -661,3 +661,5 @@ session.)
 - 2026-11-27, night 6 pass 6 (03:07): J5 live (Build site 429 green). J7, St Aldwyn's churchyard wall and yews: the wall
   a plinth, courses and a coping; the yews rounded. Lint, `npm test` and `test:wide` 2430 of 2430, smoke fine, bootJs
   772.5 KB. Shots after (`h-church-foot`, the wall close). Merged (the pass ran to about 03:50).
+- 2026-11-27, the owner (after night 6): J13 to Ready; the flats' Phases 4 (entrances, the existing block names) and 6
+  (Kite Point's roof) to Ready; with Ready empty, carry on in the plan's order (J8, then J9).

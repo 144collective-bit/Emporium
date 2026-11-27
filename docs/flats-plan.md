@@ -80,3 +80,6 @@ Each phase: tests extended, every check, shots, merged on its own.
   on the field east of the estate: now a square is only beside a slab with no street between. Four squares, all on
   the paving strips between the slabs and their avenues. Lint, typecheck, `npm test` and `test:wide` 2429 of 2429,
   smoke fine, bootJs unchanged (773.3 KB). Merged. Phases 4 and 6 wait on the owner's answers.
+- 2026-11-27: the owner's answers (A to each): Phase 4's entrances carry the block names already on the bridges (e.g.
+  "Linnet Court"), no new copy; Phase 6's roof access is Kite Point's (Degen's flat's tower). Both to Ready; the
+  nightly loop builds them in the board's order.
