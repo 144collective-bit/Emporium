@@ -306,7 +306,7 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   are `firepitFlames()` on the main thread (south3d.ts), shown only near and outside the house, still under reduced motion.
   It and the den's screens (`denCharts()`) are one-instance meshes whose count is set in `onBeforeRender` from the
   camera, not by a tick (a still city's ticks run once): out of place they draw nothing and count no draw call.
-  Phase 4 (the review) is done: shots by day and true night on desktop and a phone, and the garden measured alone on
+  Phase 4 (the review) is signed off, and the plan complete: shots by day and true night on desktop and a phone, and the garden measured alone on
   the phone tier (no measurable cost); the plan has the numbers.
 - **What was here before** (the estate's brutalist blocks with their decks, lifts and stair towers, the church, the
   parade, the subways and well, the common, the west rows, the far west's bungalows and allotments) was taken up for

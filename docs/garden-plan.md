@@ -122,7 +122,7 @@ strip west of the house, the yard).
    unchanged: 313 desktop, 198 phone. Shots: `docs/garden-shots/phase-3-*.webp`.
 4. **Review**: the full set of shots by day and night, on a phone too, `?fps` and `?bench` on the phone tier, the
    guide (`docs/guide/endswood.md`) brought up to date.
-   *Done (2026-11-26), for the owner's sign-off.* Shots: `docs/garden-shots/phase-4-day.webp`, `phase-4-night.webp`
+   *Signed off by the owner and live (2026-11-27): the garden plan is complete.* Shots: `docs/garden-shots/phase-4-day.webp`, `phase-4-night.webp`
    (from above, the north-east, the yard, the east lawn, the kitchen, the north-west lawn, the firepit) and
    `phase-4-phone.webp` (a Pixel 7, by day and night). These are the first true night shots: the shot tool had clicked
    for a time-of-day button the city doesn't have, so every earlier "night" shot in this plan and in
@@ -135,6 +135,7 @@ strip west of the house, the yard).
    measured alone: two builds of the same main, one with the garden's three files at their pre-garden state, the
    bench's compound views twice each. With the garden: `ends-home` 1.8 / 1.9 fps (167-168 draws), `ends-room` 4.7 /
    5.5, `ends-den` 8.9 / 8.9 (126-131 draws); without: 1.7 / 1.8 (169-181), 2.9 / 3.3, 8.6 / 7.6 (128-134). Within
-   the noise: the garden costs nothing measurable.
+   the noise: the garden costs nothing measurable. Noted for later, not changed: up close at night the pergola's
+   string lights glow as fair-sized orbs.
 
 Each with the owner's sign-off.
