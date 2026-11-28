@@ -93,3 +93,7 @@ Each phase: tests extended, every check, shots, merged on its own.
   railing the galleries' (`GALLERY_RAIL`) on the parapet; `skyWall()` keeps you off the edge; tested in
   `tests/southsky.test.ts` (on from the bridge, up the stair, round the roof, never past the parapet, the smoke test's
   `sky` scene still passing). **6b** the drawing: the stair's cage, the rail, a hatch and a lamp on the roof.
+- 2026-11-28, night 7 pass 4 (01:07): Phase 6a built and checked (lint, `npm test` and `test:wide` 2432 of 2432, smoke
+  fine, bootJs 768.7 KB, texFull 4331.4): `KITE_ROOF` and its shapes in southsky.ts, tested by a walk in tenths of a
+  metre from the bridge's end up the stair and round the roof. Held back, not merged: alone it would walk you through
+  the top bridge's glass onto a stair not drawn yet. It merges with 6b (the drawing) next pass.
