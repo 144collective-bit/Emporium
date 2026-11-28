@@ -9,6 +9,7 @@ import tseslint from 'typescript-eslint';
 const DOM_FREE = [
   'src/scripts/city3d/citymap.ts',
   'src/scripts/city3d/cities.ts',
+  'src/scripts/city3d/mapedit.ts',
   'src/scripts/city3d/parkcrowd.ts',
   'src/scripts/city3d/parkstands.ts',
   'src/scripts/city3d/parktrees.ts',

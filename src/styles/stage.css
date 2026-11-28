@@ -2,7 +2,7 @@
    Sector 7's own screens (the title screen, the header, the hub, the walk HUD, the panels) are put away: the
    stage has its own bar and hint, in the menus' arcade kit. */
 
-.city[data-view="stage"] > :not([data-city3d], [data-no3d], .stage-bar, .stage-hint, .mk-sprite) {
+.city[data-view="stage"] > :not([data-city3d], [data-no3d], .stage-bar, .stage-hint, .ed, .mk-sprite) {
   display: none !important;
 }
 .city[data-view="stage"] .city3d {
@@ -86,4 +86,120 @@
 .stage-hint-x:focus-visible {
   background: var(--m-coin);
   color: var(--m-cab);
+}
+
+/* ----- The map creator (mapeditor.ts, docs/cities-plan.md Phase 2): the plan, its bar on top, the tools below ----- */
+.ed {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  pointer-events: none;
+  color: var(--m-text);
+}
+.ed > * {
+  pointer-events: auto;
+}
+.ed-plan {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  outline: none;
+  cursor: crosshair;
+}
+.ed-plan[hidden] {
+  display: none;
+}
+.ed-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: calc(8px + env(safe-area-inset-top)) calc(12px + env(safe-area-inset-right)) 8px calc(12px + env(safe-area-inset-left));
+  border-bottom: 2px solid var(--m-edge);
+  background: var(--m-cab);
+}
+.ed-acts,
+.ed-tools,
+.ed-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ed-acts .mk-btn,
+.ed-foot .mk-btn {
+  padding-left: 10px;
+  padding-right: 10px;
+}
+.ed-pop {
+  position: relative;
+}
+.ed-pop > summary {
+  list-style: none;
+}
+.ed-pop > summary::-webkit-details-marker {
+  display: none;
+}
+.ed-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 2;
+  display: grid;
+  gap: 6px;
+  min-width: 132px;
+  padding: 8px;
+  border: 2px solid var(--m-edge);
+  background: var(--m-cab);
+}
+.ed-menu .mk-btn {
+  text-decoration: none;
+}
+.ed-foot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: grid;
+  gap: 6px;
+  padding: 8px calc(12px + env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left));
+  border-top: 2px solid var(--m-edge);
+  background: var(--m-cab);
+}
+/* (in 3D only the line of help stays: the tools are the plan's) */
+.ed-foot[data-three="1"] .ed-tools {
+  display: none;
+}
+.ed-tip {
+  margin: 0;
+  font: 500 12px/1.35 var(--font-mono);
+  color: var(--m-dim);
+}
+.ed-opts[hidden] {
+  display: none;
+}
+.ed .mk-btn[aria-pressed="true"] {
+  --fill: var(--m-coin);
+  --base: var(--m-coin-low);
+  color: var(--m-cab);
+}
+/* Phones: each row of the tools is one line that scrolls sideways, so the plan keeps the screen */
+@media (max-width: 560px) {
+  .ed-tools,
+  .ed-opts {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+  .ed-tools .mk-btn,
+  .ed-opts .mk-btn {
+    flex: none;
+  }
 }

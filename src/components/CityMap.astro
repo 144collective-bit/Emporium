@@ -1651,8 +1651,10 @@ const startLabel = (r: SetRow) => setLabel(r, r.act ? false : setValue({ ...SET_
       if (live.now.maintenance) return true;
       if (live.closed('cities')) return false;
       try {
-        const { bootStage } = await import('../scripts/city3d/citystage');
-        const stage = bootStage(root!, other.map(), !!other.test);
+        // (`&edit`: the map creator, mapeditor.ts, over the stage; its own chunk on top of the stage's)
+        const stage = /[?&]edit\b/.test(location.search)
+          ? (await import('../scripts/city3d/mapeditor')).bootEditor(root!, other.map(), !!other.test)
+          : (await import('../scripts/city3d/citystage')).bootStage(root!, other.map(), { test: !!other.test });
         if (!stage) return false;
         city = { stop: stage.stop, start: stage.start, open() {}, intro() {}, wake: async () => true };
         return true;

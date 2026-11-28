@@ -12,7 +12,7 @@ import { MapControls } from 'three/addons/controls/MapControls.js';
 import { Batch, liveTex, neon, setGroundLift, toon } from './kit';
 import { createPost } from './post';
 import { COVER, KERB, ROAD } from './palette';
-import { STREET_WIDTH, census, groundAt, halfOf, isBlank, type CityMap, type MapPlace, type Pt, type ZoneUse } from './citymap';
+import { DECK_Y, STREET_WIDTH, census, curveOf, groundAt, halfOf, isBlank, lengthOf, shoreOf, type CityMap, type MapPlace, type MapStreet, type Pt, type ZoneUse } from './citymap';
 
 /** One square of the ground's grid, in tiles, and the bolder line every so many squares */
 export const GRID = { cell: 10, bold: 5 } as const;
@@ -100,6 +100,35 @@ function ribbonGeo(pts: readonly Pt[], width: number, y: number) {
   return g;
 }
 
+/** How far apart a raised street's piers stand, and how thick its deck is */
+const DECK = { piers: 16, slab: 0.5, pier: 0.9 } as const;
+
+/** A street: a ribbon on the ground, or raised on its deck (the slab, its dark underside's edge and piers under it) */
+function addStreet(b: Batch, s: MapStreet) {
+  const line = curveOf(s.pts);
+  const w = STREET_WIDTH[s.kind];
+  const top = toon(s.kind === 'path' ? COVER.cartPath : ROAD.asphalt);
+  if (!s.level) {
+    b.add(ribbonGeo(line, w, LIFT.street), top);
+    return;
+  }
+  b.add(ribbonGeo(line, w, DECK_Y), top);
+  // The deck's sides: a kerb-coloured band a little wider, just under the roadway (never flush with it)
+  b.add(ribbonGeo(line, w + 0.5, DECK_Y - DECK.slab), toon(KERB.grit));
+  const total = lengthOf(line);
+  let next = DECK.piers / 2;
+  let run = 0;
+  for (let i = 1; i < line.length && next < total; i++) {
+    const seg = Math.hypot(line[i][0] - line[i - 1][0], line[i][1] - line[i - 1][1]);
+    while (next <= run + seg && next < total) {
+      const t = seg ? (next - run) / seg : 0;
+      stand(b, line[i - 1][0] + (line[i][0] - line[i - 1][0]) * t, 0, line[i - 1][1] + (line[i][1] - line[i - 1][1]) * t, DECK.pier, DECK_Y - DECK.slab, DECK.pier, toon(KERB.grit));
+      next += DECK.piers;
+    }
+    run += seg;
+  }
+}
+
 /** The ground: flat where the map is, a mesh following its hills where it has any */
 function buildGround(map: CityMap, renderer: THREE.WebGLRenderer) {
   const [w, d] = map.size;
@@ -142,6 +171,7 @@ function addPlace(b: Batch, lights: Batch, p: MapPlace) {
 
 /** The stage's bar and its hint (stage.css, the arcade kit): the city's name, what it holds, the way back */
 function buildBar(root: HTMLElement, map: CityMap, test: boolean, home: () => void) {
+  const edit = location.search.replace(/[?&]edit\b[^&]*/, '');
   const bar = document.createElement('header');
   bar.className = 'stage-bar mk-skin';
   bar.dataset.stageBar = '';
@@ -166,7 +196,12 @@ function buildBar(root: HTMLElement, map: CityMap, test: boolean, home: () => vo
   back.className = 'mk-btn is-small';
   back.href = location.pathname;
   back.textContent = 'Sector 7';
-  acts.append(reset, back);
+  // (the map creator, docs/cities-plan.md Phase 2: the same address with `edit`)
+  const draw = document.createElement('a');
+  draw.className = 'mk-btn is-small is-main';
+  draw.href = `${location.pathname}${edit}${edit ? '&' : '?'}edit`;
+  draw.textContent = 'Edit map';
+  acts.append(draw, reset, back);
   bar.append(title, acts);
 
   const hint = document.createElement('div');
@@ -191,9 +226,9 @@ function buildBar(root: HTMLElement, map: CityMap, test: boolean, home: () => vo
 
 /**
  * Starts the stage on a map: null where there's no 3D to be had (the page then says so). `test` marks a test level
- * on its bar.
+ * on its bar; `bar: false` leaves the bar and hint out (the map creator has its own, mapeditor.ts).
  */
-export function bootStage(root: HTMLElement, map: CityMap, test = false): Stage | null {
+export function bootStage(root: HTMLElement, map: CityMap, opts: { test?: boolean; bar?: boolean } = {}): Stage | null {
   const host = root.querySelector<HTMLElement>('[data-city3d]')!;
   let renderer: THREE.WebGLRenderer;
   try {
@@ -238,8 +273,8 @@ export function bootStage(root: HTMLElement, map: CityMap, test = false): Stage 
   stand(land, -hx - EDGE.t / 2, 0, 0, EDGE.t, EDGE.h, map.size[1], wall);
   stand(land, hx + EDGE.t / 2, 0, 0, EDGE.t, EDGE.h, map.size[1], wall);
   for (const z of map.zones) land.add(polyGeo(z.poly, LIFT.zone), toon(ZONE_COVER[z.use]));
-  for (const w of map.water) land.add(polyGeo(w.poly, LIFT.water), toon(WATER));
-  for (const s of map.streets) land.add(ribbonGeo(s.pts, STREET_WIDTH[s.kind], LIFT.street), toon(s.kind === 'path' ? COVER.cartPath : ROAD.asphalt));
+  for (const w of map.water) land.add(polyGeo(shoreOf(w.poly), LIFT.water), toon(WATER));
+  for (const s of map.streets) addStreet(land, s);
   for (const p of map.places) addPlace(land, lights, p);
   // Where Degen arrives: a lit ring, and a bar pointing the way he faces
   const [sx, sz] = map.spawn.at;
@@ -297,7 +332,7 @@ export function bootStage(root: HTMLElement, map: CityMap, test = false): Stage 
   const watch = new ResizeObserver(resize);
   watch.observe(host);
 
-  const unbar = buildBar(root, map, test, home);
+  const unbar = opts.bar === false ? () => {} : buildBar(root, map, !!opts.test, home);
   root.classList.remove('has-start');
   root.dataset.view = 'stage';
   resize();
@@ -305,7 +340,10 @@ export function bootStage(root: HTMLElement, map: CityMap, test = false): Stage 
   // (the lit signs' fonts and the bloom's chunks come in after the first frame: one more once they have)
   setTimeout(ask, 400);
 
+  let disposed = false;
   canvas.addEventListener('webglcontextlost', (e) => {
+    // (its own taking down gives the context back on purpose)
+    if (disposed) return;
     e.preventDefault();
     running = false;
     root.dataset.view = 'none';
@@ -332,7 +370,11 @@ export function bootStage(root: HTMLElement, map: CityMap, test = false): Stage 
       watch.disconnect();
       controls.dispose();
       unbar();
+      disposed = true;
+      scene.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
       renderer.dispose();
+      // (the browser keeps only so many 3D contexts: the map creator makes a stage each time 3D is opened)
+      renderer.forceContextLoss();
       canvas.remove();
     },
   };

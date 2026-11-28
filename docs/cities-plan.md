@@ -48,8 +48,10 @@ A map is in tiles, as Sector 7 is, centred on 0, 0. Version 1 of the file:
 - `hills`: round hills (a centre, a radius, a height); the ground's height at
   a point is `groundAt()`.
 - `water`: rivers, lakes and sea as outlines.
-- `streets`: centre lines with a kind (avenue, street, lane, path); the kind
-  gives the width.
+- `streets`: the points each was drawn through, with a kind (avenue,
+  street, lane, path; the kind gives the width) and a `level` (0 on the
+  ground, 1 raised on a deck). Its centre line is the smooth curve through
+  the points (`curveOf()`).
 - `zones`: outlines with a use (homes, shops, towers, works, park, plaza):
   the engine fills them from the building kits.
 - `places`: named spots (the arrivals airport, landmarks), names from the
@@ -72,12 +74,20 @@ A map is in tiles, as Sector 7 is, centred on 0, 0. Version 1 of the file:
    (`?city=open-level`): flat open ground 600 tiles square inside an edge
    wall, a tile grid, the arrivals pad, a camera to look round. A Vercel
    preview of the branch.
-2. **The map creator, the plan view.** `?city=open-level&edit`: a top-down
-   plan over the stage. Tools: land (hills), water, streets (click to lay
-   points, snapping to other streets), zones, places, the spawn. Undo, redo.
-   Kept in the browser as it's drawn (`degen-city-maps-v1`, in `BACKUP_KEYS`),
-   **Export** downloads the map file to commit, **Import** reads one back.
-   Its own chunk on top of the stage's.
+2. **The map creator, the plan view** (built, 2026-11-28; the owner's picks:
+   land, water and streets first; streets by clicking points, the bends
+   smoothed). `?city=open-level&edit`, or Edit map on the stage's bar: a
+   top-down plan with the tools Move, Street (avenue, street, lane or path;
+   on the ground or Raised), Water, Hill (three sizes), Arrive (the spawn)
+   and Erase. A drag always moves the view and a click always uses the tool;
+   points snap onto streets already drawn. Undo, redo; 3D shows the result
+   on the stage. The draft is kept in the browser as it's drawn
+   (`degen-city-maps-v1`; **not** in the game's backup: putting a game
+   backup back removes every key it doesn't hold, which would take the
+   drafts with it), **Export** downloads the map file to commit, **Import**
+   reads one back. Its own chunk on top of the stage's. Still to come in the
+   creator: zones and places (with Phases 3 and 4), moving a drawn point,
+   turning the arrival.
 3. **Streets and blocks drawn properly.** Roads with kerbs, pavements,
    junctions and crossings from the map's centre lines; blocks found between
    them; lamps along them. Rules DOM-free and tested (the street plan's own
@@ -98,6 +108,32 @@ A map is in tiles, as Sector 7 is, centred on 0, 0. Version 1 of the file:
    save stays apart from Sector 7's.
 8. **The first real city.** The owner's first map, made in the creator,
    committed, on the board.
+
+## The first city: a cyberpunk port (the owner's brief, 2026-11-28)
+
+- **A cyberpunk port**: a neon city on a coast, with a harbour, container
+  stacks and canals cutting into the old quarter, the towers behind.
+  Ultra-futuristic. The owner's touchstones are the genre's classics, for
+  mood only: nothing of theirs is copied (no names, places, characters,
+  signs or looks of a particular work), and every name is made up.
+- **Medium**: about 600 x 600 tiles, the Open Level's size; four or five
+  districts.
+- **Two street levels**: a dark ground level of markets and alleys, with
+  raised roads and walkways over it. The map file has this from the start
+  (`level` on a street, `DECK_Y`); ramps and stairs between the levels come
+  with Phase 3, walking on both with Phase 5.
+- **Giant signs and holograms**: huge lit boards and screens on the towers,
+  all made-up copy. Small and very bright only, so the bloom doesn't wash
+  out (the visual rules hold in every city).
+- **Dense alleys and markets**: walk-only lanes, stalls, pipes and cables
+  overhead; nowhere a dead end on foot.
+- **Towers far taller than Sector 7's**: each city has its own skyline and
+  its own centrepiece. The Emporium stays Sector 7's.
+- Not asked for: a city locked to night and rain. It keeps the sky's day
+  and night like Sector 7 until the owner says otherwise.
+
+Its theme joins `THEMES` (citymap.ts) when its ground and light are made
+(Phase 4).
 
 ## Making a map feel like a real city
 

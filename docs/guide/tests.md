@@ -120,5 +120,9 @@ keep it up to date when what it describes changes.
   clamped, the limits, the ground over the hills) and the cities' list
   (cities.ts: one home city, each map city's map sound, `?city=` only ever
   naming a map city, a test level never a destination).
+- `tests/mapedit.test.ts` holds the map creator's rules (mapedit.ts: each
+  tool's change, undo and redo, snapping, the eraser's pick, the drafts
+  kept out of the game backup, files in and out, the plan's view) and the
+  map file's curves and raised streets.
 - Browser checks (the widths above, walk and drive flows) are still done by
   hand with Playwright against `npm run preview`.

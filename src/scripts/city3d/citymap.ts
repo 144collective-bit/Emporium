@@ -21,6 +21,9 @@ export type StreetKind = 'avenue' | 'street' | 'lane' | 'path';
 /** A street's whole width in tiles, kerb to kerb, by its kind (a path is for walking and bikes only) */
 export const STREET_WIDTH: Record<StreetKind, number> = { avenue: 6, street: 4, lane: 2.4, path: 1.2 };
 
+/** How high a raised street's deck stands over the ground, in tiles */
+export const DECK_Y = 7;
+
 export type WaterKind = 'river' | 'lake' | 'sea';
 export type ZoneUse = 'homes' | 'shops' | 'towers' | 'works' | 'park' | 'plaza';
 export type PlaceKind = 'airport' | 'landmark';
@@ -45,11 +48,13 @@ export interface MapWater {
   kind: WaterKind;
   poly: Pt[];
 }
-/** A street's centre line */
+/** A street: the points it was drawn through (its centre line is the curve through them, `curveOf()`) */
 export interface MapStreet {
   id: string;
   kind: StreetKind;
   pts: Pt[];
+  /** 0 on the ground; 1 raised on a deck `DECK_Y` up (a city with two street levels) */
+  level: 0 | 1;
 }
 /** Land with a use: the stage fills it from the building kits */
 export interface MapZone {
@@ -165,6 +170,38 @@ export function lengthOf(pts: readonly Pt[]) {
   return d;
 }
 
+/** How long a piece of a drawn curve runs at most, in tiles */
+export const CURVE_STEP = 3;
+
+/** A point on the Catmull-Rom curve from b to c (a before, d after), t from 0 to 1 */
+function spline(a: Pt, b: Pt, c: Pt, d: Pt, t: number): Pt {
+  const f = (i: 0 | 1) => 0.5 * (2 * b[i] + (c[i] - a[i]) * t + (2 * a[i] - 5 * b[i] + 4 * c[i] - d[i]) * t * t + (3 * b[i] - a[i] - 3 * c[i] + d[i]) * t * t * t);
+  return [round(f(0)), round(f(1))];
+}
+
+/**
+ * The smooth line through a street's drawn points (the owner's pick: click points, the bends smoothed): it passes
+ * through every point, in pieces no longer than `CURVE_STEP`. Two points are a straight run.
+ */
+export function curveOf(pts: readonly Pt[], closed = false): Pt[] {
+  const n = pts.length;
+  if (n < 3) return pts.map((p) => [p[0], p[1]] as Pt);
+  const at = (i: number) => (closed ? pts[((i % n) + n) % n] : pts[Math.min(n - 1, Math.max(0, i))]);
+  const out: Pt[] = [];
+  const last = closed ? n : n - 1;
+  for (let i = 0; i < last; i++) {
+    const b = at(i);
+    const c = at(i + 1);
+    const steps = Math.max(1, Math.ceil(Math.hypot(c[0] - b[0], c[1] - b[1]) / CURVE_STEP));
+    for (let k = 0; k < steps; k++) out.push(spline(at(i - 1), b, c, at(i + 2), k / steps));
+  }
+  if (!closed) out.push([pts[n - 1][0], pts[n - 1][1]]);
+  return out;
+}
+
+/** Water's shore: the smooth outline through its drawn points */
+export const shoreOf = (poly: readonly Pt[]) => curveOf(poly, true);
+
 /** Whether a point is inside an outline */
 export function inPoly(poly: readonly Pt[], p: Pt) {
   let inside = false;
@@ -228,7 +265,7 @@ export function cleanMap(raw: unknown): CityMap | null {
   const streets = cleanList<MapStreet>(r.streets, LIMITS.streets, 'street', (s, sid) => {
     const pts = cleanPts(s.pts, size, false);
     if (pts.length < 2 || lengthOf(pts) < 1) return null;
-    return { id: sid, kind: oneOf(s.kind, STREET_KINDS) ?? 'street', pts };
+    return { id: sid, kind: oneOf(s.kind, STREET_KINDS) ?? 'street', pts, level: s.level === 1 ? 1 : 0 };
   });
   const zones = cleanList<MapZone>(r.zones, LIMITS.zones, 'zone', (z, zid) => {
     const poly = cleanPts(z.poly, size, true);
@@ -282,7 +319,7 @@ export function groundAt(map: Pick<CityMap, 'hills'>, x: number, z: number) {
 }
 
 /** Whether a point is in the water */
-export const inWater = (map: Pick<CityMap, 'water'>, p: Pt) => map.water.some((w) => inPoly(w.poly, p));
+export const inWater = (map: Pick<CityMap, 'water'>, p: Pt) => map.water.some((w) => inPoly(shoreOf(w.poly), p));
 
 /** The map as the text of its file: stable, so the same map always makes the same file */
 export const mapText = (map: CityMap) => JSON.stringify(cleanMap(map));
@@ -294,7 +331,7 @@ export function census(map: CityMap) {
     hills: map.hills.length,
     water: map.water.length,
     streets: map.streets.length,
-    streetLength: Math.round(map.streets.reduce((a, s) => a + lengthOf(s.pts), 0)),
+    streetLength: Math.round(map.streets.reduce((a, s) => a + lengthOf(curveOf(s.pts)), 0)),
     zones: map.zones.length,
     places: map.places.length,
   };

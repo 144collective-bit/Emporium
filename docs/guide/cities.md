@@ -53,7 +53,48 @@ date when what it describes changes.
   header, the hub, the walk HUD, the panels) and styles the stage's own bar
   (`.stage-bar`: the city's name, its size, Reset view, Sector 7) and its
   closable hint, both in the arcade kit (`.mk-skin`). Esc does nothing there.
-- **Not yet** (the plan's later phases): the map creator's plan view, real
+- **A street's line is the curve through its drawn points**: the file keeps
+  the points clicked (`pts`), and `curveOf()` (a Catmull-Rom curve through
+  every one, in pieces of `CURVE_STEP` at most) is the centre line the
+  stage, the plan and the rules all read; water's shore is the same, closed
+  (`shoreOf()`). Never draw or measure `pts` straight. A street's `level` is
+  0 on the ground or 1 raised: the stage draws a raised one on a deck
+  `DECK_Y` up with piers under it (`addStreet()` in citystage.ts).
+- **The map creator** (the owner's tool; `&edit` on a city's address, or
+  Edit map on the stage's bar) is `mapeditor.ts`, its own chunk, the screen
+  only; **its rules are `mapedit.ts`** (DOM-free, `tests/mapedit.test.ts`):
+  - The tools are `TOOLS` (Move, Street, Water, Hill, Arrive, Erase), each a
+    function from a map to a new map through `cleanMap()` (`addStreet()`,
+    `addWater()`, `addHill()`, `moveSpawn()`, `remove()`), null when it
+    can't be done. `commit()`, `undo()`, `redo()` keep the history
+    (`UNDO_MAX`), in memory only.
+  - `snap()` pulls a street's next point onto a drawn point of another
+    street first, then onto the nearest point along one. `hit()` is what the
+    eraser picks up: a street, then water, then a hill.
+  - The plan is a 2D canvas, north up, drawn only when something changes.
+    Its view is `View` (`fitView()`, `toMap()`, `toScreen()`, `zoomAt()`,
+    `panBy()`). **A drag always moves the view and a click always uses the
+    tool**, mouse or finger alike; two fingers pinch; Enter or a double
+    click finishes a street, Esc drops it, Backspace takes a point back,
+    1 to 6 pick a tool, Ctrl+Z and Ctrl+Shift+Z undo and redo.
+  - 3D makes a stage on the map as it stands (`bootStage(..., { bar: false
+    })`) and Plan takes it down (`dispose()`, which gives the graphics
+    context back: a browser keeps only so many).
+  - The draft is kept in the browser on every change (`MAPS_KEY`,
+    `degen-city-maps-v1`, by city id; `readStore()` keeps sound maps only).
+    **It is not in `BACKUP_KEYS` on purpose**: putting a game backup back
+    removes every key the backup doesn't hold. Export (`mapText()`,
+    `fileName()`: `open-level.city.json`) is a draft's backup and the file to
+    commit; Import (`readFile()`) brings a file in under the city being
+    edited, as one undoable change.
+  - Its screen is `.ed` in `stage.css`: the bar (3D / Plan, Undo, Redo, File:
+    Export, Import, Clear map, Leave), the tool strip and the tool's options
+    in the arcade kit; on phones each row is one line that scrolls sideways.
+- **The first real city is a cyberpunk port** (the owner's brief,
+  `docs/cities-plan.md`): two street levels, giant signs, dense alleys,
+  towers far taller than Sector 7's. Mood only from the genre: nothing of a
+  particular work is copied.
+- **Not yet** (the plan's later phases): zones and places in the creator, real
   roads and blocks, zones filled from the building kits, walking and
   driving, traffic and crowds, the sky, flights from the airport and the
   save keeping which city Degen is in.
