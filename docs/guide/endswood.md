@@ -100,7 +100,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   near only); street-level grit (Phase 5: the shops under the podium deck, `DECK_SHOPS` in southblocks.ts, The Wash House
   and Deck Stores lit with their neon and eight shuttered units, `drawShops()`; cables between the blocks, `CABLES`;
   court puddles that catch the sodium light; noticeboards by the lift doors); the lobbies (Phase 6: a hall in each
-  block but The Core, `LOBBIES` in southblocks.ts, cut out of its solids, `coverWithHall()`, walked on groundheight.ts's
+  block but The Core, `LOBBIES` in southblocks.ts, its door under a concrete canopy with the block's name on its front
+  edge, a warm light under it and a door-entry panel beside the door: `drawEntrance()`, docs/flats-plan.md Phase 4;
+  cut out of its solids, `coverWithHall()`, walked on groundheight.ts's
   `lobby` layer, its lift doors calling the block's lift, `lobbyLiftDoor()`; drawn rough by `drawLobby()`); Degen's flat (Phase 7a: `FLAT` in Kite Point's 15th floor, its rooms walked once it's
   his, southsky.ts `setFlatOpen()`, its card flat-ui.ts, drawn by `drawFlat()`; Kite's solids hollowed round it for the
   camera, `hollowAt()`); the two open shops run as places (Phase 7b: tycoon.ts places `e0` The Wash House and `e1`

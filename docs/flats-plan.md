@@ -83,3 +83,6 @@ Each phase: tests extended, every check, shots, merged on its own.
 - 2026-11-27: the owner's answers (A to each): Phase 4's entrances carry the block names already on the bridges (e.g.
   "Linnet Court"), no new copy; Phase 6's roof access is Kite Point's (Degen's flat's tower). Both to Ready; the
   nightly loop builds them in the board's order.
+- 2026-11-27, night 7 pass 2 (23:07): Phase 4 built: each lobby's door under a concrete canopy, the block's name on its
+  front edge (the bridges' sign sheet, no new copy), a warm light under it, a door-entry panel beside the door (near
+  only). The first shots had the names mirrored: fixed, they read left to right from in front.

@@ -1511,6 +1511,46 @@ const PLY_BOARD = toon('#a3804f');
  * a bench and the lift doors on its back wall, the stairs up in its corner, strip lights (one flickering, one dead),
  * and its grit (the owner's pick, rough: tags, litter, a boarded pane, a dented post box); never threatening
  */
+/** The block's way in (docs/flats-plan.md Phase 4, the owner's answer: the block names already on the bridges, no new
+ * copy): a concrete canopy over its lobby's door, the block's name on its front edge, a warm light under it; beside the
+ * door a door-entry panel (near only, not on phones) */
+const ENTRY_LAMP = neon('#ffd9a0', 0.12, 1.6);
+const PANEL = toon('#2b2d36');
+const PANEL_LIT = neon('#9fd8ff', 0.2, 1.2);
+function drawEntrance(b: Batch, l: (typeof LOBBIES)[number], low: boolean) {
+  const { base, t, n } = l;
+  const at = (u: number, o: number): Pt => [l.door[0] + t[0] * u + n[0] * o, l.door[1] + t[1] * u + n[1] * o];
+  const half = HALL.door / 2 + 0.75;
+  const [out, y0, y1] = [1.05, base + 1.3, base + 1.38];
+  // (the slab, its front edge deeper: the fascia the name sits on)
+  const slab: Pt[] = [at(-half, 0.02), at(half, 0.02), at(half, out), at(-half, out)];
+  flat(b, slab, y1, CONC);
+  flat(b, slab, y0, CONC_DARK, false);
+  along(b, at(-half, out - 0.04), at(half, out - 0.04), 0.08, y0 - 0.2, y1 + 0.02, CONC);
+  for (const sx of [-1, 1]) along(b, at(sx * half, 0.02), at(sx * half, out), 0.06, y0, y1, CONC);
+  // (the name, read from in front: left to right along -t when facing the door from outside)
+  const blk = blockById(l.of);
+  const row = SIGN_NAMES.indexOf(blk.name.toUpperCase());
+  if (row >= 0) {
+    // (left to right for someone facing the door: their right is -n turned a quarter, whichever way the face runs)
+    const m = at(0, out + 0.012);
+    const right: Pt = [n[1], -n[0]];
+    nameQuad(b, [m[0] - right[0] * 0.8, m[1] - right[1] * 0.8], [m[0] + right[0] * 0.8, m[1] + right[1] * 0.8], y0 - 0.17, y1 - 0.01, n, row);
+  }
+  // (the light under it)
+  const c = at(0, out / 2);
+  b.add(plain(new THREE.BoxGeometry(0.35, 0.03, 0.2).rotateY(-Math.atan2(t[1], t[0])).translate(c[0], y0 - 0.016, c[1])), ENTRY_LAMP);
+  if (low) return;
+  b.detail(() => {
+    // (the door-entry panel on the wall beside the door: a dark plate, a lit display, a row of buttons)
+    const p = at(HALL.door / 2 + 0.35, 0.025);
+    const yaw = -Math.atan2(t[1], t[0]);
+    b.add(plain(new THREE.BoxGeometry(0.22, 0.34, 0.03).rotateY(yaw).translate(p[0], base + 0.72, p[1])), PANEL);
+    const q = at(HALL.door / 2 + 0.35, 0.042);
+    b.add(plain(new THREE.BoxGeometry(0.14, 0.05, 0.01).rotateY(yaw).translate(q[0], base + 0.82, q[1])), PANEL_LIT);
+    for (let r = 0; r < 3; r++) b.add(plain(new THREE.BoxGeometry(0.15, 0.025, 0.012).rotateY(yaw).translate(q[0], base + 0.62 + r * 0.05, q[1])), RAIL);
+  });
+}
 function drawLobby(b: Batch, l: (typeof LOBBIES)[number], low: boolean) {
   const k = kit(b, WORLD);
   const { w, d, base, t, n } = l;
@@ -2163,6 +2203,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     site(`south-blocks ${l.id}`, rectOf([...l.poly, ...l.doorPoly], 1), (into) => {
       const b = new Batch();
       drawLobby(b, l, low);
+      drawEntrance(b, l, low);
       b.build(into, { cast: false, receive: false, lift: false });
     });
   // Cables strung between the blocks (Phase 5), not on phones
