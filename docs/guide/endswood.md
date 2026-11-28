@@ -122,7 +122,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `skyUp()` / `skyWall()` (walk.ts's `blocked()`: up there only the railings stop you, the solids don't); the lifts
   (`SKY_LIFTS`, `skyLiftDoors()`, `liftArrival()`, `floorName()`) and their floor picker (`skylift-ui.ts`: the metro's
   card, `[data-metro]`, its words put back after; index.ts `rideTo()`). A bridge to a tower ends at its door: the towers
-  aren't entered. The smoke test's `sky` and `stair` scenes.
+  aren't entered, but Kite Point's roof is walked (docs/flats-plan.md Phase 6, `KITE_ROOF`: off The Core's top bridge
+  through its open side, a flight up the tower's west face, a landing over the parapet, the band round the plant room;
+  drawn by southblocks3d.ts `drawKiteAccess()`, its rail on the parapet). The smoke test's `sky` and `stair` scenes.
   The galleries' fronts (docs/flats-plan.md Phase 1, the owner's call 2026-11-26): a low concrete wall `GALLERY_WALL`
   (0.40) with its coping and an open steel rail on posts every 1.2 m, its top `GALLERY_RAIL` (0.68): crouched you see
   and shoot between them, standing over the rail. `SKY_COVER` (southsky.ts) is the walls as boxes with a bottom, which

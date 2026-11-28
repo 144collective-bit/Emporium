@@ -97,3 +97,6 @@ Each phase: tests extended, every check, shots, merged on its own.
   fine, bootJs 768.7 KB, texFull 4331.4): `KITE_ROOF` and its shapes in southsky.ts, tested by a walk in tenths of a
   metre from the bridge's end up the stair and round the roof. Held back, not merged: alone it would walk you through
   the top bridge's glass onto a stair not drawn yet. It merges with 6b (the drawing) next pass.
+- 2026-11-28, night 7 pass 5 (02:07): Phase 6b drawn: the top bridge's side open over its last metre, the patch, a
+  solid flight on a stringer up Kite's face, the landing over a gap in the parapet, a rail all the way and round the
+  roof's parapet, a lamp by the landing. Shots from beside the tower and from above. 6a and 6b merge together.
