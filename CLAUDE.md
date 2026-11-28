@@ -265,7 +265,9 @@ guide file listed in the index above.
 - **Cloudflare and Vercel are paused** (the owner's call, 2026-11: "stop
   pushing to Cloudflare and Vercel, we will resume another time"): the
   "Deploy game server" Action runs only by hand, `vercel.json` turns
-  Vercel's Git deployments off, and Cloudflare's Workers Builds is to be
+  Vercel's Git deployments off (every branch but the one the owner asked a
+  preview of, 2026-11-27: the other cities' work branch, `cities.md`; never
+  `main`), and Cloudflare's Workers Builds is to be
   disconnected in its dashboard. Don't turn any of them back on until the
   owner says so; degenemporium.com (Hostinger) is unaffected.
 - **Multiplayer lives on workers.dev only**: the `server/` Worker (emporium

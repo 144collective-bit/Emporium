@@ -58,5 +58,7 @@ date when what it describes changes.
   driving, traffic and crowds, the sky, flights from the airport and the
   save keeping which city Degen is in.
 - **Vercel** (the owner's call, 2026-11-27): this work is tested on a Vercel
-  preview of its branch only. `vercel.json` keeps Git deployments off, so
-  `main` never deploys there.
+  preview of its branch only. `vercel.json`'s `git.deploymentEnabled` is off
+  for every branch (`**`) and on for that one branch by name, so `main`
+  never deploys there. When the work moves to another branch, change the
+  name there; when the testing's done, take it out.

@@ -13,7 +13,8 @@ cities. One phase at a time, each with the owner's sign-off.
 - **Drawn on a top-down plan, played in 3D.** Land, water, streets and zones
   are drawn on a plan view; a press of Play walks or drives the result.
 - **Tested on a Vercel preview of the work branch only.** Vercel's Git
-  deployments stay off (`vercel.json`), so `main` never deploys there;
+  deployments stay off for every other branch (`vercel.json`), so `main`
+  never deploys there;
   degenemporium.com (Hostinger) and Cloudflare are untouched.
 
 ## Why a second stage, not a second Sector 7
