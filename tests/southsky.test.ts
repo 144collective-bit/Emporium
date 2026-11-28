@@ -346,3 +346,47 @@ test("the bridges' concrete under their glass, and the podium deck's edge, stop 
   const onDeck = SKY_COVER.filter((b) => Math.abs(b[4] - (deck.y + GALLERY_WALL)) < 1e-6);
   assert.ok(onDeck.length > 20, `the deck's edge as cover (${onDeck.length})`);
 });
+
+test("Kite Point's roof: off The Core's top bridge, up the stair by its face, over the landing, round the roof; never past its parapet or into its plant room", async () => {
+  const { KITE_ROOF: R } = await import('../src/scripts/city3d/southsky');
+  // (a walk in tenth-of-a-metre steps along a line of spots, the floor found from the last one's height each step)
+  const walk = (spots: Pt[], y0: number) => {
+    let y = y0;
+    for (let i = 1; i < spots.length; i++) {
+      const [a, c] = [spots[i - 1], spots[i]];
+      const n = Math.max(1, Math.ceil(Math.hypot(c[0] - a[0], c[1] - a[1]) / 0.1));
+      for (let k = 1; k <= n; k++) {
+        const p: Pt = [a[0] + ((c[0] - a[0]) * k) / n, a[1] + ((c[1] - a[1]) * k) / n];
+        const f = skyFloorAt(p[0], p[1], y);
+        assert.ok(f !== null && f !== undefined, `no floor at ${p.map((v) => v.toFixed(2))} from ${y.toFixed(2)}`);
+        assert.ok(Math.abs(f! - y) < 0.2, `a step of ${(f! - y).toFixed(2)} at ${p.map((v) => v.toFixed(2))}`);
+        assert.ok(!skyWall(p[0], p[1], f!, 0.1), `a wall in the way at ${p.map((v) => v.toFixed(2))}`);
+        y = f!;
+      }
+    }
+    return y;
+  };
+  // (from the bridge's end, beside the face, up, over the landing onto the roof's band)
+  const top = walk([R.at(0, 0.6), R.at(1.0, 0.6), R.at(3.1, 0.6), R.at(5.0, 0.4), R.at(5.0, -0.7)], R.from);
+  assert.ok(Math.abs(top - R.y) < 1e-6, `on the roof (${top})`);
+  // (round the band: each side's middle, from the last)
+  const mids = R.outer.map((p, i): Pt => {
+    const q = R.outer[(i + 1) % R.outer.length];
+    const [a, c] = [R.inner[i], R.inner[(i + 1) % R.inner.length]];
+    return [(p[0] + q[0] + a[0] + c[0]) / 4, (p[1] + q[1] + a[1] + c[1]) / 4];
+  });
+  const start = mids.reduce((b, m) => (Math.hypot(m[0] - R.at(5.0, -0.7)[0], m[1] - R.at(5.0, -0.7)[1]) < Math.hypot(b[0] - R.at(5.0, -0.7)[0], b[1] - R.at(5.0, -0.7)[1]) ? m : b));
+  const i0 = mids.indexOf(start);
+  walk([R.at(5.0, -0.7), ...mids.slice(i0), ...mids.slice(0, i0), start], R.y);
+  // (not into the plant room, nor out past the parapet)
+  const c: Pt = [R.inner.reduce((s, p) => s + p[0], 0) / R.inner.length, R.inner.reduce((s, p) => s + p[1], 0) / R.inner.length];
+  assert.ok(skyWall(c[0], c[1], R.y), 'the plant room walked through');
+  for (const [i, p] of R.outer.entries()) {
+    const q = R.outer[(i + 1) % R.outer.length];
+    const m: Pt = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    const past: Pt = [m[0] + (m[0] - c[0]) * 0.08, m[1] + (m[1] - c[1]) * 0.08];
+    // (but by the landing, where the way up comes over it)
+    if (Math.hypot(past[0] - R.at(5.0, 0)[0], past[1] - R.at(5.0, 0)[1]) < 1.6) continue;
+    assert.ok(skyWall(past[0], past[1], R.y), `out past the parapet at side ${i}`);
+  }
+});

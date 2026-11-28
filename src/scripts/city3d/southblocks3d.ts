@@ -38,7 +38,7 @@ import {
   DECK_SHOPS, DECK_SHOP_DOORS, DECK_SHOP_NAMES, FLAT, LOBBIES, LOBBY as HALL, lobbyProps, PERCH, SKY_FLOORS, TOP_FLOOR, TOWER_HALF, TWIN_CORE, blockById, topOf, floorY, inBlock, lineLength, outward, pointAt, roofY, section, stepShape, storeysOf,
   type Block, type Cage, type Core, type Pt,
 } from './southblocks';
-import { CORE_GAP, DECK_WALL_OFF, DOOR_OUT, GALLERY_DROP, GALLERY_RAIL, GALLERY_WALL, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
+import { CORE_GAP, DECK_WALL_OFF, KITE_ROOF, DOOR_OUT, GALLERY_DROP, GALLERY_RAIL, GALLERY_WALL, LANDING_H, SKY_LIFTS, STAIR, cageLevels, coreFloors, lobbyLiftDoor } from './southsky';
 import { BALL_COURT, BAYS, BIKE_SHEDS, BIN_STORES, BOLLARD, BOLLARDS, COLUMN_R, DECK_COLUMNS, DECK_PROPS, DESIRE_W, FRAME, MOWN_EDGE, SANDPIT, SHRUB, SHRUBS, YARD_CARS, bayCorners, courtFence, thingCorners, type Thing } from './southyard';
 import { COURTS, DECK_LOOK, DESIRE_LINES, GRASS, PLAY, landingPosts } from './southblocks';
 import { CROWD_VIEW } from './character';
@@ -579,6 +579,82 @@ function drawStep(b: Batch, blk: Block, i: number, low: boolean) {
 
 /* ---------- The towers ---------- */
 
+/* ---------- Kite Point's roof, the way up drawn (docs/flats-plan.md Phase 6b; walked: southsky.ts `KITE_ROOF`) ---------- */
+
+/** The top bridge to Kite: its side towards the stair open over its last stretch */
+function kiteOpening(a: Pt, c: Pt): { side: number; from: number } {
+  const R = KITE_ROOF;
+  const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  const r: Pt = [-(c[1] - a[1]) / l, (c[0] - a[0]) / l];
+  return { side: r[0] * R.along[0] + r[1] * R.along[1] > 0 ? 1 : -1, from: l - (R.W.o1 + 0.05) };
+}
+/** Kite's parapet edge the landing crosses: the gap's two ends on it, or null for any other edge */
+function kiteParapetGap(a: Pt, e: Pt): [Pt, Pt] | null {
+  const R = KITE_ROOF;
+  const [g0, g1] = [R.at(R.S.flight1 - 0.15, 0), R.at(R.S.land1, 0)];
+  const l = Math.hypot(e[0] - a[0], e[1] - a[1]);
+  const t: Pt = [(e[0] - a[0]) / l, (e[1] - a[1]) / l];
+  const off = (p: Pt) => Math.abs((p[0] - a[0]) * -t[1] + (p[1] - a[1]) * t[0]);
+  if (off(g0) > 0.3 || off(g1) > 0.3) return null;
+  const f = (p: Pt) => Math.max(0, Math.min(l, (p[0] - a[0]) * t[0] + (p[1] - a[1]) * t[1]));
+  const [s0, s1] = [Math.min(f(g0), f(g1)), Math.max(f(g0), f(g1))];
+  return [[a[0] + t[0] * s0, a[1] + t[1] * s0], [a[0] + t[0] * s1, a[1] + t[1] * s1]];
+}
+/** The patch off the bridge, the flight up the face, the landing over the parapet, their rails; the roof's rail on its
+ * parapet; a lamp by the landing */
+function drawKiteAccess(b: Batch, low: boolean) {
+  const R = KITE_ROOF;
+  const { o0, o1 } = R.W;
+  const { patch0, flight0, flight1, land1 } = R.S;
+  const P = (sv: number, o: number, y: number): [number, number, number] => {
+    const p = R.at(sv, o);
+    return [p[0], y, p[1]];
+  };
+  // (the patch and the landing: slabs, their floors the decks' paving; the patch's outer edge closed)
+  flat(b, R.patch, R.from + 0.006, DECK_FLOOR);
+  flat(b, R.patch, R.from - 0.2, CONC_DARK, false);
+  flat(b, R.landing, R.y + 0.006, DECK_FLOOR);
+  flat(b, [R.at(flight1 - 0.15, 0), R.at(land1, 0), R.at(land1, o1), R.at(flight1 - 0.15, o1)], R.y - 0.2, CONC_DARK, false);
+  // (the flight: a stringer under its outer edge and its steps, solid)
+  beam(b, P(flight0, o1 - 0.05, R.from), P(flight1, o1 - 0.05, R.y), 0.3, 0.1, CONC);
+  const n = Math.round((flight1 - flight0) / 0.27);
+  const run = (flight1 - flight0) / n;
+  const rise = (R.y - R.from) / n;
+  const rot = -Math.atan2(R.along[1], R.along[0]);
+  for (let k = 0; k < n; k++) {
+    const c = R.at(flight0 + run * (k + 0.5), (o0 + o1) / 2);
+    b.add(plain(new THREE.BoxGeometry(run, rise * (k + 1) + 0.2, o1 - o0).rotateY(rot).translate(c[0], R.from - 0.2 + (rise * (k + 1) + 0.2) / 2, c[1])), CONC);
+  }
+  // (the rail along the outer edge, the patch's to the landing's end, and across the landing's far end)
+  const yAt = (sv: number) => (sv <= flight0 ? R.from : sv >= flight1 ? R.y : R.from + ((sv - flight0) / (flight1 - flight0)) * (R.y - R.from));
+  const pts = [patch0, flight0, flight1, land1];
+  for (let k = 1; k < pts.length; k++) rod(b, P(pts[k - 1], o1 - 0.03, yAt(pts[k - 1]) + 0.68), P(pts[k], o1 - 0.03, yAt(pts[k]) + 0.68), 0.025, RAIL);
+  for (const sv of pts) rod(b, P(sv, o1 - 0.03, yAt(sv)), P(sv, o1 - 0.03, yAt(sv) + 0.68), 0.022, RAIL);
+  rod(b, P(land1, 0, R.y + 0.68), P(land1, o1 - 0.03, R.y + 0.68), 0.025, RAIL);
+  rod(b, P(land1, 0, R.y), P(land1, 0, R.y + 0.68), 0.022, RAIL);
+  // (the roof's rail on its parapet, posts every 1.2, open where the landing comes over)
+  const ring = R.outer;
+  const gap = [R.at(flight1 - 0.15, 0), R.at(land1, 0)];
+  const nearGap = (p: Pt) => Math.hypot(p[0] - (gap[0][0] + gap[1][0]) / 2, p[1] - (gap[0][1] + gap[1][1]) / 2) < (land1 - flight1 + 0.15) / 2 + 0.25;
+  ring.forEach((p, j) => {
+    const q = ring[(j + 1) % ring.length];
+    const L = Math.hypot(q[0] - p[0], q[1] - p[1]);
+    const m = Math.max(1, Math.round(L / 1.2));
+    for (let k = 0; k < m; k++) {
+      const [u, v] = [k / m, (k + 1) / m];
+      const pa: Pt = [p[0] + (q[0] - p[0]) * u, p[1] + (q[1] - p[1]) * u];
+      const pb: Pt = [p[0] + (q[0] - p[0]) * v, p[1] + (q[1] - p[1]) * v];
+      if (nearGap(pa) || nearGap(pb)) continue;
+      rod(b, [pa[0], R.y + 0.68, pa[1]], [pb[0], R.y + 0.68, pb[1]], 0.025, RAIL);
+      rod(b, [pa[0], R.y, pa[1]], [pa[0], R.y + 0.68, pa[1]], 0.022, RAIL);
+    }
+  });
+  // (a lamp on a short post by the landing, lit at night)
+  const lp = R.at(land1 - 0.1, o1 - 0.1);
+  rod(b, [lp[0], R.y, lp[1]], [lp[0], R.y + 1.1, lp[1]], 0.03, CONC_DARK);
+  b.add(plain(new THREE.BoxGeometry(0.16, 0.12, 0.16).translate(lp[0], R.y + 1.16, lp[1])), CAGE_LAMP);
+  void low;
+}
 function drawTower(b: Batch, t: Block, low: boolean) {
   const k = kit(b, WORLD);
   const ring = t.foot;
@@ -605,7 +681,12 @@ function drawTower(b: Batch, t: Block, low: boolean) {
       k.wall(LOBBY, a, e, base, base + LOBBY_H, n, u0 * 3);
       quad(b, a, e, base + LOBBY_H, base + GROUND_H, n, CONC_DARK);
       k.wall(WALL, a, e, base + GROUND_H, top, n, u0, 1);
-      parapet(b, a, e, n, top);
+      // (Kite Point's: open where the way up from the top bridge comes over it, docs/flats-plan.md 6b)
+      const gap = t.id === 'kite' ? kiteParapetGap(a, e) : null;
+      if (gap) {
+        parapet(b, a, gap[0], n, top);
+        parapet(b, gap[1], e, n, top);
+      } else parapet(b, a, e, n, top);
       if (j === away) stripe(b, a, e, n, base + GROUND_H, top + PARAPET, acc);
     });
     flat(b, ring, top - 0.002, ROOF);
@@ -960,18 +1041,20 @@ const CORK = toon('#8b6a45');
 /** The towers' door lamps: sodium orange, off by day */
 const SODIUM = neon('#ff9a3c', 0.08, 1.7);
 const TAG_PAINT = ['#d94fb0', '#38c6d9', '#e6c13a', '#e0e0e0'].map((c) => toon(c));
-function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | null = STRIP) {
+function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | null = STRIP, open: { side: number; from: number } | null = null) {
   const k = kit(b, WORLD);
   const w = BRIDGE_HALF * 2;
   const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  // (a side left open from `from` along it to its end: the way out to Kite Point's roof stair, docs/flats-plan.md 6b)
+  const wallEnd = (side: number): Pt => (open && open.side === side ? [a[0] + ((c[0] - a[0]) * open.from) / l, a[1] + ((c[1] - a[1]) * open.from) / l] : c);
   k.all(() => {
     along(b, a, c, w, y - 0.2, y, CONC_DARK);
     // (R1, J1 part 2: the floor between the parapets a lighter paving over the dark slab, 6 mm up)
     along(b, a, c, w - 0.26, y, y + 0.006, DECK_FLOOR);
     for (const side of [-1, 1]) {
-      along(b, a, c, 0.12, y, y + 0.6, CONC, side * (BRIDGE_HALF - 0.06));
+      along(b, a, wallEnd(side), 0.12, y, y + 0.6, CONC, side * (BRIDGE_HALF - 0.06));
       // (clear glass to see the estate through: the owner's call, 2026-11-26, docs/flats-plan.md)
-      along(b, a, c, 0.04, y + 0.6, y + 1.5, CLEAR_GLASS, side * (BRIDGE_HALF - 0.1));
+      along(b, a, wallEnd(side), 0.04, y + 0.6, y + 1.5, CLEAR_GLASS, side * (BRIDGE_HALF - 0.1));
     }
     along(b, a, c, w + 0.12, y + 1.5, y + 1.68, CONC);
   });
@@ -987,7 +1070,7 @@ function drawBridge(b: Batch, a: Pt, c: Pt, y: number, strip: THREE.Material | n
     const r: Pt = [-t[1], t[0]];
     const at = (s: number, o: number): Pt => [a[0] + t[0] * s + r[0] * o, a[1] + t[1] * s + r[1] * o];
     for (let s = 1.2; s < l - 0.3; s += 1.2) {
-      for (const side of [-1, 1]) along(b, at(s - 0.04, side * (BRIDGE_HALF - 0.1)), at(s + 0.04, side * (BRIDGE_HALF - 0.1)), 0.07, y + 0.6, y + 1.5, CONC_DARK);
+      for (const side of [-1, 1]) if (!(open && open.side === side && s > open.from)) along(b, at(s - 0.04, side * (BRIDGE_HALF - 0.1)), at(s + 0.04, side * (BRIDGE_HALF - 0.1)), 0.07, y + 0.6, y + 1.5, CONC_DARK);
       // (the floor's joint under each mullion pair)
       along(b, at(s, -(BRIDGE_HALF - 0.13)), at(s, BRIDGE_HALF - 0.13), 0.03, y + 0.006, y + 0.012, CONC_DARK);
     }
@@ -1511,6 +1594,46 @@ const PLY_BOARD = toon('#a3804f');
  * a bench and the lift doors on its back wall, the stairs up in its corner, strip lights (one flickering, one dead),
  * and its grit (the owner's pick, rough: tags, litter, a boarded pane, a dented post box); never threatening
  */
+/** The block's way in (docs/flats-plan.md Phase 4, the owner's answer: the block names already on the bridges, no new
+ * copy): a concrete canopy over its lobby's door, the block's name on its front edge, a warm light under it; beside the
+ * door a door-entry panel (near only, not on phones) */
+const ENTRY_LAMP = neon('#ffd9a0', 0.12, 1.6);
+const PANEL = toon('#2b2d36');
+const PANEL_LIT = neon('#9fd8ff', 0.2, 1.2);
+function drawEntrance(b: Batch, l: (typeof LOBBIES)[number], low: boolean) {
+  const { base, t, n } = l;
+  const at = (u: number, o: number): Pt => [l.door[0] + t[0] * u + n[0] * o, l.door[1] + t[1] * u + n[1] * o];
+  const half = HALL.door / 2 + 0.75;
+  const [out, y0, y1] = [1.05, base + 1.3, base + 1.38];
+  // (the slab, its front edge deeper: the fascia the name sits on)
+  const slab: Pt[] = [at(-half, 0.02), at(half, 0.02), at(half, out), at(-half, out)];
+  flat(b, slab, y1, CONC);
+  flat(b, slab, y0, CONC_DARK, false);
+  along(b, at(-half, out - 0.04), at(half, out - 0.04), 0.08, y0 - 0.2, y1 + 0.02, CONC);
+  for (const sx of [-1, 1]) along(b, at(sx * half, 0.02), at(sx * half, out), 0.06, y0, y1, CONC);
+  // (the name, read from in front: left to right along -t when facing the door from outside)
+  const blk = blockById(l.of);
+  const row = SIGN_NAMES.indexOf(blk.name.toUpperCase());
+  if (row >= 0) {
+    // (left to right for someone facing the door: their right is -n turned a quarter, whichever way the face runs)
+    const m = at(0, out + 0.012);
+    const right: Pt = [n[1], -n[0]];
+    nameQuad(b, [m[0] - right[0] * 0.8, m[1] - right[1] * 0.8], [m[0] + right[0] * 0.8, m[1] + right[1] * 0.8], y0 - 0.17, y1 - 0.01, n, row);
+  }
+  // (the light under it)
+  const c = at(0, out / 2);
+  b.add(plain(new THREE.BoxGeometry(0.35, 0.03, 0.2).rotateY(-Math.atan2(t[1], t[0])).translate(c[0], y0 - 0.016, c[1])), ENTRY_LAMP);
+  if (low) return;
+  b.detail(() => {
+    // (the door-entry panel on the wall beside the door: a dark plate, a lit display, a row of buttons)
+    const p = at(HALL.door / 2 + 0.35, 0.025);
+    const yaw = -Math.atan2(t[1], t[0]);
+    b.add(plain(new THREE.BoxGeometry(0.22, 0.34, 0.03).rotateY(yaw).translate(p[0], base + 0.72, p[1])), PANEL);
+    const q = at(HALL.door / 2 + 0.35, 0.042);
+    b.add(plain(new THREE.BoxGeometry(0.14, 0.05, 0.01).rotateY(yaw).translate(q[0], base + 0.82, q[1])), PANEL_LIT);
+    for (let r = 0; r < 3; r++) b.add(plain(new THREE.BoxGeometry(0.15, 0.025, 0.012).rotateY(yaw).translate(q[0], base + 0.62 + r * 0.05, q[1])), RAIL);
+  });
+}
 function drawLobby(b: Batch, l: (typeof LOBBIES)[number], low: boolean) {
   const k = kit(b, WORLD);
   const { w, d, base, t, n } = l;
@@ -2131,7 +2254,7 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
       for (const br of set) {
         const [a, c] = br.pts;
         const y = (br.ys[0] + br.ys[1]) / 2;
-        drawBridge(b, a, c, y);
+        drawBridge(b, a, c, y, STRIP, br.id === `core-kite-${TOP_FLOOR}` ? kiteOpening(a, c) : null);
         // (each end's block named on the parapet a little before it, on the left walking towards it)
         const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
         if (l > 4 && !low)
@@ -2158,11 +2281,18 @@ export function register({ low, scene, tick }: { low: boolean; scene: THREE.Scen
     drawFlat(b, low);
     b.build(into, { cast: false, receive: false, lift: false });
   });
+  // Kite Point's roof, the way up (docs/flats-plan.md 6b)
+  site('south-blocks kite roof', rectOf([...KITE_ROOF.patch, ...KITE_ROOF.flight, ...KITE_ROOF.landing, ...KITE_ROOF.outer], 1), (into) => {
+    const b = new Batch();
+    drawKiteAccess(b, low);
+    b.build(into, { cast: true, receive: true, lift: false });
+  });
   // The lobbies (Phase 6): each its own site, out of the sun's shadow (they're inside the blocks)
   for (const l of LOBBIES)
     site(`south-blocks ${l.id}`, rectOf([...l.poly, ...l.doorPoly], 1), (into) => {
       const b = new Batch();
       drawLobby(b, l, low);
+      drawEntrance(b, l, low);
       b.build(into, { cast: false, receive: false, lift: false });
     });
   // Cables strung between the blocks (Phase 5), not on phones

@@ -83,3 +83,20 @@ Each phase: tests extended, every check, shots, merged on its own.
 - 2026-11-27: the owner's answers (A to each): Phase 4's entrances carry the block names already on the bridges (e.g.
   "Linnet Court"), no new copy; Phase 6's roof access is Kite Point's (Degen's flat's tower). Both to Ready; the
   nightly loop builds them in the board's order.
+- 2026-11-27, night 7 pass 2 (23:07): Phase 4 built: each lobby's door under a concrete canopy, the block's name on its
+  front edge (the bridges' sign sheet, no new copy), a warm light under it, a door-entry panel beside the door (near
+  only). The first shots had the names mirrored: fixed, they read left to right from in front.
+- 2026-11-28, night 7 pass 3 (00:07): Phase 4 merged (#294). Phase 6 (Kite Point's roof, the owner's pick) is bigger
+  than one pass, so split: **6a** the rules: from The Core's top-floor bridge's end at Kite's door (`core-kite-17`), a
+  short caged stair up Kite's face to its roof (`southsky.ts`: a flight shape and its landing, as The Core's stair);
+  the roof a walkable level inset from the parapet, the plant room and beacon left out of it (strips round them); the
+  railing the galleries' (`GALLERY_RAIL`) on the parapet; `skyWall()` keeps you off the edge; tested in
+  `tests/southsky.test.ts` (on from the bridge, up the stair, round the roof, never past the parapet, the smoke test's
+  `sky` scene still passing). **6b** the drawing: the stair's cage, the rail, a hatch and a lamp on the roof.
+- 2026-11-28, night 7 pass 4 (01:07): Phase 6a built and checked (lint, `npm test` and `test:wide` 2432 of 2432, smoke
+  fine, bootJs 768.7 KB, texFull 4331.4): `KITE_ROOF` and its shapes in southsky.ts, tested by a walk in tenths of a
+  metre from the bridge's end up the stair and round the roof. Held back, not merged: alone it would walk you through
+  the top bridge's glass onto a stair not drawn yet. It merges with 6b (the drawing) next pass.
+- 2026-11-28, night 7 pass 5 (02:07): Phase 6b drawn: the top bridge's side open over its last metre, the patch, a
+  solid flight on a stringer up Kite's face, the landing over a gap in the parapet, a rail all the way and round the
+  roof's parapet, a lamp by the landing. Shots from beside the tower and from above. 6a and 6b merge together.

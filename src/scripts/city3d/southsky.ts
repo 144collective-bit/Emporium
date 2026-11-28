@@ -14,7 +14,7 @@
  */
 import {
   BLOCKS, BLOCKS_RECT, BRIDGES, BRIDGE_HALF, CAGE, CAGES, CORES, DECKS, GALLERY_W, SKY_FLOORS, FLAT, LOBBIES, PERCH, TOP_FLOOR, lobbyAt, TWIN_CORE_HALF, blockById, floorY,
-  inBlock, lineLength, outward, pointAt, section, storeysOf, type Block, type Pt,
+  inBlock, lineLength, outward, pointAt, roofY, section, storeysOf, TOWER_HALF, type Block, type Pt,
 } from './southblocks';
 import { inside, shift } from './streetfaces';
 import { onDeckProp } from './southyard';
@@ -255,7 +255,106 @@ export function flatDoors(y: number): { id: string; x: number; z: number; label:
   return [{ id: 'flat:door', x: p[0], z: p[1], label: FLAT_STATE.open ? 'Your flat' : 'Flat' }];
 }
 
-export const SKY_SHAPES: SkyShape[] = [...galleryShapes(), ...landingShapes(), ...bridgeShapes(), ...DECKS.map((d) => level(`deck ${d.id}`, d.poly, d.y)), ...stairShapes(), ...flatShapes()];
+/* ---------- Kite Point's roof (docs/flats-plan.md Phase 6a, the owner's pick) ---------- */
+
+/** A convex outline pulled in by `d` all round (each corner along its bisector) */
+function inset(poly: Pt[], d: number): Pt[] {
+  const c: Pt = [poly.reduce((s, p) => s + p[0], 0) / poly.length, poly.reduce((s, p) => s + p[1], 0) / poly.length];
+  return poly.map((p, i) => {
+    const [a, b] = [poly[(i + poly.length - 1) % poly.length], poly[(i + 1) % poly.length]];
+    const unit = (q: Pt, r: Pt): Pt => {
+      const l = Math.hypot(r[0] - q[0], r[1] - q[1]) || 1;
+      return [(r[0] - q[0]) / l, (r[1] - q[1]) / l];
+    };
+    const [u, v] = [unit(p, a), unit(p, b)];
+    let m: Pt = [u[0] + v[0], u[1] + v[1]];
+    const ml = Math.hypot(m[0], m[1]) || 1;
+    m = [m[0] / ml, m[1] / ml];
+    // (towards the middle, d from each edge: the bisector's length over the half angle's sine)
+    if ((c[0] - p[0]) * m[0] + (c[1] - p[1]) * m[1] < 0) m = [-m[0], -m[1]];
+    const half = Math.acos(Math.max(-1, Math.min(1, u[0] * v[0] + u[1] * v[1]))) / 2;
+    const k = d / Math.max(0.2, Math.sin(half));
+    return [p[0] + m[0] * k, p[1] + m[1] * k];
+  });
+}
+/**
+ * Kite Point's roof: the band between its parapet and its plant room (set in `TOWER_HALF * 0.3`, southblocks3d.ts),
+ * reached from The Core's top-floor bridge: a patch off the bridge's last stretch through its side, a flight up the
+ * tower's west face to the roof's level, a landing over the parapet. `KITE_ROOF` for the drawing (6b) and the tests.
+ */
+export const KITE_ROOF = (() => {
+  const k = blockById('kite');
+  const y = roofY(k.base, storeysOf(k));
+  const br = BRIDGES.find((q) => q.id === `core-kite-${TOP_FLOOR}`)!;
+  const end = br.pts[1];
+  const from = br.ys[1];
+  // (the face it meets: the foot's edge nearest the bridge's end; along it towards its north end, out from the tower)
+  let best = 0;
+  let bestD = Infinity;
+  k.foot.forEach((a, j) => {
+    const c = k.foot[(j + 1) % k.foot.length];
+    const [dx, dz] = [c[0] - a[0], c[1] - a[1]];
+    const f = Math.max(0, Math.min(1, ((end[0] - a[0]) * dx + (end[1] - a[1]) * dz) / (dx * dx + dz * dz)));
+    const dd = Math.hypot(a[0] + dx * f - end[0], a[1] + dz * f - end[1]);
+    if (dd < bestD) [best, bestD] = [j, dd];
+  });
+  const [a, c] = [k.foot[best], k.foot[(best + 1) % k.foot.length]];
+  const l = Math.hypot(c[0] - a[0], c[1] - a[1]);
+  let along: Pt = [(c[0] - a[0]) / l, (c[1] - a[1]) / l];
+  // (up the face away from the bridge towards the end with more room)
+  const sToC = (c[0] - end[0]) * along[0] + (c[1] - end[1]) * along[1];
+  const sToA = (a[0] - end[0]) * along[0] + (a[1] - end[1]) * along[1];
+  if (Math.abs(sToA) > Math.abs(sToC)) along = [-along[0], -along[1]];
+  const kc: Pt = [k.foot.reduce((s, p) => s + p[0], 0) / k.foot.length, k.foot.reduce((s, p) => s + p[1], 0) / k.foot.length];
+  let out: Pt = [-along[1], along[0]];
+  if ((kc[0] - end[0]) * out[0] + (kc[1] - end[1]) * out[1] > 0) out = [-out[0], -out[1]];
+  const at = (sv: number, o: number): Pt => [end[0] + along[0] * sv + out[0] * o, end[1] + along[1] * sv + out[1] * o];
+  const W = { o0: 0.05, o1: 1.05 };
+  const S = { patch0: 0.3, flight0: 1.6, flight1: 4.6, land1: 5.4 };
+  const ring = k.foot;
+  return {
+    y,
+    from,
+    at,
+    along,
+    out,
+    W,
+    S,
+    // (each piece a little over the next, so they join: a step's worth at the same height)
+    patch: [at(S.patch0, W.o0), at(S.flight0 + 0.15, W.o0), at(S.flight0 + 0.15, W.o1), at(S.patch0, W.o1)],
+    flight: [at(S.flight0, W.o0), at(S.flight1, W.o0), at(S.flight1, W.o1), at(S.flight0, W.o1)],
+    landing: [at(S.flight1 - 0.15, -1.0), at(S.land1, -1.0), at(S.land1, W.o1), at(S.flight1 - 0.15, W.o1)],
+    /** The band's outer edge (inside the parapet) and inner (clear of the plant room) */
+    outer: inset(ring, 0.35),
+    inner: inset(ring, TOWER_HALF * 0.3 - 0.25),
+  };
+})();
+const kiteRoofShapes = (): SkyShape[] => {
+  const R = KITE_ROOF;
+  const rise = (x: number, z: number) => {
+    const sv = (x - R.at(0, 0)[0]) * R.along[0] + (z - R.at(0, 0)[1]) * R.along[1];
+    return R.from + (R.y - R.from) * Math.max(0, Math.min(1, (sv - R.S.flight0) / (R.S.flight1 - R.S.flight0)));
+  };
+  const n = R.outer.length;
+  return [
+    level('kite roof patch', R.patch, R.from),
+    { id: 'kite roof stair', poly: R.flight, y: rise, lo: R.from, hi: R.y },
+    level('kite roof landing', R.landing, R.y),
+    // (each side's strip carried a little past its ends, so the strips overlap round the corners and join)
+    ...R.outer.map((p, i) => {
+      const grow = (a: Pt, b: Pt, d: number): [Pt, Pt] => {
+        const l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+        const t: Pt = [((b[0] - a[0]) / l) * d, ((b[1] - a[1]) / l) * d];
+        return [[a[0] - t[0], a[1] - t[1]], [b[0] + t[0], b[1] + t[1]]];
+      };
+      const [o0, o1] = grow(p, R.outer[(i + 1) % n], 0.15);
+      const [i0, i1] = grow(R.inner[i], R.inner[(i + 1) % n], 0.25);
+      return level(`kite roof ${i}`, [o0, o1, i1, i0], R.y);
+    }),
+  ];
+};
+
+export const SKY_SHAPES: SkyShape[] = [...galleryShapes(), ...landingShapes(), ...bridgeShapes(), ...DECKS.map((d) => level(`deck ${d.id}`, d.poly, d.y)), ...stairShapes(), ...flatShapes(), ...kiteRoofShapes()];
 
 /* ---------- The galleries' fronts as cover (docs/flats-plan.md Phase 1) ---------- */
 

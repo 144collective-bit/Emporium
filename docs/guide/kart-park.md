@@ -251,12 +251,21 @@ keep it up to date when what it describes changes.
   game server (keep the boards' shape server-ready).
 - **On screen:** `kart-types.ts` holds the interfaces the three parts agree
   on. `kartpark3d.ts` (`buildKartPark()`, at the boot) is the place: the
-  spot's group (the garages with their numbers and the screens, the clubhouse and
-  its terrace, the timing tower with its board, both grandstands, the
-  gate's arch with SECTOR 7 KART PARK both ways, the kiosk), its people,
-  trees, lamps and parked cars, and `KART_VIEW` (the way round and whether
+  spot's group and its ring, the screens' one live picture (`board()`),
+  the trophy cabinet's cups, the fans' bob, its people, trees, lamps and
+  parked cars, and `KART_VIEW` (the way round and whether
   the pits are closed, which `setCourse()` / `racing()` set and the
-  grounds apply when they've come). `kartgrounds3d.ts` (a district loaded
+  grounds apply when they've come). The buildings and stands drawn into
+  the spot's group (the garages with their numbers and the screens'
+  frames, the clubhouse and its terrace, the timing tower with its board,
+  both grandstands and the fans, the podium, the flags, the gate's arch
+  with SECTOR 7 KART PARK both ways, the kiosk, the totem and signs) are
+  `kartpark-draw.ts`, a district of its own since the boot's slimming
+  (2026-11-27, `LAZY_DISTRICTS` id `kartpark`), sharing `KART_PARK_LIVE`
+  with the boot; its far form is made once it's in (lod.ts `FAR_LATER`).
+  The stand's seats and fans are kartfacility.ts `standSeats()`, which the
+  boot runs too to step the park's generator (`KART_SEED`) past them, so a
+  phone keeps the same trees. `kartgrounds3d.ts` (a district loaded
   as you approach, `LAZY_DISTRICTS` id `karts`; signs shared through
   `kartsigns.ts`) draws the rest as sites: the lawn, the paving and the
   banks; the circuit:

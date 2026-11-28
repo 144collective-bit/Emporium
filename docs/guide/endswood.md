@@ -100,7 +100,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   near only); street-level grit (Phase 5: the shops under the podium deck, `DECK_SHOPS` in southblocks.ts, The Wash House
   and Deck Stores lit with their neon and eight shuttered units, `drawShops()`; cables between the blocks, `CABLES`;
   court puddles that catch the sodium light; noticeboards by the lift doors); the lobbies (Phase 6: a hall in each
-  block but The Core, `LOBBIES` in southblocks.ts, cut out of its solids, `coverWithHall()`, walked on groundheight.ts's
+  block but The Core, `LOBBIES` in southblocks.ts, its door under a concrete canopy with the block's name on its front
+  edge, a warm light under it and a door-entry panel beside the door: `drawEntrance()`, docs/flats-plan.md Phase 4;
+  cut out of its solids, `coverWithHall()`, walked on groundheight.ts's
   `lobby` layer, its lift doors calling the block's lift, `lobbyLiftDoor()`; drawn rough by `drawLobby()`); Degen's flat (Phase 7a: `FLAT` in Kite Point's 15th floor, its rooms walked once it's
   his, southsky.ts `setFlatOpen()`, its card flat-ui.ts, drawn by `drawFlat()`; Kite's solids hollowed round it for the
   camera, `hollowAt()`); the two open shops run as places (Phase 7b: tycoon.ts places `e0` The Wash House and `e1`
@@ -120,7 +122,9 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   `skyUp()` / `skyWall()` (walk.ts's `blocked()`: up there only the railings stop you, the solids don't); the lifts
   (`SKY_LIFTS`, `skyLiftDoors()`, `liftArrival()`, `floorName()`) and their floor picker (`skylift-ui.ts`: the metro's
   card, `[data-metro]`, its words put back after; index.ts `rideTo()`). A bridge to a tower ends at its door: the towers
-  aren't entered. The smoke test's `sky` and `stair` scenes.
+  aren't entered, but Kite Point's roof is walked (docs/flats-plan.md Phase 6, `KITE_ROOF`: off The Core's top bridge
+  through its open side, a flight up the tower's west face, a landing over the parapet, the band round the plant room;
+  drawn by southblocks3d.ts `drawKiteAccess()`, its rail on the parapet). The smoke test's `sky` and `stair` scenes.
   The galleries' fronts (docs/flats-plan.md Phase 1, the owner's call 2026-11-26): a low concrete wall `GALLERY_WALL`
   (0.40) with its coping and an open steel rail on posts every 1.2 m, its top `GALLERY_RAIL` (0.68): crouched you see
   and shoot between them, standing over the rail. `SKY_COVER` (southsky.ts) is the walls as boxes with a bottom, which
@@ -174,7 +178,7 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   boot**: only the village's chunk imports it (laying it out took seconds as the page loaded), so its solids join
   there, `registerCouncil()` calling `addSolids()` on the main thread (the houses' with `lift` false, their tops
   already over their plinths), as Sunridge's houses do; tests that check against `SOLIDS` across the south add them
-  (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts).
+  (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts; each bungalow's plot, `drawGardens()`: front and back lawns, a front hedge with gaps for the drive and the door's path, timber fences round the sides and back, the loop's J8).
 - **Aldwyn's Green Rec** (`rec.ts`, DOM-free, tested in `tests/rec.test.ts`, 3e): `PITCH`, `GOALS`, `PAVILION`, `VERANDA`,
   `SKATE` and its features, `PLAYGROUND`, `BENCHES`, `GATE`, `FOOTPATH`, `BRIDGE` / `recBridgeY()` (groundheight.ts's
   `recbridge` layer), `REC_PATH`, `REC_SPAWN`, `REC_SOLIDS`, `REC_RECT`; a place (`rec`, endsplaces.ts). Drawn by

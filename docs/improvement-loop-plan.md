@@ -323,9 +323,12 @@ sets the order (rule 2).
       coping or coursing; the yews are bare cones. R1 for stone: a coping, courses, a darker plinth; the yews rounded.
       Done 2026-11-27 (night 6 pass 6): a darker plinth proud of the wall, a dressed coping, courses near only; the
       yews a rounded bell with a smaller crown and a short trunk. Drawing only: the wall's height and solids unchanged.
-- [ ] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
+- [x] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
       with paths stopping short, no plots, and straight hedge pieces standing alone in the open land beyond. R3: plots
-      with low hedges or fences and front paths, the stray hedges joined into field boundaries or gone.
+      with low hedges or fences and front paths, the stray hedges joined into field boundaries or gone. Done
+      2026-11-28: the plots (below, the log); the stray hedges are J8b.
+- [ ] **J8b (R3): the stray hedges past the bungalows** (`h-council-air`): the straight hedge pieces alone in the open
+      land east and south of the bungalows, joined into field boundaries or removed (the owner's pick).
 - [ ] **J9 (R1/R3): Lot 9's empty pitches and lanes** (the hunt, part 2, `h-lot9-air`): the empty pitches are bare
       grey slabs and the lanes plain grey strips meeting square, no verge or kerb. R1 for the pads (gravel, a hook-up
       post, worn edges), R3 for the lanes' verges and corners.
@@ -345,7 +348,7 @@ sets the order (rule 2).
       each cul-de-sac's path to the next street), trees in groups, a bench. Done 2026-11-26 (`sungreens.ts`): the
       greens open onto Mesa Drive after all; footpaths from Saguaro and Palo Verde Courts' circles to it, bollards,
       a bench each, 11 trees in groups; no lot taken (the owner's call). Ocotillo Court's circle is boxed in by lots.
-- [ ] **J13 (R1, small): Sunridge's back-yard patios** (`s-street` [150,4,-60] to [200,1,-75]): pale bare slabs; a
+- [x] **J13 (R1, small): Sunridge's back-yard patios** (`s-street` [150,4,-60] to [200,1,-75]): pale bare slabs; a
       paving joint pattern or a darker border.
 - [ ] **J14 (R1): the big dark hall by The Trenches' river** (the hunt, 2026-11-25, `t-air` [-70,75,250] to
       [-40,0,160]): a huge dark box with a flat plain roof and no detail, between the riverside road and the terraces.
@@ -663,3 +666,16 @@ session.)
   772.5 KB. Shots after (`h-church-foot`, the wall close). Merged (the pass ran to about 03:50).
 - 2026-11-27, the owner (after night 6): J13 to Ready; the flats' Phases 4 (entrances, the existing block names) and 6
   (Kite Point's roof) to Ready; with Ready empty, carry on in the plan's order (J8, then J9).
+- 2026-11-27, night 7 pass 1 (22:07): J13 (the board's top Ready card), Sunridge's back-yard patios: pavers in a darker
+  border, their joints near only (sunyards3d.ts). Lint, `npm test` and `test:wide` 2430 of 2430, smoke fine, bootJs 772.5
+  KB. Shot of an open patio close. Merged.
+- 2026-11-28, night 7 pass 6 (03:07): J8, the bungalows' plots (council3d.ts `drawGardens`, drawing only): a back
+  lawn, a low front hedge with gaps for the drive and a new path to the door, stained timber fences down both sides
+  and across the back. Lint, typecheck, `npm test` 2432 of 2432, bootJs 768.6 KB, texFull 4331.4. Shots
+  (`h-council-air` and a low one) after a fresh build (the first set ran on the old build and showed nothing new).
+  The stray hedges beyond are split off as J8b. Merged (the pass ran to about 03:45).
+- 2026-11-28, the owner (after night 7): J9 (Lot 9's pitches and lanes) first next loop night, in the plan's order;
+  J8b (the stray hedges) after. J9 to Ready.
+- 2026-11-28, the owner: every looks job (the hunt's H1-H19 and the sweeps) to Ready; the board's ranks kept as the
+  order (J9, J8b, the sweeps, speed, exits, then the hunt's cards). Exits 2 ranked ahead of Exits 3. H9's gantry boards
+  carry only district and place names already in the city, with arrows: no new copy, no numbers.

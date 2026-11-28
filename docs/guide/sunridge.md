@@ -35,7 +35,8 @@ keep it up to date when what it describes changes.
   `sunhouses3d.ts` (a site a house: tile roofs from a texture a colour, lit
   windows at night, details near only); the hipped roofs are `roofs3d.ts`
   (shared with Crestmont's estates). Phase 3 (the yards) is built:
-  `sunyards.ts` (DOM-free, the chunk's, tested in `tests/sunyards.test.ts`):
+  `sunyards.ts` (DOM-free, the chunk's, tested in `tests/sunyards.test.ts`; the patios drawn as pavers in a
+  darker border, their joints near only: the loop's J13):
   `YARDS` (desert or lawn fronts and their plants, the bins, the back yard's
   ground, patio, ramada, grill, pool, extras, the gates), `WALLS` (block walls
   between and behind the lots, one to a line, none on the perimeter wall's,
