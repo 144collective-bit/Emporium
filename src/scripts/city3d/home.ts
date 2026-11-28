@@ -605,10 +605,13 @@ const SEAT_X = rx0 + 3.26;
 const SEAT_Z = rz0 + 2.2;
 export const HOME_WAKE = { x: SEAT_X - 0.33, z: SEAT_Z, yaw: Math.PI / 2 };
 /**
- * The sofa as a seat (moments.ts's bench mark: its middle, `ry` the way the sitter faces, 0 south; he stands up onto
- * `HOME_WAKE`, `MOMENT.stand.bench` in front of it), its cushion `h` over the floor
+ * The sofa as a seat (moments.ts `seatMark()`: a bench's mark, `ry` the way the sitter faces, 0 south; he stands up
+ * onto `HOME_WAKE`, `MOMENT.stand.bench` in front of it): his hips `h` over the floor, a thigh's half-thickness over
+ * its cushion (0.22, home3d.ts `furnish()`), and `back` behind the mark: there, so his thighs (about 0.19) lie on the
+ * cushion with his knees over its front edge (the owner's call, 2026-11-28: he was sunk into the cushion, his hips
+ * level with its top and his legs in its front). His feet hang a touch over the floor: it's a deep sofa
  */
-export const SOFA_SEAT = { x: SEAT_X, z: SEAT_Z, ry: -Math.PI / 2, h: 0.24 };
+export const SOFA_SEAT = { x: SEAT_X, z: SEAT_Z, ry: -Math.PI / 2, h: 0.29, back: 0 };
 
 /**
  * The room's windows (home3d.ts draws them: the front one over the sofa, the one east of the front door over the

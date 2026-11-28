@@ -25,7 +25,7 @@ import { LIVE_PLACES } from '../src/scripts/city3d/live';
 import { CARS } from '../src/scripts/city3d/carspec';
 import { PLAYER_CARS } from '../src/scripts/city3d/mycar';
 import { BENCH_VIEWS } from '../src/scripts/city3d/bench';
-import { benchMark } from '../src/scripts/city3d/moments';
+import { benchMark, seatMark } from '../src/scripts/city3d/moments';
 /** What's solid, the council rows' and the allotments' too (they join with the village's chunk: council3d.ts) */
 const SOLIDS = [...BOOT_SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS];
 
@@ -337,6 +337,16 @@ test('he wakes sat on the sofa, its cushion under him, and stands up onto the wa
   assert.ok(Math.abs(Math.cos(m.face - (HOME_WAKE.yaw + Math.PI))) > 0.999);
   assert.ok(inRect(sofa.rect, m.seat!.x, m.seat!.z), 'the seat is on the sofa');
   assert.ok(SOFA_SEAT.h > 0.15 && SOFA_SEAT.h < sofa.h, 'on its cushion, under its back');
+  // On it, not in it (the owner's call, 2026-11-28): his hips over the cushion (0.22, home3d.ts furnish()) by a
+  // thigh's half-thickness, as a bench's sitter's are; far enough in that his thighs (about 0.19) lie on it, his knees
+  // just over its front edge, not so far his shins go into its front
+  const s = seatMark(SOFA_SEAT, SLAB_Y);
+  assert.ok(Math.abs(s.x - HOME_WAKE.x) < 1e-9 && Math.abs(s.z - HOME_WAKE.z) < 1e-9, 'still stands up onto HOME_WAKE');
+  assert.ok(s.seat!.y - SLAB_Y - 0.22 > 0.05 && s.seat!.y - SLAB_Y - 0.22 < 0.1, 'hips over the cushion, not in it');
+  assert.ok(Math.abs(s.seat!.z - SOFA_SEAT.z) < 1e-9, 'square to the sofa');
+  const toFront = s.seat!.x - sofa.rect[0];
+  assert.ok(toFront > 0.1 && toFront < 0.19, `knees just over its front edge (hips ${toFront.toFixed(2)} in)`);
+  assert.ok(s.seat!.x < sofa.rect[2] - 0.2, 'in front of its back');
 });
 
 test('the curtains: drawn, they cover both windows; open, they bunch at the ends; always in the room, off the glass, over the furniture', () => {

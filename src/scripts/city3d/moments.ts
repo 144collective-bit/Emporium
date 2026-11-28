@@ -152,6 +152,17 @@ export function benchMark(bench: { x: number; z: number; ry: number }, y: number
 }
 
 /**
+ * A seat that isn't a bench (his sofa at home, docs/spawn-plan.md): a bench's mark, his hips `h` over the floor and
+ * `back` behind the mark (toward its backrest: a deep cushion has him sat back on it, not perched on its edge)
+ */
+export function seatMark(seat: { x: number; z: number; ry: number; h: number; back?: number }, y: number): Mark {
+  const m = benchMark(seat, y);
+  const back = seat.back ?? -MOMENT.bench.back;
+  m.seat = { x: seat.x - Math.sin(seat.ry) * back, z: seat.z - Math.cos(seat.ry) * back, y: y + seat.h };
+  return m;
+}
+
+/**
  * Getting into a vehicle: he comes at its side point `door` (world, on the body: the car's door, the kart's pod,
  * the aircraft's door, the ladder's top for the boat) from (`fx`, `fz`), stands `board.stand` short of it facing
  * it, the hands go to it (the handle, the pod's rim, the door frame, the rails) and the clip takes his root to

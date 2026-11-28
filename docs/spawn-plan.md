@@ -83,8 +83,10 @@ What it says:
    front door once it stops waiting.
 2. **The wake-up and the curtains** (*built*, signed off 2026-11-18; the owner left the choices to us:
    deep red curtains, sat on the sofa, the curtains open with the doors). He's on the sofa as the room appears
-   (home.ts `SOFA_SEAT`: moments.ts's bench mark at the sofa's front, its cushion `h` 0.24 up, facing the telly;
-   walk.ts `enter(spawn, seat)` puts him on it with `moments.sit()`, already seated) and
+   (home.ts `SOFA_SEAT`: moments.ts `seatMark()`, a bench's mark at the sofa's front, facing the telly, his hips `h`
+   0.29 over the floor, 0.07 over the cushion, his knees just over its front edge; walk.ts `enter(spawn, seat)` puts
+   him on it with `moments.sit()`, already seated. It was `h` 0.24, his hips level with the cushion's top, and he sat
+   sunk into it: raised on the owner's word, 2026-11-28) and
    stands up onto `HOME_WAKE` (now just in front of the sofa) about 0.7 s after the menu has gone (walk.ts
    `standUp()`, the bench's own stand-up; any push of the keys stands him up sooner, as on a bench). The view starts
    in front of him, looking back at him on the sofa (behind him is the wall); once he's up the

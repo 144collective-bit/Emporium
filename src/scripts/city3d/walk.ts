@@ -75,7 +75,7 @@ import { bankY } from './kartfacility';
 import type { RaceStart } from './kart-types';
 import type { Cond } from './kartcircuit';
 import { COUNTER, TRAINER } from './fightsite';
-import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, bikeMark, boardMark, carMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
+import { MOMENT, type Mark, type Moment, type Vehicle, alightMark, benchMark, bikeMark, seatMark, boardMark, carMark, counterMark, crateMark, createMoment, doorMark, liftMark } from './moments';
 import { inWorld } from './carinside';
 import { CARS } from './cars';
 import { toon } from './kit';
@@ -3424,7 +3424,7 @@ export function createWalk(d: WalkDeps) {
      * the way its sitter faces, `h` its seat over the ground: waking on his sofa at home, docs/spawn-plan.md), up off
      * it with `standUp()` or the first push of the keys
      */
-    enter(spawn?: { x: number; z: number; yaw: number; y?: number }, seat?: { x: number; z: number; ry: number; h: number }) {
+    enter(spawn?: { x: number; z: number; yaw: number; y?: number }, seat?: { x: number; z: number; ry: number; h: number; back?: number }) {
       active = true;
       // A few steps back from the doors, so the arcade tower fills the view
       pos.copy(SPAWN).add(new THREE.Vector3(Math.sin(SPAWN_YAW), 0, Math.cos(SPAWN_YAW)).multiplyScalar(WALK_SPAWN.back));
@@ -3463,8 +3463,7 @@ export function createWalk(d: WalkDeps) {
       hero.g.visible = hero.ring.visible = true;
       if (seat) {
         const y = groundAt(seat.x, seat.z, pos.y);
-        const mk = benchMark(seat, y);
-        mk.seat!.y = y + seat.h;
+        const mk = seatMark(seat, y);
         pos.set(mk.x, y, mk.z);
         face = mk.face;
         // (the camera in front of him, looking back at him on the seat: behind him is the sofa's back and the wall;
