@@ -1,0 +1,1 @@
+function e(e){let t=new Date(e);return{day:Math.floor((e-t.getTimezoneOffset()*6e4)/864e5),dow:t.getDay(),hour:t.getHours()+t.getMinutes()/60+t.getSeconds()/3600}}function t(e){let t=Math.floor(e),n=Math.round((e-t)*60),r=t;return n===60&&(n=0,r++),r=(r%24+24)%24,`${r%12==0?12:r%12}${n?`:${String(n).padStart(2,`0`)}`:``} ${r<12?`am`:`pm`}`}export{t as n,e as t};

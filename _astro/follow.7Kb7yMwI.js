@@ -1,0 +1,1 @@
+var e={lag:.06,share:.6,most:.22,snap:1.2},t=e=>Math.atan2(Math.sin(e),Math.cos(e));function n(){let n=null,r=0;return{update(i,a){return n===null||Math.abs(t(a-n))>e.snap?n=a:i>0&&(n=a+t(n-a)*.5**(i/e.lag)),r=Math.max(-e.most,Math.min(e.most,e.share*t(n-a))),r},reset(){n=null,r=0},get offset(){return r}}}export{n as t};

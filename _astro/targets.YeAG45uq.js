@@ -1,0 +1,1 @@
+function e(e,t,n,r){if(e===`low`)return{msaa:0,smaa:!1};let i=Math.min(t,n)>=1.75?0:r;return{msaa:i,smaa:t<1.5||r>0&&i===0}}function t(e){let t=Math.max(0,e.width)*Math.max(0,e.height),n=Math.max(1,e.samples),r=t*e.bpp;return e.samples>0&&(r+=t*e.bpp*n),e.depthBuffer&&(r+=t*4*n),e.depthTexture&&(r+=t*4),r}export{t as n,e as t};

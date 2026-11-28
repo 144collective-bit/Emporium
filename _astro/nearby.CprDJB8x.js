@@ -1,0 +1,1 @@
+import{t as e}from"./character.BLfDWbiB.js";var t=30;function n(n=200,r=t){let i=!0;return(t,a,o=t,s=a)=>{let c=e.eye;return!e.on||(i=Math.hypot(Math.max(t-c.x,c.x-o,0),Math.max(a-c.z,c.z-s,0))<(i?n+r:n),i)}}export{n as t};

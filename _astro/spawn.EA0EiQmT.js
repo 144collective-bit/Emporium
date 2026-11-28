@@ -1,0 +1,1 @@
+import{ft as e}from"./solids.3QfOTosb.js";import{o as t}from"./tilework.p9fDGF-Z.js";var n={open:!0},r=[e.gates.x,(e.gates.z0+e.gates.z1)/2];function i(e,n,i=r,a=60){return e.filter(e=>!n.includes(e.id)&&t(i[0],i[1],e.rect)<=a).map(e=>e.id)}function a(e){return e.due===0&&e.waiting===0||e.waitedMs>=25e3}export{a as i,n,i as r,r as t};
