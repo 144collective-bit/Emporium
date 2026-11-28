@@ -676,3 +676,6 @@ session.)
   The stray hedges beyond are split off as J8b. Merged (the pass ran to about 03:45).
 - 2026-11-28, the owner (after night 7): J9 (Lot 9's pitches and lanes) first next loop night, in the plan's order;
   J8b (the stray hedges) after. J9 to Ready.
+- 2026-11-28, the owner: every looks job (the hunt's H1-H19 and the sweeps) to Ready; the board's ranks kept as the
+  order (J9, J8b, the sweeps, speed, exits, then the hunt's cards). Exits 2 ranked ahead of Exits 3. H9's gantry boards
+  carry only district and place names already in the city, with arrows: no new copy, no numbers.
