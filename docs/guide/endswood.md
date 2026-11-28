@@ -178,7 +178,7 @@ Part of the project guide (`CLAUDE.md` is its index); keep it up to date when wh
   boot**: only the village's chunk imports it (laying it out took seconds as the page loaded), so its solids join
   there, `registerCouncil()` calling `addSolids()` on the main thread (the houses' with `lift` false, their tops
   already over their plinths), as Sunridge's houses do; tests that check against `SOLIDS` across the south add them
-  (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts).
+  (`[...SOLIDS, ...COUNCIL_SOLIDS, ...ALLOTMENT_SOLIDS]`). Drawn by `council3d.ts` (`registerCouncil()`, from village3d.ts; each bungalow's plot, `drawGardens()`: front and back lawns, a front hedge with gaps for the drive and the door's path, timber fences round the sides and back, the loop's J8).
 - **Aldwyn's Green Rec** (`rec.ts`, DOM-free, tested in `tests/rec.test.ts`, 3e): `PITCH`, `GOALS`, `PAVILION`, `VERANDA`,
   `SKATE` and its features, `PLAYGROUND`, `BENCHES`, `GATE`, `FOOTPATH`, `BRIDGE` / `recBridgeY()` (groundheight.ts's
   `recbridge` layer), `REC_PATH`, `REC_SPAWN`, `REC_SOLIDS`, `REC_RECT`; a place (`rec`, endsplaces.ts). Drawn by

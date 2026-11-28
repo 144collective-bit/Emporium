@@ -212,6 +212,8 @@ function along(b: Batch, a: Pt, c: Pt, w: number, y0: number, y1: number, m: THR
   g.deleteAttribute('uv');
   b.add(g, m);
 }
+/** The bungalows' plot fences (J8): stained timber */
+const PLOT_FENCE = toon('#6b4a32');
 const inFrame = (l: Lot, u: number, v: number): Pt => [l.at[0] + l.face[1] * u + l.face[0] * v, l.at[1] - l.face[0] * u + l.face[1] * v];
 function drawGardens(b: Batch, semis: Semi[], bungalows: Bungalow[]) {
   for (const s of semis) {
@@ -229,6 +231,25 @@ function drawGardens(b: Batch, semis: Semi[], bungalows: Bungalow[]) {
     flat(b, lotRing(s, BUNGALOW.front - 0.05, 0), ON, LAWN);
     const gu = (s.garageLeft ? -1 : 1) * (BW / 2 - 1.3) * (s.w / BW);
     along(b, inFrame(s, -gu, 0.05), inFrame(s, -gu, BUNGALOW.front - 0.05), 2.4, ON, ON + 0.004, PATH);
+    // (the improvement loop's J8, R3: each bungalow its plot. The back garden; a front hedge with gaps for the drive and
+    // a path to the door, the door's side the garage's other; low fences down both sides and across the back)
+    flat(b, lotRing({ ...s, at: [s.at[0] - s.face[0] * BUNGALOW.depth, s.at[1] - s.face[1] * BUNGALOW.depth] }, 0, BUNGALOW.rear), ON, LAWN);
+    const du = -Math.sign(gu) * 1.3 * (s.w / BW);
+    along(b, inFrame(s, -du, 0.05), inFrame(s, -du, BUNGALOW.front - 0.05), 0.8, ON, ON + 0.004, PATH);
+    const v = BUNGALOW.front - 0.35;
+    const cuts = [
+      [gu - 1.3, gu + 1.3],
+      [du - 0.5, du + 0.5],
+    ].sort((a, c) => a[0] - c[0]);
+    let u0 = -s.w / 2;
+    for (const [c0, c1] of cuts) {
+      if (c0 - u0 > 0.3) along(b, inFrame(s, -u0, v), inFrame(s, -c0, v), 0.5, 0.15, 0.8, HEDGE);
+      u0 = Math.max(u0, c1);
+    }
+    if (s.w / 2 - u0 > 0.3) along(b, inFrame(s, -u0, v), inFrame(s, -s.w / 2, v), 0.5, 0.15, 0.8, HEDGE);
+    const back = -(BUNGALOW.depth + BUNGALOW.rear) + 0.05;
+    for (const u of [-s.w / 2 + 0.05, s.w / 2 - 0.05]) along(b, inFrame(s, -u, v - 0.3), inFrame(s, -u, back), 0.06, 0.15, 0.85, PLOT_FENCE);
+    along(b, inFrame(s, -(-s.w / 2 + 0.05), back), inFrame(s, -(s.w / 2 - 0.05), back), 0.06, 0.15, 0.85, PLOT_FENCE);
   }
 }
 

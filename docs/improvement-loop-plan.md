@@ -323,9 +323,12 @@ sets the order (rule 2).
       coping or coursing; the yews are bare cones. R1 for stone: a coping, courses, a darker plinth; the yews rounded.
       Done 2026-11-27 (night 6 pass 6): a darker plinth proud of the wall, a dressed coping, courses near only; the
       yews a rounded bell with a smaller crown and a short trunk. Drawing only: the wall's height and solids unchanged.
-- [ ] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
+- [x] **J8 (R3): the bungalows' estate south of the Green** (`h-council-air`): the bungalows stand on one open lawn
       with paths stopping short, no plots, and straight hedge pieces standing alone in the open land beyond. R3: plots
-      with low hedges or fences and front paths, the stray hedges joined into field boundaries or gone.
+      with low hedges or fences and front paths, the stray hedges joined into field boundaries or gone. Done
+      2026-11-28: the plots (below, the log); the stray hedges are J8b.
+- [ ] **J8b (R3): the stray hedges past the bungalows** (`h-council-air`): the straight hedge pieces alone in the open
+      land east and south of the bungalows, joined into field boundaries or removed (the owner's pick).
 - [ ] **J9 (R1/R3): Lot 9's empty pitches and lanes** (the hunt, part 2, `h-lot9-air`): the empty pitches are bare
       grey slabs and the lanes plain grey strips meeting square, no verge or kerb. R1 for the pads (gravel, a hook-up
       post, worn edges), R3 for the lanes' verges and corners.
@@ -666,3 +669,8 @@ session.)
 - 2026-11-27, night 7 pass 1 (22:07): J13 (the board's top Ready card), Sunridge's back-yard patios: pavers in a darker
   border, their joints near only (sunyards3d.ts). Lint, `npm test` and `test:wide` 2430 of 2430, smoke fine, bootJs 772.5
   KB. Shot of an open patio close. Merged.
+- 2026-11-28, night 7 pass 6 (03:07): J8, the bungalows' plots (council3d.ts `drawGardens`, drawing only): a back
+  lawn, a low front hedge with gaps for the drive and a new path to the door, stained timber fences down both sides
+  and across the back. Lint, typecheck, `npm test` 2432 of 2432, bootJs 768.6 KB, texFull 4331.4. Shots
+  (`h-council-air` and a low one) after a fresh build (the first set ran on the old build and showed nothing new).
+  The stray hedges beyond are split off as J8b. Merged (the pass ran to about 03:45).
