@@ -118,6 +118,10 @@ keep it up to date when what it describes changes.
   folds away, decal, spinning props and rotors with blur discs);
   `createFleet()` makes one instanced mesh per part for each kind, culled
   as a fleet. Under reduced motion every aircraft stands parked.
+  `aircraft.ts` isn't in the boot (its slimming, 2026-11-28): airport.ts
+  works out every flight's pose from the boot (`traffic()`, which the
+  guidance and the rest read) and asks for the models on the first frame
+  (`lazy()`), the fleets taking up the poses from then on.
   On phones the fleet's far ones are one piece each, one draw for the
   fleet (`farGeometry()`, `FAR_PHONE` in `lod.ts`; `performance.md`, Near and far).
 - The outskirts' trees keep off the airport's land and the low end of the

@@ -162,7 +162,10 @@ keep it up to date when what it describes changes.
     kart park's buildings and stands, their own district since 2026-11-27,
     `kartpark-draw.ts`, drawn into the spot's group, the spot, screens'
     picture, cabinet, people, trees and lamps left at the boot in
-    `kartpark3d.ts`: 4.7 KB, the boot from 772.5 to 767.8) behind `lazyFront()` (`lazyfront.ts`): the same
+    `kartpark3d.ts`: 4.7 KB, the boot from 772.5 to 767.8; and the
+    aircraft's models, `aircraft.ts`, asked for by airport.ts on the first
+    frame, the flights' poses still worked out from the boot: 8.4 KB, the
+    boot from 767.8 to 759.4) behind `lazyFront()` (`lazyfront.ts`): the same
     shape, fetched once the first frame is drawn, answering from `idle`
     until then ("not driving, nothing near": every getter walk.ts reads has
     its stand-in there, since anything else comes back as a do-nothing

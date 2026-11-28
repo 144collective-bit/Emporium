@@ -43,7 +43,8 @@ import {
   type AircraftKind,
   type Pose,
 } from './airfield';
-import { createFleet } from './aircraft';
+import type { Fleet } from './aircraft';
+import { lazy } from './lazy';
 import { parkedCars, type CarId } from './cars';
 import type { Idle, Spot } from './landmarks';
 import { addLamp, addPool, addTree, type Tick } from './world';
@@ -446,16 +447,21 @@ const LIVERY: Record<AircraftKind | 'freighter', string[]> = {
   heli: ['#00b0ff', '#c9a227'],
 };
 
-/** Every aircraft on its timetable (the clock is the same for everyone), parked under reduced motion; the parked airliners at their stands */
+/** The aircraft's models (aircraft.ts), not in the boot (its slimming, 2026-11-28): fetched on the first frame */
+const loadAircraft = lazy(() => import('./aircraft'), 'the aircraft');
+
+/**
+ * Every aircraft on its timetable (the clock is the same for everyone), parked under reduced motion; the parked
+ * airliners at their stands. Where they are is worked out from the boot (the air traffic others read); the models
+ * come with aircraft.ts, asked for on the first frame, and take up the poses from then on
+ */
 function flying(scene: THREE.Scene, tick: (f: Tick) => void, reduced: boolean) {
   const kinds: (AircraftKind | 'freighter')[] = ['jet', 'freighter', 'prop', 'heli'];
   const fleets = kinds.map((k) => {
-    const f = createFleet(k, LIVERY[k]);
-    scene.add(f.group);
     // (the freighters are airliners on the timetable, drawn as a fleet of their own)
     const kind: AircraftKind = k === 'freighter' ? 'jet' : k;
     const flights = FLIGHTS.filter((x) => x.kind === kind && !!x.freight === (k === 'freighter'));
-    return { kind, fleet: f, flights, parked: k === 'jet' ? PARKED_JETS : k === 'freighter' ? PARKED_FREIGHTERS : [] };
+    return { k, kind, fleet: null as Fleet | null, flights, parked: k === 'jet' ? PARKED_JETS : k === 'freighter' ? PARKED_FREIGHTERS : [] };
   });
   const now = () => Date.now() / 1000;
   const current: { kind: AircraftKind; pose: Pose }[] = [];
@@ -464,18 +470,31 @@ function flying(scene: THREE.Scene, tick: (f: Tick) => void, reduced: boolean) {
     for (const { kind, fleet, flights, parked } of fleets) {
       flights.forEach((f, i) => {
         const pose = reduced ? f.parked : poseAt(f, t);
-        fleet.set(i, pose);
+        fleet?.set(i, pose);
         current.push({ kind, pose });
       });
       parked.forEach((pose, i) => {
-        fleet.set(flights.length + i, pose);
+        fleet?.set(flights.length + i, pose);
         current.push({ kind, pose });
       });
-      fleet.update(t, dt);
+      fleet?.update(t, dt);
     }
   };
   place(now(), 0);
+  let asked = false;
   tick(({ dt }) => {
+    if (!asked) {
+      asked = true;
+      void loadAircraft()
+        .then(({ createFleet }) => {
+          for (const f of fleets) {
+            f.fleet = createFleet(f.k, LIVERY[f.k]);
+            scene.add(f.fleet.group);
+          }
+          place(now(), 0);
+        })
+        .catch(() => {});
+    }
     if (!reduced) place(now(), dt);
   });
   return () => current;

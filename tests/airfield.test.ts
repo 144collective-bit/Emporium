@@ -420,3 +420,12 @@ test('taxiing aircraft keep clear of everything solid at the airport', () => {
         assert.ok(p.x < s[0] - r || p.x > s[2] + r || p.z < s[1] - r || p.z > s[3] + r, `${FLIGHTS[i].id} rolls into something at ${p.x.toFixed(1)}, ${p.z.toFixed(1)}`);
     });
 });
+
+import { readFileSync } from 'node:fs';
+test("the aircraft's models out of the boot: the airport asks for them on the first frame, its traffic worked out without them", () => {
+  const src = readFileSync('src/scripts/city3d/airport.ts', 'utf8');
+  // (only a type, and the dynamic import through lazy(): a static import would bring aircraft.ts back into the boot)
+  assert.ok(!/^import \{[^}]*\} from '\.\/aircraft'/m.test(src), 'a static import of aircraft.ts');
+  assert.ok(src.includes("import('./aircraft')"), 'the lazy import');
+  assert.ok(/fleet\?\.set\(/.test(src) && /current\.push\(/.test(src), 'the traffic kept whether the models are in or not');
+});
