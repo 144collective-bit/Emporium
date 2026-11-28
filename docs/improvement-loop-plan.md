@@ -674,3 +674,5 @@ session.)
   and across the back. Lint, typecheck, `npm test` 2432 of 2432, bootJs 768.6 KB, texFull 4331.4. Shots
   (`h-council-air` and a low one) after a fresh build (the first set ran on the old build and showed nothing new).
   The stray hedges beyond are split off as J8b. Merged (the pass ran to about 03:45).
+- 2026-11-28, the owner (after night 7): J9 (Lot 9's pitches and lanes) first next loop night, in the plan's order;
+  J8b (the stray hedges) after. J9 to Ready.
