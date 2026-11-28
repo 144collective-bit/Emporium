@@ -94,6 +94,7 @@ it and has been retired completely. Build only on what's here.
 | What the tests cover and how they run | `docs/guide/tests.md` |
 | Build mode and the grand station (both retired) | `docs/guide/retired.md` |
 | Other cities: the map file, the cities' list, `?city=`, the stage, the Open Level, the map creator (`docs/cities-plan.md`) | `docs/guide/cities.md` |
+| Port Meridian, the cyberpunk port built for driving and combat: its own rules, layout and phases | `docs/meridian-plan.md` |
 | The nightly improvement loop (its standing sign-off, rules, levels and log) | `docs/improvement-loop-plan.md` |
 
 ## Rules that hold everywhere
@@ -137,7 +138,9 @@ it and has been retired completely. Build only on what's here.
   rows; cut-throughs are for walking and bikes, bollards at each end.
 - **Nothing threatening, and nothing in the city attacks you.** Targets are
   the dummies and the drones only; the crowd is never a target; there's no
-  player health outside the Fight Club's ring.
+  player health outside the Fight Club's ring. (Sector 7's rule. Port
+  Meridian, another city, has its own, the owner's call, 2026-11-28:
+  `docs/meridian-plan.md`. Nothing of it comes into Sector 7.)
 - **Retired, the owner's calls; don't bring any back without the owner:**
   the 2D map, the stage and screen on the hangout square, the skyline ring
   of dark towers, Sector 7 Central (the grand station), the street races,

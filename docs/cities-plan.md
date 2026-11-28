@@ -111,6 +111,12 @@ A map is in tiles, as Sector 7 is, centred on 0, 0. Version 1 of the file:
 
 ## The first city: a cyberpunk port (the owner's brief, 2026-11-28)
 
+**The plan changed the same day**: the city is Port Meridian, written from
+the owner's description rather than drawn by hand, 900 x 900 and built for
+driving and combat. Its plan, rules and phases are `docs/meridian-plan.md`,
+which takes over from Phases 3 to 8 below for that city. What follows is the
+first brief, kept for what still holds.
+
 - **A cyberpunk port**: a neon city on a coast, with a harbour, container
   stacks and canals cutting into the old quarter, the towers behind.
   Ultra-futuristic. The owner's touchstones are the genre's classics, for
@@ -164,7 +170,8 @@ Notes for drawing maps, and for what the creator should make easy:
 
 - Made-up names only, from the map file; no real brand, never the token.
 - Dorras, free play and the rewards work in every city as in Sector 7.
-- Nothing threatening in any city.
+- Nothing threatening in a city unless the owner gives it rules of its own
+  (Port Meridian has: `docs/meridian-plan.md`).
 - Each city's drawing is its own chunk; the boot of Sector 7 gains nothing
   but the few lines that read the address.
 - The budgets aren't raised to fit this in.
